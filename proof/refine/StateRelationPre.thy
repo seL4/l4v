@@ -34,4 +34,8 @@ definition map_relation :: "(obj_ref \<rightharpoonup> 'a) \<Rightarrow> (obj_re
      dom ah = dom ch
      \<and> (\<forall>p obj obj'. ah p = Some obj \<and> ch p = Some obj' \<longrightarrow> rel obj obj')"
 
+lemma map_relation_fun_upd:
+  "\<lbrakk>map_relation ah ch rel; rel obj obj'\<rbrakk> \<Longrightarrow> map_relation (ah(ptr \<mapsto> obj)) (ch(ptr \<mapsto> obj')) rel"
+  by (clarsimp simp: map_relation_def)
+
 end

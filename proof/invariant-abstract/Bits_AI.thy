@@ -13,10 +13,6 @@ lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp' whileLoop_valid_inv
 lemmas crunch_simps = split_def whenE_def unlessE_def Let_def if_fun_split
                       assertE_def zipWithM_mapM zipWithM_x_mapM
 
-lemma in_set_object:
-  "(rv, s') \<in> fst (set_object ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := (kheap s) (ptr \<mapsto> obj) \<rparr>"
-  by (clarsimp simp: set_object_def get_object_def in_monad)
-
 lemma cap_fault_injection:
  "cap_fault_on_failure addr b = injection_handler (ExceptionTypes_A.CapFault addr b)"
   apply (rule ext)

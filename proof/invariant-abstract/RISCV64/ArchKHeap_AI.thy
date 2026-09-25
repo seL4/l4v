@@ -865,7 +865,8 @@ lemma set_tcb_obj_ref_asid_map[wp]:
 
 lemma update_sched_context_hyp_refs_of[wp]:
   "update_sched_context ptr f \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+  unfolding update_sched_context_def get_sched_context_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
   apply (clarsimp elim!: rsubst[where P=P])
   apply (rule all_ext)
   apply (clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def

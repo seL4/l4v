@@ -56,6 +56,11 @@ abbreviation scs_relation :: "'z state \<Rightarrow> kernel_state \<Rightarrow> 
 
 lemmas scs_relation_def = scs_relation_2_def
 
+lemma scs_relation_2_sc_update:
+  "\<lbrakk>scs_relation_2 scs szs scs'; sc_relation sc n sc'; szs ptr = Some n; valid_sched_context_size n\<rbrakk>
+   \<Longrightarrow> scs_relation_2 (scs(ptr \<mapsto> sc)) szs (scs'(ptr \<mapsto> sc'))"
+  by (clarsimp simp: scs_relation_2_def)
+
 abbreviation replies_relation :: "'z state \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "replies_relation s s' \<equiv> map_relation (replies_of s) (replies_of' s') reply_relation"
 

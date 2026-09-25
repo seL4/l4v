@@ -98,9 +98,10 @@ lemma arch_switchToIdleThread_corres:
   "corres dc
      (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
       and valid_vspace_objs and valid_idle)
-     (no_0_obj')
+     no_0_obj'
      arch_switch_to_idle_thread Arch.switchToIdleThread"
   unfolding arch_switch_to_idle_thread_def RISCV64_H.switchToIdleThread_def
+  apply add_pspace_adb
   apply add_valid_idle'
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply clarsimp

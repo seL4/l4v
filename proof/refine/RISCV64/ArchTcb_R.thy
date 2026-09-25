@@ -22,8 +22,9 @@ lemma asUser_postModifyRegisters_corres[Arch_assms]:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (arch_post_modify_registers ct t)
      (asUser t $ postModifyRegisters ct t)"
-  apply (rule corres_cross[where Q' = "tcb_at' t", OF tcb_at'_cross_rel])
-   apply (simp add: invs_psp_aligned invs_distinct)
+  apply add_pspace_adb
+  apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
+   apply (fastforce intro: tcb_at_cross)
   apply (rule corres_guard_imp)
     apply (clarsimp simp: arch_post_modify_registers_def postModifyRegisters_def when_def)
     apply (subst submonad_asUser.return)

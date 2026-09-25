@@ -227,6 +227,7 @@ lemma replyUnlinkTcb_corres:
        and reply_tcb_reply_at ((=) (Some t)) rp)
         valid_tcbs'
         (reply_unlink_tcb t rp) (replyUnlink rp t)" (is "corres _ _ ?conc_guard _ _")
+  apply add_pspace_adb
   apply (rule_tac Q="?conc_guard
                      and st_tcb_at' (\<lambda>st. (\<exists>ep pl. st = BlockedOnReceive ep (receiver_can_grant pl) (Some rp))
                                           \<or> st = BlockedOnReply (Some rp)) t
@@ -276,26 +277,6 @@ lemma replyUnlink_valid_tcbs'[wp]:
   unfolding replyUnlink_def getReply_def updateReply_def
   by (wpsimp wp: set_reply'.getObject_wp gts_wp')
 
-lemma updateEndpoint_wp:
-  "\<lbrace>\<lambda>s. \<forall>ep :: endpoint. ko_at' ep epPtr s \<longrightarrow> P (set_obj' epPtr (f ep) s)\<rbrace>
-   updateEndpoint epPtr f
-   \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding updateEndpoint_def setEndpoint_def
-  by (wpsimp wp: set_ep'.setObject_wp getEndpoint_wp)
-
-lemma updateNotification_wp:
-  "\<lbrace>\<lambda>s. \<forall>ntfn :: notification. ko_at' ntfn ntfnPtr s \<longrightarrow> P (set_obj' ntfnPtr (f ntfn) s)\<rbrace>
-   updateNotification ntfnPtr f
-   \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding updateNotification_def setNotification_def
-  by (wpsimp wp: set_ntfn'.setObject_wp getNotification_wp)
-
-lemma updateEndpoint_dom_eps_of'[wp]:
-  "updateEndpoint a b \<lbrace>\<lambda>s. P (dom (eps_of' s))\<rbrace>"
-  apply (wpsimp wp: updateEndpoint_wp)
-  apply (fastforce elim!: rsubst[where P=P] simp: projectKO_opts_defs obj_at'_def opt_map_red)
-  done
-
 lemma set_endpoint_dom_eps_of[wp]:
   "set_endpoint ep_ptr ep \<lbrace>\<lambda>s. P (dom (eps_of s))\<rbrace>"
   apply (wpsimp wp: set_simple_ko_wp)
@@ -304,38 +285,12 @@ lemma set_endpoint_dom_eps_of[wp]:
 
 lemma set_endpoint_det_wp[wp]:
   "det_wp (ep_at ep_ptr) (set_endpoint ep_ptr ep)"
-  apply (wpsimp wp: get_object_wp simp: set_simple_ko_def)
+  apply (wpsimp wp: get_object_wp set_object_det_wp simp: set_simple_ko_def)
   apply (clarsimp simp: gen_obj_at_simps is_ep_def)
   apply (rename_tac ko, case_tac ko; clarsimp)
   done
 
 lemmas set_endpoint_no_fail[wp] = det_wp_no_fail[OF set_endpoint_det_wp]
-
-method set_simple_ko_heaps_inv =
-  wpsimp wp: set_simple_ko_wp,
-  erule rsubst[where P=P],
-  clarsimp simp: aobj_of_def ep_at_pred_def ntfn_at_pred_def opt_map_def
-
-lemma
-  shows set_endpoint_scs_fields_of[wp]:
-    "set_endpoint ep_ptr ep \<lbrace>\<lambda>s. P (scs_fields_of s)\<rbrace>"
-  and set_notification_scs_fields_of[wp]:
-    "set_notification ntfn_ptr ntfn \<lbrace>\<lambda>s. P (scs_fields_of s)\<rbrace>"
-  by set_simple_ko_heaps_inv+
-
-lemma
-  shows set_endpoint_cnodes_of[wp]:
-    "set_endpoint ep_ptr ep \<lbrace>\<lambda>s. P (cnodes_of s)\<rbrace>"
-  and set_notification_cnodes_of[wp]:
-    "set_notification ntfn_ptr ntfn \<lbrace>\<lambda>s. P (cnodes_of s)\<rbrace>"
-  by set_simple_ko_heaps_inv+
-
-lemma
-  shows set_endpoint_replies_of[wp]:
-    "set_endpoint ep_ptr ep \<lbrace>\<lambda>s. P (replies_of s)\<rbrace>"
-  and set_notification_replies_of[wp]:
-    "set_notification ntfn_ptr ntfn \<lbrace>\<lambda>s. P (replies_of s)\<rbrace>"
-  by set_simple_ko_heaps_inv+
 
 lemma no_fail_setEndpoint[wp]:
   "no_fail (ep_at' ptr) (setEndpoint ptr new)"
@@ -347,25 +302,6 @@ lemma no_fail_setEndpoint[wp]:
 lemma no_fail_updateEndpoint[wp]:
   "no_fail (ep_at' ptr) (updateEndpoint ptr f)"
   by (wpsimp wp: getEndpoint_wp simp: updateEndpoint_def)
-
-crunch updateEndpoint
-  for ntfns_of'[wp]: "\<lambda>s. P (ntfns_of' s)"
-  (wp: crunch_wps)
-
-crunch updateNotification
-  for eps_of'[wp]: "\<lambda>s. P (eps_of' s)"
-  (wp: crunch_wps)
-
-lemma
-  shows set_endpoint_aobjs_of[wp]:
-    "set_endpoint ep_ptr ep \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  and set_notification_aobjs_of[wp]:
-    "set_notification ntfn_ptr ntfn \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  by set_simple_ko_heaps_inv+
-
-crunch updateEndpoint, updateNotification
-  for dom_tcbs_of'[wp]: "\<lambda>s. P (dom (tcbs_of' s))"
-  and tcbs_of'[wp]: "\<lambda>s. P (tcbs_of' s)"
 
 lemma
   shows updateEndpoint_list_queue_relation[wp]:
@@ -383,15 +319,8 @@ lemma updateEndpoint_epQueues_of_other:
   apply (clarsimp simp: opt_map_def)
   done
 
-lemma
-  shows set_endpoint_cdt_list[wp]:
-    "set_endpoint ptr ep \<lbrace>\<lambda>s. P (cdt_list s)\<rbrace>"
-  and set_notification_cdt_list[wp]:
-    "set_notification ptr ntfn \<lbrace>\<lambda>s. P (cdt_list s)\<rbrace>"
-  by (wpsimp wp: set_simple_ko_wp)+
-
 lemma in_ep_queue_sched_flag_set:
-  "\<lbrakk>ep_queues_blocked s; (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s;
+  "\<lbrakk>ep_queues_blocked s; (s, s') \<in> state_relation; pspace_aligned' s'; pspace_distinct' s';
     ep_queues_of s p = Some q\<rbrakk>
    \<Longrightarrow> \<forall>t \<in> set q. tcb_at' t s' \<and> sched_flag_set s' t"
   apply (clarsimp simp: ep_queues_blocked_def ep_blocked_def)
@@ -492,10 +421,7 @@ lemma tcbEPDequeue_corres:
      (tcb_ep_dequeue tcb_ptr ep_ptr) (tcbEPDequeue tcbPtr epPtr)"
   supply if_split[split del]
          return_bind[simp del]
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (rule_tac Q="ep_at ep_ptr" in corres_cross_add_abs_guard)
    apply (clarsimp simp: obj_at_def is_ep_def in_ep_queue_at_def eps_of_kh_def opt_map_def
                   split: option.splits)
@@ -664,10 +590,7 @@ lemma blocked_cancelIPC_corres:
      (blocked_cancel_ipc st t reply_opt)
      (blockedCancelIPC st' t reply_opt)"
   (is "\<lbrakk> _ ; _ ; _ \<rbrakk> \<Longrightarrow> corres _ (?abs_guard and _) _ _ _")
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (prop_tac "getBlockingObject st' = return epPtr")
    apply (case_tac st; clarsimp simp: getBlockingObject_def epBlocked_def)
   apply (rule_tac Q="valid_tcb_state st " in corres_cross_add_abs_guard)
@@ -779,7 +702,7 @@ lemma no_fail_updateNotification[wp]:
   by (wpsimp wp: getNotification_wp simp: updateNotification_def)
 
 lemma in_ntfn_queue_sched_flag_set:
-  "\<lbrakk>ntfn_queues_blocked s; (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s;
+  "\<lbrakk>ntfn_queues_blocked s; (s, s') \<in> state_relation; pspace_aligned' s'; pspace_distinct' s';
     ntfn_queues_of s p = Some q\<rbrakk>
    \<Longrightarrow> \<forall>t \<in> set q. tcb_at' t s' \<and> sched_flag_set s' t"
   apply (clarsimp simp: ntfn_queues_blocked_def ntfn_blocked_def)
@@ -793,7 +716,7 @@ lemma in_ntfn_queue_sched_flag_set:
 
 lemma set_notification_det_wp[wp]:
   "det_wp (ntfn_at ntfn_ptr) (set_notification ntfn_ptr ntfn)"
-  apply (wpsimp wp: get_object_wp simp: set_simple_ko_def)
+  apply (wpsimp wp: get_object_wp set_object_det_wp simp: set_simple_ko_def)
   apply (safe; clarsimp simp: gen_obj_at_simps is_ntfn_def)
   apply (rename_tac ko, case_tac ko; clarsimp)
   done
@@ -830,10 +753,7 @@ lemma tcbNTFNDequeue_corres:
      (sym_heap_sched_pointers and valid_objs')
      (tcb_ntfn_dequeue tcb_ptr ntfn_ptr) (tcbNTFNDequeue tcbPtr ntfnPtr)"
   supply if_split[split del] return_bind[simp del]
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (rule_tac Q="ntfn_at ntfn_ptr" in corres_cross_add_abs_guard)
    apply (clarsimp simp: obj_at_def is_ntfn_def in_ntfn_queue_at_def opt_map_def
                   split: option.splits)
@@ -907,6 +827,7 @@ lemma tcbNTFNDequeue_corres:
                  in rcorres_split[rotated])
      apply clarsimp
      apply (rcorres rcorres: tcbQueueRemove_rcorres_other rcorres_op_lifts)
+     apply clarsimp
      apply (metis ntfn_queues_disjoint)
     apply (rcorres rcorres: rcorres_op_lifts
                         wp: set_notification_ntfn_queues_of_other
@@ -1235,6 +1156,7 @@ lemma replyRemoveTCB_corres:
      (valid_objs' and (\<lambda>s'. sym_refs (list_refs_of_replies' s')) and sym_heap_sched_pointers)
      (reply_remove_tcb t rp) (replyRemoveTCB t)"
   (is "corres _ ?abs_guard ?conc_guard _ _")
+  apply add_pspace_adb
   apply add_sym_refs
   apply (rule_tac Q'="st_tcb_at' ((=) (thread_state.BlockedOnReply (Some rp))) t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
@@ -1556,6 +1478,7 @@ lemma setSchedContext_pop_head_corres:
               setSchedContext ptr (scReply_update (\<lambda>_. replyPrev reply') sc')
            od)"
   supply opt_mapE[elim!]
+  apply add_pspace_adb
   apply (rule_tac Q'="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD simp: obj_at_def is_sc_obj_def vs_heap_simps
                     elim!: sc_at_cross valid_objs_valid_sched_context_size)
@@ -1703,17 +1626,12 @@ lemma replyPop_corres:
                               and (\<lambda>s. sc_with_reply rp s = _) and ?sc_replies)
                              (?conc_guard and (\<lambda>s'. sym_refs (list_refs_of_replies' s'))) _ _")
   supply if_split[split del] opt_mapE[elim!]
+  apply add_pspace_adb
   apply add_sym_refs
   apply (rule_tac Q'="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
   apply (rule_tac Q'="\<lambda>s. tcbSCs_of s t = tcbsc" in corres_cross_add_guard)
    apply (fastforce dest!: bound_sc_tcb_at_cross elim!: obj_at'_weakenE)
-  apply (rule_tac Q'="pspace_distinct'" in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
-  apply (rule_tac Q'="pspace_aligned'" in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'="pspace_bounded'" in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
   apply (rule_tac Q'="\<lambda>s. scReplies_of s scp = Some rp" in corres_cross_add_guard)
    apply (fastforce simp: opt_map_red obj_at'_def
                    dest!: sc_replies_relation_scReplies_of state_relation_sc_replies_relation)
@@ -1985,6 +1903,7 @@ lemma replyRemove_corres:
              (reply_remove t rp) (replyRemove rp' t)"
   (is "\<lbrakk> _ ; _ \<rbrakk> \<Longrightarrow> corres _ ?abs_guard ?conc_guard _ _")
   apply (rule corres_gen_asm2', simp only:)
+  apply add_pspace_adb
   apply add_sym_refs
   apply (rule_tac Q'="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
@@ -2184,6 +2103,8 @@ lemma replyRemove_corres:
                                       apply wpsimp
                                      apply wpsimp
                                      apply (clarsimp dest!: state_relationD simp: reply_sc_reply_at_def)
+                                     apply (frule (1) pspace_aligned_cross)
+                                     apply (frule (2) pspace_distinct_cross)
                                      apply (fastforce intro!: reply_at_cross elim!: obj_at_weakenE simp: is_reply)
                                     apply (clarsimp cong: conj_cong)
                                     apply (case_tac "replyPrev reply'"; simp)
@@ -2464,7 +2385,7 @@ lemma blockedCancelIPC_valid_sched_pointers:
                         in hoare_post_imp)
             apply (clarsimp simp: st_tcb_at'_def obj_at'_def opt_pred_def opt_map_red)
            apply (wpsimp wp: sts_st_tcb_at'_cases_strong)
-          apply (wpsimp wp: gts_wp' hoare_vcg_all_lift hoare_drop_imps)+
+          apply (wpsimp wp: gts_wp' hoare_vcg_all_lift | wp (once) hoare_drop_imps)+
   done
 
 crunch blockedCancelIPC
@@ -2802,10 +2723,9 @@ lemma restartThreadIfNoFault_corres:
       and valid_objs and active_scs_valid and current_time_bounded
       and in_correct_ready_q and ready_qs_distinct and ready_or_release
       and ep_queues_blocked and ntfn_queues_blocked and ready_queues_runnable)
-     (valid_objs' and valid_sched_pointers
-      and pspace_aligned' and pspace_distinct' and pspace_bounded'
-      and (\<lambda>s. \<not> is_sched_linked t s))
+     (valid_objs' and valid_sched_pointers and (\<lambda>s. \<not> is_sched_linked t s))
      (restart_thread_if_no_fault t) (restartThreadIfNoFault t)"
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
   apply (clarsimp simp: restart_thread_if_no_fault_def restartThreadIfNoFault_def)
@@ -3019,14 +2939,9 @@ lemma removeAndRestartEPQueuedThread_corres:
      (remove_and_restart_ep_queued_thread t epptr)
      (removeAndRestartEPQueuedThread t epptr)"
   supply if_split[split del]
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro!: tcb_at_cross)
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_distinct_cross)
-  apply (rule_tac Q'=pspace_bounded' in corres_cross_add_guard)
-   apply (fastforce intro!: pspace_relation_pspace_bounded')
   apply (clarsimp simp: remove_and_restart_ep_queued_thread_def removeAndRestartEPQueuedThread_def)
   apply (rule corres_symb_exec_r[OF _ gts_sp']; (solves wpsimp)?)
   apply (rule corres_assert_gen_asm_cross_forwards)
@@ -3598,6 +3513,7 @@ lemma cancelAllIPC_corres:
     apply fastforce
    apply (wpsimp wp: whileLoop_valid_inv)
    apply fastforce
+  apply add_pspace_adb
   apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ get_ep_sp', rotated]; (solves wpsimp)?)
    apply wpsimp
    apply (force intro: ep_at_cross simp: ex_abs_def ep_at_pred_def obj_at_def is_ep_def)
@@ -3676,10 +3592,7 @@ lemma removeAndRestartNTFNQueuedThread_corres:
      (valid_objs' and valid_sched_pointers and sym_heap_sched_pointers and pspace_bounded')
      (remove_and_restart_ntfn_queued_thread t ntfnPtr)
      (removeAndRestartNTFNQueuedThread t ntfnPtr)"
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro!: tcb_at_cross)
   apply (clarsimp simp: remove_and_restart_ntfn_queued_thread_def removeAndRestartNTFNQueuedThread_def)
@@ -3823,7 +3736,6 @@ lemma cancelAllSignals_corres:
   apply (rule corres_underlying_split[OF _ _ get_simple_ko_sp get_ntfn_sp'])
    apply (corres corres: getNotification_corres)
     apply fastforce
-   apply fastforce
   apply (rename_tac ntfn ntfn')
   apply (case_tac "ntfn_obj ntfn", simp_all add: ntfn_relation_def)
   apply (rule_tac F="ntfn_queue (ntfn_obj ntfn) \<noteq> []" in corres_req)
@@ -4005,6 +3917,7 @@ lemma cancelAllSignals_corres:
     apply fastforce
    apply (wpsimp wp: whileLoop_valid_inv)
    apply fastforce
+  apply add_pspace_adb
   apply (rule corres_symb_exec_r_conj_ex_abs_forwards[OF _ get_ntfn_sp', rotated]; (solves wpsimp)?)
    apply wpsimp
    apply (force intro!: ntfn_at_cross simp: ex_abs_def ntfn_at_pred_def obj_at_def is_ntfn_def)
@@ -4427,10 +4340,7 @@ lemma removeAndRestartBadgedThread_corres:
      (remove_and_restart_badged_thread t ep_ptr badge)
      (removeAndRestartBadgedThread t ep_ptr badge)"
   supply if_split[split del]
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro!: tcb_at_cross)
   apply (clarsimp simp: remove_and_restart_badged_thread_def removeAndRestartBadgedThread_def)

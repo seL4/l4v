@@ -71,6 +71,11 @@ lemma det_wp_gets [wp]:
   "det_wp \<top> (gets f)"
   by (simp add: simpler_gets_def det_wp_def)
 
+lemma put_det_wp[wp]:
+  "det_wp \<top> (put s)"
+  unfolding put_def
+  by (clarsimp simp: det_wp_def)
+
 lemma det_wp_fail [wp]:
   "det_wp \<bottom> fail"
   by (simp add: fail_def det_wp_def)

@@ -47,6 +47,10 @@ lemma pageBits_le_maxUntypedSizeBits[Arch_assms, simp]:
   "pageBits \<le> maxUntypedSizeBits"
   by (simp add: pageBits_def maxUntypedSizeBits_def)
 
+lemma maxUntypedSizeBits_less_word_bits[Arch_assms]:
+  "maxUntypedSizeBits < word_bits"
+  by (simp add: maxUntypedSizeBits_def word_bits_def)
+
 lemmas pte_ko_at_valid_objs_valid_pte' =
   ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pte valid_obj'_def]
 

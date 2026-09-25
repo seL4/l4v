@@ -1664,17 +1664,17 @@ lemma makeFaultMessage_corres:
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
    apply (clarsimp simp: threadGet_getObject)
+   apply add_pspace_adb
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getObject_TCB_corres])
        apply (rename_tac tcb tcb')
        apply (rule_tac P="\<lambda>s. (bound (tcb_sched_context tcb) \<longrightarrow> sc_at (the (tcb_sched_context tcb)) s)
                               \<and> pspace_aligned s \<and> pspace_distinct s"
+                   and P'="pspace_aligned' and pspace_distinct'"
                     in corres_inst)
        apply (case_tac "tcb_sched_context tcb"; case_tac "tcbSchedContext tcb'";
               clarsimp simp: tcb_relation_def)
        apply (rule corres_underlying_split)
-          apply (rule_tac Q'="sc_at' (the (tcbSchedContext tcb'))" and P'=\<top> in corres_cross_add_guard)
-           apply (fastforce dest!: state_relationD intro!: sc_at_cross simp: obj_at'_def)[1]
           apply (rule corres_guard_imp)
             apply (rule schedContextUpdateConsumed_corres)
            apply (wpsimp simp: sched_context_update_consumed_def)+
@@ -2392,7 +2392,7 @@ lemma tcbAppend_rcorres:
      (\<lambda>s s'. (sorted_wrt (img_ord (prios_of s) (opt_ord_rel (\<lambda>x y. y \<le> x))) ts)
              \<and> list_queue_relation ts q (tcbSchedNexts_of s') (tcbSchedPrevs_of s')
              \<and> heap_pspace_relation s s' \<and> sym_heap_sched_pointers s'
-             \<and> pspace_aligned s \<and> pspace_distinct s
+             \<and> pspace_aligned' s' \<and> pspace_distinct' s'
              \<and> \<not> is_sched_linked t s' \<and> t \<notin> set ts \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> tcb_at t s)
      (tcb_append t ts) (tcbAppend t q)
      (\<lambda>ts' q' s s'. list_queue_relation ts' q' (tcbSchedNexts_of s') (tcbSchedPrevs_of s'))"
@@ -2409,7 +2409,7 @@ lemma tcbAppend_rcorres_other:
      (\<lambda>s s'. list_queue_relation ts q (tcbSchedNexts_of s') (tcbSchedPrevs_of s')
              \<and> list_queue_relation ts' q' (tcbSchedNexts_of s') (tcbSchedPrevs_of s')
              \<and> heap_pspace_relation s s' \<and> sym_heap_sched_pointers s'
-             \<and> pspace_aligned s \<and> pspace_distinct s
+             \<and> pspace_aligned' s' \<and> pspace_distinct' s'
              \<and> t \<notin> set ts \<and> set ts \<inter> set ts' = {} \<and> tcb_at t s \<and> (\<forall>t \<in> set ts'. tcb_at t s))
      (tcb_append t ts') (tcbAppend t q')
      (\<lambda>_ _ s s'. list_queue_relation ts q (tcbSchedNexts_of s') (tcbSchedPrevs_of s'))"
@@ -2439,11 +2439,8 @@ lemma tcbEPAppend_corres:
      (tcb_ep_append tcb_ptr ep_ptr is_recv) (tcbEPAppend tcbPtr epPtr state)"
   supply if_split[split del] tcb_append_rv_wf'[wp del] tcb_append_rv_wf''[wp del]
   apply (rule corres_gen_asm')
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' tcb_ptr" in corres_cross_add_guard, fastforce intro!: tcb_at_cross)
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
   apply (rule_tac Q'="ep_at' epPtr" in corres_cross_add_guard, fastforce intro!: ep_at_cross)
   apply (clarsimp simp: tcb_ep_append_def tcbEPAppend_def)
   apply (rule corres_stateAssert_ignore, simp)
@@ -3026,7 +3023,7 @@ crunch getSchedulerAction
   for (no_fail) no_fail[wp]
 
 lemma bound_sc_tcb_at_cross':
-  "\<lbrakk>bound_sc_tcb_at P t s; (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>
+  "\<lbrakk>bound_sc_tcb_at P t s; (s, s') \<in> state_relation; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> bound_sc_tcb_at' P t s'"
   by (fastforce dest!: bound_sc_tcb_at_cross simp: pred_tcb_at'_def obj_at'_def opt_map_red)
 
@@ -3053,6 +3050,7 @@ lemma sendIPC_corres:
   apply (insert assms)
   apply add_sym_refs
   apply add_valid_idle'
+  apply add_pspace_adb
   apply (clarsimp simp: send_ipc_def sendIPC_def Let_def split del: if_split)
   apply (rule corres_stateAssert_add_assertion[rotated], simp)
   apply (rule corres_stateAssert_add_assertion[rotated], simp)
@@ -3062,7 +3060,7 @@ lemma sendIPC_corres:
    apply (fastforce intro!: st_tcb_at_runnable_cross)
   apply (rule corres_stateAssert_add_assertion[rotated], simp add: runnable_eq_active')
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (force intro: bound_sc_tcb_at_cross')
+   apply (force intro!: bound_sc_tcb_at_cross')
   apply (rule_tac Q'="\<lambda>s'. \<not> (tcbQueued |< tcbs_of' s') t" in corres_cross_add_guard)
    apply (frule state_relation_ready_queues_relation)
    apply (frule in_ready_q_tcbQueued_eq[where t=t])
@@ -3392,7 +3390,8 @@ lemma sendIPC_corres:
         apply (case_tac reply_opt; clarsimp)
         apply (rename_tac reply_ptr, subgoal_tac "reply_at' reply_ptr s'", simp)
          apply (frule (1) replySCs_of_cross, simp)
-        apply (erule cross_relF[OF _ reply_at'_cross_rel])
+        apply (frule state_relation_pspace_relation)
+        apply (erule (2) reply_at_cross)
         apply (clarsimp simp: obj_at_def reply_sc_reply_at_def is_reply)
        apply (wpsimp wp: gts_wp)
       apply (rule_tac Q'="\<lambda>_ s'. tcb_at' t s' \<and> tcb_at' dest s' \<and> ep_at' ep_ptr s' \<and> valid_pspace' s'
@@ -3605,21 +3604,15 @@ lemma no_ofail_readReadyTime[wp]:
 
 lemma no_ofail_readTCBReadyTime:
   "no_ofail
-     (\<lambda>s'. \<exists>s. pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s \<and> active_scs_valid s
+     (\<lambda>s'. \<exists>s. valid_objs s \<and> active_scs_valid s
                \<and> active_sc_tcb_at tcbPtr s \<and> valid_objs' s'
+               \<and> pspace_aligned s \<and> pspace_distinct s
+               \<and> pspace_aligned' s' \<and> pspace_distinct' s' \<and> pspace_bounded' s'
                \<and> heap_pspace_relation s s')
      (readTCBReadyTime tcbPtr)"
   unfolding readTCBReadyTime_def
   apply (wpsimp wp: ovalid_threadRead)
   apply (rename_tac s' s)
-  apply (frule pspace_aligned_cross)
-   apply (simp flip: pspace_relation_heap_pspace_relation)
-  apply (frule pspace_distinct_cross)
-    apply fastforce
-   apply (simp flip: pspace_relation_heap_pspace_relation)
-  apply (prop_tac "pspace_bounded' s'")
-   apply (rule pspace_relation_pspace_bounded')
-   apply (simp flip: pspace_relation_heap_pspace_relation)
   apply (frule active_sc_tcb_at_tcb_at)
   apply (intro context_conjI impI allI)
    apply (fastforce intro!: tcb_at_cross_tcbs_relation)
@@ -3698,6 +3691,7 @@ lemma orderedInsert_readTCBReadyTime_rcorres:
              \<and> release_queue_relation s s' \<and> q = ksReleaseQueue s'
              \<and> heap_pspace_relation s s' \<and> sym_heap_sched_pointers s'
              \<and> pspace_aligned s \<and> pspace_distinct s
+             \<and> pspace_aligned' s' \<and> pspace_distinct' s' \<and> pspace_bounded' s'
              \<and> \<not> is_sched_linked t s' \<and> not_in_release_q t s \<and> active_sc_tcb_at t s
              \<and> active_scs_valid s \<and> valid_objs s \<and> valid_objs' s')
      (ready_times_append t ts) (orderedInsert t q readTCBReadyTime (\<le>))
@@ -3723,6 +3717,7 @@ lemma orderedInsert_readTCBReadyTime_rcorres_other:
              \<and> list_queue_relation ts q (tcbSchedNexts_of s') (tcbSchedPrevs_of s')
              \<and> heap_pspace_relation s s' \<and> sym_heap_sched_pointers s'
              \<and> pspace_aligned s \<and> pspace_distinct s
+             \<and> pspace_aligned' s' \<and> pspace_distinct' s' \<and> pspace_bounded' s'
              \<and> t' \<notin> set ts \<and> set ts \<inter> set (release_queue s) = {}
              \<and> active_sc_tcb_at t' s \<and> active_scs_valid s \<and> valid_objs s \<and> valid_objs' s')
      (ready_times_append t' ts') (orderedInsert t' q' readTCBReadyTime (\<le>))
@@ -3747,6 +3742,7 @@ lemma tcbReleaseEnqueue_corres:
      (tcb_release_enqueue t) (tcbReleaseEnqueue t)"
   supply if_split[split del]
          heap_path_append[simp del] heap_path.simps[simp del]
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce intro!: tcb_at_cross)
   apply (rule_tac Q'="\<lambda>s'. \<not> (tcbInReleaseQueue |< tcbs_of' s') t" in corres_cross_add_guard)
@@ -4036,14 +4032,9 @@ lemma maybeDonateSc_corres:
      (valid_objs' and sym_heap_sched_pointers and valid_sched_pointers)
      (maybe_donate_sc tcb_ptr ntfn_ptr)
      (maybeDonateSc tcb_ptr ntfn_ptr)"
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' tcb_ptr" in corres_cross_add_guard)
    apply (fastforce intro!: tcb_at_cross)
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest!: pspace_distinct_cross)
-  apply (rule_tac Q'=pspace_bounded' in corres_cross_add_guard)
-   apply (fastforce intro!: pspace_relation_pspace_bounded')
   unfolding maybeDonateSc_def maybe_donate_sc_def
   apply (simp add: get_tcb_obj_ref_def get_sk_obj_ref_def liftM_def maybeM_def get_sc_obj_ref_def)
   apply add_sym_refs
@@ -4181,6 +4172,7 @@ lemma ntfnSetActive_corres:
       and pspace_aligned and pspace_distinct) \<top>
      (set_notification ntfn_ptr (ntfn_set_obj ntfn (ActiveNtfn msg)))
      (ntfnSetActive ntfn_ptr msg')"
+  apply add_pspace_adb
   apply (rule_tac Q="ntfn_at ntfn_ptr" in corres_cross_add_abs_guard)
    apply (fastforce simp: obj_at_def is_ntfn_def)
   apply (rule_tac Q'="ntfn_at' ntfn_ptr" in corres_cross_add_guard)
@@ -4237,6 +4229,7 @@ lemma sendSignal_corres:
      (einvs and ntfn_at ntfn_ptr and current_time_bounded) invs'
      (send_signal ntfn_ptr bg) (sendSignal ntfn_ptr bg)"
   supply if_cong[cong]
+  apply add_pspace_adb
   apply add_sym_refs
   apply add_valid_idle'
   apply (rule_tac Q'="ntfn_at' ntfn_ptr" in corres_cross_add_guard)
@@ -4245,8 +4238,6 @@ lemma sendSignal_corres:
   apply (rule corres_stateAssert_assume[rotated], simp)
   apply (rule corres_split_forwards'[OF _ get_simple_ko_sp get_ntfn_sp'])
    apply (corres corres: getNotification_corres)
-    apply fastforce
-   apply fastforce
   apply (rename_tac ntfn nTFN)
   apply (rule_tac Q="valid_ntfn ntfn" in corres_cross_add_abs_guard)
    apply (fastforce dest: invs_valid_objs simp: valid_obj_def obj_at_def)
@@ -4470,8 +4461,6 @@ lemma sendSignal_corres:
      subgoal by (clarsimp simp: valid_sched_def)
     apply (clarsimp simp: st_tcb_at_def obj_at_def valid_ntfn_def)
    apply clarsimp
-   apply (frule invs_psp_aligned)
-   apply (frule invs_distinct)
    apply (frule (3) st_tcb_at_coerce_concrete)
    apply (clarsimp cong: conj_cong)
    apply (intro conjI impI allI; clarsimp?)
@@ -4673,6 +4662,7 @@ lemma completeSignal_corres:
       invs'
       (complete_signal ntfnptr tcbptr) (completeSignal ntfnptr tcbptr)"
   supply opt_mapE[elim!]
+  apply add_pspace_adb
   apply add_sym_refs
   apply (rule_tac Q'="tcb_at' tcbptr" in corres_cross_add_guard)
    apply (fastforce intro!: tcb_at_cross)
@@ -4836,7 +4826,6 @@ lemma maybeReturnSc_corres:
       apply (wpsimp wp: get_simple_ko_wp getNotification_wp)+
     apply (rule valid_tcbs_valid_tcbE, simp, simp)
     apply (fastforce simp: valid_tcb_def valid_bound_obj_def split: option.splits)
-   apply (rule cross_rel_srE [OF ntfn_at'_cross_rel [where t=ntfnPtr]], simp)
    apply clarsimp
   apply (fastforce dest: ko_at'_valid_tcbs'_valid_tcb'
                    simp: valid_tcb'_def valid_bound_obj'_def split: option.splits)
@@ -4845,7 +4834,6 @@ lemma maybeReturnSc_corres:
 lemma doNBRecvFailedTransfer_corres:
   "corres dc (pspace_aligned and pspace_distinct and tcb_at thread) \<top>
              (do_nbrecv_failed_transfer thread) (doNBRecvFailedTransfer thread)"
-  apply (rule corres_cross[where Q' = "tcb_at' thread", OF tcb_at'_cross_rel], simp)
   apply (clarsimp simp: do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def)
   apply (rule corres_guard_imp)
     apply (clarsimp simp: badgeRegister_badge_register)
@@ -4985,8 +4973,7 @@ lemma receiveIPC_preamble_corres:
    apply (frule (1) valid_objs_ko_at[OF invs_valid_objs])
    apply (clarsimp simp: valid_obj_def valid_reply_def)
   apply (clarsimp simp: valid_cap_def)
-  apply (erule cross_relF[OF _ reply_at'_cross_rel])
-  apply fastforce
+  apply (fastforce intro: reply_at_cross)
   done
 
 lemma ri_preamble_vbreply:
@@ -5548,6 +5535,7 @@ lemma tcbNTFNAppend_corres:
      (\<lambda>s. sym_heap_sched_pointers s \<and> valid_objs' s \<and> \<not> is_sched_linked tcbPtr s)
      (tcb_ntfn_append tcb_ptr ntfn_ptr) (tcbNTFNAppend tcbPtr ntfnPtr)"
   supply if_split[split del] tcb_append_rv_wf'[wp del] tcb_append_rv_wf''[wp del]
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' tcb_ptr" in corres_cross_add_guard, fastforce intro!: tcb_at_cross)
   apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
    apply (fastforce dest!: pspace_aligned_cross)
@@ -5992,7 +5980,6 @@ lemma sendFaultIPC_corres:
                          thread_set_release_q_runnable
                    simp: ran_tcb_cap_cases valid_cap_def)+
    apply fastforce
-  apply (frule cross_relF[OF _ tcb_at'_cross_rel[where t=thread]], fastforce)
   apply (fastforce simp: invs'_def valid_tcb_def valid_cap'_def obj_at'_def inQ_def)
   done
 
@@ -6854,6 +6841,7 @@ lemma handleFault_corres:
 lemma isValidTimeoutHandler_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) valid_tcbs'
      (is_valid_timeout_handler t) (isValidTimeoutHandler t)"
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
   apply (rule_tac Q'="pspace_aligned'" in corres_cross_add_guard)
@@ -7217,11 +7205,12 @@ lemma doReplyTransfer_corres:
                        apply simp
                       apply clarsimp
                       apply (erule active_sc_at'_cross)
+                          apply fastforce
                          apply fastforce
                         apply fastforce
-                       apply (fastforce simp: obj_at_kh_kheap_simps)
-                      apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps is_sc_obj_def
-                                     intro!: valid_sched_context_size_objsI)
+                       apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+                       apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps is_sc_obj_def
+                                      intro!: valid_sched_context_size_objsI)
                      apply (wpsimp wp: gts_wp)
                     apply (wpsimp wp: gts_wp')
                    apply (wpsimp wp: thread_get_wp')
@@ -7350,7 +7339,7 @@ lemma doReplyTransfer_corres:
        apply (erule (2) reply_tcb_sym_refsD)
       apply (clarsimp simp: invs'_def valid_pspace'_def cong: conj_cong)
       apply (intro conjI)
-        apply (erule cross_relF[OF _ tcb_at'_cross_rel[where t=sender]], fastforce)
+        apply (fastforce intro: tcb_at_cross)
        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
       apply (prop_tac "sch_act_wf (ksSchedulerAction s') s'")
        apply (fastforce dest: sch_act_wf_cross)
@@ -7362,7 +7351,7 @@ lemma doReplyTransfer_corres:
   apply (clarsimp split: option.split
                    simp: invs_def valid_state_def valid_pspace_def invs'_def
                          valid_pspace'_def)
-  apply (frule cross_relF[OF _ reply_at'_cross_rel[where t=reply]]; clarsimp)
+  apply (fastforce intro: reply_at_cross)
   done
 
 end (* Ipc_R *)

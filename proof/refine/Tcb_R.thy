@@ -544,6 +544,7 @@ lemma isRunnable_corres':
    corres (\<lambda>ts runn. runnable ts = runn)
      (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (get_thread_state t) (isRunnable t')"
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: isRunnable_def readRunnable_def flip: threadGet_def getThreadState_def)
@@ -1372,6 +1373,7 @@ lemma threadSet_not_queued_corres:
     \<And>tcb'. \<forall>(getF, v) \<in> ran tcb_cte_cases. getF (F tcb') = getF tcb'\<rbrakk>
    \<Longrightarrow> corres dc (tcb_at t and not_queued t and pspace_aligned and pspace_distinct) \<top>
          (thread_set f t) (threadSet F t)"
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: thread_set_def threadSet_def)
@@ -3771,6 +3773,7 @@ notes if_cong[cong] shows
       (invs' and tcb_at' t and (\<lambda>s. \<forall>x \<in> set extras'. s \<turnstile>' (fst x)))
      (decode_bind_notification (cap.ThreadCap t) extras)
      (decodeBindNotification (capability.ThreadCap t) extras')"
+  apply add_pspace_adb
   apply (simp add: decode_bind_notification_def decodeBindNotification_def)
   apply (simp add: returnOk_def)
   apply (rule stronger_corres_guard_imp)

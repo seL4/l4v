@@ -584,7 +584,7 @@ lemma resume_cur_thread_cross:
   by (case_tac "scheduler_action a", simp_all add: state_relation_def)
 
 lemma ct_running_cross:
-  "\<lbrakk>(a,c) \<in> state_relation; ct_running a; pspace_aligned a; pspace_distinct a\<rbrakk> \<Longrightarrow> ct_running' c"
+  "\<lbrakk>(a,c) \<in> state_relation; ct_running a; pspace_aligned' c; pspace_distinct' c\<rbrakk> \<Longrightarrow> ct_running' c"
   apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
   apply (frule st_tcb_at_coerce_concrete)
      apply fastforce+
@@ -592,7 +592,7 @@ lemma ct_running_cross:
   done
 
 lemma ct_idle_cross:
-  "\<lbrakk>(a,c) \<in> state_relation; ct_idle a; pspace_aligned a; pspace_distinct a\<rbrakk> \<Longrightarrow> ct_idle' c"
+  "\<lbrakk>(a,c) \<in> state_relation; ct_idle a; pspace_aligned' c; pspace_distinct' c\<rbrakk> \<Longrightarrow> ct_idle' c"
   apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
   apply (frule st_tcb_at_coerce_concrete)
      apply fastforce+
@@ -600,7 +600,7 @@ lemma ct_idle_cross:
   done
 
 lemma ct_running_or_idle_cross:
-  "\<lbrakk>(a,c) \<in> state_relation; ct_running a \<or> ct_idle a; pspace_aligned a; pspace_distinct a\<rbrakk>
+  "\<lbrakk>(a, c) \<in> state_relation; ct_running a \<or> ct_idle a; pspace_aligned' c; pspace_distinct' c\<rbrakk>
    \<Longrightarrow> ct_running' c \<or> ct_idle' c"
   apply (fastforce dest: ct_running_cross ct_idle_cross)
   done
@@ -700,7 +700,7 @@ lemma kernel_corres':
              apply fastforce
             apply simp
            apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
-           apply (drule (3) st_tcb_at_coerce_concrete[OF _ _ invs_psp_aligned invs_distinct])
+           apply (drule (1) st_tcb_at_coerce_concrete, fastforce+)
            apply (clarsimp simp: pred_tcb_at'_def obj_at'_def state_relation_def)
            apply (rename_tac st; case_tac st; clarsimp)
           apply (wpsimp wp: schedule_valid_sched
@@ -715,7 +715,7 @@ lemma kernel_corres':
        apply (clarsimp simp: state_relation_def schact_is_rct_def sched_act_relation_def)
        apply (case_tac "scheduler_action s"; clarsimp)
       apply (drule schact_is_rct, clarsimp)
-      apply (frule (3) st_tcb_at_coerce_concrete[OF _ _ invs_psp_aligned invs_distinct])
+      apply (frule (1) st_tcb_at_coerce_concrete, fastforce+)
       apply (clarsimp simp: pred_tcb_at'_def obj_at'_def state_relation_def)
       apply (rename_tac st; case_tac st; clarsimp)
      apply wpsimp
@@ -798,8 +798,8 @@ lemma kernel_corres:
        apply (rule kernel_corres')
       apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
        apply simp
-      apply (simp add: kernelExitAssertions_def)
-      apply (fastforce intro: cur_tcb_cross simp: state_relation_def)
+      apply (clarsimp simp: kernelExitAssertions_def)
+      apply (fastforce intro: cur_tcb_cross pspace_aligned_cross pspace_distinct_cross)
      apply (rule hoare_vcg_conj_lift)
       apply (rule_tac Q'="\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)" in hoare_post_imp, fastforce)
       apply (wp akernel_invs_det_ext)
@@ -842,7 +842,6 @@ lemma entry_corres:
          apply fastforce
         apply (rule corres_split [OF kernel_corres])
           apply (rule_tac P=invs and P'=\<top> in corres_inst)
-          apply add_cur_tcb'
           apply (rule corres_guard_imp)
             apply (rule corres_split_eqr[OF getCurThread_corres])
               apply (rule threadGet_corres)
@@ -1202,7 +1201,14 @@ lemma fw_sim_A_H:
     apply clarsimp
     apply (rule_tac x=abs_state' in exI)
     apply clarsimp
-    apply (drule_tac a=abs_state' in ct_running_cross; clarsimp)
+    apply (frule_tac s=abs_state' in invs_psp_aligned)
+    apply (frule_tac s'=conc_state' in pspace_aligned_cross)
+     apply fastforce
+    apply (frule_tac s=abs_state' in invs_distinct)
+    apply (frule_tac s'=conc_state' in pspace_distinct_cross)
+      apply fastforce
+     apply fastforce
+    apply (force dest!: ct_running_cross)
    apply (erule_tac P="a \<and> b" for a b in disjE)
     apply (clarsimp simp: do_user_op_H_def do_user_op_A_def monad_to_transition_def)
     apply (rule rev_mp, rule_tac tc1=tc and f1=uop and P="ct_running and einvs" in corres_guard_imp2[OF do_user_op_corres])

@@ -769,10 +769,9 @@ lemma list_all_remove1: "list_all P ls \<Longrightarrow> list_all P (remove1 x l
 declare reply_unlink_sc_invs[wp]
 
 lemma  sched_context_clear_ntfn_sc_yf_helper[wp]:
-  "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
-                            st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>
-      sched_context_unbind_ntfn scptr \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
-                            st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
+  "sched_context_unbind_ntfn scptr
+   \<lbrace>\<lambda> s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
+                               st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
   apply (clarsimp simp: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
   apply (rule bind_wp[OF _ get_sched_context_sp])
   apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
@@ -846,20 +845,15 @@ lemma sched_context_unbind_all_tcbs_sc_yf_helper[wp]:
   done
 
 lemma set_sc_rm_iflive[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-     set_sc_obj_ref sc_refill_max_update t tcb
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  "set_sc_obj_ref sc_refill_max_update t tcb \<lbrace>if_live_then_nonz_cap\<rbrace>"
   apply (wpsimp simp: update_sched_context_def wp: get_object_wp)
   apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
   apply (fastforce simp: obj_at_def live_def live_sc_def)
   done
 
 lemma set_sc_rm_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
-   set_sc_obj_ref sc_refill_max_update t tcb
-   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_object_def update_sched_context_def
-                wp: get_object_wp)
+  "set_sc_obj_ref sc_refill_max_update t tcb \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
   by (fastforce elim!: rsubst[where P=P]
                  simp: state_refs_of_def obj_at_def Un_def split_def  Collect_eq get_refs_def2
                 split: option.splits if_splits)
@@ -1862,12 +1856,11 @@ lemma sched_context_set_inactive_not_live[wp]:
 
 lemma sched_context_unbind_ntfn_unbinds:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None) sc \<rbrace>
-      sched_context_unbind_ntfn sc
-   \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None \<and> sc_ntfn sc = None) sc\<rbrace>"
-  unfolding sched_context_unbind_ntfn_def
-  apply (wpsimp simp: update_sched_context_def set_object_def update_sk_obj_ref_def
-                      set_simple_ko_def get_sc_obj_ref_def
-                  wp: get_object_wp get_simple_ko_wp )
+   sched_context_unbind_ntfn sc
+   \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None \<and> sc_ntfn sc = None) sc\<rbrace>"
+  unfolding sched_context_unbind_ntfn_def update_sk_obj_ref_def
+  apply (wpsimp simp: set_simple_ko_def get_sc_obj_ref_def
+                  wp: update_sched_context_wp set_object_wp get_object_wp get_simple_ko_wp)
   by (auto simp: obj_at_def)
 
 lemma sched_context_unbind_ntfn_valid_objs[wp]:
@@ -1910,13 +1903,12 @@ lemma sched_context_unbind_all_tcbs_unbinds:
 
 lemma finalise_cap_replaceable_helper:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None \<and> sc_ntfn sc = None) sc \<rbrace>
-      sched_context_unbind_reply sc
-   \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None
-                                \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc\<rbrace>"
+   sched_context_unbind_reply sc
+   \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None
+                          \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc\<rbrace>"
   unfolding sched_context_unbind_reply_def
-  apply (wpsimp simp: update_sched_context_def set_object_def update_sk_obj_ref_def
-                      set_simple_ko_def get_sc_obj_ref_def
-                  wp: get_object_wp get_simple_ko_wp )
+  apply (wpsimp simp: update_sk_obj_ref_def set_simple_ko_def
+                  wp: update_sched_context_wp set_object_wp get_object_wp get_simple_ko_wp )
   by (auto simp: obj_at_def)
 
 end

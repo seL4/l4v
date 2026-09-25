@@ -630,8 +630,8 @@ lemma ep_at_pred_obj_at:
 lemma make_fault_msg_ko_at_Endpoint[wp]:
   "make_fault_msg f sender \<lbrace>\<lambda>s. P (ko_at (Endpoint ep) p s)\<rbrace>"
   by (cases f;
-      wpsimp simp: tcb_agnostic_pred_def sched_context_update_consumed_def update_sched_context_def
-               wp: as_user.tcb_agnostic_obj_at set_object_wp get_object_wp
+      wpsimp simp: tcb_agnostic_pred_def sched_context_update_consumed_def
+               wp: update_sched_context_wp as_user.tcb_agnostic_obj_at
         split_del: if_split;
       clarsimp simp: obj_at_def)
 
@@ -639,8 +639,8 @@ lemma make_fault_msg_ep_at_pred[wp]:
   "make_fault_msg f sender \<lbrace>\<lambda>s. Q (ep_at_pred P p s)\<rbrace>"
   unfolding ep_at_pred_obj_at
   apply (cases f;
-         wpsimp simp: tcb_agnostic_pred_def sched_context_update_consumed_def update_sched_context_def
-                  wp: as_user.tcb_agnostic_obj_at set_object_wp get_object_wp
+         wpsimp simp: tcb_agnostic_pred_def sched_context_update_consumed_def
+                  wp: update_sched_context_wp as_user.tcb_agnostic_obj_at
            split_del: if_split)
   apply (fastforce elim: rsubst[where P=Q] simp: obj_at_def)
   done
@@ -1245,15 +1245,15 @@ crunch maybe_return_sc
 
 lemma set_sc_obj_ref_ko_not_tcb_at[wp]:
   "set_sc_obj_ref f scp v \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def obj_at_def pred_neg_def
-               wp: get_object_wp)
+  unfolding update_sched_context_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  by (clarsimp simp: obj_at_def pred_neg_def split: if_splits)
 
-lemma set_sc_obj_ref_valid_tcb[wp]:
-  "set_sc_obj_ref f scp v \<lbrace>valid_tcb ptr tcb\<rbrace>"
-  by (wpsimp wp: get_object_wp simp: update_sched_context_def)
+crunch update_sched_context
+  for valid_tcb[wp]: "valid_tcb ptr tcb"
 
 lemma set_sc_obj_ref_valid_tcbs[wp]:
-  "set_sc_obj_ref f scp v \<lbrace>valid_tcbs\<rbrace>"
+  "update_sched_context ptr f \<lbrace>valid_tcbs\<rbrace>"
   unfolding valid_tcbs_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
@@ -1371,14 +1371,13 @@ crunch reschedule_required
   (wp: crunch_wps simp: crunch_simps)
 
 lemma maybe_return_sc_sc_at_ppred:
-  "\<lbrace>sc_at_ppred proj P scp and bound_sc_tcb_at (\<lambda>x. x \<noteq> Some scp) tcb_ptr\<rbrace>
+  "\<lbrace>sc_at_ppred proj P scp and bound_sc_tcb_at (\<lambda>sc_ptr_opt. sc_ptr_opt \<noteq> Some scp) tcb_ptr\<rbrace>
    maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv. sc_at_ppred proj P scp\<rbrace>"
-  apply (wpsimp simp: maybe_return_sc_def update_sched_context_def
-                      thread_set_def set_object_def
-                      get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
-                      get_object_def)
-  by (auto simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def get_tcb_SomeD)
+   \<lbrace>\<lambda>_. sc_at_ppred proj P scp\<rbrace>"
+  unfolding maybe_return_sc_def
+  apply (wpsimp wp: update_sched_context_wp thread_set_wp thread_get_wp get_object_wp
+              simp: get_tcb_obj_ref_def get_sk_obj_ref_def get_simple_ko_def)
+  by (fastforce simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def get_tcb_SomeD)
 
 lemma reschedule_required_cur_sc_tcb':
   "\<lbrace>\<lambda>s. sc_tcb_sc_at \<top> (cur_sc s) s\<rbrace> reschedule_required \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
@@ -1394,8 +1393,7 @@ lemma maybe_return_sc_cur_sc_tcb[wp]:
    \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   supply reschedule_required_cur_sc_tcb' [wp]
   supply reschedule_required_cur_sc_tcb [wp del]
-  apply (wpsimp simp: maybe_return_sc_def update_sched_context_def
-                      thread_set_def set_object_def
+  apply (wpsimp simp: maybe_return_sc_def update_sched_context_def thread_set_def set_object_def
                       get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
                       get_object_def)
   apply (case_tac "thread = cur_thread s"; simp)
@@ -1415,12 +1413,11 @@ lemma maybe_return_sc_invs[wp]:
            simp: invs_def valid_state_def valid_pspace_def)
 
 lemma maybe_return_sc_ko_at_Endpoint[wp]:
-  "maybe_return_sc ntfn_ptr thread \<lbrace>\<lambda>s. ko_at (Endpoint ep) ep_ptr s\<rbrace>"
-  apply (wpsimp simp: maybe_return_sc_def update_sched_context_def
-                      thread_set_def set_object_def
-                      get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
-                      get_object_def)
-  by (auto simp: obj_at_def)
+  "maybe_return_sc ntfn_ptr thread \<lbrace>ko_at (Endpoint ep) ep_ptr\<rbrace>"
+  unfolding maybe_return_sc_def
+  apply (wpsimp wp: update_sched_context_wp thread_get_wp' thread_set_wp get_object_wp
+              simp: get_tcb_obj_ref_def get_sk_obj_ref_def get_simple_ko_def)
+  by (fastforce simp: obj_at_def get_tcb_def)
 
 crunch receive_ipc_preamble
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
@@ -2684,19 +2681,16 @@ lemma schedule_tcb_invs':
   apply wpsimp
   done
 
-lemma set_sc_obj_ref_bound_sc_tcb_at_cur_thread [wp]:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
-   set_sc_obj_ref f ref new
-   \<lbrace>\<lambda>rv s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def
-                   pred_tcb_at_def obj_at_def)
+lemma set_sc_obj_ref_bound_sc_tcb_at_cur_thread[wp]:
+  "set_sc_obj_ref f ref new \<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
+  by (rule hoare_lift_Pf2[where f=cur_thread]; wpsimp)
 
-lemma set_sc_tcb_cur_sc [wp]:
+lemma set_sc_tcb_cur_sc[wp]:
   "\<lbrace>\<lambda>s. sc_ptr = cur_sc s\<rbrace>
    set_sc_obj_ref sc_tcb_update sc_ptr tcb_ptr
-   \<lbrace>\<lambda>rv s. sc_tcb_sc_at ((=) tcb_ptr) (cur_sc s) s\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def
-                   sc_tcb_sc_at_def obj_at_def)
+   \<lbrace>\<lambda>_ s. sc_tcb_sc_at ((=) tcb_ptr) (cur_sc s) s\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
 lemma set_tcb_sc_cur_thread [wp]:
   "\<lbrace>\<lambda>s. tcb_ptr = cur_thread s\<rbrace>

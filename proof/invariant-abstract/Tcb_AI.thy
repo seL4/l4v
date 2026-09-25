@@ -359,10 +359,8 @@ lemma possible_switch_to_valid_tcbs[wp]:
 
 lemma update_sched_context_ko_at_TCB[wp]:
   "update_sched_context ref f \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
-  apply (clarsimp simp: update_sched_context_def)
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
-  done
+  apply (wpsimp wp: update_sched_context_wp)
+  by (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
 
 crunch restart_thread_if_no_fault
   for valid_tcbs[wp]: valid_tcbs

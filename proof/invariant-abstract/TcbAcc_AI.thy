@@ -2871,6 +2871,10 @@ crunch arch_thread_set
   and exst[wp]: "\<lambda>s. P (exst s)"
   (wp: set_object_wp)
 
+crunch set_object
+  for ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  (wp: crunch_wps)
+
 lemma arch_thread_set_no_change_arch_tcb_at:
   "\<lbrakk>\<And>atcb. P (arch_tcb_to_iarch_tcb (f atcb)) = P (arch_tcb_to_iarch_tcb atcb)\<rbrakk>
    \<Longrightarrow> arch_thread_set f t' \<lbrace>\<lambda>s. Q (arch_tcb_at P t s)\<rbrace>"

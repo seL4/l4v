@@ -175,7 +175,7 @@ lemma decodeSchedcontext_Bind_corres:
   apply (cases excaps'; clarsimp)
   apply (rule corres_splitEE_forwards')
      apply (corresKsimp corres: get_sc_corres)
-     apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
+     apply (fastforce intro: sc_at_cross)
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
   apply (case_tac cap; clarsimp)
@@ -239,14 +239,14 @@ lemma decodeSchedContext_UnbindObject_corres:
    apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
    apply (rule corres_splitEE_forwards')
       apply (corresKsimp corres: get_sc_corres)
-      apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
+      apply (fastforce intro: sc_at_cross)
      apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
     apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
    apply (corresKsimp simp: sc_relation_def)
   apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
   apply (rule corres_splitEE_forwards')
      apply (corresKsimp corres: get_sc_corres)
-     apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
+     apply (fastforce intro: sc_at_cross)
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
   apply (rule corres_splitEE_forwards')
@@ -270,7 +270,7 @@ lemma decodeSchedContext_YieldTo_corres:
   apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
   apply (rule corres_splitEE_forwards')
      apply (corresKsimp corres: get_sc_corres)
-     apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
+     apply (fastforce intro: sc_at_cross)
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
   apply (rule corres_splitEE_forwards')
@@ -337,7 +337,7 @@ lemma decode_sc_inv_corres:
   apply (clarsimp simp: returnOk_def)
   apply (rule corres_splitEE_forwards')
      apply (corresKsimp corres: get_sc_corres)
-     apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
+     apply (fastforce intro: sc_at_cross)
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
   apply (rule corres_splitEE_forwards')
@@ -409,6 +409,7 @@ lemma schedContextBindNtfn_corres:
       and (\<lambda>s. sym_refs (state_refs_of s)) and pspace_aligned and pspace_distinct)
      \<top>
      (sched_context_bind_ntfn scp ntfnp) (schedContextBindNtfn scp ntfnp)"
+  apply add_pspace_adb
   apply add_sym_refs
   unfolding sched_context_bind_ntfn_def schedContextBindNtfn_def
   apply (clarsimp simp: updateNotification_def update_sk_obj_ref_def bind_assoc)
@@ -490,6 +491,7 @@ lemma returnConsumed_corres:
   "corres (=)
      (sc_at scp and pspace_aligned and pspace_distinct and cur_tcb) \<top>
      (return_consumed scp) (returnConsumed scp)"
+  apply add_pspace_adb
   apply (clarsimp simp: return_consumed_def returnConsumed_def)
   apply (rule_tac Q'=cur_tcb' in corres_cross_add_guard)
    apply (fastforce intro!: cur_tcb_cross)
@@ -744,7 +746,7 @@ lemma schedContextYieldTo_corres:
                               sched_context_resume_not_in_release_q_other
                    | wps)+)[1]
           apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
-           apply clarsimp
+           apply fastforce
           apply (wpsimp wp: hoare_case_option_wp)
          apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def)
          apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
@@ -766,7 +768,7 @@ lemma schedContextYieldTo_corres:
      apply wpsimp+
    apply (fastforce simp: sc_tcb_sc_at_def obj_at_def is_sc_obj
                    elim!: valid_sched_context_size_objsI[OF invs_valid_objs])
-  apply clarsimp
+  apply fastforce
   done
 
 crunch sched_context_unbind_ntfn, sched_context_unbind_all_tcbs
@@ -867,6 +869,7 @@ lemma refillNew_corres:
    corres dc
      (pspace_aligned and pspace_distinct and sc_obj_at n sc_ptr and valid_objs) valid_objs'
      (refill_new sc_ptr max_refills budget period) (refillNew sc_ptr max_refills budget period)"
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard
                [where Q' = "sc_at' sc_ptr and (\<lambda>s'. ((\<lambda>sc. scSize sc = n) |< scs_of' s') sc_ptr)"])
    apply (fastforce dest!: sc_obj_at_cross[OF state_relation_pspace_relation]
@@ -948,6 +951,7 @@ lemma refillUpdate_corres:
      (refillUpdate sc_ptr period budget max_refills)"
   (is "_ \<Longrightarrow> _ \<Longrightarrow> corres _ (?pred and _) ?conc _ _")
   supply getSchedContext_wp[wp del] set_sc'.get_wp[wp del] projection_rewrites[simp] if_cong[cong]
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q' = "sc_at' sc_ptr"])
    apply (fastforce dest!: sc_obj_at_cross[OF state_relation_pspace_relation]
                      simp: obj_at'_def opt_map_red objBits_simps)

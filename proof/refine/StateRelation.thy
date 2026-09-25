@@ -670,35 +670,6 @@ lemma pspace_relation_absD:
   apply (fastforce simp: image_def intro: rev_bexI)
   done
 
-lemma (in Arch) pspace_relation_None:
-  "\<lbrakk>pspace_relation p p'; p' ptr = None \<rbrakk> \<Longrightarrow> p ptr = None"
-  apply (rule not_Some_eq[THEN iffD1, OF allI, OF notI])
-  apply (drule(1) pspace_relation_absD)
-   apply (case_tac y; clarsimp simp: cte_map_def of_bl_def well_formed_cnode_n_def split: if_splits)
-   subgoal for n
-    apply (drule spec[of _ ptr])
-    apply (drule spec)
-    apply clarsimp
-    apply (drule spec[of _ "replicate n False"])
-    apply (drule mp[OF _ refl])
-     apply (drule mp)
-    subgoal premises by (induct n; simp)
-    apply clarsimp
-    done
-  subgoal for x
-     apply (cases x; clarsimp)
-   apply ((drule spec[of _ 0], fastforce)+)[2]
-   apply (drule spec[of _ ptr])
-   apply (drule spec)
-   apply clarsimp
-   apply (drule mp[OF _ refl])
-   apply (drule spec[of _ 0])
-   subgoal for _ sz by (cases sz; simp add: ptTranslationBits_def)
-   done
-  done
-
-requalify_facts Arch.pspace_relation_None (* FIXME arch-split RT *)
-
 lemma in_related_pspace_dom:
   "\<lbrakk> s' x = Some y; pspace_relation s s' \<rbrakk> \<Longrightarrow> x \<in> pspace_dom s"
   by (clarsimp simp add: pspace_relation_def)
@@ -807,120 +778,6 @@ lemma sym_replies_next_then_prev_id_p:
   supply opt_map_red[simp]
   apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs)
   by (drule (1) sym_refsD[rotated], simp)
-
-(* Some results related to the size of scheduling contexts *)
-
-lemma sc_const_eq:
-  "refillSizeBytes = (refill_size_bytes::nat)"
-  "schedContextStructSize = sizeof_sched_context_t"
-  "minSchedContextBits = min_sched_context_bits"
-  by (auto simp: refillSizeBytes_def refill_size_bytes_def minSchedContextBits_def
-                 wordSize_def RISCV64.wordBits_def' word_size_def (* FIXME arch-split RT *)
-                 sizeof_sched_context_t_def min_sched_context_bits_def schedContextStructSize_def)
-
-lemma max_num_refills_eq_refillAbsoluteMax':
-  "max_num_refills = refillAbsoluteMax'"
-  by (rule ext)
-     (simp add: max_num_refills_def refillAbsoluteMax'_def shiftL_nat sc_const_eq)
-
-lemma maxUntyped_eq:
-  "untyped_max_bits = maxUntypedSizeBits"
-  by (simp add: RISCV64_A.untyped_max_bits_def RISCV64_H.maxUntypedSizeBits_def) (* FIXME arch-split RT *)
-
-lemmas sc_const_conc = sc_const_eq[symmetric] max_num_refills_eq_refillAbsoluteMax' maxUntyped_eq
-
-lemma refillAbsoluteMax'_mono:
-  fixes x y
-  assumes "minSchedContextBits \<le> x"
-    and "x \<le> y"
-  shows "refillAbsoluteMax' x \<le> refillAbsoluteMax' y"
-proof -
-  show ?thesis
-    unfolding refillAbsoluteMax'_def
-    using assms
-    by (simp add: diff_le_mono div_le_mono shiftL_nat)
-qed
-
-lemmas scBits_simps = refillAbsoluteMax_def sc_size_bounds_def sc_const_conc
-
-lemma minSchedContextBits_check:
-  "minSchedContextBits = (LEAST n. schedContextStructSize + MIN_REFILLS * refillSizeBytes \<le> 2 ^ n)"
-proof -
-  note simps = minSchedContextBits_def sc_const_eq(2) sizeof_sched_context_t_def word_size_def
-               MIN_REFILLS_def refillSizeBytes_def
-  show ?thesis
-    apply (rule sym)
-    apply (rule Least_equality)
-     apply (clarsimp simp: simps)
-    apply (rename_tac n)
-    apply (rule ccontr)
-    apply (simp add: not_le)
-    apply (prop_tac "2 ^ n \<le> 2 ^ (minSchedContextBits - 1)")
-     apply (fastforce intro: power_increasing_iff[THEN iffD2])
-    using less_le_trans
-    by (fastforce simp: simps)
-qed
-
-lemma minSchedContextBits_rel:
-  "schedContextStructSize + MIN_REFILLS * refillSizeBytes \<le> 2 ^ minSchedContextBits"
-  apply (simp add: minSchedContextBits_check)
-  by (meson self_le_ge2_pow order_refl wellorder_Least_lemma(1))
-
-lemma refillAbsoluteMax'_greatest:
-  assumes "schedContextStructSize \<le> 2 ^ n"
-  shows "refillAbsoluteMax' n = (GREATEST r. schedContextStructSize + r * refillSizeBytes \<le> 2 ^ n)"
-  apply (simp flip: max_num_refills_eq_refillAbsoluteMax'
-               add: max_num_refills_def scBits_simps(4) scBits_simps(3))
-  apply (rule sym)
-  apply (rule Greatest_equality)
-   apply (metis assms le_diff_conv2 le_imp_diff_is_add div_mult_le le_add1 diff_add_inverse)
-  apply (rename_tac r)
-  apply (prop_tac "r * refillSizeBytes \<le> 2 ^ n - schedContextStructSize")
-   apply linarith
-  apply (drule_tac k=refillSizeBytes in div_le_mono)
-  by (simp add: refillSizeBytes_def)
-
-lemma refillAbsoluteMax'_leq:
-  "schedContextStructSize \<le> 2 ^ n \<Longrightarrow>
-   schedContextStructSize + refillAbsoluteMax' n * refillSizeBytes \<le> 2 ^ n"
-  apply (frule refillAbsoluteMax'_greatest)
-   apply (simp add: refillSizeBytes_def)
-  apply (rule_tac b="2 ^ n" in GreatestI_ex_nat)
-   apply presburger
-  by fastforce
-
-lemma schedContextStructSize_minSchedContextBits:
-  "schedContextStructSize \<le> 2 ^ minSchedContextBits"
-  apply (insert minSchedContextBits_check)
-  by (metis LeastI_ex add_leD1 le_refl self_le_ge2_pow)
-
-lemma MIN_REFILLS_refillAbsoluteMax'[simp]:
-  "minSchedContextBits \<le> us \<Longrightarrow> MIN_REFILLS \<le> refillAbsoluteMax' us"
-  apply (insert minSchedContextBits_rel)
-  apply (frule_tac b1=2 in power_increasing_iff[THEN iffD2, rotated])
-   apply fastforce
-  apply (subst refillAbsoluteMax'_greatest)
-   apply (insert schedContextStructSize_minSchedContextBits)
-   apply (fastforce elim!: order_trans)
-  apply (rule_tac b="2 ^ us" in Greatest_le_nat)
-   apply (fastforce intro: order_trans)
-  apply (clarsimp simp: refillSizeBytes_def)
-  done
-
-lemma length_scRefills_bounded:
-  "\<lbrakk>valid_sched_context' sc s; valid_sched_context_size' sc\<rbrakk>
-   \<Longrightarrow> refillSizeBytes * length (scRefills sc) < 2 ^ word_bits"
-  apply (clarsimp simp: valid_sched_context_size'_def sc_size_bounds_def gen_objBits_simps
-                        valid_sched_context'_def)
-  apply (insert schedContextStructSize_minSchedContextBits)
-  apply (prop_tac "schedContextStructSize \<le> 2 ^ (minSchedContextBits + scSize sc)")
-   apply (fastforce intro: order_trans)
-  apply (frule_tac n="minSchedContextBits + scSize sc" in refillAbsoluteMax'_leq)
-  apply (rule_tac y="2 ^ (minSchedContextBits + scSize sc)" in le_less_trans)
-   apply (clarsimp simp: refillSizeBytes_def)
-  apply simp
-  apply (clarsimp simp add: word_bits_def RISCV64.untypedBits_defs) (* FIXME arch-split RT *)
-  done
 
 (* for handling refill buffer *)
 
@@ -1131,5 +988,7 @@ locale StateRelation_R =
     "\<And>s s'.
      ghost_relation_wrapper s s'
      \<Longrightarrow> ups_of_heap (kheap s) = gsUserPages s' \<and> cns_of_heap (kheap s) = gsCNodes s'"
+  assumes pspace_relation_None:
+    "\<And>p p' ptr. \<lbrakk>pspace_relation p p'; p' ptr = None \<rbrakk> \<Longrightarrow> p ptr = None"
 
 end

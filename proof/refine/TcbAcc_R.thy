@@ -360,9 +360,14 @@ lemma (in TcbAcc_R) setObject_update_TCB_corres:
                   dest!: readObject_misc_ko_at')+
   done
 
+method add_pspace_adb =
+  rule_tac Q'="pspace_aligned' and pspace_distinct' and pspace_bounded'" in corres_cross_add_guard,
+  fastforce intro!: pspace_aligned_cross pspace_distinct_cross pspace_relation_pspace_bounded'
+
 lemma getObject_TCB_corres:
   "corres tcb_relation (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (gets_the (get_tcb t)) (getObject t)"
+  apply add_pspace_adb
   apply (rule corres_cross_over_guard[where Q="tcb_at' t"])
    apply (fastforce simp: tcb_at_cross state_relation_def)
   apply (rule corres_guard_imp)
@@ -984,14 +989,6 @@ lemma threadSet_valid_dom_schedule':
   "threadSet F t \<lbrace>valid_dom_schedule'\<rbrace>"
   by (wp valid_dom_schedule'_lift)
 
-lemma threadSet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb :: tcb. ko_at' tcb t s \<longrightarrow> P (set_obj' t (f tcb) s)\<rbrace>
-   threadSet f t
-   \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding threadSet_def
-  apply (wpsimp wp: setObject_tcb_wp set_tcb'.getObject_wp)
-  done
-
 lemma threadSet_sched_pointers:
   "\<lbrakk>\<And>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb; \<And>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb\<rbrakk>
    \<Longrightarrow> threadSet F tcbPtr \<lbrace>\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
@@ -1276,6 +1273,7 @@ lemmas getThreadState_corres = getThreadState_corres'[OF refl]
 lemma is_blocked_corres:
   "corres (=) (pspace_aligned and pspace_distinct and tcb_at tcb_ptr)  \<top>
               (is_blocked tcb_ptr) (isBlocked tcb_ptr)"
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' tcb_ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   unfolding is_blocked_def isBlocked_def
@@ -3246,12 +3244,6 @@ lemma set_endpoint_ep_queues_of_other:
   by (wpsimp wp: set_simple_ko_wp)
      (clarsimp simp: eps_of_kh_def opt_map_def)
 
-lemma threadSet_dom_tcbs_of'[wp]:
-  "threadSet f tcbPtr \<lbrace>\<lambda>s. P (dom (tcbs_of' s))\<rbrace>"
-  apply (wpsimp wp: threadSet_wp)
-  apply (fastforce elim: rsubst[where P=P] simp: opt_map_def obj_at'_def)
-  done
-
 crunch tcbQueueRemove, orderedInsert
   for dom_tcbs_of'[wp]: "\<lambda>s. P (dom (tcbs_of' s))"
   (wp: crunch_wps)
@@ -3491,6 +3483,7 @@ lemma tcbSchedEnqueue_corres:
      (valid_sched_pointers and valid_tcbs')
      (tcb_sched_action tcb_sched_enqueue tcb_ptr) (tcbSchedEnqueue tcbPtr)"
   supply if_split[split del] bind_return[simp del] return_bind[simp del]
+  apply add_pspace_adb
   apply (rule_tac Q'="st_tcb_at' runnable' tcbPtr" in corres_cross_add_guard)
    apply (fastforce intro!: st_tcb_at_runnable_cross simp: vs_all_heap_simps obj_at_def is_tcb_def)
   apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
@@ -3784,6 +3777,7 @@ lemma inReleaseQueue_corres:
   "corres (\<longleftrightarrow>)
      (tcb_at tcbPtr and pspace_aligned and pspace_distinct) \<top>
      (gets (in_release_queue tcbPtr)) (inReleaseQueue tcbPtr)"
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' tcbPtr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (rule corres_bind_return)
@@ -3914,7 +3908,7 @@ lemma runnable_tsr:
   by (case_tac ts, auto)
 
 lemma runnable_runnable'_eq:
-  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; tcb_at t s\<rbrakk>
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned' s'; pspace_distinct' s'; tcb_at t s\<rbrakk>
    \<Longrightarrow> (runnable |< (tcbs_of s ||> tcb_state)) t = (runnable' |< (tcbs_of' s' ||> tcbState)) t"
   apply (frule state_relation_pspace_relation)
   apply (frule (3) tcb_at_cross)
@@ -3924,7 +3918,8 @@ lemma runnable_runnable'_eq:
                split: Structures_A.kernel_object.splits)
 
 lemma sc_active_cross_eq:
-  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; tcb_at t s; valid_tcbs s\<rbrakk>
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s';
+    tcb_at t s; valid_tcbs s\<rbrakk>
    \<Longrightarrow> (sc_active |< (tcbs_of s |> tcb_sched_context |> scs_of s)) t = active_sc_tcb_at' t s'"
   apply (clarsimp simp: active_sc_tcb_at'_def)
   apply (frule state_relation_pspace_relation)
@@ -3950,7 +3945,8 @@ lemma sc_active_cross_eq:
           split: Structures_A.kernel_object.splits option.splits)
 
 lemma schedulable_schedulable'_eq:
-  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; tcb_at t s; valid_tcbs s\<rbrakk>
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s';
+    tcb_at t s; valid_tcbs s\<rbrakk>
    \<Longrightarrow> schedulable t s = schedulable' t s'"
   apply (clarsimp simp: schedulable_def schedulable'_def)
   apply (intro conj_cong)
@@ -3964,6 +3960,7 @@ lemma getSchedulable_corres:
   "corres (=)
      (valid_tcbs and pspace_aligned and pspace_distinct and tcb_at t) valid_tcbs'
      (gets (schedulable t)) (getSchedulable t)"
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
   apply (rule corres_bind_return2)
@@ -4163,6 +4160,7 @@ lemma setThreadState_corres:
      (valid_tcbs and pspace_aligned and pspace_distinct and tcb_at t and valid_tcb_state ts)
      valid_tcbs'
      (set_thread_state t ts) (setThreadState ts' t)"
+  apply add_pspace_adb
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (solves \<open>fastforce simp: state_relation_def intro: tcb_at_cross\<close>)
   apply (simp add: set_thread_state_def setThreadState_def)
@@ -6367,6 +6365,7 @@ lemma tcbSchedDequeue_corres:
      (sym_heap_sched_pointers and valid_objs')
      (tcb_sched_action tcb_sched_dequeue tcb_ptr) (tcbSchedDequeue tcbPtr)"
   supply if_split[split del] bind_return[simp del] return_bind[simp del]
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' tcbPtr" in corres_cross_add_guard)
    apply (fastforce intro!: tcb_at_cross simp: vs_all_heap_simps obj_at_def is_tcb_def)
   apply (clarsimp simp: tcb_sched_action_def get_tcb_queue_def

@@ -662,15 +662,17 @@ lemma cancel_signal_invs:
                    dest: idle_only_sc_refs elim: pred_tcb_weakenE)
   done
 
-lemma reply_unlink_sc_sc_tcb_sc_at [wp]:
-  "\<lbrace>\<lambda>s. sc_tcb_sc_at (P (idle_thread s)) scp' s\<rbrace>
-   reply_unlink_sc scp rp
-   \<lbrace>\<lambda>_ s. sc_tcb_sc_at (P (idle_thread s)) scp' s\<rbrace>"
-  apply (wpsimp simp: reply_unlink_sc_def update_sched_context_def set_object_def
-                      get_object_def update_sk_obj_ref_def set_simple_ko_def get_simple_ko_def
-                      get_sched_context_def)
-  apply (auto simp: sc_tcb_sc_at_def obj_at_def)
-  done
+crunch reply_unlink_sc
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps)
+
+crunch reply_unlink_sc
+  for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)"
+  (wp: crunch_wps ignore: update_sk_obj_ref)
+
+lemma reply_unlink_sc_sc_tcb_sc_at_it[wp]:
+  "reply_unlink_sc scp rp \<lbrace>\<lambda>s. sc_tcb_sc_at (P (idle_thread s)) scp' s\<rbrace>"
+  by (rule hoare_lift_Pf2[where f=idle_thread]; (solves wpsimp)?)
 
 lemma reply_unlink_tcb_reply_at [wp]:
   "\<lbrace>reply_at rp'\<rbrace> reply_unlink_tcb t rp \<lbrace>\<lambda>_. reply_at rp'\<rbrace>"
@@ -765,13 +767,9 @@ crunch reply_unlink_sc, restart_thread_if_no_fault
   and valid_cur_fpu[wp]: valid_cur_fpu
   (wp: get_simple_ko_wp valid_irq_node_typ crunch_wps sts_only_idle valid_cur_fpu_lift)
 
-lemma reply_unlink_sc_sc_at [wp]:
-  "\<lbrace>sc_at scp'\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>rv. sc_at scp'\<rbrace>"
-  apply (wpsimp simp: reply_unlink_sc_def update_sk_obj_ref_def set_simple_ko_def set_object_def
-                      get_object_def get_simple_ko_def obj_at_def is_sc_obj_def
-                      update_sched_context_def)
-  apply auto
-  done
+crunch reply_unlink_sc
+  for sc_at[wp]: "sc_at sc_ptr"
+  (wp: crunch_wps)
 
 lemma reply_unlink_tcb_sc_tcb_sc_at [wp]:
   "\<lbrace>\<lambda>s. Q (sc_tcb_sc_at (P (idle_thread s)) scp' s)\<rbrace>

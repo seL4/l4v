@@ -356,12 +356,18 @@ where
      return $ f sc
    od"
 
+abbreviation set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
+  "set_sched_context ptr sc n \<equiv> set_object ptr (SchedContext sc n)"
+
 definition (* update only the schedcontext in place, keeping the size *)
   update_sched_context :: "obj_ref \<Rightarrow> (sched_context \<Rightarrow> sched_context) \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "update_sched_context ptr f  \<equiv> do
      obj \<leftarrow> get_object ptr;
-     case obj of SchedContext sc n \<Rightarrow> set_object ptr (SchedContext (f sc) n) | _ \<Rightarrow> fail
+     case obj of
+         SchedContext sc n \<Rightarrow> set_sched_context ptr (f sc) n
+       | _ \<Rightarrow> fail
    od"
 
 abbreviation

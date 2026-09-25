@@ -224,6 +224,7 @@ lemma getRefillHead_corres:
       and is_active_sc sc_ptr and sc_at sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
      valid_objs'
      (get_refill_head sc_ptr) (getRefillHead scPtr)"
+  apply add_pspace_adb
   apply (add_active_sc_at' scPtr)
   apply (rule_tac Q'=pspace_bounded' in corres_cross_add_guard)
    apply (fastforce intro: pspace_relation_pspace_bounded')
@@ -243,6 +244,7 @@ lemma getRefillCapacity_corres:
       and is_active_sc sc_ptr and sc_at sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
      valid_objs'
      (get_sc_refill_capacity sc_ptr consumed) (getRefillCapacity scPtr consumed)"
+  apply add_pspace_adb
   apply (add_active_sc_at' scPtr)
   apply (clarsimp simp: getRefillCapacity_def get_sc_refill_capacity_def read_sc_refill_capacity_def
                         readRefillCapacity_def ohaskell_state_assert_def gets_the_ostate_assert
@@ -262,6 +264,7 @@ lemma getRefillSufficient_corres:
       and is_active_sc sc_ptr and sc_at sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
      valid_objs'
      (get_sc_refill_sufficient sc_ptr consumed) (getRefillSufficient scPtr consumed)"
+  apply add_pspace_adb
   apply (add_active_sc_at' scPtr)
   apply (clarsimp simp: get_sc_refill_sufficient_def getRefillSufficient_def bind_assoc
                         read_sc_refill_sufficient_def readRefillSufficient_def refill_sufficient_def
@@ -303,8 +306,7 @@ lemma scActive_corres:
   "sc_ptr = scPtr \<Longrightarrow>
    corres (=) (sc_at scPtr and pspace_aligned and pspace_distinct) \<top>
      (get_sc_active sc_ptr) (scActive scPtr)"
-  apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
-   apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def valid_pspace_def sc_at_pred_n_def)
+  apply add_pspace_adb
   apply (clarsimp simp: get_sc_active_def read_sc_active_def read_sched_context_get_sched_context
                         readScActive_def readSchedContext_def getObject_def[symmetric]
                         getSchedContext_def[symmetric] scActive_def)
@@ -497,7 +499,8 @@ lemma preemptionPoint_corres:
                     apply (rule_tac Q="\<top>\<top>" and P'=\<top> in corres_symb_exec_l)
                        apply fastforce
                       apply wpsimp+
-               apply (fastforce intro!: sc_at_cross)
+               apply (fastforce intro!: sc_at_cross pspace_aligned_cross pspace_distinct_cross
+                                        pspace_relation_pspace_bounded')
               apply wpsimp
              apply (rule_tac Q'="\<lambda>_. valid_objs'" in hoare_post_imp)
               apply fastforce
