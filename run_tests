@@ -37,7 +37,6 @@ EXCLUDE["ARM_HYP"]=[
     "Access",
     "Bisim",
     "DRefine",
-    "RefineOrphanage",
     "SimplExportAndRefine"]
 
 EXCLUDE["ARM"]=[]
@@ -48,7 +47,6 @@ EXCLUDE["X64"]=[
     "CamkesGlueProofs",
     "DBaseRefine",
     "DSpec",
-    "RefineOrphanage",
     "SimplExportAndRefine",
     "AsmRefine"
 ]
