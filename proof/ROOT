@@ -45,8 +45,10 @@ session Refine in "refine" = BaseRefine +
  * This theory is in a separate session because the proofs currently
  * work only for ARM, RISCV64, and AARCH64.
  *)
-session RefineOrphanage in "refine/$L4V_ARCH/orphanage" = Refine +
+session RefineOrphanage in "refine/orphanage" = Refine +
   description \<open>Proof that the kernel does not orphan threads.\<close>
+  directories
+    "$L4V_ARCH"
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
     "Orphanage"
   theories
