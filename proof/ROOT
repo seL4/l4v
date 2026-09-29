@@ -50,9 +50,9 @@ session RefineOrphanage in "refine/orphanage" = Refine +
   directories
     "$L4V_ARCH"
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "Orphanage"
+    "ArchOrphanage"
   theories
-    "Orphanage"
+    "ArchOrphanage"
 
 session BaseRefine in "refine/base" = AInvs +
   description \<open>Background theory and libraries for refinement proof.\<close>
