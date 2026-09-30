@@ -41,10 +41,6 @@ session Refine in "refine" = BaseRefine +
   theories
     "RefineToplevel_R"
 
-(*
- * This theory is in a separate session because the proofs currently
- * work only for ARM, RISCV64, and AARCH64.
- *)
 session RefineOrphanage in "refine/orphanage" = Refine +
   description \<open>Proof that the kernel does not orphan threads.\<close>
   directories
