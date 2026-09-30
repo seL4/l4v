@@ -442,8 +442,8 @@ lemma prepareNextDomain_corres[corres]:
   by corres
 
 crunch prepareNextDomain
-  for invs'[wp]: invs'
-  and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  for invs'[Arch_assms, wp]: invs'
+  and nosch[Arch_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 crunch tcb_sched_action
   for valid_vs_lookup[Arch_assms, wp]: valid_vs_lookup
@@ -510,14 +510,14 @@ lemma scheduleChooseNewThread_invs'[Arch_assms]:
 crunch lazyFpuRestore
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
-lemma stt_nosch:
+lemma stt_nosch[Arch_assms]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
    switchToThread t
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (simp add: Thread_H.switchToThread_def X64_H.switchToThread_def storeWordUser_def)
      (wpsimp wp: setCurThread_nosch hoare_drop_imp)
 
-lemma stit_nosch[wp]:
+lemma stit_nosch[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
    switchToIdleThread
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
