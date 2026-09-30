@@ -562,7 +562,7 @@ locale Schedule_R =
     "\<And>t P t'. Arch.switchToThread t \<lbrace> obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace>"
   (* can't interface pred_tcb_at' due to free variable in projection *)
   assumes Arch_switchToThread_st_tcb_at'[wp]:
-    "\<And>t P t'. Arch.switchToThread t \<lbrace> st_tcb_at' P t'\<rbrace>"
+    "\<And>t P P' t'. Arch.switchToThread t \<lbrace>\<lambda>s. P (st_tcb_at' P' t' s)\<rbrace>"
   assumes Arch_switchToThread_it[wp]:
     "\<And>t P. Arch.switchToThread t \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
   assumes Arch_switchToIdleThread_it[wp]:
@@ -1291,6 +1291,10 @@ locale Schedule_R_2 = Schedule_R +
        od)"
   assumes tcb_sched_action_valid_vs_lookup[wp]:
     "tcb_sched_action action t \<lbrace>\<lambda>s::det_state. valid_vs_lookup s\<rbrace>"
+  assumes prepareNextDomain_invs'[wp]:
+    "Arch.prepareNextDomain \<lbrace>invs'\<rbrace>"
+  assumes prepareNextDomain_nosch[wp]:
+    "\<And>P. Arch.prepareNextDomain \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
 begin
 
 lemma lookupBitmapPriority_Max_eqI:
@@ -1611,6 +1615,10 @@ locale Schedule_R_3 = Schedule_R_2 +
     "\<lbrace> invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread) \<rbrace>
      scheduleChooseNewThread
      \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
+  assumes stt_nosch:
+    "\<And>t P. switchToThread t \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+  assumes stit_nosch[wp]:
+    "\<And>P. switchToIdleThread \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
 begin
 
 lemma schedule_corres:
