@@ -19,7 +19,7 @@ clear_named_theorems Arch_assms (* accumulate assumptions for Orphanage locale *
 
 crunch doMachineOp
   for tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
-  (wp: no_orphans_lift tcb_in_cur_domain'_lift)
+  (wp: tcb_in_cur_domain'_lift)
 
 crunch Arch.switchToThread, Arch.switchToIdleThread
   for ksCurThread[Arch_assms, wp]: "\<lambda>s. P (ksCurThread s)"
@@ -33,7 +33,10 @@ crunch Arch.switchToThread, Arch.switchToIdleThread
 crunch Arch.switchToIdleThread
   for obj_at'_tcb[Arch_assms, wp]: "\<lambda>s. P (obj_at' (P' :: tcb \<Rightarrow> _) p s)"
 
-crunch Arch.switchToThread
+crunch lazyFpuRestore
+  for tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"
+
+crunch Arch.switchToThread, copyGlobalMappings
   for no_orphans[Arch_assms, wp]: "no_orphans"
   (wp: no_orphans_lift crunch_wps)
 
@@ -79,7 +82,7 @@ lemma arch_createObject_no_orphans[Arch_assms]:
     and K (range_cover ptr sz (APIType_capBits tp us) (Suc 0)) and no_orphans\<rbrace>
    Arch.createObject tp ptr us d
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
-  unfolding RISCV64_H.createObject_def
+  unfolding X64_H.createObject_def
   apply (wpsimp wp: createObjects'_wp_subst createObjects_no_orphans[where sz=sz]
                 simp: placeNewObject_def2 placeNewDataObject_def
                       is_active_thread_state_def makeObject_tcb projectKO_opt_tcb
@@ -113,7 +116,7 @@ lemma handleReservedIRQ_no_orphans[Arch_assms, wp]:
   unfolding handleReservedIRQ_def
   by wpsimp
 
-crunch maskIrqSignal
+crunch maskIrqSignal, hwASIDInvalidate
   for no_orphans[Arch_assms, wp]: no_orphans
 
 lemma deleteASIDPool_no_orphans [wp]:
@@ -138,16 +141,15 @@ lemma archThreadSet_tcbQueued_inv[wp]:
   unfolding archThreadSet_def
   by (wp setObject_tcb_strongest getObject_tcb_wp) (fastforce simp: obj_at'_def)
 
-crunch modifyArchState, archThreadSet
+crunch modifyArchState, archThreadSet, unmapPage, flushTable
   for no_orphans[wp]: "no_orphans"
   (wp: no_orphans_lift crunch_wps)
 
-crunch postSetFlags, prepareSetDomain, handleSpuriousIRQ, unmapPage
+crunch postSetFlags, prepareSetDomain, handleSpuriousIRQ
   for no_orphans[Arch_assms, wp]: no_orphans
 
 crunch unmapPageTable, prepareThreadDelete
   for no_orphans[Arch_assms, wp]: "no_orphans"
-  (wp: lookupPTSlotFromLevel_inv)
 
 lemma setASIDPool_no_orphans [wp]:
   "setObject p (ap :: asidpool) \<lbrace> no_orphans \<rbrace>"
@@ -163,7 +165,8 @@ lemma no_orphans_arch_finalise_prop_stuff[Arch_assms]:
   by (simp add: arch_finalise_prop_stuff_def)
 
 crunch performIRQControl, InterruptDecls_H.invokeIRQHandler, performPageTableInvocation,
-       performPageInvocation, handleVMFault, copyGlobalMappings
+       performPageDirectoryInvocation, performPageInvocation, performPDPTInvocation, handleVMFault,
+       performX64PortInvocation
   for no_orphans[Arch_assms, wp]: no_orphans
   (wp: crunch_wps simp: crunch_simps)
 
@@ -171,7 +174,7 @@ lemma handleHypervisorFault_no_orphans[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<and> no_orphans s\<rbrace>
    handleHypervisorFault w f
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
-  unfolding handleHypervisorFault_def
+  unfolding handleHypervisorFault_def isFpuEnable_def
   by (wpsimp wp: undefined_valid)
 
 crunch performASIDPoolInvocation
@@ -256,8 +259,8 @@ lemma arch_performInvocation_no_orphans[Arch_assms, wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_arch_inv' i s \<and> ct_active' s \<rbrace>
    Arch.performInvocation i
    \<lbrace> \<lambda>_. no_orphans \<rbrace>"
-  unfolding RISCV64_H.performInvocation_def performRISCVMMUInvocation_def
-  by (wpsimp simp: valid_arch_inv'_def)
+  unfolding X64_H.performInvocation_def performX64MMUInvocation_def
+  by (wpsimp simp: valid_arch_inv'_def wp: crunch_wps)
 
 crunch prepareSetDomain
   for cur_tcb'[Arch_assms, wp]: cur_tcb'
@@ -271,7 +274,7 @@ end (* Arch *)
 
 interpretation Orphanage?: Orphanage
 proof goal_cases
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Orphanage_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact X64.Orphanage_assms)?)?)
 qed
 
 end
