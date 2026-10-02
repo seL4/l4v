@@ -2556,17 +2556,31 @@ lemma (in CSpace_R) cteInsert_valid_pspace:
   by (wpsimp wp: cteInsert_valid_objs,
       fastforce elim: valid_capAligned)
 
-(* same derivation on all architectures: changing caps never affects anything VCPU-related *)
-lemma (in Arch) hyp_live'_tcb_cap_update[simp]:
+(* same derivation on all architectures:
+   only changing a field related to the VCPU should affect hyp_live' *)
+lemma (in Arch) hyp_live'_tcb_update[simp]:
   "hyp_live' (KOTCB (tcbIPCBufferFrame_update (\<lambda>_. v) tcb)) = hyp_live' (KOTCB tcb)"
-  "hyp_live' (KOTCB (tcbCaller_update (\<lambda>_. v) tcb)) = hyp_live' (KOTCB tcb)"
-  "hyp_live' (KOTCB (tcbReply_update (\<lambda>_. v) tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbFaultHandler_update (\<lambda>_. v) tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbTimeoutHandler_update (\<lambda>_. v) tcb)) = hyp_live' (KOTCB tcb)"
   "hyp_live' (KOTCB (tcbVTable_update (\<lambda>_. v) tcb)) = hyp_live' (KOTCB tcb)"
   "hyp_live' (KOTCB (tcbCTable_update (\<lambda>_. v) tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbDomain_update f tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbState_update g tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbMCP_update h tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbPriority_update i tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbQueued_update j tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbFault_update k tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbIPCBuffer_update l tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbBoundNotification_update m tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbSchedContext_update n tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbYieldTo_update p tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbSchedPrev_update q tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbSchedNext_update r tcb)) = hyp_live' (KOTCB tcb)"
+  "hyp_live' (KOTCB (tcbFlags_update s tcb)) = hyp_live' (KOTCB tcb)"
   by (auto simp: hyp_live'_def)
 
-requalify_facts Arch.hyp_live'_tcb_cap_update
-lemmas [simp] = hyp_live'_tcb_cap_update
+requalify_facts Arch.hyp_live'_tcb_update
+lemmas [simp] = hyp_live'_tcb_update
 
 lemma setCTE_ko_wp_at_live[wp]:
   "\<lbrace>\<lambda>s. P (ko_wp_at' live' p' s)\<rbrace>

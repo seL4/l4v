@@ -662,6 +662,12 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
                            \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
     install_tcb_cap target slot n slot_opt
     \<lbrace>\<lambda>_. no_cap_to_obj_dr_emp cap\<rbrace>"
+  assumes is_valid_vtable_root_is_cnode_or_valid_arch:
+    "\<And>cap. is_valid_vtable_root cap \<Longrightarrow> is_cnode_or_valid_arch cap"
+  assumes is_cnode_cap_is_cnode_or_valid_arch:
+    "\<And>cap. is_cnode_cap cap \<Longrightarrow> is_cnode_or_valid_arch cap"
+  assumes is_cnode_or_valid_arch_not_valid_fault_handler:
+    "\<And>cap. is_cnode_or_valid_arch cap \<Longrightarrow> \<not> valid_fault_handler cap"
   assumes tcc_invs:
   "\<And>t croot vroot buf fh th mcp sl pr sc.
     \<lbrace>(invs::'state_ext state \<Rightarrow> bool)

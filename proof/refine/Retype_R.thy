@@ -486,6 +486,12 @@ locale Retype_R =
     "\<And>ko. 0 < objBitsKO ko"
   assumes arch_tcb_relation_default:
     "arch_tcb_relation default_arch_tcb newArchTCB"
+  assumes reply_relation_retype:
+    "obj_relation_retype
+       (default_object Structures_A.ReplyObject dev n d) (KOReply makeObject)"
+  assumes ntfn_relation_retype:
+    "obj_relation_retype
+       (default_object Structures_A.NotificationObject dev n d) (KONotification makeObject)"
   assumes update_gs_id:
     "\<And>tp us addrs. tp \<in> no_gs_types \<Longrightarrow> update_gs tp us addrs = id"
   assumes valid_untyped'_helper_arch_cap:
@@ -2568,26 +2574,11 @@ lemma captable_relation_retype:
   apply (simp add: of_drop_to_bl word_bits_size less_mask_eq)
   done
 
-lemma reply_relation_retype:
-  "obj_relation_retype (default_object Structures_A.ReplyObject dev n d)
-                                 (KOReply makeObject)"
-  by (simp add: default_object_def reply_relation_def default_reply_def
-                makeObject_reply obj_relation_retype_def
-                gen_objBits_simps word_bits_def replySizeBits_def RISCV64.wordSizeCase_simp) (*FIXME arch-split RT*)
-
 lemma ep_relation_retype:
   "obj_relation_retype (default_object Structures_A.EndpointObject dev n d)
                        (KOEndpoint makeObject)"
   by (clarsimp simp: default_object_def obj_relation_retype_def ep_relation_def default_ep_def
                      makeObject_endpoint ep_relation_cut_def epSizeBits_def gen_objBits_simps)
-
-lemma ntfn_relation_retype:
-  "obj_relation_retype (default_object Structures_A.NotificationObject dev n d)
-                       (KONotification makeObject)"
-  by (clarsimp simp: default_object_def obj_relation_retype_def ntfn_relation_def
-                     default_ntfn_def default_notification_def
-                     makeObject_notification ntfn_relation_cut_def
-                     ntfnSizeBits_def gen_objBits_simps RISCV64.wordSizeCase_simp) (*FIXME arch-split RT*)
 
 lemma sc_relation_retype:
   "\<lbrakk>sc_size_bounds n\<rbrakk> \<Longrightarrow>

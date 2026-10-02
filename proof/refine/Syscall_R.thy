@@ -642,38 +642,25 @@ lemma setDomain_corres:
   apply fastforce
   done
 
-(* FIXME rt arch-split *)
-context Arch begin arch_global_naming
+lemma arch_prepare_set_domain_in_correct_ready_q[wp]:
+  "arch_prepare_set_domain t new_dom \<lbrace>in_correct_ready_q\<rbrace>"
+  by (rule in_correct_ready_q_lift; wpsimp wp: arch_prepare_set_domain_valid_sched_pred)
 
-(* FIXME: move *)
-crunch arch_prepare_set_domain
-  for valid_tcbs[wp]: valid_tcbs
-  and in_correct_ready_q[wp]: in_correct_ready_q
-  and ready_qs_distinct[wp]: ready_qs_distinct
-  and ep_queues_blocked[wp]: ep_queues_blocked
-  and ntfn_queues_blocked[wp]: ntfn_queues_blocked
-  and ready_queues_runnable[wp]: ready_queues_runnable
-  (wp: crunch_wps)
+lemma arch_prepare_set_domain_ready_qs_distinct[wp]:
+  "arch_prepare_set_domain t new_dom \<lbrace>ready_qs_distinct\<rbrace>"
+  by (rule ready_qs_distinct_lift; wpsimp wp: arch_prepare_set_domain_valid_sched_pred)
 
-end
+lemma arch_prepare_set_domain_ep_queues_blocked[wp]:
+  "arch_prepare_set_domain t new_dom \<lbrace>ep_queues_blocked\<rbrace>"
+  by (rule ep_queues_blocked_lift; wpsimp wp: arch_prepare_set_domain_valid_sched_pred)
 
-arch_requalify_facts
-  arch_prepare_set_domain_valid_tcbs arch_prepare_set_domain_in_correct_ready_q
-  arch_prepare_set_domain_ready_qs_distinct arch_prepare_set_domain_ep_queues_blocked
-  arch_prepare_set_domain_ntfn_queues_blocked arch_prepare_set_domain_ready_queues_runnable
+lemma arch_prepare_set_domain_ntfn_queues_blocked[wp]:
+  "arch_prepare_set_domain t new_dom \<lbrace>ntfn_queues_blocked\<rbrace>"
+  by (rule ntfn_queues_blocked_lift; wpsimp wp: arch_prepare_set_domain_valid_sched_pred)
 
-lemmas [wp] =
-  arch_prepare_set_domain_valid_tcbs arch_prepare_set_domain_in_correct_ready_q
-  arch_prepare_set_domain_ready_qs_distinct arch_prepare_set_domain_ep_queues_blocked
-  arch_prepare_set_domain_ntfn_queues_blocked arch_prepare_set_domain_ready_queues_runnable
-
-(*FIXME: move into update_valid_tcb*)
-lemma update_valid_tcb2[simp]:
-  "\<And>f. valid_tcb ptr tcb (domain_index_update f s) = valid_tcb ptr tcb s"
-  "\<And>f. valid_tcb ptr tcb (domain_start_index_update f s) = valid_tcb ptr tcb s"
-  "\<And>f. valid_tcb ptr tcb (domain_time_update f s) = valid_tcb ptr tcb s"
-  by (auto simp: valid_tcb_def valid_tcb_state_def valid_bound_obj_def RISCV64.valid_arch_tcb_def (* FIXME rt arch-split *)
-          split: Structures_A.thread_state.splits option.splits)
+lemma arch_prepare_set_domain_ready_queues_runnable[wp]:
+  "arch_prepare_set_domain t new_dom \<lbrace>ready_queues_runnable\<rbrace>"
+  by (rule ready_queues_runnable_lift; wpsimp wp: arch_prepare_set_domain_valid_sched_pred)
 
 lemma domainSetStart_corres[corres]:
   "\<lbrakk> i' = i \<rbrakk> \<Longrightarrow>
@@ -687,9 +674,9 @@ lemma domainSetStart_corres[corres]:
   apply (corres corres: corres_modify_tivial rescheduleRequired_corres
                 simp: gets_comp_eq_return
                 term_simp: state_relation_def cdt_relation_def)
-  (*FIXME: add domain_index, domain_start_index and domain_time to update lemmas*)
    apply (simp add: ready_qs_distinct_def ep_queues_blocked_def ntfn_queues_blocked_def
-                    in_correct_ready_q_def ready_queues_runnable_def valid_tcbs_def)
+                    in_correct_ready_q_def ready_queues_runnable_def valid_tcbs_def
+                    update_valid_tcb)
   apply clarsimp
   done
 
@@ -711,7 +698,10 @@ lemma domainSet_corres[corres]:
           (invs' and sch_act_simple and tcb_at' t' and K (d' \<le> maxDomain))
           (invoke_set_domain t d) (domainSet t' d')"
   unfolding invoke_set_domain_def domainSet_def
-  by (simp, corres corres: setDomain_corres; fastforce dest: invs_sym_refs valid_sched_valid_ready_qs)
+  apply simp
+  apply ((corres corres: setDomain_corres | strengthen invs_valid_objs valid_objs_valid_tcbs)+)[1]
+   apply (fastforce dest: invs_sym_refs valid_sched_valid_ready_qs)+
+  done
 
 lemma invokeDomain_corres[corres]:
   "domaininv_relation di di' \<Longrightarrow>
@@ -1819,7 +1809,7 @@ lemma lookup_reply_is_reply_cap [wp]:
 
 crunch lookupReply
   for inv[wp]: "P"
-  (simp: crunch_simps wp: crunch_wps RISCV64.getRegister_inv) (* FIXME rt arch-split *)
+  (simp: crunch_simps wp: crunch_wps getRegister_inv)
 
 crunch lookup_reply
   for valid_cap[wp]: "valid_cap c"
@@ -1896,7 +1886,7 @@ lemma handleRecv_isBlocking_corres':
                       apply simp
                      apply (clarsimp simp: cap_relation_def)
                     apply simp+
-                apply (wpsimp wp: RISCV64.lookup_reply_valid_list)+ (* FIXME rt arch-split *)
+                apply (wpsimp wp: lookup_reply_valid_list)+
               apply (clarsimp simp: ct_in_state_def invs_def valid_state_def valid_pspace_def)
              apply (simp add: invs'_def valid_pspace'_def)
             apply (clarsimp simp: lookup_failure_map_def split: if_splits)
@@ -1927,7 +1917,7 @@ lemma handleRecv_isBlocking_corres':
            apply (case_tac rv; clarsimp simp: lookup_failure_map_def)
           apply wpsimp+
         apply (rule handleFault_corres, clarsimp)
-       apply (wpsimp wp: get_sk_obj_ref_wp RISCV64.lookup_reply_valid_list)+ (* FIXME rt arch-split *)
+       apply (wpsimp wp: get_sk_obj_ref_wp lookup_reply_valid_list)+
        apply (rule_tac Q'="\<lambda>_. ?pre1 and (\<lambda>s. cur_thread s = thread)
                                and K (valid_fault (ExceptionTypes_A.fault.CapFault x True
                                       (ExceptionTypes_A.lookup_failure.MissingCapability 0)))"

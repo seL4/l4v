@@ -4222,8 +4222,7 @@ lemma setThreadState_Inactive_unlive:
   "setThreadState Inactive tptr \<lbrace>ko_wp_at' (Not o live') p\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
   apply (wpsimp wp: threadSet_wp)
-  apply (clarsimp simp: live'_def ko_wp_at'_def obj_at'_def gen_objBits_simps ps_clear_upd
-                        RISCV64.hyp_live'_def) (* FIXME: rt arch-split *)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def gen_objBits_simps ps_clear_upd)
   done
 
 lemma possibleSwitchTo_unlive_other:

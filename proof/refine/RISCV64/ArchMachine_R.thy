@@ -85,7 +85,7 @@ lemma tlsBaseRegister_def'[Arch_assms]:
   by (simp add: tlsBaseRegister_def)
 
 (* FIXME arch-split: missing crunches in Machine_AI compared to other architectures *)
-crunch resetTimer, ackInterrupt
+crunch resetTimer, ackInterrupt, setDeadline, ackDeadlineIRQ
   for underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
 
 (* FIXME arch-split: missing crunches in Machine_AI compared to other architectures *)

@@ -878,6 +878,9 @@ lemma update_valid_tcb[simp]:
   "\<And>f. valid_tcb ptr tcb (reprogram_timer_update f s) = valid_tcb ptr tcb s"
   "\<And>f. valid_tcb ptr tcb (ready_queues_update f s) = valid_tcb ptr tcb s"
   "\<And>f. valid_tcb ptr tcb (scheduler_action_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (domain_index_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (domain_start_index_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (domain_time_update f s) = valid_tcb ptr tcb s"
   by (auto simp: valid_tcb_def valid_tcb_state_def valid_bound_obj_def valid_arch_tcb_def
           split: thread_state.splits option.splits)
 

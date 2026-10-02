@@ -1783,15 +1783,8 @@ crunch replyRemove
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and valid_dom_schedule'[wp]: valid_dom_schedule'
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
+  and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
   (simp: crunch_simps wp: crunch_wps valid_dom_schedule'_lift)
-
-context begin interpretation Arch . (*FIXME: rt arch-split*)
-
-crunch replyRemove, handleFaultReply
-  for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
-  (wp: crunch_wps simp: crunch_simps)
-
-end
 
 global_interpretation replyRemove: gen_typ_at_all_props' "replyRemove replyPtr tcbPtr"
   by typ_at_props'
@@ -3841,6 +3834,10 @@ sublocale schedContextUnbindNtfn: gen_typ_at_all_props' "schedContextUnbindNtfn 
 sublocale schedContextUnbindAllTCBs: gen_typ_at_all_props' "schedContextUnbindAllTCBs scPtr"
   by typ_at_props'
 
+crunch unbind_from_sc, maybe_return_sc, lookup_reply
+  for valid_list[wp]: valid_list
+  (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
+
 lemma finaliseCap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
@@ -3891,8 +3888,7 @@ lemma finaliseCap_corres:
             apply (rule corres_split[OF suspend_corres])
               apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
               apply (rule prepareThreadDelete_corres, simp)
-             apply (wp unbind_notification_invs unbind_from_sc_valid_sched
-                       RISCV64.unbind_from_sc_valid_list)+ (* FIXME: rt arch-split*)
+             apply (wp unbind_notification_invs unbind_from_sc_valid_sched)+
        apply (clarsimp simp: valid_cap_def)
       apply (clarsimp simp: valid_cap'_def)
      (* SchedContextCap *)
