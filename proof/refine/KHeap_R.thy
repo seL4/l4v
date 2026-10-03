@@ -1341,6 +1341,14 @@ lemma getReply_TCB_corres:
   apply (clarsimp simp: reply_relation_def)
   done
 
+lemma getReply_canGrant_corres:
+  "corres (=) (reply_at ptr) (reply_at' ptr)
+     (get_reply_can_grant ptr) (liftM replyCanGrant (getReply ptr))"
+  apply clarsimp
+  apply (rule get_reply_corres[THEN corres_rel_imp])
+  apply (clarsimp simp: reply_relation_def)
+  done
+
 lemma get_sc_corres_size:
   "corres (\<lambda>sc sc'. sc_relation sc n sc')
      (sc_obj_at n ptr) (sc_at' ptr)

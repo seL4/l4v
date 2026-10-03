@@ -353,12 +353,15 @@ definition is_timeout_fault :: "fault \<Rightarrow> bool" where
     (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
 
 definition receive_ipc_blocked ::
-  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
+  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> bool
+   \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
   where
-  "receive_ipc_blocked is_blocking thread epptr reply \<equiv>
+  "receive_ipc_blocked is_blocking thread epptr reply can_grant \<equiv>
      if is_blocking
      then do set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = False\<rparr>);
-             maybeM (\<lambda>r. set_reply_obj_ref reply_tcb_update r (Some thread)) reply;
+             maybeM (\<lambda>r. do set_reply_obj_ref reply_tcb_update r (Some thread);
+                            update_reply r (reply_can_grant_update (\<lambda>_. can_grant))
+                         od) reply;
              tcb_ep_append thread epptr True
           od
      else do_nbrecv_failed_transfer thread"
@@ -369,7 +372,7 @@ definition receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Righta
                            EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                          | _ \<Rightarrow> fail);
      reply \<leftarrow> (case reply_cap of
-                 ReplyCap r _ \<Rightarrow> do
+                 ReplyCap r \<Rightarrow> do
                    tptr \<leftarrow> get_reply_tcb r;
                    when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ cancel_ipc (the tptr);
                    return (Some r)
@@ -405,6 +408,7 @@ definition receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Righta
                 then do
                   sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
                   donate \<leftarrow> return $ (sender_sc \<noteq> None) \<and> \<not>(case_option False is_timeout_fault fault);
+                  update_reply (the reply) (reply_can_grant_update (\<lambda>_. AllowGrant \<in> rights));
                   reply_push sender thread (the reply) donate
                 od
                 else set_thread_state sender Inactive
@@ -414,7 +418,7 @@ definition receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Righta
               \<^cancel>\<open>FIXME RT: the C code has a test here for (refiil_sufficient sender'sc \<or> sender's sc is None)\<close>
               od
             od
-           | _  \<Rightarrow> receive_ipc_blocked is_blocking thread epptr reply
+           | _  \<Rightarrow> receive_ipc_blocked is_blocking thread epptr reply (AllowGrant \<in> rights)
      od
    od"
 

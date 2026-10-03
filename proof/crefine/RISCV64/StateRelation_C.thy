@@ -494,6 +494,7 @@ lemma refill_buffer_relation_size_eq:
 definition creply_relation :: "Structures_H.reply \<Rightarrow> reply_C \<Rightarrow> bool" where
   "creply_relation areply creply \<equiv>
        option_to_ctcb_ptr (replyTCB areply) = replyTCB_C creply
+     \<and> from_bool (replyCanGrant areply) = canGrant_C creply
      \<and> option_to_ptr (replyPrev areply)
         = ((Ptr \<circ> callStackPtr_CL \<circ> call_stack_lift \<circ> replyPrev_C) creply :: reply_C ptr)
      \<and> from_bool (isHead (replyNext areply)) = (isHead_CL \<circ> call_stack_lift \<circ> replyNext_C) creply

@@ -72,8 +72,7 @@ This is the type used to represent a capability.
 >         | ArchObjectCap {
 >             capCap :: ArchCapability }
 >         | ReplyCap {
->             capReplyPtr :: PPtr Reply,
->             capReplyCanGrant :: Bool }
+>             capReplyPtr :: PPtr Reply }
 >         | UntypedCap {
 >             capIsDevice :: Bool,
 >             capPtr :: PPtr (),
@@ -239,6 +238,7 @@ the full queue is obtained by starting at the head and following the tcbSchedNex
 
 > data Reply = Reply {
 >     replyTCB :: Maybe (PPtr TCB),
+>     replyCanGrant :: Bool,
 >     replyPrev :: Maybe (PPtr Reply),
 >     replyNext :: Maybe ReplyNext }
 

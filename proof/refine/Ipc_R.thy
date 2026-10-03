@@ -1988,7 +1988,7 @@ lemma bind_sc_reply_invs[wp]:
   apply (erule (1) valid_objs_sc_replies_distinct)
   done
 
-crunch update_sk_obj_ref, set_simple_ko, update_sched_context
+crunch update_sk_obj_ref, set_simple_ko, update_sched_context, update_reply
   for in_correct_ready_q[wp]: in_correct_ready_q
   and ready_qs_distinct[wp]: ready_qs_distinct
   (rule: ready_qs_distinct_lift in_correct_ready_q_lift)
@@ -4912,7 +4912,7 @@ crunch doIPCTransfer
 definition receiveIPC_preamble where
   "receiveIPC_preamble replyCap thread \<equiv>
     case replyCap of NullCap \<Rightarrow> return Nothing
-                 | ReplyCap r _ \<Rightarrow>
+                 | ReplyCap r \<Rightarrow>
                  (do tptrOpt <- liftM replyTCB (getReply (r));
                      when (tptrOpt \<noteq> Nothing \<and> tptrOpt \<noteq> Some thread) $ cancelIPC (the tptrOpt);
                      return (Just r)
@@ -5005,7 +5005,7 @@ lemma ri_preamble_not_in_sc:
 lemma receiveIPC_corres_helper:
   "(do replyOpt <-
                  case replyCap of capability.NullCap \<Rightarrow> return Nothing
-                 | capability.ReplyCap r v18 \<Rightarrow> return (Just r)
+                 | capability.ReplyCap r \<Rightarrow> return (Just r)
                  | _ \<Rightarrow> haskell_fail [];
                  y <-
                  when (\<exists>y. replyOpt = Some y)
@@ -5016,7 +5016,7 @@ lemma receiveIPC_corres_helper:
                  f replyOpt
           od) = (do replyOpt <-
                  case replyCap of capability.NullCap \<Rightarrow> return Nothing
-                 | capability.ReplyCap r _ \<Rightarrow>
+                 | capability.ReplyCap r \<Rightarrow>
                  (do tptrOpt <- liftM replyTCB (getReply (r));
                      when (tptrOpt \<noteq> Nothing \<and> tptrOpt \<noteq> Some thread) $ cancelIPC (the tptrOpt);
                      return (Just r)
@@ -5034,6 +5034,27 @@ crunch ifCondRefillUnblockCheck
 crunch updateReply
   for obj_at'_endpoint[wp]: "\<lambda>s. Q (obj_at' (P :: endpoint \<Rightarrow> bool) epPtr s)"
 
+lemma replyCanGrant_update_valid_replies'_sc_asrt[wp]:
+  "updateReply ptr (replyCanGrant_update f) \<lbrace>valid_replies'_sc_asrt ptr\<rbrace>"
+  apply (rule valid_replies'_sc_asrt_lift; wpsimp wp: updateReply_wp_all)
+    apply (subst opt_map_upd_triv; clarsimp simp: opt_map_def obj_at'_def)+
+  apply (fastforce simp: pred_tcb_at'_def  obj_at'_def)
+  done
+
+crunch update_reply
+  for ep_queued[wp]: "\<lambda>s. P (ep_queued ep_ptr s)"
+  and ntfn_queued[wp]: "\<lambda>s. P (ntfn_queued ep_ptr s)"
+  and ep_queues_blocked[wp]: ep_queues_blocked
+  and ntfn_queues_blocked[wp]: ntfn_queues_blocked
+  and ready_queues_runnable[wp]: ready_queues_runnable
+  and release_q_runnable[wp]: release_q_runnable
+  (wp: ep_queued_lift ntfn_queued_lift ep_queues_blocked_lift ntfn_queues_blocked_lift
+       ready_queues_runnable_lift release_q_runnable_lift)
+
+lemma valid_reply'_grant_update[simp]:
+  "valid_reply' (replyCanGrant_update f r) s = valid_reply' r s"
+  by (simp add: valid_reply'_def)
+
 lemma receiveIPCBlocked_corres:
   "corres dc
      (einvs and st_tcb_at runnable thread and not_queued thread and not_in_release_q thread
@@ -5041,8 +5062,8 @@ lemma receiveIPCBlocked_corres:
       and ep_at epptr and receive_ipc_preamble_rv reply_cap replyOpt)
      (invs' and valid_bound_reply' replyOpt
       and obj_at' (\<lambda>ep. epState ep \<noteq> IdleEPState \<longrightarrow> epState ep = ReceiveEPState) epptr)
-     (receive_ipc_blocked isBlocking thread epptr replyOpt)
-     (receiveIPCBlocked isBlocking thread epptr replyOpt)"
+     (receive_ipc_blocked isBlocking thread epptr replyOpt canGrant)
+     (receiveIPCBlocked isBlocking thread epptr replyOpt canGrant)"
   supply if_split[split del] if_cong[cong]
   apply (rule_tac Q'="st_tcb_at' runnable' thread" in corres_cross_add_guard)
    apply (fastforce intro: st_tcb_at_runnable_cross)
@@ -5065,10 +5086,11 @@ lemma receiveIPCBlocked_corres:
           apply (subst if_swap)
           apply (rule corres_if_strong[where R=\<top> and R'=\<top>])
             apply fastforce
-           apply (rule replyTCB_update_corres)
-          apply (rule corres_return_trivial)
+           apply (rule corres_split[OF replyTCB_update_corres])
+             apply (rule replyCanGrant_update_corres, simp)
+            apply wpsimp+
          apply (rule tcbEPAppend_corres, simp, simp)
-         apply simp
+        apply simp
         apply (wpsimp wp: when_wp)
        apply (wpsimp wp: when_wp updateReply_valid_objs')
       apply (wpsimp wp: set_thread_state_ep_queues_blocked_not_queued
@@ -5076,7 +5098,7 @@ lemma receiveIPCBlocked_corres:
                         set_thread_state_ready_queues_runnable_not_queued
                         set_thread_state_release_q_runnable_not_in_release_q
                         hoare_vcg_if_lift2 hoare_vcg_imp_lift')
-     apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift')
+     apply (wpsimp wp: hoare_TrueI hoare_vcg_if_lift2 hoare_vcg_imp_lift')
       apply (rule_tac Q'="\<lambda>_ s. tcb_at' thread s \<and> \<not> is_sched_linked thread s
                                 \<and> obj_at' (\<lambda>ep. epState ep \<noteq> IdleEPState
                                                 \<longrightarrow> epState ep = ReceiveEPState)
@@ -5266,25 +5288,30 @@ lemma receiveIPC_corres:
                                                  and valid_sched_pointers
                                                  and valid_objs'
                                                  and valid_bound_obj' valid_replies'_sc_asrt replyOpt
+                                                 and valid_bound_reply' replyOpt
                                                  and pspace_aligned' and pspace_distinct'
                                                  and pspace_bounded'"
                                           in corres_guard_imp[OF corres_if])
                                  apply (simp add: fault_rel_optionation_def)
                                 apply (rule corres_if2)
                                   apply simp
-                                 apply (rule corres_split_eqr[OF threadGet_corres replyPush_corres])
+                                 apply (rule corres_split_eqr[OF threadGet_corres])
                                     apply (clarsimp simp: tcb_relation_def)
-                                   apply (clarsimp simp: fault_rel_optionation_def split: option.splits)
-                                  prefer 3 \<comment> \<open> defer wp until corres complete \<close>
-                                  apply (rule setThreadState_corres, simp)
-                                 prefer 3 \<comment> \<open> defer wp until corres complete \<close>
-                                 apply (rule corres_split[OF setThreadState_corres], simp)
-                                   apply (rule possibleSwitchTo_corres, simp)
-                                  apply (wpsimp wp: set_thread_state_valid_sched_action
-                                                    set_thread_state_ep_queues_blocked_not_queued
-                                                    set_thread_state_ntfn_queues_blocked_not_queued
-                                                    set_thread_state_ready_queues_runnable_not_queued)
-                                 apply (wpsimp wp: setThreadState_sched_pointers_valid_sched_pointers)
+                                   apply (rule corres_split[OF replyCanGrant_update_corres replyPush_corres])
+                                      apply simp
+                                     apply (clarsimp simp: fault_rel_optionation_def split: option.splits)
+                                    prefer 5 \<comment> \<open> defer wp until corres complete \<close>
+                                    apply (rule setThreadState_corres, simp)
+                                   prefer 5 \<comment> \<open> defer wp until corres complete \<close>
+                                   apply (rule corres_split[OF setThreadState_corres], simp)
+                                     apply (rule possibleSwitchTo_corres, simp)
+                                    apply (wpsimp wp: set_thread_state_valid_sched_action
+                                                      set_thread_state_ep_queues_blocked_not_queued
+                                                      set_thread_state_ntfn_queues_blocked_not_queued
+                                                      set_thread_state_ready_queues_runnable_not_queued)
+                                   apply (wpsimp wp: setThreadState_sched_pointers_valid_sched_pointers)
+                                  apply (wpsimp wp: updateReply_valid_objs')
+                                 apply (wpsimp wp: updateReply_valid_objs')
                                 apply wpsimp
                                apply wpsimp
                               apply clarsimp
@@ -5307,11 +5334,10 @@ lemma receiveIPC_corres:
                                apply (frule valid_sched_action_weak_valid_sched_action)
                                apply (clarsimp simp: valid_sched_def
                                               split: if_splits cong: conj_cong)
-                               subgoal by fastforce
+                               subgoal by (fastforce simp: reply_at_ppred_reply_at)
                               apply (fastforce simp: image_def)
                              apply (clarsimp, frule valid_objs'_valid_tcbs')
-                             apply (clarsimp simp: valid_sched_def split: if_splits
-                                             cong: conj_cong)
+                             apply (clarsimp simp: valid_reply'_def split: if_splits)
                              apply (case_tac replyOpt; simp)
                             apply wpsimp
                            apply wpsimp
@@ -5385,9 +5411,10 @@ lemma receiveIPC_corres:
                                                \<and> valid_objs' s
                                                \<and> pspace_aligned' s \<and> pspace_distinct' s
                                                \<and> pspace_bounded' s
-                                               \<and> valid_bound_obj' valid_replies'_sc_asrt replyOpt s"
+                                               \<and> valid_bound_obj' valid_replies'_sc_asrt replyOpt s
+                                               \<and> valid_bound_reply' replyOpt s"
                                   in hoare_post_imp)
-                      apply (clarsimp simp: obj_at'_def split: option.split)
+                      apply (clarsimp split: option.split)
                      apply (wpsimp wp: valid_replies'_sc_asrt_lift valid_bound_obj'_lift)
                     apply (wpsimp wp: gts_st_tcb_at)
                    apply wpsimp
@@ -6612,7 +6639,7 @@ lemma ri_invs' [wp]:
                   cong: conj_cong imp_cong)
   apply (frule (3) sym_refs_tcbSCs)
   apply (frule (3) sym_refs_scReplies)
-  apply (prop_tac "\<forall>r g. replyCap = ReplyCap r g \<longrightarrow> \<not>obj_at' (\<lambda>a. replyTCB a = Some t) r s")
+  apply (prop_tac "\<forall>r. replyCap = ReplyCap r \<longrightarrow> \<not>obj_at' (\<lambda>a. replyTCB a = Some t) r s")
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
    apply (drule_tac ko="ko :: reply" for ko in sym_refs_ko_atD'[rotated])
     apply (fastforce simp: obj_at'_def)

@@ -30,9 +30,6 @@ lemma maskCapRights_cap_cases:
                         (\<lambda>_. capNtfnCanReceive c \<and> capAllowRead R)
                         (capNtfnCanSend_update
                           (\<lambda>_. capNtfnCanSend c \<and> capAllowWrite R) c))
-  | ReplyCap _ _ \<Rightarrow>
-    return (capReplyCanGrant_update
-             (\<lambda>_. capReplyCanGrant c \<and> capAllowGrant R) c)
   | _ \<Rightarrow> return c)"
   apply (simp add: maskCapRights_def Let_def split del: if_split)
   apply (cases c; simp add: isCap_simps split del: if_split)
@@ -63,10 +60,9 @@ lemma maskVMRights_spec:
     \<acute>ret__unsigned_long && mask 2 = \<acute>ret__unsigned_long \<and>
     \<acute>ret__unsigned_long \<noteq> 0 \<rbrace>"
   apply vcg
-  apply (clarsimp simp: vmrights_defs vmrights_to_H_def maskVMRights_def mask_def
-                        cap_rights_to_H_def to_bool_def
-                  split: bool.split)
-  done
+  by (clarsimp simp: vmrights_defs vmrights_to_H_def maskVMRights_def mask_def
+                     cap_rights_to_H_def to_bool_def
+              split: bool.split)
 
 lemma frame_cap_rights [simp]:
   "cap_get_tag cap = scast cap_frame_cap
@@ -129,15 +125,6 @@ lemma to_bool_ntfn_cap_bf:
   to_bool (capNtfnCanSend_CL cap) = to_bool_bf (capNtfnCanSend_CL cap) \<and>
   to_bool (capNtfnCanReceive_CL cap) = to_bool_bf (capNtfnCanReceive_CL cap)"
   apply (simp add:cap_lift_def Let_def split: if_split_asm)
-  apply (subst to_bool_bf_to_bool_mask,
-         clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
-  apply simp
-  done
-
-lemma to_bool_reply_cap_bf:
-  "cap_lift c = Some (Cap_reply_cap cap)
-   \<Longrightarrow> to_bool (capReplyCanGrant_CL cap) = to_bool_bf (capReplyCanGrant_CL cap)"
-  apply (simp add: cap_lift_def Let_def split: if_split_asm)
   apply (subst to_bool_bf_to_bool_mask,
          clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
   apply simp
@@ -291,17 +278,6 @@ lemma maskCapRights_ccorres [corres]:
         apply (rule conseqPre)
          apply vcg
         apply (simp add: cap_get_tag_isCap isCap_simps return_def)
-        apply clarsimp
-        apply (unfold ccap_relation_def)[1]
-        apply (simp add: cap_reply_cap_lift [THEN iffD1])
-        apply (clarsimp simp: cap_to_H_def)
-        apply (simp add: map_option_case split: option.splits)
-        apply (clarsimp simp add: cap_to_H_def Let_def
-                        split: cap_CL.splits if_split_asm)
-        apply (simp add: cap_reply_cap_lift_def)
-        apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
-                         to_bool_reply_cap_bf
-                         to_bool_mask_to_bool_bf[simplified] to_bool_cap_rights_bf)
        apply (simp add: Collect_const_mem)
        apply csymbr
        apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
