@@ -1541,7 +1541,7 @@ fun split_pair_apps ctxt thm =
 
   val subst = map (fn (v,t) => (dest_Var v, Thm.cterm_of ctxt t)) (mk_subst [] t);
 
-  in full_simplify (put_simpset HOL_basic_ss ctxt addsimps [@{thm fst_conv}, @{thm snd_conv}])
+  in full_simplify (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simps @{thms fst_conv snd_conv})
        (Drule.instantiate_normalize (TVars.empty, Vars.make subst) thm)
   end;
 
@@ -1588,7 +1588,7 @@ fun mk_split_thms ctxt (vars as _::_)  =
       in
         Goal.prove_global thy [] [] prop'
           (fn {context = goal_ctxt, ...} =>
-            ALLGOALS (simp_tac (put_simpset HOL_basic_ss goal_ctxt addsimps simps)))
+            ALLGOALS (simp_tac (goal_ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simps simps)))
       end;
 
     val split_meta   = prove_simp [@{thm split_paired_all}] split_meta_prop;
@@ -1623,7 +1623,7 @@ fun adapt_aux_var ctxt split_app (vars as (_::_::_)) tvar_rules =
        val pT = Thm.ctyp_of ctxt (foldr1 HOLogic.mk_prodT types);
        val rules' = map (fn (z,r) => (Drule.instantiate_normalize (TVars.make [(tvar z,pT)], Vars.empty) r)) tvar_rules;
        val splits = mk_split_thms ctxt (vars ~~ types);
-       val rules'' = map (full_simplify (put_simpset HOL_basic_ss ctxt addsimps splits)) rules';
+       val rules'' = map (full_simplify (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simps splits)) rules';
      in if split_app then (map (split_pair_apps ctxt) rules'') else rules'' end
   | adapt_aux_var _ _ ([name]) tvar_rules = map (rename_aux_var name o snd) tvar_rules
   | adapt_aux_var ctxt _ ([]) tvar_rules =
@@ -1633,7 +1633,7 @@ fun adapt_aux_var ctxt split_app (vars as (_::_::_)) tvar_rules =
         val uT = Thm.ctyp_of ctxt HOLogic.unitT;
         val rules' = map (fn (z,r) => (Drule.instantiate_normalize (TVars.make [(tvar z,uT)], Vars.empty) r)) tvar_rules;
         val splits = [@{thm Hoare.unit_meta},@{thm Hoare.unit_object},@{thm Hoare.unit_ex},@{thm Hoare.unit_UN}];
-        val rules'' = map (full_simplify (put_simpset HOL_basic_ss ctxt addsimps splits)) rules';
+        val rules'' = map (full_simplify (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simps splits)) rules';
       in rules'' end
 
 
@@ -1666,9 +1666,9 @@ fun gen_call_rec_rule ctxt specs_name n rule =
      val Specs = foldr1 (mk_Un quadT_set) (map mk_spec (1 upto n));
      val rule' =
        Thm.instantiate' [] [SOME (Thm.cterm_of ctxt Specs)] rule
-       |> full_simplify (put_simpset (simpset_of @{theory_context Main}) ctxt
-              addsimps [@{thm Hoare.conjE_simp},@{thm Hoare.in_Specs_simp},@{thm Hoare.in_set_Un_simp},@{thm split_all_conj},
-                        @{thm image_Un},@{thm image_Un_single_simp}] )
+       |> full_simplify (ctxt |> put_simpset (Simplifier.simpset_of @{theory_context Main})
+              |> Simplifier.add_simps @{thms Hoare.conjE_simp Hoare.in_Specs_simp Hoare.in_set_Un_simp split_all_conj
+                   image_Un image_Un_single_simp})
        |> rename_bvars (fn s => if member (op =) ["s","\<sigma>"] s then s else "Z")
   in rule'
   end;
@@ -1680,9 +1680,9 @@ fun gen_proc_rec ctxt mode n =
 
 (* simplifications on "Collect" sets, like {s. P s} Int {s. Q s} = {s. P s & Q s} *)
 fun merge_assertion_simp_tac ctxt thms =
-     simp_tac (put_simpset HOL_basic_ss ctxt
-                   addsimps ([@{thm Hoare.CollectInt_iff},@{thm HOL.conj_assoc},@{thm Hoare.Compl_Collect},singleton_conv_sym,
-                   @{thm Set.Int_empty_right},@{thm Set.Int_empty_left},@{thm Un_empty_right},@{thm Un_empty_left}]@thms)) ;
+     simp_tac (ctxt |> put_simpset HOL_basic_ss
+                   |> Simplifier.add_simps (@{thms Hoare.CollectInt_iff HOL.conj_assoc Hoare.Compl_Collect} @ singleton_conv_sym
+                     :: @{thms Set.Int_empty_right Set.Int_empty_left Un_empty_right Un_empty_left} @ thms));
 
 (* The following probably shouldn't live here, but refactoring
    so that Hoare could depend on recursive_records does not look feasible.
@@ -1691,22 +1691,19 @@ structure FoldCongData = Theory_Data
 (
   type T = simpset;
   val empty = HOL_basic_ss;
-  val merge = merge_ss;
+  val merge = Simplifier.merge_ss;
 )
 
 val get_foldcong_ss = FoldCongData.get
 
-fun add_foldcongs congs thy = FoldCongData.map (fn ss =>
-        Proof_Context.init_global thy
-        |> put_simpset ss
-        |> fold Simplifier.add_cong congs
-        |> simpset_of) thy
+fun map_foldcong_ss f thy =
+  FoldCongData.map (Simplifier.simpset_map (Proof_Context.init_global thy) f) thy
 
-fun add_foldcongsimps simps thy = FoldCongData.map (fn ss =>
-        Proof_Context.init_global thy
-        |> put_simpset ss
-        |> (fn ctxt => ctxt addsimps simps)
-        |> simpset_of) thy
+fun add_foldcongs congs =
+  map_foldcong_ss (fold Simplifier.add_cong congs)
+
+fun add_foldcongsimps simps =
+  map_foldcong_ss (Simplifier.add_simps simps)
 
 (* propagates state into "Collect" sets and simplifies selections updates like:
  *  s:{s. P s} = P s
@@ -1719,7 +1716,8 @@ fun in_assertion_simp_tac ctxt state_kind thms i =
      val state_simps = Named_Theorems.get ctxt @{named_theorems "state_simp"}
  in
    EVERY [simp_tac
-            (put_simpset HOL_basic_ss ctxt
+            (ctxt
+              |> put_simpset HOL_basic_ss
               |> Simplifier.add_simps
                   (@{thms mem_Collect_eq Set.Un_iff Set.Int_iff
                       Set.empty_subsetI Set.empty_iff UNIV_I
@@ -1727,7 +1725,7 @@ fun in_assertion_simp_tac ctxt state_kind thms i =
               |> fold Simplifier.add_proc (state_simprocs ctxt state_kind)
               |> fold Simplifier.add_cong K_congs)  i
            THEN_MAYBE
-           (simp_tac (put_simpset fold_simps ctxt
+           (simp_tac (ctxt |> put_simpset fold_simps
              |> fold Simplifier.add_proc (state_upd_simprocs ctxt state_kind)) i)
          ]
  end;
@@ -1739,8 +1737,8 @@ fun assertion_simp_tac ctxt state_kind thms i =
 
 (* simplify equality test on strings (and datatype-constructors) and propagate result*)
 fun string_eq_simp_tac ctxt =
-  simp_tac (put_simpset HOL_basic_ss ctxt
-    addsimps @{thms list.inject list.distinct char.inject
+  simp_tac (ctxt |> put_simpset HOL_basic_ss
+    |> Simplifier.add_simps @{thms list.inject list.distinct char.inject
       cong_exp_iff_simps simp_thms});
 
 
@@ -1749,9 +1747,8 @@ fun assertion_string_eq_simp_tac ctxt state_kind thms i =
 
 
 fun before_set2pred_simp_tac ctxt =
-  (simp_tac (put_simpset HOL_basic_ss ctxt addsimps [singleton_conv_sym,
-                                    @{thm Hoare.CollectInt_iff},
-                                    @{thm Hoare.Compl_Collect}]));
+  (simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simps (singleton_conv_sym
+    :: @{thms Hoare.CollectInt_iff  Hoare.Compl_Collect})));
 
 (*****************************************************************************)
 (** set2pred transforms sets inclusion into predicates implication,         **)
@@ -1883,23 +1880,27 @@ local
    EX s to s=s' to perform the substitution *)
 
 val conseq1_ss_base =
-  simpset_of (put_simpset HOL_basic_ss @{context}
-    addsimps (@{thms mem_Collect_eq Set.singleton_iff Set.Int_iff
-              Set.empty_iff UNIV_I HOL.conj_assoc disj_assoc Hoare.all_imp_eq_triv}
-              @ K_convs @ @{thms simp_thms} @ @{thms ex_simps} @ @{thms all_simps})
-    delsimps @{thms Hoare.all_imp_to_ex}
-    |> fold Simplifier.add_cong K_congs)
+  HOL_basic_ss
+  |> Simplifier.simpset_map @{context} (
+    Simplifier.add_simps (@{thms mem_Collect_eq Set.singleton_iff Set.Int_iff Set.empty_iff UNIV_I HOL.conj_assoc disj_assoc Hoare.all_imp_eq_triv}
+      @ K_convs @ @{thms simp_thms ex_simps all_simps})
+    #> Simplifier.del_simps @{thms Hoare.all_imp_to_ex}
+    #> fold Simplifier.add_cong K_congs
+  )
 
 val conseq2_ss_base =
-  simpset_of (put_simpset HOL_basic_ss @{context}
-    addsimps (@{thms Hoare.all_imp_eq_triv} @ @{thms simp_thms} @ @{thms ex_simps} @ @{thms all_simps})
-    delsimps [@{thm Hoare.all_imp_to_ex}]
-    |> Simplifier.add_cong @{thm imp_cong});
+  HOL_basic_ss
+  |> Simplifier.simpset_map @{context} (
+    Simplifier.add_simps @{thms Hoare.all_imp_eq_triv simp_thms ex_simps all_simps}
+    #> Simplifier.del_simp @{thm Hoare.all_imp_to_ex}
+    #> Simplifier.add_cong @{thm imp_cong}
+  )
+
 in
 
 fun raw_conseq_simp_tac ctxt state_kind thms i =
   let
-    val ctxt' = Config.put simp_depth_limit 0 ctxt;
+    val ctxt' = Config.put Simplifier.simp_depth_limit 0 ctxt;
   in
      simp_tac (put_simpset conseq1_ss_base ctxt'
        |> fold Simplifier.add_proc (state_simprocs ctxt' state_kind)
@@ -2329,7 +2330,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
           fun solve_modifies_tac i =
                 (clarsimp_tac ((ctxt'
                   |> put_claset (claset_of @{theory_context Set})
-                  |> put_simpset (simpset_of @{theory_context Set}))
+                  |> put_simpset (Simplifier.simpset_of @{theory_context Set}))
                   |> Simplifier.add_simps
                       ([@{thm Hoare.mex_def},@{thm Hoare.meq_def}]@K_convs@
                         (Named_Theorems.get ctxt @{named_theorems "state_simp"}))
@@ -2356,8 +2357,8 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                   basic_tac ctxt' spec (cnt - 8),
                   if cmode = Parameter
                   then EVERY [resolve_tac ctxt' @{thms subset_refl} (cnt - 8),
-                              simp_tac (put_simpset HOL_basic_ss ctxt'
-                                addsimps (@{thm Hoare.CollectInt_iff} :: @{thms simp_thms})) 1]
+                              simp_tac (ctxt' |> put_simpset HOL_basic_ss
+                                |> Simplifier.add_simps @{thms Hoare.CollectInt_iff simp_thms}) 1]
                   else all_tac]
         end) ()
       |> (fn SOME res => res
@@ -2413,7 +2414,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
               else EVERY [trace_tac ctxt "inline_bdy_tac no args",
                           resolve_tac ctxt [ProcBody mode] i,
                           resolve_tac ctxt [impl] (i+2),
-                          simp_tac (put_simpset HOL_basic_ss ctxt addsimps [bdy]) (i+1),
+                          simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simp bdy) (i+1),
                           cont_tac ctxt (i+1)])));
 
   in
@@ -2445,13 +2446,16 @@ fun call_tac cont_tac mode state_kind state_space ctxt asms spec_sfx t =
 fun solve_in_Faults_tac ctxt i =
     resolve_tac ctxt @{thms UNIV_I in_insert_hd} i
     ORELSE
-    SELECT_GOAL (SOLVE (simp_tac (put_simpset (simpset_of @{theory_context Set}) ctxt) 1)) i;
+    SELECT_GOAL (SOLVE (simp_tac (put_simpset (Simplifier.simpset_of @{theory_context Set}) ctxt) 1)) i;
 
 local
 fun triv_simp ctxt = merge_assertion_simp_tac ctxt @{thms mem_Collect_eq} THEN'
-         simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms simp_thms}
-           |> fold Simplifier.add_cong [@{thm conj_cong}, @{thm imp_cong}]);
-    (* a guarded while produces stupid things, since the guards are
+         simp_tac (ctxt
+           |> put_simpset HOL_basic_ss
+           |> Simplifier.add_simps @{thms simp_thms}
+           |> Simplifier.add_cong @{thm conj_cong}
+           |> Simplifier.add_cong @{thm imp_cong})
+       (* a guarded while produces stupid things, since the guards are
           put at the end of the body and in the invariant (rule WhileAnnoG):
          - guard: g /\ g
          - guarantee: g --> g *)
@@ -2482,12 +2486,12 @@ fun guard_tac ctxt strip cont_tac mode (t,i) =
 end;
 
 fun wf_tac ctxt =
-  simp_tac (put_simpset HOL_basic_ss ctxt
-    addsimps [@{thm Wellfounded.wf_measure},@{thm Wellfounded.wf_lex_prod},@{thm Wfrec.wf_same_fst}, @{thm Hoare.wf_measure_lex_prod},@{thm Wellfounded.wf_inv_image}]);
+  simp_tac (ctxt |> put_simpset HOL_basic_ss
+    |> Simplifier.add_simps @{thms Wellfounded.wf_measure Wellfounded.wf_lex_prod Wfrec.wf_same_fst Hoare.wf_measure_lex_prod Wellfounded.wf_inv_image});
 
 fun in_rel_simp ctxt =
-  simp_tac (put_simpset HOL_basic_ss ctxt
-    addsimps [@{thm Hoare.in_measure_iff},@{thm Hoare.in_lex_iff},@{thm Hoare.in_mlex_iff},@{thm Hoare.in_inv_image_iff}, @{thm split_conv}]);
+  simp_tac (ctxt |> put_simpset HOL_basic_ss
+    |> Simplifier.add_simps @{thms Hoare.in_measure_iff Hoare.in_lex_iff Hoare.in_mlex_iff Hoare.in_inv_image_iff split_conv});
 
 fun while_annotate_tac ctxt inv state_space i st =
   let
@@ -2594,10 +2598,12 @@ fun gen_Anno_tac dest rules tac cont_tac ctxt state_kind (t,i) st =
                   |(xs::_) => adapt_aux_var ctxt false (map fst xs) (map get_aux_tvar rules));
   in EVERY [resolve_tac ctxt rules' i,
             tac,
-            simp_tac (put_simpset HOL_basic_ss ctxt addsimps ([@{thm split_conv}, refl, @{thm Hoare.triv_All_eq}]@anno_defs)
-                      |> Simplifier.add_proc @{simproc case_prod_beta}) (i+2),
-            simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm split_conv}]) (i+1),
-            simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm split_conv}]) i,
+            simp_tac (ctxt
+              |> put_simpset HOL_basic_ss
+              |> Simplifier.add_simps (@{thm split_conv} :: refl :: @{thm Hoare.triv_All_eq} :: anno_defs)
+              |> Simplifier.add_proc @{simproc case_prod_beta}) (i+2),
+            simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simp @{thm split_conv}) (i+1),
+            simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simp @{thm split_conv}) i,
             REPEAT (resolve_tac ctxt [allI] (i+1)),
             cont_tac ctxt (i+1),
             conseq_simp_tac ctxt state_kind [] i] st
@@ -2620,7 +2626,7 @@ fun whileAnnoFix_tac ctxt state_kind cont_tac mode (t,i) =
 
     val rules = [WhileAnnoFix mode];
     fun wf_tac' i = EVERY [REPEAT (resolve_tac ctxt [allI] i),
-                           simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm split_conv}]) i,
+                           simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simp @{thm split_conv}) i,
                            wf_tac ctxt i];
     val tac = if mode=Total
               then EVERY [wf_tac' (i+3),in_rel_simp ctxt (i+1)]
@@ -2813,7 +2819,7 @@ fun HoareStepTac strip_guards mode state_kind state_space spec_sfx ctxt tac st =
      fun call (t,i) = call_tac result_tac mode state_kind state_space ctxt asms spec_sfx t i
 
      fun final_simp_tac i =
-          EVERY [full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms mem_Collect_eq}) i,
+          EVERY [full_simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simp @{thm mem_Collect_eq}) i,
                  REPEAT (eresolve_tac ctxt [conjE] i),
                  TRY (hyp_subst_tac_thin true ctxt i),
                  BasicSimpTac ctxt state_kind true [] tac i]
@@ -3118,13 +3124,13 @@ fun abs_var ctxt t = (remdeco' ctxt (sel_name t), sel_type t);
 local
 
 val ss =
-  simpset_of
-    (put_simpset (simpset_of @{theory_context Fun}) @{context}
-      |> Simplifier.add_simps (@{thm StateFun.lookup_def} :: @{thm StateFun.id_id_cancel}
-        :: @{thms list.inject list.distinct char.inject
-        cong_exp_iff_simps simp_thms})
-      |> fold Simplifier.add_proc [Record.simproc, StateFun.lazy_conj_simproc]
-      |> fold Simplifier.add_cong @{thms block_conj_cong});
+  Simplifier.simpset_of @{theory_context Fun}
+  |> Simplifier.simpset_map @{context}
+      (Simplifier.add_simps @{thms StateFun.lookup_def StateFun.id_id_cancel
+        list.inject list.distinct char.inject cong_exp_iff_simps simp_thms}
+      #> Simplifier.add_proc Record.simproc
+      #> Simplifier.add_proc StateFun.lazy_conj_simproc
+      #> Simplifier.add_cong @{thm block_conj_cong});
 
 in
 
@@ -3218,7 +3224,7 @@ fun record_vanish_tac ctxt state_kind state_space i =
   if Config.get ctxt record_vanish then
     let
         val rem_useless_vars_simps = [Drule.triv_forall_equality,@{thm Hoare.triv_All_eq},@{thm Hoare.triv_Ex_eq}];
-        val rem_useless_vars_simpset = empty_simpset ctxt addsimps rem_useless_vars_simps;
+        val rem_useless_vars_simpset = ctxt |> Simplifier.empty_simpset |> Simplifier.add_simps rem_useless_vars_simps;
         fun no_spec (t as (Const (@{const_name All},_)$_)) =
               is_none (try dest_hoare_raw (strip_qnt_body @{const_name All} t))
           | no_spec _ = true;
@@ -3283,13 +3289,13 @@ fun record_vanish_tac ctxt state_kind state_space i =
 local
 
 val state_fun_update_ss =
-  simpset_of (put_simpset HOL_basic_ss @{context}
-    |> Simplifier.add_simps ([@{thm StateFun.update_def}, @{thm id_def}, @{thm fun_upd_apply}, @{thm if_True}, @{thm if_False}]
-      @ @{thms list.inject list.distinct char.inject
-      cong_exp_iff_simps simp_thms} @ K_fun_convs)
-    |> Simplifier.add_proc (DistinctTreeProver.distinct_simproc ["distinct_fields", "distinct_fields_globals"])
-    |> Simplifier.add_cong @{thm imp_cong}
-    |> Splitter.add_split @{thm if_split});
+  HOL_basic_ss
+  |> Simplifier.simpset_map @{context}
+    (Simplifier.add_simps (@{thms StateFun.update_def id_def fun_upd_apply if_True if_False
+         list.inject list.distinct char.inject cong_exp_iff_simps simp_thms} @ K_fun_convs)
+    #> Simplifier.add_proc (DistinctTreeProver.distinct_simproc ["distinct_fields", "distinct_fields_globals"])
+    #> Simplifier.add_cong @{thm imp_cong}
+    #> Splitter.add_split @{thm if_split});
 
 in
 
@@ -3313,7 +3319,7 @@ fun solve_modifies_tac ctxt state_kind state_space i st =
         |> the_default 0
       else 0
       | is_split_state t = 0;
-    val simp_ctxt = put_simpset HOL_ss ctxt addsimps (@{thm Ex_True} :: @{thm Ex_False} :: Record.get_extinjects thy);
+    val simp_ctxt = ctxt |> put_simpset HOL_ss |> Simplifier.add_simps (@{thm Ex_True} :: @{thm Ex_False} :: Record.get_extinjects thy);
       fun try_solve Function i =
            ((fn k => (TRY (REPEAT_ALL_NEW (resolve_tac ctxt [conjI, impI, allI]) k)))
              THEN_ALL_NEW
@@ -3332,7 +3338,7 @@ fun solve_modifies_tac ctxt state_kind state_space i st =
     ((trace_tac ctxt "solve_modifies_tac" THEN
      clarsimp_tac ((ctxt
         |> put_claset (claset_of @{theory_context HOL})
-        |> put_simpset (simpset_of @{theory_context Set}))
+        |> put_simpset (Simplifier.simpset_of @{theory_context Set}))
         |> Simplifier.add_simps (@{thms Hoare.mex_def Hoare.meq_def} @K_convs@(Named_Theorems.get ctxt @{named_theorems "state_simp"}))
         |> fold Simplifier.add_proc (state_upd_simprocs ctxt Record @ state_simprocs ctxt Record)
         |> fold Simplifier.add_cong K_congs) i)
@@ -3352,7 +3358,7 @@ fun proc_lookup_simp_tac ctxt i st =
                               [suffix bodyP pname,
                                suffix (body_def_sfx^"_def") pname,
                                suffix procL pname^"."^ (suffix (body_def_sfx^"_def") pname)]);
-    in simp_tac (put_simpset HOL_basic_ss ctxt addsimps thms @ strip_simps @ @{thms option.sel}) i st end) ()
+    in simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simps (thms @ strip_simps @ @{thms option.sel})) i st end) ()
   |> the_default (Seq.single st);
 
 fun proc_lookup_in_dom_simp_tac ctxt i st =
@@ -3364,8 +3370,8 @@ fun proc_lookup_in_dom_simp_tac ctxt i st =
       val thms =  map_filter I (map (try (Proof_Context.get_thm ctxt))
                                  [suffix bodyP pname, suffix "_def" pname]);
     in
-      simp_tac (put_simpset HOL_basic_ss ctxt
-        addsimps (@{thm Hoare.lookup_Some_in_dom} :: @{thm dom_strip} :: thms)) i st end) ()
+      simp_tac (ctxt |> put_simpset HOL_basic_ss
+        |> Simplifier.add_simps (@{thm Hoare.lookup_Some_in_dom} :: @{thm dom_strip} :: thms)) i st end) ()
   |> the_default (Seq.single st);
 
 
@@ -3427,7 +3433,7 @@ fun HoareCallRuleTac state_kind state_space ctxt thms i st =
                 proc_lookup_in_dom_simp_tac ctxt i
                 ]
         else in_rel_simp ctxt i THEN
-             simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm Un_empty_left},@{thm Un_empty_right}]) i THEN
+             simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simps @{thms Un_empty_left Un_empty_right}) i THEN
              proc_lookup_simp_tac ctxt i
 
     fun basic_tac i = (((resolve_tac ctxt thms')
