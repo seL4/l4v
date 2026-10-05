@@ -30,7 +30,7 @@ fun mk_meta_eq_safe t = mk_meta_eq t
 
 val unfold_bodies = Simplifier.make_simproc @{context}
   {name = "unfold constants named *_body",
-   kind = Simproc,
+   kind = Simplifier.Simproc,
    lhss = [@{term "v"}],
    proc = fn _ =>
      (fn ctxt => (fn t => case head_of (Thm.term_of t) of
@@ -48,8 +48,8 @@ theorem spec_refine:
      (kernel_all_substitute.\<Gamma> symbol_table domain)"
   apply (simp add: kernel_all_global_addresses.\<Gamma>_def kernel_all_substitute.\<Gamma>_def)
   apply (intro spec_statefn_simulates_lookup_tree_Node spec_statefn_simulates_lookup_tree_Leaf)
-  apply (tactic \<open>ALLGOALS (asm_simp_tac (put_simpset HOL_ss @{context} addsimps @{thms switch.simps fst_conv snd_conv}
-                  addsimprocs [unfold_bodies] |> Splitter.del_split @{thm if_split}))
+  apply (tactic \<open>ALLGOALS (asm_simp_tac (put_simpset HOL_ss @{context} |> Simplifier.add_simps @{thms switch.simps fst_conv snd_conv}
+                  |> Simplifier.add_proc unfold_bodies |> Splitter.del_split @{thm if_split}))
               THEN ALLGOALS (TRY o resolve_tac @{context} @{thms exec_statefn_simulates_refl})\<close>)
 
   apply (tactic \<open>ALLGOALS (REPEAT_ALL_NEW (resolve_tac @{context} @{thms exec_statefn_simulates_comI

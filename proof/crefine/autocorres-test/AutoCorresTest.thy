@@ -7,7 +7,7 @@
 (* Experimental AutoCorres proofs over CRefine: work in progress *)
 
 theory AutoCorresTest
-imports Refine_C
+imports CRefine.Refine_C
 begin
 
 section \<open>Simple test case: handleYield\<close>
@@ -282,7 +282,7 @@ definition clzl' :: "32 word \<Rightarrow> (globals, 32 signed word) nondet_mona
 lemma clzl'_TScorres:
   "L2_call (l2_clzl' rec_measure' x) = liftE (clzl' x)"
   apply (unfold l2_clzl'_def clzl'_def)
-  apply (tactic \<open>simp_tac (@{context} addsimps
+  apply (tactic \<open>simp_tac (@{context} |> Simplifier.add_simps
       (#lift_rules (the (Monad_Types.get_monad_type "nondet" (Context.Proof @{context})))
        |> Thmtab.dest |> map fst)) 1\<close>)
   done

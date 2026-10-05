@@ -755,7 +755,7 @@ method_setup terminates_setup = \<open>
                  EVERY [
                    resolve_tac ctxt @{thms terminates.Call} 1,
                    resolve_tac ctxt [impl] 1,
-                   simp_tac (ctxt addsimps (body :: @{thms return_C_def lvar_nondet_init_def})) 1
+                   simp_tac (ctxt |> Simplifier.add_simps (body :: @{thms return_C_def lvar_nondet_init_def})) 1
                  ]
                end
   in

@@ -276,7 +276,7 @@ fun translate_term trans t = case assoc (trans, t) of SOME t' => t' | NONE =>
 (* Remove "Hoare.meq" and "Hoare.mex" scaffolding from SIMPL modifies specs *)
 fun modifies_simp ctxt =
   Conv.fconv_rule
-    (Raw_Simplifier.rewrite ctxt true
+    (Simplifier.rewrite_wrt ctxt true
       @{thms meq_def[THEN eq_reflection] mex_def[THEN eq_reflection]});
 
 fun modifies_simp_term ctxt =
@@ -376,7 +376,7 @@ fun modifies_invariant_tac quiet_fail ctxt n st = if Thm.nprems_of st = 0 then n
       (DETERM (REPEAT (eresolve_tac ctxt @{thms exE} n)) THEN
        split_s_tac THEN
        resolve_tac ctxt [case_sigma] n THEN
-       SOLVES (asm_full_simp_tac (put_simpset HOL_ss ctxt addsimps globals_record_simps) n))
+       SOLVES (asm_full_simp_tac (put_simpset HOL_ss ctxt |> Simplifier.add_simps globals_record_simps) n))
   end
 
 (* Convert initial modifies goal of the form
@@ -413,7 +413,7 @@ fun modifies_call_tac (callee_modifies: incr_net) ctxt n = DETERM (
 
 (* VCG for trivial state invariants, such as globals modifies specs.
  * Takes vcg rules from "valid_inv". *)
-val valid_invN = Context.theory_name { long=true } @{theory} ^ ".valid_inv"
+val valid_invN = @{named_theorems valid_inv}
 fun modifies_vcg_tac leaf_tac ctxt n = let
   val vcg_rules = Named_Theorems.get ctxt valid_invN |> Bires.build_net;
   fun vcg n st = Seq.make (fn () => let
@@ -564,7 +564,7 @@ fun do_modifies_recursive ctxt fn_info (prog_info: ProgramInfo.prog_info) (calle
             (((DETERM o (intro_tac ctxt @{thms conjI allI} THEN_ALL_NEW
                          elim_tac ctxt @{thms conjE}) THEN_ALL_NEW
                          (fn n => Conv.gconv_rule
-                                    (Raw_Simplifier.rewrite ctxt true @{thms All_to_all}) n
+                                    (Simplifier.rewrite_wrt ctxt true @{thms All_to_all}) n
                                   #> Seq.succeed))
               THEN' K (maybe_print_tac "inductive case'" ctxt))
              THEN_ALL_NEW (resolve_tac ctxt inductive_thms THEN_ALL_NEW Method.assm_tac ctxt)) 1
@@ -575,7 +575,7 @@ fun do_modifies_recursive ctxt fn_info (prog_info: ProgramInfo.prog_info) (calle
     HOLogic.conj_elims combined_thm
     |> map (fn thm =>
         thm
-        |> Thm.equal_elim (Raw_Simplifier.rewrite ctxt true @{thms All_to_all} (Thm.cprop_of thm))
+        |> Thm.equal_elim (Simplifier.rewrite_wrt ctxt true @{thms All_to_all} (Thm.cprop_of thm))
         |> Thm.forall_elim_vars 0);
   in final_thms end;
 

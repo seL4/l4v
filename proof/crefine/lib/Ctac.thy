@@ -2042,7 +2042,7 @@ fun tac ctxt =
             finish_ceqv_Seq_Skip_cases} 1
         ORELSE (resolve_tac ctxt [@{thm xpresI}] THEN' simp_tac (ctxt |> Splitter.del_split @{thm "if_split"})) 1
     ))
-  THEN simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms com.case}) 1
+  THEN simp_tac (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps @{thms com.case}) 1
   THEN no_name_eta_tac ctxt
 \<close>
 

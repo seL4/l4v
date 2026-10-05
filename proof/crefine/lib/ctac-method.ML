@@ -980,7 +980,7 @@ fun corres_boilerplate_tac opts unfold_haskell_p xfs ctxt = let
         val ccorres_rewrite_tac = NO_CONTEXT_TACTIC ctxt
             (Method_Closure.apply_method ctxt @{method "ccorres_rewrite"} [] [] [] ctxt [])
 
-        val ss = simpset_of (ctxt delsimps boilerplace_simp_dels |> addcongs
+        val ss = simpset_of (ctxt |> Simplifier.del_simps boilerplace_simp_dels |> addcongs
                  (if #ignore_call opts then call_ignore_cong else []))
     in
         prim_trace_tac' (#trace_this trace) depth "CINIT" ctxt
