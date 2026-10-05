@@ -118,7 +118,7 @@ fun define_const_args name hidden term args lthy =
     (* Define the constant. *)
    val lthy = lthy |> Local_Theory.begin_nested |> snd
    val ((_, (_, thm)), lthy) =
-        Specification.definition (SOME (maybe_hide (Binding.name name), NONE, NoSyn))
+        Specification.definition {verbose = false} (SOME (maybe_hide (Binding.name name), NONE, NoSyn))
             [] [] (Binding.empty_atts, new_term) lthy
 
     (* Integrate into the current locale. *)
@@ -453,20 +453,20 @@ fun term_fold_map_top f x =
 fun simp_map f =
   Context.map_proof (
     Local_Theory.declaration {syntax = false, pervasive = false, pos = @{here}} (
-      K (Simplifier.map_ss f)))
+      K (Simplifier.map_simpset f)))
   |> Context.proof_map
 
 (*
  * Add a thm to the simpset.
  *)
 fun simp_add thms =
-  simp_map (fn ctxt => ctxt addsimps thms)
+  simp_map (Simplifier.add_simps thms)
 
 (*
  * Delete a thm from a simpset.
  *)
 fun simp_del thms =
-  simp_map (fn ctxt => ctxt delsimps thms)
+  simp_map (Simplifier.del_simps thms)
 
 (*
  * Define a (possibly recursive) set of functions.
@@ -532,7 +532,7 @@ let
 
     (* Define the function. *)
     val lthy = lthy |> Local_Theory.begin_nested |> snd
-    val ctxt' = Function.add_function
+    val ctxt' = Function.add_function {verbose = false}
       function_bindings
       (map (fn x => ((Binding.empty_atts, x), [], [])) function_bodies)
       Function_Common.default_config pat_completeness_auto lthy
@@ -924,7 +924,7 @@ fun solved_tac thm =
 (* Convenience function for making simprocs. *)
 fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context -> cterm -> thm option) = let
   in Simplifier.make_simproc ctxt
-       {name=name, kind=Simproc, identifier=[],
+       {name=name, kind=Simplifier.Simproc, identifier=[],
         lhss = map (Proof_Context.read_term_pattern ctxt) pats,
         proc = K proc} end
 

@@ -75,7 +75,7 @@ let
       |> Thm.cterm_of ctxt
       |> Goal.init
       |> Utils.apply_tac "solve simple record proof"
-          (simp_tac (ctxt addsimps [def_thm]) 1)
+          (simp_tac (ctxt |> Simplifier.add_simp def_thm) 1)
       |> Goal.finish ctxt
   val thms = map gen_simp_proof (fields ~~ components)
 
@@ -84,7 +84,7 @@ let
 
   (* Add new rules to the simpset. *)
   val lthy = Local_Theory.map_contexts
-    (fn _ => Context.proof_map (Simplifier.map_ss (fn x => x addsimps thms))) lthy
+    (fn _ => Context.proof_map (Simplifier.map_simpset (Simplifier.add_simps thms))) lthy
 in
   (thms, lthy)
 end
@@ -101,18 +101,18 @@ let
   val thy = Proof_Context.theory_of ctxt
   val record_ss_1 = Record.get_simpset thy
   val record_ss_2 = RecursiveRecordPackage.get_simpset thy
-  val record_ss = merge_ss (record_ss_1, record_ss_2)
+  val record_ss = Simplifier.merge_ss (record_ss_1, record_ss_2)
 in
-  (put_simpset record_ss ctxt)
-      addsimprocs ([
+  record_ss
+  |> Simplifier.simpset_map ctxt
+    (fold Simplifier.add_proc [
           Record.simproc,
           Record.upd_simproc,
           Record.eq_simproc,
           Record.ex_sel_eq_simproc,
           Record.split_simproc (K ~1)
-      ])
-      addsimps (Record.get_extinjects thy)
-  |> simpset_of
+      ]
+     #> Simplifier.add_simps (Record.get_extinjects thy))
 end
 
 end

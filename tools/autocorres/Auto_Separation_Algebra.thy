@@ -349,7 +349,7 @@ fun make_rewrite heap_getters heap_setters heap_type sep_info ctxt =
          val localise_simps = @{thms modify_def gets_def put_def fun_upd_def get_def return_def bind_def }
          val localise_term' = @{mk_term "Trueprop (modify (\<lambda>s. ?f (\<lambda>a. a(p:= f a s)) s) = do a <- gets (\<lambda>s. f (?h s) s); ?g p a od)" (f,h,g)} (heap_setter, heap_getter, t')
          val prove_localise = force_tac
-                          (ctxt addsimps localise_simps addsimps [thy'])
+                          (ctxt |> Simplifier.add_simps (localise_simps @ [thy']))
          val localise_thm = Goal.prove ctxt ["f", "p"] [] localise_term (fn _ => prove_localise 1)
          val localise'_thm = Goal.prove ctxt ["f", "p"] [] localise_term' (fn _ => prove_localise 1)
          val sep_info =  sep_info |> #sep_thms |> (fn x => x @ [localise_thm, localise'_thm, Thm.symmetric thy,Thm.symmetric thy']) |> upd_thms sep_info
@@ -425,7 +425,7 @@ ML \<open>fun prove_get_leaf_lemma heap_type ((sep_info : sep_info),  ctxt) =
                             @{thm pred_conj_def},
                             heap_getter_def, heap_arrow_def, plus_thm]
                val name = heap_getter |> dest_Const |> fst |> Long_Name.base_name
-               fun proof_tac ctxt = fast_force_tac (ctxt addsimps thms)
+               fun proof_tac ctxt = fast_force_tac (ctxt |> Simplifier.add_simps thms)
                val get_wp = Goal.prove ctxt ["x", "p","R"] [] proof_term (fn _ => proof_tac ctxt 1)
        in (sep_info, Utils.define_lemma (name ^ "_wp") get_wp ctxt |> snd) end;\<close>
 
@@ -433,7 +433,7 @@ ML \<open>fun prove_get_leaf_lemma heap_type ((sep_info : sep_info),  ctxt) =
 ML \<open>
       fun prove_update_heap_lemma (heap_arrow, heap_arrow_def) heap_update  ctxt =
          let val proof_term = @{mk_term "((?arr p x) s \<Longrightarrow> (?arr p v) (?heap_update (\<lambda>s. fun_upd s p v) s))" (arr,heap_update)} (heap_arrow, heap_update)
-             val proof = clarsimp_tac (ctxt addsimps [heap_arrow_def])
+             val proof = clarsimp_tac (ctxt |> Simplifier.add_simp heap_arrow_def)
              in   Goal.prove ctxt ["x", "p", "v","s"] [] proof_term (fn x => proof 1)
       end;
 
@@ -452,12 +452,12 @@ ML \<open>
                val thms = @{thms fun_upd_def} @ [ heap_arrow_def, disj_thm, plus_thm]
                val name = heap_setter |> dest_Const |> fst |> Long_Name.base_name
                val heap_update_lemma = prove_update_heap_lemma (heap_arrow, heap_arrow_def) (heap_updater) ctxt
-               fun proof_tac ctxt = clarsimp_tac (ctxt addsimps [heap_setter_def]) THEN'
+               fun proof_tac ctxt = clarsimp_tac (ctxt |> Simplifier.add_simp heap_setter_def) THEN'
                                     eresolve0_tac [@{thm sep_conjE}] THEN'
                                     resolve0_tac [@{thm sep_conjI}] THEN'
                                     eresolve0_tac [heap_update_lemma] THEN'
                                     fast_force_tac (ctxt) THEN_ALL_NEW
-                                    fast_force_tac (ctxt addsimps thms)
+                                    fast_force_tac (ctxt |> Simplifier.add_simps thms)
                val set_wp = Goal.prove ctxt ["x", "p","R", "v"] [] proof_term (fn x =>  proof_tac (#context x) 1 )
        in (sep_info, Utils.define_lemma (name ^ "_wp") set_wp ctxt |> snd) end;\<close>
 
@@ -501,9 +501,9 @@ ML \<open>
              fun proof_tac thms ctxt =
                  let
                      val equality =  Proof_Context.get_thm ctxt "lifted_globals.equality" ;
-                     val simpset = ctxt addsimps @{thms sep_add_left_commute sep_disj_commute sep_add_assoc sep_add_commute
+                     val simpset = ctxt |> Simplifier.add_simps (@{thms sep_add_left_commute sep_disj_commute sep_add_assoc sep_add_commute
                                                        left_commute zero_fun_def plus_fun_def sep_disj_fun_def zero_bool_def
-                                                       commute} addsimps thms
+                                                       commute} @ thms)
                      val intros = [equality, @{thm ext}]
                   in
                          Class.standard_intro_classes_tac ctxt [] THEN

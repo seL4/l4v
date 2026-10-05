@@ -32,7 +32,7 @@ val the' = Utils.the'
 
 (* Simpset we use for automated tactics. *)
 fun setup_l2_ss ctxt = put_simpset AUTOCORRES_SIMPSET ctxt
-                         addsimps @{thms pred_conj_def}
+                         |> Simplifier.add_simps @{thms pred_conj_def}
 
 (* Convert a set of variable names into an Isabelle list of strings. *)
 fun var_set_to_isa_list prog_info s =
@@ -695,7 +695,7 @@ let
   val new_thm = list_implies (Thm.cprems_of thm, Thm.cterm_of ctxt new_concl)
 in
   Goal.init new_thm
-  |> asm_full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps [mk_meta_eq @{thm split_def}]) 1 |> Seq.hd
+  |> asm_full_simp_tac (ctxt |> put_simpset HOL_basic_ss |> Simplifier.add_simp (mk_meta_eq @{thm split_def})) 1 |> Seq.hd
   |> resolve_tac ctxt [rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm] 1 |> Seq.hd
   |> REPEAT (assume_tac ctxt 1) |> Seq.hd
   |> Goal.finish ctxt
@@ -1363,13 +1363,13 @@ fun get_l2corres_thm ctxt prog_info l1_infos l1_call_info do_opt trace_opt fn_na
   val new_thm = Conv.fconv_rule (
       Utils.remove_meta_conv (fn ctxt =>
         Utils.nth_arg_conv 5 (
-          Raw_Simplifier.rewrite ctxt false @{thms L2_remove_scaffolding_1}
+          Simplifier.rewrite_wrt ctxt false @{thms L2_remove_scaffolding_1}
           then_conv
-          Raw_Simplifier.rewrite ctxt false @{thms L2_remove_scaffolding_2})) ctxt) new_thm
+          Simplifier.rewrite_wrt ctxt false @{thms L2_remove_scaffolding_2})) ctxt) new_thm
 
   (* Cleanup. *)
   val _ = writeln ("Simplifying (L2) " ^ fn_name)
-  val new_thm = Simplifier.simplify (put_simpset HOL_basic_ss ctxt addsimps
+  val new_thm = Simplifier.simplify (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps
                                        (* this rule is expensive *)
                                        (if do_opt then @{thms L2_unknown_bind} else []))
                                     new_thm
@@ -1377,7 +1377,7 @@ fun get_l2corres_thm ctxt prog_info l1_infos l1_call_info do_opt trace_opt fn_na
   val _ = writeln ("Simplifying (L2opt) " ^ fn_name)
   (* HACK: we need to avoid these simps until heap_lift *)
   val cleanup_del = @{thms ptr_coerce.simps ptr_add_0_id}
-  val (new_thm, traces) = L2Opt.cleanup_thm_tagged (ctxt delsimps cleanup_del) new_thm
+  val (new_thm, traces) = L2Opt.cleanup_thm_tagged (ctxt |> Simplifier.del_simps cleanup_del) new_thm
                                                    (if do_opt then 0 else 2) 5 trace_opt "L2"
 in
   (new_thm, traces)
@@ -1431,8 +1431,8 @@ let
                           (* We use simp to solve assumptions (assume_tac doesn't work
                            * because the assumptions are ALL-quantified) and to
                            * split tuple cases. *)
-                          @ [CHANGED (asm_full_simp_tac (clear_simpset lthy
-                               addsimps @{thms split_conv split_tupled_all}) 1)])))
+                          @ [CHANGED (asm_full_simp_tac (lthy |> Simplifier.clear_simpset
+                               |> Simplifier.add_simps @{thms split_conv split_tupled_all}) 1)])))
                 func_expand)
 
   val mono_thm = map make_mono_step_stmt fn_defs
@@ -1454,7 +1454,7 @@ let
       end
   val final_thms = fn_defs
         |> map (fn fn_def => Goal.prove lthy [] [] (make_mono_stmt fn_def)
-                     (K (asm_full_simp_tac (lthy addsimps [@{thm monad_mono_alt_def}, mono_thm]) 1)))
+                     (K (asm_full_simp_tac (lthy |> Simplifier.add_simps [@{thm monad_mono_alt_def}, mono_thm]) 1)))
 in
   final_thms
   |> (fn thms => fn_names ~~ thms)

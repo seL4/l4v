@@ -269,7 +269,7 @@ let
   val (thm, guard_opt_trace) = AutoCorresTrace.fconv_rule_maybe_traced ctxt (l1conv guard_conv) thm trace_opt
   val (thm, peephole_opt_trace) =
       AutoCorresTrace.fconv_rule_maybe_traced ctxt
-          (l1conv (Simplifier.rewrite (put_simpset HOL_basic_ss ctxt addsimps
+          (l1conv (Simplifier.rewrite (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps
                      (if do_opt then Utils.get_rules ctxt @{named_theorems L1opt} else []))))
           thm trace_opt
 
@@ -300,7 +300,7 @@ let
   (* Unfold terms in the body which we don't want to deal with. *)
   val unfolded_simpl_thm =
       Conv.fconv_rule (Utils.rhs_conv
-          (Simplifier.rewrite (put_simpset HOL_basic_ss ctxt addsimps
+          (Simplifier.rewrite (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps
              (Utils.get_rules ctxt @{named_theorems L1unfold}))))
           simpl_thm
   val unfolded_simpl_term = Thm.concl_of unfolded_simpl_thm |> Utils.rhs_of;

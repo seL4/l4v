@@ -426,7 +426,7 @@ let
       |> apply_tac "unfolding L2 rewritten theorem"
              (EqSubst.eqsubst_tac lthy [0] [hd inst_thms] 1)
       |> apply_tac "simplifying remainder"
-             (TRY (simp_tac (put_simpset HOL_ss (Context_Position.set_visible false lthy) addsimps simps) 1))
+             (TRY (simp_tac (put_simpset HOL_ss (Context_Position.set_visible false lthy) |> Simplifier.add_simps simps) 1))
     )
     |> Goal.finish lthy
 

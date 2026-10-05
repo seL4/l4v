@@ -22,7 +22,7 @@ fun map_opt_simpset use_ugly_rules =
     #> Simplifier.add_cong @{thm split_cong}
     #> Simplifier.add_cong @{thm HOL.conj_cong}
     #> (if use_ugly_rules then
-          (fn ctxt => ctxt addsimps [@{thm split_def}])
+          Simplifier.add_simp @{thm split_def}
         else
            I)
 
@@ -221,7 +221,7 @@ fun l2_guard_simproc ss =
 fun fix_L2_while_loop_splits_conv ctxt =
   Simplifier.asm_full_rewrite (
     put_simpset HOL_ss ctxt
-    addsimps @{thms L2_split_fixups}
+    |> Simplifier.add_simps @{thms L2_split_fixups}
     |> fold Simplifier.add_cong @{thms L2_split_fixups_congs})
 
 (*
@@ -243,9 +243,9 @@ let
   (* Setup basic simplifier. *)
   fun basic_ss ctxt =
       put_simpset AUTOCORRES_SIMPSET ctxt
-      |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (Utils.get_rules ctxt @{named_theorems L2opt}) else ctxt)
-      |> (fn ctxt => if fast_mode < 2 then ctxt addsimprocs [l2_gets_bind_simproc] else ctxt)
-      |> (fn ctxt => ctxt addsimprocs [l2_guard_simproc (simpset_of ctxt)])
+      |> (fn ctxt => if fast_mode < 2 then Simplifier.add_simps (Utils.get_rules ctxt @{named_theorems L2opt}) ctxt else ctxt)
+      |> (fn ctxt => if fast_mode < 2 then Simplifier.add_proc l2_gets_bind_simproc ctxt else ctxt)
+      |> (fn ctxt => Simplifier.add_proc (l2_guard_simproc (simpset_of ctxt)) ctxt)
       |> map_opt_simpset false
   fun simp_conv ctxt =
     Drule.beta_eta_conversion

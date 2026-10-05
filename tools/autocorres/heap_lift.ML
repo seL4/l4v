@@ -333,8 +333,8 @@ fun new_heap_update_thm (getter_type_name, getter_field_name, getter, getter_def
       val prop = @{mk_term "Trueprop (?lhs = ?rhs)" (lhs, rhs)} (lhs, rhs)
       val defs = the_list getter_def @ the_list setter_def
       val thm = Goal.prove_future lthy ["s", "p", "v"] [] prop
-                  (fn params => (simp_tac ((#context params) addsimps
-                                @{thms ext fun_upd_apply} @ defs) 1))
+                  (fn params => (simp_tac (#context params |> Simplifier.add_simps
+                                (@{thms ext fun_upd_apply} @ defs)) 1))
   in SOME thm end
 
 fun new_heap_valid_thm valid_term (_, _, setter, NONE) lthy = NONE
@@ -342,7 +342,7 @@ fun new_heap_valid_thm valid_term (_, _, setter, NONE) lthy = NONE
   let val prop = @{mk_term "Trueprop (?valid (?set s p v) q = ?valid s q)" (valid, set)}
                  (Const valid_term, setter)
       val thm = Goal.prove_future lthy ["s", "p", "v", "q"] [] prop
-                  (fn params => (simp_tac ((#context params) addsimps
+                  (fn params => (simp_tac (#context params |> Simplifier.add_simps
                                 [@{thm fun_upd_apply}, setter_def]) 1))
   in SOME thm end
 
@@ -353,7 +353,8 @@ fun eta_rhs lthy thm = let
   val Const (@{const_name "Pure.eq"}, typ) $ lhs $ (rhs $ Var (("s", s_n), s_typ)) = term_of_thm thm
   val abs_term = @{mk_term "?a == ?b" (a, b)} (lambda (Var (("s", s_n), s_typ)) lhs, rhs)
   val thm' = Goal.prove_future lthy [] [] abs_term
-               (fn params => simp_tac (put_simpset HOL_basic_ss (#context params) addsimps thm :: @{thms atomize_eq ext}) 1)
+               (fn params => simp_tac (#context params |> put_simpset HOL_basic_ss
+                                           |> Simplifier.add_simps (thm :: @{thms atomize_eq ext})) 1)
 in thm' end
 
 (* Extract the abstract term out of a L2Tcorres thm. *)
@@ -374,19 +375,17 @@ fun lifted_globals_lemmas prog_info heap_info lthy = let
         @ (lookup_the struct_simpset "fg_cons_simps")
     val base_ss = simpset_of @{theory_context HeapLift}
     val record_ss = RecordUtils.get_record_simpset lthy
-    val merged_ss = merge_ss (base_ss, record_ss)
+    val merged_ss = Simplifier.merge_ss (base_ss, record_ss)
 
     (* Generate a simpset containing everything we need. *)
     val ss =
-      (Context_Position.set_visible false lthy)
-      |> put_simpset merged_ss
-      |> (fn ctxt => ctxt
-                addsimps [#lift_fn_thm heap_info]
+      merged_ss
+      |> Simplifier.simpset_map (Context_Position.set_visible false lthy)
+           (Simplifier.add_simps ([#lift_fn_thm heap_info]
                     @ @{thms typ_simple_heap_simps}
                     @ @{thms valid_globals_field_def}
                     @ @{thms the_fun_upd_lemmas}
-                    @ struct_simps)
-      |> simpset_of
+                    @ struct_simps))
   in
     fun subgoal_solver_tac ctxt =
       (fast_force_tac (put_simpset ss ctxt) 1)

@@ -115,7 +115,7 @@ let
   val cterm = Thm.cterm_of lthy term
   (* Just apply the simplifier and hope that it works. *)
   val thm = Simplifier.rewrite (
-      put_simpset HOL_ss lthy addsimps rules' addsimps more_facts) cterm
+      put_simpset HOL_ss lthy |> Simplifier.add_simps (rules' @ more_facts)) cterm
   val rhs = Utils.rhs_of (term_of_thm thm)
   val good_rewrite = if forward then #valid_term mt else term_is_L2
 in
@@ -142,7 +142,7 @@ let
 
   (* Simplify using polish rules. *)
   val rules = Monad_Types.monad_type_rules mt
-  val simp_conv = Simplifier.rewrite (put_simpset HOL_ss ctxt addsimps (#polish_rules rules @ simps))
+  val simp_conv = Simplifier.rewrite (put_simpset HOL_ss ctxt |> Simplifier.add_simps (#polish_rules rules @ simps))
 
   (* eta-contract "case_prod clauses, so that they render as:
    * "%(a, b). P a b" instead of "case x of (a, b) => P a b". *)

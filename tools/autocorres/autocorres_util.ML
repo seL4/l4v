@@ -444,7 +444,7 @@ fun define_funcs
           |> Utils.apply_tac "unfold bodies"
               (EVERY (map (fn x => (EqSubst.eqsubst_tac ctxt' [1] [x] 1)) (rev fn_def_thms)))
           |> Utils.apply_tac "solve induction base cases"
-              (SOLVES ((simp_tac (put_simpset HOL_ss ctxt' addsimps [rec_base_case]) 1)))
+              (SOLVES ((simp_tac (ctxt' |> put_simpset HOL_ss |> Simplifier.add_simp rec_base_case) 1)))
           |> Utils.apply_tac "solve remaining goals"
               (Utils.metis_insert_tac ctxt helper_thms 1)
         ) else (

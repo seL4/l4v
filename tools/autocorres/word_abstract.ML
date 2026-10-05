@@ -381,7 +381,7 @@ let
         corresTA_abs_conv (fn ctxt =>
           (HeapLift.dest_first_order ctxt)
           then_conv (Simplifier.rewrite (
-                put_simpset HOL_basic_ss ctxt addsimps [@{thm id_def}]))
+                put_simpset HOL_basic_ss ctxt |> Simplifier.add_simp @{thm id_def}))
           then_conv Drule.beta_eta_conversion
         )
       ) thm

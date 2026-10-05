@@ -20,7 +20,8 @@ lemma globals_surj: "surj globals"
 ML \<open>
 
 val AUTOCORRES_SIMPSET =
-  @{context} delsimps (
+  @{context}
+  |> Simplifier.del_simps (
     (* interferes with heap_lift *)
     @{thms fun_upd_apply}
     (* affects boolean expressions *)
@@ -29,10 +30,10 @@ val AUTOCORRES_SIMPSET =
     @ @{thms ptr_coerce.simps ptr_add_0_id}
     (* oversimplifies Spec sets prior to L2 stage
        (we will control this explicitly in L2Peephole) *)
-    @ @{thms CollectPairFalse})
+    @ @{thms CollectPairFalse}
     (* avoid take_bit terms in word abstraction and user simps *)
-    @ @{thms of_int_and_nat}
-  addsimps (
+    @ @{thms of_int_and_nat})
+  |> Simplifier.add_simps (
     (* Needed for L2corres_spec *)
     @{thms globals_surj}
     )
