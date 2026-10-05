@@ -411,7 +411,7 @@ ML \<open>
                   |        ~ @{ML asm_simp_tac} (can use assumptions of subgoal, e.g. to do
                   |                              proof by contradiction)
                   | "simp only: some_thms" ~
-                  |      @{ML "simp_tac (clear_simpset some_ctxt addsimps some_thms)"}
+                  |      @{ML "simp_tac (some_ctxt |> Simplifier.clear_simpset |> Simplifier.add_simps some_thms)"}
 \<close>
 
 section "Method combinators and tactic combinators"

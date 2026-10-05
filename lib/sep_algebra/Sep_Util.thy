@@ -33,7 +33,7 @@ fun sep_all tac ctxt =
   end
 
 fun sep_simp thms ctxt =
-   let val ctxt' = ctxt addsimps thms
+   let val ctxt' = ctxt |> Simplifier.add_simps thms
        val clarsimp' = CHANGED_PROP o clarsimp_tac ctxt'
  in REPEAT_ALL_NEW (sep_all clarsimp' ctxt)
 end

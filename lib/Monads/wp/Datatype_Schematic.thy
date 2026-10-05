@@ -138,7 +138,7 @@ fun get_bound_tac ctxt = SUBGOAL (fn (t, i) => case get_action ctxt t of
     val t' = Drule.infer_instantiate ctxt
         [((nm, ix), Thm.cterm_of ctxt inst_v)] t
     val t'' = Conv.fconv_rule (Thm.beta_conversion true) t'
-  in safe_full_simp_tac (clear_simpset ctxt addsimps [thm]) i t'' end)
+  in safe_full_simp_tac (ctxt |> Simplifier.clear_simpset |> Simplifier.add_simp thm) i t'' end)
   | _ => no_tac)
 
 fun id_applicable (f $ x) = let

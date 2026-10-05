@@ -75,7 +75,7 @@ end
 
 fun pretty_adjusted_name ctxt (FoundName ((name, idx), _)) =
     Pretty.block
-      [Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
+      [Pretty.marks_str (Facts.markups_extern ctxt (Proof_Context.facts_of ctxt) name),
        case idx of
            SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ ")")
          | NONE => Pretty.str ""]

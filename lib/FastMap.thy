@@ -453,8 +453,8 @@ fun prove_tree_valid tree_name mappings kT keyT tree_term get_key simp_ctxt ctxt
                     (kT --> keyT) --> treeT --> valid_resultT) $
                get_key $ tree_term))
     val solver = simp_tac (put_simpset HOL_basic_ss ctxt
-                           addsimps (@{thms prod.sel FastMap.lookup_tree_valid_simps'} @
-                                     key_ord_thms)) 1
+                           |> Simplifier.add_simps (@{thms prod.sel FastMap.lookup_tree_valid_simps'} @
+                                                    key_ord_thms)) 1
   in Goal.prove ctxt [] [] tree_valid_prop (K solver) end
 
 fun solve_simp_tac name ctxt = SUBGOAL (fn (t, i) =>
@@ -586,8 +586,8 @@ fun define_map
             (minimal_simp: bool) (* true: start with minimal simpset; extra_simps must be adequate *)
             ctxt = let
     fun simp_ctxt ctxt basic_simps more_simps = if minimal_simp
-      then put_simpset HOL_basic_ss ctxt addsimps (basic_simps @ extra_simps @ more_simps)
-      else ctxt addsimps (extra_simps @ more_simps)
+      then put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps (basic_simps @ extra_simps @ more_simps)
+      else ctxt |> Simplifier.add_simps (extra_simps @ more_simps)
 
     val (kT, keyT) = dest_funT (fastype_of get_key)
     val valT = fastype_of (snd (hd mappings))

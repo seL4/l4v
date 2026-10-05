@@ -101,16 +101,16 @@ lemma isRight_rel_sum_comb2:
 lemma isRight_case_sum: "isRight x \<Longrightarrow> case_sum f g x = g (theRight x)"
   by (cases x; clarsimp)
 
-lemma enumerate_append:"enumerate i (xs @ ys) = enumerate i xs @ enumerate (i + length xs) ys"
+lemma indexed_from_append:"indexed_from i (xs @ ys) = indexed_from i xs @ indexed_from (i + length xs) ys"
   apply (induct xs arbitrary:ys i)
    apply clarsimp+
   done
 
-lemma enumerate_bound:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> a < n + length xs"
-  by (metis add.commute in_set_enumerate_eq prod.sel(1))
+lemma indexed_from_bound:"(a, b) \<in> set (indexed_from n xs) \<Longrightarrow> a < n + length xs"
+  by (metis add.commute in_set_indexed_from_eq prod.sel(1))
 
-lemma enumerate_exceed:"(n + length xs, b) \<notin> set (enumerate n xs)"
-  by (metis enumerate_bound less_not_refl)
+lemma indexed_from_exceed:"(n + length xs, b) \<notin> set (indexed_from n xs)"
+  by (metis indexed_from_bound less_not_refl)
 
 lemma all_pair_unwrap:"(\<forall>a. P (fst a) (snd a)) = (\<forall>a b. P a b)"
   by force
@@ -291,8 +291,8 @@ lemma fold_add_sum: "fold (+) ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = 
   apply (subst sum_list_rev)
   by clarsimp
 
-lemma set_of_enumerate:"card (set (enumerate n xs)) = length xs"
-  by (metis distinct_card distinct_enumerate length_enumerate)
+lemma set_of_indexed_from:"card (set (indexed_from n xs)) = length xs"
+  by (metis distinct_card distinct_indexed_from length_indexed_from)
 
 lemma collapse_fst: "fst ` (\<lambda>x. (f x, g x)) ` s = f ` s"
   by force
@@ -300,8 +300,8 @@ lemma collapse_fst: "fst ` (\<lambda>x. (f x, g x)) ` s = f ` s"
 lemma collapse_fst2: "fst ` (\<lambda>(x, y). (f x, g y)) ` s = (\<lambda>x. f (fst x)) ` s"
   by force
 
-lemma collapse_fst3: "(\<lambda>x. f (fst x)) ` set (enumerate n xs) = f ` set [n..<n + length xs]"
-  by (metis image_image list.set_map map_fst_enumerate)
+lemma collapse_fst3: "(\<lambda>x. f (fst x)) ` set (indexed_from n xs) = f ` set [n..<n + length xs]"
+  by (metis image_image list.set_map map_fst_indexed_from)
 
 lemma card_of_dom_bounded:
   fixes f :: "'a \<Rightarrow> 'b option"
@@ -312,12 +312,12 @@ lemma card_of_dom_bounded:
 lemma third_in: "(a, b, c) \<in> S \<Longrightarrow> c \<in> (snd \<circ> snd) ` S"
   by (metis (erased, opaque_lifting) map_set_in image_comp snd_conv)
 
-lemma third_in2: "(a \<in> (snd \<circ> snd) ` (set (enumerate i xs))) = (a \<in> snd ` (set xs))"
-  by (metis map_map map_snd_enumerate set_map)
+lemma third_in2: "(a \<in> (snd \<circ> snd) ` (set (indexed_from i xs))) = (a \<in> snd ` (set xs))"
+  by (metis map_map map_snd_indexed_from set_map)
 
-lemma map_of_enum: "map_of (enumerate n xs) x = Some y \<Longrightarrow> y \<in> set xs"
+lemma map_of_enum: "map_of (indexed_from n xs) x = Some y \<Longrightarrow> y \<in> set xs"
   apply (clarsimp)
-  by (metis enumerate_eq_zip in_set_zipE)
+  by (metis indexed_from_eq_zip in_set_zipE)
 
 lemma map_of_append:
   "(map_of xs ++ map_of ys) x = (case map_of ys x of None \<Rightarrow> map_of xs x | Some x' \<Rightarrow> Some x')"
@@ -337,8 +337,8 @@ lemma map_of_in_set_map: "map_of (map (\<lambda>(n, y). (f n, y)) xs) x = Some z
     thus "z \<in> snd ` set xs" using map_set_in by fastforce
   qed
 
-lemma pair_in_enum: "(a, b) \<in> set (enumerate x ys) \<Longrightarrow> b \<in> set ys"
-  by (metis enumerate_eq_zip in_set_zip2)
+lemma pair_in_enum: "(a, b) \<in> set (indexed_from x ys) \<Longrightarrow> b \<in> set ys"
+  by (metis indexed_from_eq_zip in_set_zip2)
 
 lemma distinct_inj:
   "inj f \<Longrightarrow> distinct xs = distinct (map f xs)"
@@ -423,7 +423,7 @@ lemma map_length_split_triple:
 lemma sum_suc_triple: "(\<Sum>(a, b, c)\<leftarrow>xs. Suc (f a b c)) = length xs + (\<Sum>(a, b, c)\<leftarrow>xs. f a b c)"
   by (induct xs; clarsimp)
 
-lemma sum_enumerate: "(\<Sum>(a, b)\<leftarrow>enumerate n xs. P b) = (\<Sum>b\<leftarrow>xs. P b)"
+lemma sum_indexed_from: "(\<Sum>(a, b)\<leftarrow>indexed_from n xs. P b) = (\<Sum>b\<leftarrow>xs. P b)"
   by (induct xs arbitrary:n; clarsimp)
 
 lemma dom_map_fold:"dom (fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) ms) = dom ms \<union> set (map f xs)"
@@ -432,8 +432,8 @@ lemma dom_map_fold:"dom (fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) ms
 lemma list_ran_prop:"map_of (map (\<lambda>x. (f x, g x)) xs) i = Some t \<Longrightarrow> \<exists>x \<in> set xs. g x = t"
   by (induct xs arbitrary:f g t i; clarsimp split:if_split_asm)
 
-lemma in_set_enumerate_eq2:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> (b = xs ! (a - n))"
-  by (simp add: in_set_enumerate_eq)
+lemma in_set_indexed_from_eq2:"(a, b) \<in> set (indexed_from n xs) \<Longrightarrow> (b = xs ! (a - n))"
+  by (simp add: in_set_indexed_from_eq)
 
 lemma subset_eq_notI: "\<lbrakk>a\<in> B;a\<notin> C\<rbrakk> \<Longrightarrow> \<not> B \<subseteq> C"
   by auto

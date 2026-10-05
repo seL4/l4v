@@ -255,7 +255,7 @@ ML \<open>
 local
   val simpset = simpset_of (
       put_simpset HOL_basic_ss @{context}
-        addsimps [(sym OF [@{thm sep_conj_assoc}])])
+        |> Simplifier.add_simp (sym OF [@{thm sep_conj_assoc}]))
   fun simp ctxt thm = simplify (put_simpset simpset ctxt) thm
   fun attrib thm ctxt thm' =
     (thm OF [simp (ctxt) thm'])

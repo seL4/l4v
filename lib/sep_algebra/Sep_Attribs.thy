@@ -34,7 +34,7 @@ lemma curry: "(P \<longrightarrow> Q \<longrightarrow> R) \<Longrightarrow> (P \
 ML \<open>
 local
   fun atomize_thm ctxt thm = Conv.fconv_rule (Object_Logic.atomize ctxt) thm
-  fun setup_simpset ctxt = put_simpset HOL_basic_ss ctxt addsimps [(sym OF [@{thm sep_conj_assoc}])]
+  fun setup_simpset ctxt = put_simpset HOL_basic_ss ctxt |> Simplifier.add_simp (sym OF [@{thm sep_conj_assoc}])
   fun simp ctxt thm = simplify (setup_simpset ctxt) thm
 
   fun REPEAT_TRYOF_N _ thm2 0 = thm2

@@ -144,8 +144,8 @@ fun st_intro_tac ctxt = CSUBGOAL (fn (ct, i) => fn thm => let
 
 fun intro_tac ctxt vs = SUBGOAL (fn (t, i) => if has_var vs t
     then CONVERSION (target_var_conv vs ctxt) i
-        THEN CONVERSION (Simplifier.full_rewrite (clear_simpset ctxt
-            addsimps @{thms target_var_drop_func}
+        THEN CONVERSION (Simplifier.full_rewrite (ctxt |> Simplifier.clear_simpset
+            |> Simplifier.add_simps @{thms target_var_drop_func}
         )) i
         THEN st_intro_tac ctxt i
     else all_tac)

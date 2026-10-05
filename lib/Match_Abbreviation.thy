@@ -65,7 +65,7 @@ fun add_reassoc name rhs fixes thms_info ctxt = let
     val thms = Attrib.eval_thms ctxt thms_info
     val rhs_pat = singleton (parse_pat_fixes ctxt fixes) rhs
       |> Thm.cterm_of ctxt
-    val rew = Simplifier.rewrite (clear_simpset ctxt addsimps thms) rhs_pat
+    val rew = Simplifier.rewrite (ctxt |> Simplifier.clear_simpset |> Simplifier.add_simps thms) rhs_pat
       |> Thm.symmetric
     val (_, ctxt) = Local_Theory.note ((name, []), [rew]) ctxt
     val pretty_decl = Pretty.block [Pretty.str (Binding.name_of name ^ ":\n"),
@@ -145,7 +145,7 @@ fun unvarify_types_same ty = ty
 fun unvarify_types tm = tm
   |> Same.commit (Term.map_types_same unvarify_types_same)
 
-fun match_abbreviation mode name init adjusts int ctxt = let
+fun match_abbreviation mode name init adjusts ctxt = let
     val init_term = init ctxt
     val init_lambda = lambda_frees_vars ctxt init_term init_term
       |> unvarify_types
@@ -154,7 +154,7 @@ fun match_abbreviation mode name init adjusts int ctxt = let
     val result = fold (do_adjust ctxt) adjusts init_lambda
     val lhs = Free (Binding.name_of name, fastype_of result)
     val eq = Logic.mk_equals (lhs, result)
-    val ctxt = Specification.abbreviation mode (SOME decl) [] eq int ctxt
+    val ctxt = Specification.abbreviation {verbose = true} mode (SOME decl) [] eq ctxt
     val pretty_eq = Syntax.pretty_term ctxt eq
   in Pretty.writeln pretty_eq; ctxt end
 
@@ -187,7 +187,7 @@ val adjust_parser = Parse.and_list1
 
 (* install match_abbreviation. see below for examples/docs *)
 val _ =
-  Outer_Syntax.local_theory' @{command_keyword match_abbreviation}
+  Outer_Syntax.local_theory @{command_keyword match_abbreviation}
     "setup abbreviation for subterm of theorem"
     (Parse.syntax_mode -- Parse.binding
         -- init_term_parse -- adjust_parser

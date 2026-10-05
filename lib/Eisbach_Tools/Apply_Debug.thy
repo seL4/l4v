@@ -731,7 +731,7 @@ in
             val r = Synchronized.timed_access ident (fn _ => SOME (seconds 0.1)) (fn e as {restart,next_state,...} =>
               if is_restarting e andalso is_none next_state then
               SOME ((fst restart, #trans_id e), restart_state (snd restart) e) else NONE);
-            val _ = OS.Process.sleep (seconds 0.1);
+            val _ = Time.sleep (seconds 0.1);
             in case r of NONE => main_loop ()
             | SOME (f,trans_id) =>
               let

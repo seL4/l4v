@@ -19,7 +19,7 @@ text \<open>
   value @{term x}.
 \<close>
 definition generic_tag :: "'ns \<Rightarrow> 'tag \<Rightarrow> 'a \<Rightarrow> 'a"
-  where remove_generic_tag[code del]: "generic_tag _ _ x \<equiv> x"
+  where remove_generic_tag[code abort]: "generic_tag _ _ x \<equiv> x"
 
 text \<open>Often the tagged value is a proposition to be proved.\<close>
 lemma generic_tagP_I:

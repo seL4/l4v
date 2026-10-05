@@ -90,7 +90,7 @@ in
   Simplifier.make_simproc ctxt
     {name = "simp_strategy_" ^ fst (dest_Const name),
      lhss = [@{term simp_strategy} $ name $ @{term x}],
-     kind = Simproc,
+     kind = Simplifier.Simproc,
      proc = (fn _ => fn ctxt' => fn ct =>
         ct
         |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt'))

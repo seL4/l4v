@@ -39,7 +39,7 @@ fun mk_upd_simps ctxt upd_app (simps, done, n) = let
       | _ => raise TERM ("mk_upd_simps: impossible", [upd_app])
     val prop = HOLogic.mk_eq (upd_app, rhs) |> HOLogic.mk_Trueprop
     val thm = Thm.trivial (Thm.cterm_of ctxt prop)
-      |> simp_tac (ctxt addsimps [def, @{thm fun_eq_iff}] addsimps simps) 1
+      |> simp_tac (ctxt |> Simplifier.add_simps ([def, @{thm fun_eq_iff}] @ simps)) 1
       |> Seq.hd
     val upd_apps_prem = Thm.prems_of thm |> maps get_upd_apps
       |> sort_distinct Term_Ord.fast_term_ord
@@ -63,10 +63,10 @@ fun mk_upd_simps_tm ctxt t = let
   in simps end
 
 fun add_upd_simps t exsimps ctxt = let
-    val thms = mk_upd_simps_tm (ctxt addsimps exsimps) t
+    val thms = mk_upd_simps_tm (ctxt |> Simplifier.add_simps exsimps) t
     val _ = map (Thm.pretty_thm ctxt #> Pretty.writeln) thms
   in if null thms then ctxt
-     else (Local_Theory.notes [((@{binding upd_simps}, []), [(thms, [])])] ctxt |> #2) addsimps thms
+     else (Local_Theory.notes [((@{binding upd_simps}, []), [(thms, [])])] ctxt |> #2) |> Simplifier.add_simps thms
   end
 
 val add_upd_simps_syn = Outer_Syntax.local_theory @{command_keyword "add_upd_simps"}

@@ -56,12 +56,12 @@ end
 declare [[simproc del: eval_bool eval_nat eval_int]]
 
 method_setup eval_bool = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
-    (CHANGED o full_simp_tac (clear_simpset ctxt addsimprocs [@{simproc eval_bool}])))\<close>
+    (CHANGED o full_simp_tac (ctxt |> Simplifier.clear_simpset |> Simplifier.add_proc @{simproc eval_bool})))\<close>
     "use code generator setup to simplify booleans in goals to True or False"
 
 method_setup eval_int_nat = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
-    (CHANGED o full_simp_tac (clear_simpset ctxt
-        addsimprocs [@{simproc eval_nat}, @{simproc eval_int}])))\<close>
+    (CHANGED o full_simp_tac (ctxt |> Simplifier.clear_simpset
+        |> fold Simplifier.add_proc [@{simproc eval_nat}, @{simproc eval_int}])))\<close>
     "use code generator setup to simplify nats and ints in goals to values"
 
 text \<open>Testing.\<close>

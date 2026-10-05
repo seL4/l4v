@@ -46,7 +46,7 @@ let
   (* Set a simpset as being hidden, so warnings are not printed from it. *)
   val ctxt' = Context_Position.set_visible false ctxt
 in
-  CHANGED (clarsimp_tac (ctxt' addsimps (MonadEqThms.get ctxt')) 1)
+  CHANGED (clarsimp_tac (ctxt' |> Simplifier.add_simps (MonadEqThms.get ctxt')) 1)
 end
 \<close>
 

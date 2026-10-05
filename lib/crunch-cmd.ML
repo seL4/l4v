@@ -705,7 +705,7 @@ fun crunch_rule cfg const goal extra thms =
 
 fun warn_helper_thms wp ctxt t =
   let val simp_thms = maybe_thms ctxt "crunch_simps"
-      val ctxt' = ctxt addsimps simp_thms
+      val ctxt' = ctxt |> Simplifier.add_simps simp_thms
       val wp_thms = maybe_thms ctxt "crunch_wps"
       fun can_tac tac = (is_some o SINGLE (HEADGOAL (CHANGED_GOAL tac))) t
   in if can_tac (clarsimp_tac ctxt')
@@ -783,7 +783,7 @@ fun crunch cfg pre extra stack const' thms =
                       error("probably infinite loop")) else ();
           val (goals, thms') = funkyfold (crunch cfg pre extra stack') (map fst ms) thms;
           val goals' = map_filter I goals
-          val ctxt'' = ctxt' addsimps ((#simps cfg) @ goals')
+          val ctxt'' = ctxt' |> Simplifier.add_simps ((#simps cfg) @ goals')
               |> Splitter.del_split split_if
 
           fun collect_preconds' pre =
@@ -911,7 +911,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
 
         val wp_dels = get_thms_from_facts ctxt wp_dels';
         val ctxt' =
-          ctxt delsimps simp_dels
+          ctxt |> Simplifier.del_simps simp_dels
           |> fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.wp_del] thm ctxt |> snd)
                   wp_dels
           |> fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.combs_add] thm ctxt |> snd)

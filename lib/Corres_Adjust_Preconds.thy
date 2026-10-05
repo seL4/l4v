@@ -130,7 +130,7 @@ fun mk_adj_preconds ctxt intros rule = let
   in x
     |> ALLGOALS (handle_preconds ctxt intros)
     |> Seq.hd
-    |> Simplifier.simplify (clear_simpset ctxt addsimps @{thms conj_assoc simp_thms(21-22)})
+    |> Simplifier.simplify (ctxt |> Simplifier.clear_simpset |> Simplifier.add_simps @{thms conj_assoc simp_thms(21-22)})
   end
 
 val setup =

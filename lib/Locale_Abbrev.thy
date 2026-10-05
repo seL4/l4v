@@ -48,13 +48,13 @@ val _ =
     (Parse.syntax_mode -- Parse.const >> revert_abbrev)
 
 val _ =
-  Outer_Syntax.local_theory' @{command_keyword locale_abbrev}
+  Outer_Syntax.local_theory @{command_keyword locale_abbrev}
     "constant abbreviation that provides also provides printing in locales"
     (Parse.syntax_mode -- Scan.option Parse_Spec.constdecl -- Parse.prop -- Parse.for_fixes
-      >> (fn (((mode, decl), spec), params) => fn restricted => fn lthy =>
+      >> (fn (((mode, decl), spec), params) => fn lthy =>
            lthy
            |> Local_Theory.begin_nested |> snd
-           |> Specification.abbreviation_cmd mode decl params spec restricted
+           |> Specification.abbreviation_cmd {verbose = true} mode decl params spec
            |> Local_Theory.end_nested (* commit new abbrev. name *)
            |> revert_abbrev (mode, name_of spec lthy)));
 

@@ -101,7 +101,7 @@ let
 
   (* simp add: sep_conj_ac *)
   val sep_conj_ac_tac = Simplifier.asm_full_simp_tac
-                          (put_simpset HOL_basic_ss ctxt addsimps SepConj.sep_conj_ac)
+                          (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps SepConj.sep_conj_ac)
 
 in
   Goal.prove ctxt [] [] goal (fn _ => sep_conj_ac_tac 1)
@@ -140,7 +140,7 @@ fun UNSOLVED' tac i st =
 fun sep_flatten ctxt =
 let
   fun simptac i =
-    CHANGED_PROP (full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm sep_conj_assoc}]) i)
+    CHANGED_PROP (full_simp_tac (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simp @{thm sep_conj_assoc}) i)
 in
   UNSOLVED' simptac
 end
@@ -150,7 +150,7 @@ let
   val sep_select = sep_selects_tac ctxt
   val iffI = @{thm iffI}
   val sep_conj_ac_tac =
-        Simplifier.asm_full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps SepConj.sep_conj_ac)
+        Simplifier.asm_full_simp_tac (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps SepConj.sep_conj_ac)
 in
   lens_tac THEN'
   resolve0_tac [iffI] THEN'

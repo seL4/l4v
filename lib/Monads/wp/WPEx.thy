@@ -96,7 +96,7 @@ fun get_wp_simps_strgs ctxt rules asms = let
 
 fun postcond_ss ctxt = ctxt
     |> put_simpset HOL_basic_ss
-    |> (fn ctxt => ctxt addsimps @{thms pred_conj_def})
+    |> Simplifier.add_simps @{thms pred_conj_def}
     |> simpset_of
 
 fun wp_default_ss ctxt = ctxt
@@ -114,7 +114,7 @@ in
   THEN' Subgoal.FOCUS (fn focus => let
       val ctxt = #context focus;
       val (simps, _) = get_wp_simps_strgs ctxt rules (#prems focus);
-    in CHANGED (simp_tac (put_simpset (wp_default_ss ctxt) ctxt addsimps simps) 1) end) ctxt
+    in CHANGED (simp_tac (put_simpset (wp_default_ss ctxt) ctxt |> Simplifier.add_simps simps) 1) end) ctxt
   THEN' eresolve_tac ctxt [@{thm wpex_name_for_idE}]
 end
 

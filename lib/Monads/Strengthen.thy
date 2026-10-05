@@ -140,7 +140,7 @@ fun gather_to_imp ctxt drule pattern = let
       | (@{term Pure.imp}, _) => binop_conv' (Object_Logic.atomize ctxt) (inner (drop 1 pat)) ct
       | (_, []) => Object_Logic.atomize ctxt ct
       | (_, pat) => raise THM ("gather_to_imp: leftover pattern: " ^ commas pat, 1, [])
-    fun simp thms = Raw_Simplifier.rewrite ctxt false thms
+    fun simp thms = Simplifier.rewrite_wrt ctxt false thms
     fun ensure_imp ct = case strip_comb (Thm.term_of ct) |> apsnd (map head_of)
      of
         (@{term Pure.imp}, _) => Conv.arg_conv ensure_imp ct
@@ -169,7 +169,7 @@ fun quantify_vars ctxt drule thm = let
             (Termtab.keys new_vars)
         |> map (Thm.cterm_of ctxt)
   in fold Thm.forall_intr quant thm
-    |> Conv.fconv_rule (Raw_Simplifier.rewrite ctxt false @{thms narrow_quant})
+    |> Conv.fconv_rule (Simplifier.rewrite_wrt ctxt false @{thms narrow_quant})
   end
 
 fun mk_strg (typ, pat) ctxt thm = let

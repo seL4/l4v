@@ -70,7 +70,7 @@ fun make_defs binding t v lthy =
     val mk_eq = HOLogic.mk_Trueprop o HOLogic.mk_eq
     val def_t = mk_eq (Free (Binding.name_of binding, @{typ nat}), t)
     val ((_, (_, def_thm)), lthy') =
-          lthy |> Specification.definition NONE [] [] (Binding.empty_atts, def_t)
+          lthy |> Specification.definition {verbose = false} NONE [] [] (Binding.empty_atts, def_t)
     val eq_t = mk_eq (t, force_nat_numeral v)
     val eq_thm =
           Goal.prove lthy' [] [] eq_t (fn {context = ctxt, prems = _} => eval_tac ctxt 1)
