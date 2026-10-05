@@ -16,7 +16,7 @@
 <testsuite cpu-timeout="600">
 
     <set depends="isabelle">
-        <test name="Lib">../isabelle/bin/isabelle build -v -d .. Lib</test>
+        <test name="Lib">../isabelle/bin/isabelle build -b -v -d .. Lib</test>
         <test name="Concurrency" depends="Lib">../isabelle/bin/isabelle build -v -d .. Concurrency</test>
         <test name="CLib" depends="Lib CParser">../isabelle/bin/isabelle build -v -d .. CLib</test>
         <test name="LibTest" depends="Lib CParser Refine" cpu-timeout="1800">../isabelle/bin/isabelle build -v -d .. LibTest</test>

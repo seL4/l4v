@@ -16,7 +16,7 @@
 <testsuite cpu-timeout="600">
 
     <set depends="isabelle Lib">
-        <test name="Sep_Algebra">../../isabelle/bin/isabelle build -v -d ../.. Sep_Algebra</test>
+        <test name="Sep_Algebra">../../isabelle/bin/isabelle build -b -v -d ../.. Sep_Algebra</test>
     </set>
 
 </testsuite>
