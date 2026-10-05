@@ -2718,7 +2718,7 @@ lemma isFinal:
      apply clarsimp
     apply (case_tac cte')
     apply clarsimp
-   subgoal by (simp add: verit_implies_simplify(1) sameObjectAs_not_Untyped)
+   subgoal by (simp add: alethe_implies_simplify(1) sameObjectAs_not_Untyped)
               (simp add: sameObjectAs_not_Untyped') (* simps do not combine *)
   apply clarsimp
   apply (rule conjI)
