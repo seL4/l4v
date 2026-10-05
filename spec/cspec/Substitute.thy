@@ -89,7 +89,7 @@ fun prove_impl_tac ctxt ss =
           |> filter (String.isSuffix "_'proc");
         val unfolds = map (Proof_Context.get_thm ctxt o suffix "_def"
           o Long_Name.base_name) cnames;
-      in simp_tac (put_simpset ss ctxt addsimps unfolds) n
+      in simp_tac (put_simpset ss ctxt |> Simplifier.add_simps unfolds) n
       end);
 
 fun convert_impls ctxt = let
@@ -101,7 +101,7 @@ fun convert_impls ctxt = let
       |> map (suffix "_def" #> Proof_Context.get_thm ctxt)
 
     val tree_lemmata = StaticFun.prove_partial_map_thms thm
-        (ctxt addsimps proc_defs)
+        (ctxt |> Simplifier.add_simps proc_defs)
 
     fun impl_name_from_proc (Const (s, _)) = s
             |> Long_Name.base_name
