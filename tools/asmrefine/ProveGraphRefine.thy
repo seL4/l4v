@@ -348,8 +348,8 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
       |> infer_instantiate ctxt [(("f",0), Thm.cterm_of ctxt pat),
           (("m",0), Thm.cterm_of ctxt m)]
       |> simplify (put_simpset HOL_basic_ss ctxt
-          addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
-          addsimps @{thms foldr.simps id_apply o_apply})
+          |> Simplifier.add_proc Word_Bitwise_Tac.expand_upt_simproc
+          |> Simplifier.add_simps @{thms foldr.simps id_apply o_apply})
       |> mk_meta_eq
       |> Conv.fconv_rule conv
   in thm end
@@ -357,7 +357,7 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
 val fold_of_nat_eq_Ifs_simproc = Simplifier.make_simproc
   (Proof_Context.init_global @{theory})
   { name = "fold_of_nat_eq_Ifs"
-  , kind = Simproc
+  , kind = Simplifier.Simproc
   , lhss = [@{term "If (x = 0) y z"}]
   , proc = fn _ => fn ctxt => try (fold_of_nat_eq_Ifs ctxt) o Thm.term_of
   , identifier = []
@@ -369,12 +369,12 @@ fun unfold_assertion_data_get_set_conv ctxt tm = let
     val procs = map_filter (fn (Const (s, _)) => if String.isSuffix "_'proc" s
         then SOME s else NONE | _ => NONE) xs
     val defs = map (suffix "_def" #> Proof_Context.get_thm ctxt) (f_nm :: procs)
-  in Simplifier.rewrite (ctxt addsimps defs) (Thm.cterm_of ctxt tm) end
+  in Simplifier.rewrite (ctxt |> Simplifier.add_simps defs) (Thm.cterm_of ctxt tm) end
 
 val unfold_assertion_data_get_set = Simplifier.make_simproc
   (Proof_Context.init_global @{theory})
   { name = "unfold_assertion_data_get"
-  , kind = Simproc
+  , kind = Simplifier.Simproc
   , lhss = [@{term "ghost_assertion_data_get k acc s"}, @{term "ghost_assertion_data_set k v upd"}]
   , proc = fn _ => fn ctxt => SOME o (unfold_assertion_data_get_set_conv ctxt) o Thm.term_of
   , identifier = []
@@ -469,7 +469,7 @@ fun ptr_safe_arr_field_tac ctxt =
     EVERY' [
       eqsubst_either_wrap_tac ctxt @{thms ptr_safe_ptr_add_array_ptr_index},
       resolve_tac ctxt @{thms ptr_safe_field} THEN' assume_tac ctxt THEN' asm_full_simp_tac ctxt,
-      asm_full_simp_tac (ctxt addsimps @{thms typ_uinfo_t_def}),
+      asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms typ_uinfo_t_def}),
       asm_full_simp_tac ctxt
     ]
 
@@ -479,11 +479,11 @@ fun prove_ptr_safe reason ctxt = DETERM o
                 @{thms array_ptr_index_coerce nat_uint_less_helper}
             )
         THEN_ALL_NEW (TRY o REPEAT_ALL_NEW (ptr_safe_arr_field_tac ctxt))
-        THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
+        THEN_ALL_NEW asm_full_simp_tac (ctxt |> Simplifier.add_simps
             @{thms ptr_safe_ptr_add_array_ptr_index
                    word_sle_msb_le word_sless_msb_less
                    nat_uint_less_helper})
-        THEN_ALL_NEW asm_simp_tac (ctxt addsimps
+        THEN_ALL_NEW asm_simp_tac (ctxt |> Simplifier.add_simps
             @{thms ptr_safe_field[unfolded typ_uinfo_t_def]
                    ptr_safe_Array_element unat_less_helper unat_def[symmetric]
                    ptr_safe_Array_element_0
@@ -527,7 +527,7 @@ fun get_globals_rewrites ctxt = let
     val cgr = Proof_Context.get_thms ctxt "const_globals_rewrites_with_swap"
     val pinv = Proof_Context.get_thms ctxt "pointer_inverse_safe_global_rules"
     val pinv2 = map (simplify (put_simpset HOL_basic_ss ctxt
-        addsimps @{thms pointer_inverse_safe_sign ptr_coerce.simps})) pinv
+        |> Simplifier.add_simps @{thms pointer_inverse_safe_sign ptr_coerce.simps})) pinv
   in (gsr, cgr, pinv @ pinv2) end
         handle ERROR _ => raise THM
             ("run add_globals_swap_rewrites on ctxt", 1, [])
@@ -568,7 +568,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
     = (eqsubst_asm_wrap_tac ctxt [h_val] ORELSE' eqsubst_wrap_tac ctxt [h_val])
          THEN' (assume_tac ctxt ORELSE' except_tac ctxt (msg "couldn't atac"))
   in
-    asm_full_simp_tac (ctxt addsimps init_simps addsimps [h_val])
+    asm_full_simp_tac (ctxt |> Simplifier.add_simps init_simps |> Simplifier.add_simp h_val)
     THEN_ALL_NEW warn_schem_tac msg' ctxt (K all_tac)
     THEN_ALL_NEW
         (TRY o REPEAT_ALL_NEW ((eqsubst_asm_wrap_tac ctxt
@@ -576,7 +576,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
                 ORELSE' eqsubst_wrap_tac ctxt
                     @{thms heap_access_Array_element'}
                 ORELSE' disjoint_h_val_tac)
-            THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps init_simps)))
+            THEN_ALL_NEW asm_full_simp_tac (ctxt |> Simplifier.add_simps init_simps)))
     THEN_ALL_NEW
         SUBGOAL (fn (t, i) => case
             Envir.beta_eta_contract (Logic.strip_assums_concl t)
@@ -585,7 +585,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
             | @{term Trueprop} $ (Const (@{const_name ptr_safe}, _) $ _ $ _)
               => prove_ptr_safe msg' ctxt i
             | _ => all_tac)
-    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_word_simps nat_uint_less_helper})
+    THEN_ALL_NEW full_simp_tac (ctxt |> Simplifier.add_simps @{thms h_val_word_simps nat_uint_less_helper})
   end
 
 val heap_update_id_nonsense
@@ -593,13 +593,13 @@ val heap_update_id_nonsense
         "Trueprop (heap_update ?p (h_val ?hp' ?p) (hrs_mem ?hrs) = hrs_mem ?hrs)"))
 
 fun prove_mem_equality_init_simpset ctxt =
-    ctxt addsimps
-      @{thms hrs_mem_update heap_update_Array_update heap_access_Array_element' o_def}
-        @ get_field_h_val_rewrites ctxt
+    ctxt |> Simplifier.add_simps
+      (@{thms hrs_mem_update heap_update_Array_update heap_access_Array_element' o_def}
+        @ get_field_h_val_rewrites ctxt)
 
 fun prove_mem_equality_unpack_simpset ctxt =
-    ctxt addsimps
-      @{thms heap_update_def to_bytes_array
+    ctxt |> Simplifier.add_simps
+      (@{thms heap_update_def to_bytes_array
              heap_update_list_append
              h_val_word_simps
              heap_update_word_simps
@@ -612,10 +612,10 @@ fun prove_mem_equality_unpack_simpset ctxt =
              ucast_nat_def of_int_sint_scast of_int_uint_ucast
              heap_access_Array_element field_lvalue_def}
         @ Proof_Context.get_thms ctxt "field_to_bytes_rewrites"
-        @ (get_field_h_val_rewrites ctxt)
-      addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
-      delsimps @{thms One_nat_def}
-      addsimps @{thms One_nat_def[symmetric]}
+        @ (get_field_h_val_rewrites ctxt))
+      |> Simplifier.add_proc Word_Bitwise_Tac.expand_upt_simproc
+      |> Simplifier.del_simps @{thms One_nat_def}
+      |> Simplifier.add_simps @{thms One_nat_def[symmetric]}
     handle ERROR _ => raise THM
       ("prove_mem_equality: run add_field_to_bytes_rewrites on ctxt", 1, [])
 
@@ -642,7 +642,7 @@ fun prove_mem_equality_unchecked ctxt = let
        and won't function after we unpack them *)
     THEN_ALL_NEW normalise_mem_accs "prove_mem_equality" ctxt
     THEN_ALL_NEW asm_lr_simp_tac (prove_mem_equality_unpack_simpset ctxt)
-    THEN_ALL_NEW simp_tac (ctxt addsimps @{thms add_ac mult_ac add_mult_comms})
+    THEN_ALL_NEW simp_tac (ctxt |> Simplifier.add_simps @{thms add_ac mult_ac add_mult_comms})
   end
 
 fun prove_mem_equality ctxt = DETERM o
@@ -658,7 +658,7 @@ fun prove_mem_equality ctxt = DETERM o
       else all_tac))
 
 fun prove_global_equality ctxt
-    = simp_tac (ctxt addsimps (#1 (get_globals_rewrites ctxt)))
+    = simp_tac (ctxt |> Simplifier.add_simps (#1 (get_globals_rewrites ctxt)))
         THEN' prove_mem_equality ctxt
 
 fun clean_heap_upd_swap ctxt = DETERM o let
@@ -677,7 +677,7 @@ fun clean_htd_upd_swap ctxt = let
     val thm = @{thm globals_swap_hrs_htd_update[symmetric]}
     val thm = res_from_ctxt "clean_htd_upd_swap" "global_acc_valid" ctxt thm
     val thm = res_from_ctxt "clean_htd_upd_swap" "globals_list_valid" ctxt thm
-  in simp_tac (ctxt addsimps [thm])
+  in simp_tac (ctxt |> Simplifier.add_simp thm)
     THEN_ALL_NEW (except_tac ctxt "clean_htd_upd_swap: not finished")
   end
 
@@ -705,8 +705,8 @@ fun decompose_mem_goals_init post trace ctxt = warn_schem_tac "decompose_mem_goa
             ORELSE' except_tac ctxt "decompose_mem_goals: const globals"
         end
     | @{term Trueprop} $ (Const (@{const_name pglobal_valid}, _) $ _ $ _ $ _)
-        => asm_full_simp_tac (ctxt addsimps @{thms pglobal_valid_def}
-              addsimps #3 (get_globals_rewrites ctxt))
+        => asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms pglobal_valid_def}
+              |> Simplifier.add_simps (#3 (get_globals_rewrites ctxt)))
     | @{term Trueprop} $ (@{term "(=) :: heap_mem \<Rightarrow> _"} $ x $ y) => let
         val query = (heap_upd_kind x, heap_upd_kind y)
         val _ = if trace then writeln ("decompose_mem_goals: " ^ @{make_string} query)
@@ -719,10 +719,10 @@ fun decompose_mem_goals_init post trace ctxt = warn_schem_tac "decompose_mem_goa
             resolve_tac ctxt [@{thm sym}]
               THEN' clean_heap_upd_swap ctxt THEN' post ctxt
         | ("HeapUpd", "GlobalUpd") =>
-            simp_tac (ctxt addsimps (#1 (get_globals_rewrites ctxt)))
+            simp_tac (ctxt |> Simplifier.add_simps (#1 (get_globals_rewrites ctxt)))
               THEN_ALL_NEW (post ctxt)
         | ("GlobalUpd", "HeapUpd") =>
-            simp_tac (ctxt addsimps (#1 (get_globals_rewrites ctxt)))
+            simp_tac (ctxt |> Simplifier.add_simps (#1 (get_globals_rewrites ctxt)))
               THEN_ALL_NEW (post ctxt)
         | ("HTDUpdateWithSwap", _)
             => clean_htd_upd_swap ctxt
@@ -742,10 +742,10 @@ fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
                 THEN_ALL_NEW resolve_tac ctxt [@{thm order_refl}])
             THEN_ALL_NEW except_tac ctxt "unat_mono_tac: escaped order_refl")
         ORELSE' except_tac ctxt "unat_mono_tac: couldn't get started")
-    THEN' (asm_full_simp_tac (ctxt addsimps @{thms
+    THEN' (asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms
             word_sless_to_less word_sle_to_le
         })
-        THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps @{thms
+        THEN_ALL_NEW asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms
             word_less_nat_alt word_le_nat_alt
             unat_ucast_if_up
         })
@@ -753,9 +753,9 @@ fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
 
 fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
     if Term.exists_Const (fn (s, _) => s = @{const_name parray_valid}) t
-        then (full_simp_tac (ctxt addsimps @{thms ptr_add_assertion'
+        then (full_simp_tac (ctxt |> Simplifier.add_simps @{thms ptr_add_assertion'
             typ_uinfo_t_diff_from_typ_name parray_valid_def
-            ptr_add_assertion_unfold_numeral} delsimps @{thms One_nat_def})
+            ptr_add_assertion_unfold_numeral} |> Simplifier.del_simps @{thms One_nat_def})
           THEN_ALL_NEW TRY o REPEAT_ALL_NEW (dresolve_tac ctxt
             @{thms ptr_add_assertion_uintD[rule_format]
                    ptr_add_assertion_sintD[rule_format]})
@@ -771,7 +771,7 @@ fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
 fun tactic_check' (ss, t) = (ss, tactic_check (hd ss) t)
 
 fun graph_refine_proof_tacs csenv ctxt = let
-    val ctxt = ctxt delsimps @{thms shiftl_numeral_numeral shiftl1_is_mult}
+    val ctxt = ctxt |> Simplifier.del_simps @{thms shiftl_numeral_numeral shiftl1_is_mult}
         |> Splitter.del_split @{thm if_split}
         |> Simplifier.del_cong @{thm if_weak_cong}
 
@@ -780,14 +780,14 @@ fun graph_refine_proof_tacs csenv ctxt = let
             "to be done before any general simplification.",
             "also unfold some things that may be in assumptions",
             "and should be unfolded"],
-        full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms
+        full_simp_tac (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps @{thms
               guard_arith_simps
               mex_def meq_def}
-              addsimps [Proof_Context.get_thm ctxt "simpl_invariant_def"])),
+              |> Simplifier.add_simp (Proof_Context.get_thm ctxt "simpl_invariant_def"))),
         (["step 2: normalise a lot of things that occur in",
             "simpl->graph that are extraneous"],
         SUBGOAL (fn (t, i) =>
-            asm_full_simp_tac (ctxt addsimps @{thms eq_impl_def
+            asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms eq_impl_def
                     var_word32_def var_word8_def var_mem_def
                     var_word64_def var_word16_def var_ghoststate_def
                     var_htd_def var_acc_var_upd
@@ -806,12 +806,12 @@ fun graph_refine_proof_tacs csenv ctxt = let
                 (* we should also unfold enumerations, since the graph
                    representation does this, and we need to normalise
                    word arithmetic the same way on both sides. *)
-                addsimps (enum_simps csenv ctxt)
+                |> Simplifier.add_simps (enum_simps csenv ctxt)
                 (* unfold constant globals unless we can see their symbols
                    somewhere else in the goal *)
-                addsimps (get_expand_const_globals ctxt t)
+                |> Simplifier.add_simps (get_expand_const_globals ctxt t)
                 (* and fold up expanded array accesses, and clean up assertion_data get/set *)
-                addsimprocs [fold_of_nat_eq_Ifs_simproc, unfold_assertion_data_get_set]
+                |> fold Simplifier.add_proc [fold_of_nat_eq_Ifs_simproc, unfold_assertion_data_get_set]
             ) i)),
         (["step 3: split into goals with safe steps",
             "also derive ptr_safe assumptions from h_t_valid",
@@ -835,7 +835,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
         TRY o DETERM o REPEAT_ALL_NEW
             (eqsubst_either_wrap_tac ctxt @{thms machine_word_truncate_noop})),
         (["step 7: try to simplify out all remaining word logic"],
-        asm_full_simp_tac (ctxt addsimps @{thms
+        asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms
                         pvalid_def pweak_valid_def palign_valid_def
                         field_lvalue_offset_eq array_ptr_index_def ptr_add_def
                         mask_def unat_less_helper
@@ -852,12 +852,12 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         signed_ge_zero_scast_eq_ucast
                         unatSuc[OF less_is_non_zero_p1'] unatSuc2[OF less_is_non_zero_p1]
                         less_shift_targeted_cast_convs
-                } delsimps @{thms ptr_val_inj})),
+                } |> Simplifier.del_simps @{thms ptr_val_inj})),
         (["step 8: try rewriting ring equalitites",
             "this must be done after general simplification",
             "because of a bug in the simpset for 2 ^ n",
             "(unfolded in Suc notation if addition is commuted)"],
-        asm_full_simp_tac (ctxt addsimps @{thms field_simps})),
+        asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms field_simps})),
         (["step 9: attack unat less-than properties explicitly"],
         TRY o unat_mono_tac ctxt)
 

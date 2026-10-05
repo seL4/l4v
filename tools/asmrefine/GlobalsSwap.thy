@@ -769,10 +769,10 @@ fun define_globals_list (mungedb:CalculateState.mungedb) globloc globty thy = le
     val thm = Goal.prove ctxt [] [] (HOLogic.mk_Trueprop
             (Const (@{const_name less_eq}, setT --> setT --> HOLogic.boolT)
                 $ (setC $ gdTs) $ (setC $ gdl)))
-        (K (simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms order_refl}
-                addsimps [gdl_def]) 1))
+        (K (simp_tac (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps @{thms order_refl}
+                |> Simplifier.add_simp gdl_def) 1))
 
-    val mems = simplify (put_simpset HOL_basic_ss ctxt addsimps
+    val mems = simplify (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps
             @{thms set_simps insert_subset empty_subsetI simp_thms}) thm
         |> dest_conjs
 
@@ -893,7 +893,7 @@ fun add_globals_swap_rewrites member_thms ctxt = let
       in if s = @{const_name global_data} orelse s = @{const_name const_global_data}
         orelse s = @{const_name addressed_global_data}
         then thm
-        else simplify (empty_ctxt addsimps [Proof_Context.get_thm ctxt (s ^ "_def")]) thm
+        else simplify (empty_ctxt |> Simplifier.add_simp (Proof_Context.get_thm ctxt (s ^ "_def"))) thm
       end
 
     val member_thms = map unfold_mem member_thms

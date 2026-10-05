@@ -345,7 +345,7 @@ text \<open>Phase 2 eliminates compound types, so we access and
 update only words from memory and local values.\<close>
 
 ML \<open>
-fun ptr_simp ctxt = ctxt addsimps @{thms CTypesDefs.ptr_add_def size_of_def size_td_array
+fun ptr_simp ctxt = ctxt |> Simplifier.add_simps @{thms CTypesDefs.ptr_add_def size_of_def size_td_array
         field_lvalue_offset_eq align_td_array' scast_def[symmetric]
         ucast_def[symmetric]
         sint_sbintrunc' word_smod_numerals word_sdiv_numerals sdiv_int_def smod_int_def}
@@ -367,7 +367,7 @@ fun convert_ghost_key ctxt k = let
     val procs = Term.add_const_names k []
       |> filter (String.isSuffix HoarePackage.proc_deco)
     val proc_defs = map (suffix "_def" #> Proof_Context.get_thm ctxt) procs
-    val conv = Simplifier.rewrite (ctxt addsimps proc_defs)
+    val conv = Simplifier.rewrite (ctxt |> Simplifier.add_simps proc_defs)
       (Thm.cterm_of ctxt k)
 
     val n = Thm.rhs_of conv |> Thm.term_of
@@ -794,7 +794,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
     handle TERM _ => raise TERM ("convert_ph3", [t]))
   end
 
-fun htd_simp ctxt = ctxt addsimps @{thms fold_all_htd_updates
+fun htd_simp ctxt = ctxt |> Simplifier.add_simps @{thms fold_all_htd_updates
         unat_less_2p_word_bits[simplified word_bits_conv]}
   |> Simplifier.add_cong @{thm if_cong} |> Simplifier.rewrite
 
@@ -889,7 +889,7 @@ fun has_reads_globals (params : export_params) body = exists_Const (fn (s, T) =>
 
 fun get_reads_calls ctxt params globals name = let
     val thm = Proof_Context.get_thm ctxt (name ^ "_body_def")
-        |> simplify (put_simpset HOL_basic_ss ctxt addsimps @{thms call_def block_def block_exn_def})
+        |> simplify (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps @{thms call_def block_def block_exn_def})
     fun calls (Const (@{const_name com.Call}, _) $ proc) = [proc]
       | calls (f $ x) = calls f @ calls x
       | calls (Abs (_, _, t)) = calls t
@@ -1087,7 +1087,7 @@ fun emit_func_body ctxt outfile eparams name = let
 
     val body = Get_Body_Refines.get ctxt name
       |> simplify (put_simpset HOL_basic_ss ctxt
-                addsimps @{thms switch.simps fst_conv snd_conv
+                |> Simplifier.add_simps @{thms switch.simps fst_conv snd_conv
                                 insert_iff empty_iff
                                 ptr_add_assertion_def if_True if_False
                                 bv_clz_def[symmetric] bv_ctz_def[symmetric]

@@ -1708,12 +1708,12 @@ fun graph_gamma_tac ctxt = SUBGOAL (fn (t, i) => let
     val GG_assum = HOLogic.mk_eq
             (lhs, @{term "Some :: graph_function \<Rightarrow> _"} $ gfun)
         |> HOLogic.mk_Trueprop |> Thm.cterm_of ctxt |> Thm.assume
-        |> simplify (put_simpset HOL_basic_ss ctxt addsimps [gfun_def])
+        |> simplify (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simp gfun_def)
   in resolve0_tac [GG_assum] i end
     handle TERM (s, ts) => raise TERM ("graph_gamma_tac: " ^ s, t :: ts))
 
 fun inst_graph_node_tac ctxt =
-  simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms function_graph.simps})
+  simp_tac (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps @{thms function_graph.simps})
   THEN' SUBGOAL (fn (t, i) => case
     HOLogic.dest_Trueprop (Logic.strip_assums_concl
         (Envir.beta_eta_contract t))
@@ -1723,7 +1723,7 @@ fun inst_graph_node_tac ctxt =
     val thm = Proof_Context.get_thm ctxt
         (Long_Name.base_name g ^ "_" ^ Int.toString n')
     val thm = if n = @{term "Suc 0"}
-        then simplify (put_simpset HOL_basic_ss ctxt addsimps @{thms One_nat_def}) thm
+        then simplify (put_simpset HOL_basic_ss ctxt |> Simplifier.add_simps @{thms One_nat_def}) thm
         else thm
   in resolve0_tac [thm] i end handle TERM (s, ts) => raise TERM ("inst_graph_node_tac: " ^ s, t :: ts))
   | t => raise TERM ("inst_graph_node_tac", [t]))
@@ -1829,7 +1829,7 @@ fun is_pglobal_valid_conjs (Const (@{const_name conj}, _) $ p $ q)
   | is_pglobal_valid_conjs _ = false
 
 fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
-    addsimps @{thms switch.simps fst_conv snd_conv
+    |> Simplifier.add_simps @{thms switch.simps fst_conv snd_conv
         length_Cons singletonI triv_forall_equality
         simpl_to_graph_Seq simpl_to_graph_Catch
 }
@@ -1859,7 +1859,7 @@ fun check_err_cond_tac (Hints hints) = SUBGOAL (fn (t, _) => let
 
 fun apply_simpl_to_graph_tac funs hints ctxt =
         simp_tac (simpl_ss ctxt
-            addsimps @{thms One_nat_def whileAnno_def
+            |> Simplifier.add_simps @{thms One_nat_def whileAnno_def
                 creturn_def[folded creturn_void_def]})
     THEN' DETERM o (FIRST' [
         apply_hint_thm ctxt hints,
@@ -2122,7 +2122,7 @@ fun init_graph_refines_proof funs nm ctxt = let
         THEN graph_gamma_tac ctxt 1
         THEN resolve_tac ctxt [body_ref_thm] 1
         THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt
-            addsimps @{thms entry_point.simps function_inputs.simps
+            |> Simplifier.add_simps @{thms entry_point.simps function_inputs.simps
                             function_outputs.simps list.simps}))
         THEN TRY ((resolve_tac ctxt [@{thm simpl_to_graph_noop_same_eqs}]
             THEN' inst_graph_tac ctxt) 1)
