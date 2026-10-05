@@ -18,9 +18,9 @@ lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE
 
 ML \<open>
 fun get_nondet_monad_state_type
-  (Type ("Product_Type.prod",
-         [Type ("Set.set", [Type ("Product_Type.prod", [_,v])]),
-          Type ("HOL.bool",[])]))
+  (Type (@{type_name prod},
+         [Type (@{type_name set}, [Type (@{type_name prod}, [_,v])]),
+          Type (@{type_name bool},[])]))
       = SOME v
   | get_nondet_monad_state_type _ = NONE
 

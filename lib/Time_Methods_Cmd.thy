@@ -16,7 +16,8 @@ structure Time_Methods = struct
   fun skip_dummy_state (method: Method.method) : Method.method =
     fn facts => fn (ctxt, st) =>
       case Thm.prop_of st of
-          Const ("Pure.prop", _) $ (Const ("Pure.term", _) $ Const ("Pure.dummy_pattern", _)) =>
+          Const (@{const_name Pure.prop}, _) $
+            (Const (@{const_name Pure.term}, _) $ Const (@{const_name Pure.dummy_pattern}, _)) =>
             Seq.succeed (Seq.Result (ctxt, st))
         | _ => method facts (ctxt, st);
 

@@ -35,7 +35,7 @@ let
         Syntax.free (sign ^ k);
     in
       case T of
-        Type (@{type_name fun}, [_, T' as Type("Word.word",_)]) =>
+        Type (@{type_name fun}, [_, T' as Type(@{type_name word},_)]) =>
           if not (Config.get ctxt show_types) andalso can Term.dest_Type T'
           then t'
           else Syntax.const @{syntax_const "_constrain"} $ t' $

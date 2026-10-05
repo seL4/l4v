@@ -50,7 +50,7 @@ end
 fun solves_tac ctxt =
 let
   val assms =
-    Proof_Context.get_fact ctxt (Facts.named "local.assms")
+    Proof_Context.get_fact ctxt (Facts.named @{unchecked_name local.assms})
       handle ERROR _ => [];
   fun add_prems i = TRY (Method.insert_tac ctxt assms i);
   val all_facts = all_facts_of ctxt

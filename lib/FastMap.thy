@@ -309,8 +309,8 @@ ML \<open>
 structure FastMap = struct
 
 (* utils *)
-fun mk_optionT typ = Type ("Option.option", [typ])
-fun dest_optionT (Type ("Option.option", [typ])) = typ
+fun mk_optionT typ = Type (@{type_name option}, [typ])
+fun dest_optionT (Type (@{type_name option}, [typ])) = typ
   | dest_optionT t = raise TYPE ("dest_optionT", [t], [])
 
 (* O(1) version of thm RS @{thm eq_reflection} *)
