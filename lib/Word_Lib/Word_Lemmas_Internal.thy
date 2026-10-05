@@ -892,7 +892,7 @@ lemma scast_ucast_up_eq_ucast:
   using assms
   apply (subst scast_eq_ucast; simp)
   apply (simp only: ucast_eq msb_word_of_int)
-   apply (metis bin_nth_uint_imp decr_length_less_iff numeral_nat(7) verit_comp_simplify1(3))
+   apply (metis bin_nth_uint_imp decr_length_less_iff numeral_nat(7) not_le)
   by (metis less_or_eq_imp_le ucast_nat_def unat_ucast_up_simp)
 
 lemmas not_max_word_iff_less = word_order.not_eq_extremum
@@ -1103,7 +1103,7 @@ proof -
     by (intro distinct_filter distinct_enum_upto')
   moreover
   have enum_UNIV: "set [(minBound::'a word) .e. maxBound] = UNIV"
-    by (force simp: upto_enum_def minBound_word maxBound_word word_unat.univ unats_def
+    by (force simp: upto_enum_def minBound_word maxBound_word word_unat.Rep_range[symmetric] unats_def
                     unat_minus_one_word
                     atLeastLessThan_def atLeast_def lessThan_def)
   moreover
