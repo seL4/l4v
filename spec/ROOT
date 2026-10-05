@@ -7,22 +7,6 @@
 chapter "Specifications"
 
 (*
- * List of rules to make various images.
- *
- * Some rules have duplicate targets of the form:
- *
- *    theories [condition = "MOO", quick_and_dirty]
- *       "foo"
- *    theories
- *       "foo"
- *
- * The idea is that if the environment variable "MOO" is defined we
- * execute the first rule (doing the proof in quick-and-dirty mode), and
- * then find we need not take any action for the second. Otherwise, we
- * skip the first rule and only perform the second.
- *)
-
-(*
  * Abstract Specification
  *)
 
@@ -83,10 +67,6 @@ session CSpec in "cspec" = CKernel +
   directories
     "c/build/$L4V_ARCH/generated/arch/object"
     "c/build/$L4V_ARCH/generated/sel4"
-  theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]
-    "Substitute"
-  theories [condition = "SORRY_BITFIELD_PROOFS", quick_and_dirty]
-    "KernelInc_C"
   theories
     "KernelInc_C"
     "KernelState_C"
@@ -96,8 +76,6 @@ session CKernel in "cspec/$L4V_ARCH" = CParser +
     "ExecSpec"
     "CLib"
     "AsmRefine"
-  theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]
-    "Kernel_C"
   theories
     "Kernel_C"
 

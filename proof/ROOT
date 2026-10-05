@@ -7,22 +7,6 @@
 chapter "Proofs"
 
 (*
- * List of rules to make various images.
- *
- * Some rules have duplicate targets of the form:
- *
- *    theories [condition = "MOO", quick_and_dirty]
- *       "foo"
- *    theories
- *       "foo"
- *
- * The idea is that if the environment variable "MOO" is defined we
- * execute the first rule (doing the proof in quick-and-dirty mode), and
- * then find we need not take any action for the second. Otherwise, we
- * skip the first rule and only perform the second.
- *)
-
-(*
  * Refinement proof.
  *)
 
@@ -34,10 +18,6 @@ session Refine in "refine" = BaseRefine +
     AInvs
   directories
     "$L4V_ARCH"
-  theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "RefineToplevel_R"
-  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
-    "RefineToplevel_R"
   theories
     "RefineToplevel_R"
 
@@ -47,8 +27,6 @@ session Refine in "refine" = BaseRefine +
  *)
 session RefineOrphanage in "refine/$L4V_ARCH/orphanage" = Refine +
   description \<open>Proof that the kernel does not orphan threads.\<close>
-  theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "Orphanage"
   theories
     "Orphanage"
 
@@ -63,10 +41,6 @@ session BaseRefine in "refine/base" = AInvs +
 session AInvs in "invariant-abstract" = ASpec +
   directories
     "$L4V_ARCH"
-  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
-    "AInvsToplevel_AI"
-  theories [condition = "AINVS_QUICK_AND_DIRTY", quick_and_dirty]
-    "AInvsToplevel_AI"
   theories
     "AInvsToplevel_AI"
 
@@ -77,8 +51,6 @@ session AInvs in "invariant-abstract" = ASpec +
 session CRefineSyscall in "crefine/intermediate" = CBaseRefine +
   sessions
     CRefine
-  theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "Intermediate_C"
   theories
     "Intermediate_C"
 
@@ -86,8 +58,6 @@ session CRefine in "crefine" = CBaseRefine +
   directories
     "lib"
     "$L4V_ARCH"
-  theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "Refine_C"
   theories
     "Refine_C"
 
@@ -96,11 +66,8 @@ session CBaseRefine in "crefine/base" = CSpec +
     CLib
     Refine
     AutoCorres
-  theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
-    (* crefine/lib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
-    "L4VerifiedLinks"
-    "Include_C"
   theories
+    (* crefine/lib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
     "L4VerifiedLinks"
     "Include_C"
 
@@ -150,8 +117,6 @@ session InfoFlowCBase in "infoflow/refine/base" = CRefine +
     Refine
     Access
     InfoFlow
-  theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
-    "Include_IF_C"
   theories
     "Include_IF_C"
 
