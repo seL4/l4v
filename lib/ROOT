@@ -133,7 +133,7 @@ session LibTest (lib) in test = Refine +
     Requalify_Test
     Clear_Named_Theorems_Test
   (* use virtual memory function as an example, only makes sense on ARM: *)
-  theories [condition = "L4V_ARCH_IS_ARM"]
+  theories [condition = "$L4V_ARCH_IS_ARM"]
     CorresK_Test
 
 session SepTactics (lib) in Hoare_Sep_Tactics = Sep_Algebra +
