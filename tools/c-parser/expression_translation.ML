@@ -480,8 +480,8 @@ in
         else if cty2 = cty1 then let
             val opname =
                 case opr of
-                  @{const_name "less"} => "CTypesBase.ptr_less"
-                | @{const_name "less_eq"} => "CTypesBase.ptr_le"
+                  @{const_name "less"} => @{const_name ptr_less}
+                | @{const_name "less_eq"} => @{const_name ptr_le}
                 | _ => raise Fail "binop_term: catastrophic"
           in
             lmk_comb(opname, [ei1,ei2], Known bool, Signed Int, true)
@@ -746,7 +746,7 @@ in
         val ity = ctype_to_typ(thy, cty)
         val ety = ctype_to_typ(thy, ty)
       in
-        Const("Arrays.FCP", (nat --> ety) --> ity) $
+        Const(@{const_name FCP}, (nat --> ety) --> ity) $
              (Abs("_", nat, zero_term thy senv ty))
       end
     | EnumTy _ => mk_zero(ctype_to_typ(thy, Signed Int))
@@ -763,7 +763,7 @@ fun mk_complit_upd thy cty rootty ((pth,value), ei) = let
           val (subtype, _) = dest_array_type ty
           val subresult = mk_upds subtype rest base
         in
-          Const("Arrays.fupdate", nat --> type_of subresult --> (ty --> ty)) $
+          Const(@{const_name fupdate}, nat --> type_of subresult --> (ty --> ty)) $
                mk_nat_numeral i $ subresult
         end
       | fld s :: rest => let

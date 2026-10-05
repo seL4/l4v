@@ -194,7 +194,7 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     val f = Free("f", ffty)
     val g = Free("g", ffty)
     val lhs_t = upd_t $ f $ (upd_t $ g $ r_var)
-    val comp = Const("Fun.comp", ffty --> (ffty --> ffty))
+    val comp = Const(@{const_name comp}, ffty --> (ffty --> ffty))
     val rhs_t = upd_t $ (comp $ f $ g) $ r_var
   in
     prove(mk_eqt(lhs_t, rhs_t))

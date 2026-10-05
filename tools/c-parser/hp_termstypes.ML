@@ -61,9 +61,9 @@ open IsabelleTermsTypes
 val StrictC_errortype_ty = @{typ "CProof.strictc_errortype"}
 val c_exntype_ty = @{typ "CProof.c_exntype"}
 
-fun mk_com_ty args = Type("Language.com", args)
+fun mk_com_ty args = Type(@{type_name com}, args)
 
-fun mk_skip_t tyargs = Const("Language.com.Skip", mk_com_ty tyargs)
+fun mk_skip_t tyargs = Const(@{const_name Skip}, mk_com_ty tyargs)
 
 val Return_exn = @{const "CProof.c_exntype.Return"}
 val Break_exn = @{const "CProof.c_exntype.Break"}
@@ -106,7 +106,7 @@ end
 fun mk_callreturn globty statety = let
   val svar = Free("s", statety)
   val tvar = Free("t", statety)
-  val gupdate = Const(suffix Record.updateN "StateSpace.state.globals",
+  val gupdate = Const(suffix Record.updateN @{const_name globals},
                       (globty --> globty) --> (statety --> statety))
   val gaccess = Const(@{const_name "StateSpace.state.globals"},
                       statety --> globty)

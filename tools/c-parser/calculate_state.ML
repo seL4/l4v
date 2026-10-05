@@ -240,7 +240,7 @@ in
   | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ ctxt ity0)
   | recd (s, _) => Type (m s, [])
   | array (ity, sz, _) =>
-    Type("Arrays.array", [isa_type_to_typ ctxt ity, mk_array_size_ty sz])
+    Type(@{type_name array}, [isa_type_to_typ ctxt ity, mk_array_size_ty sz])
   | existing (ty, _) => ty
 end
 
@@ -393,7 +393,7 @@ in
   ()
 end
 
-val outfilnameN = "umm_types.txt"
+val outfilnameN = @{verbatim "umm_types.txt"}
 
 fun mk_thy_types cse install thy = let
   (* Make the necessary theory declarations to make the C file's types work
@@ -456,7 +456,7 @@ fun mk_thy_types cse install thy = let
           (* establish the new type as a c_type, which requires no proof, as
              there are no axioms attached to c_type *)
           val c_type_instance_t =
-              Logic.mk_of_class(recty, "CTypesDefs.c_type")
+              Logic.mk_of_class(recty, @{class c_type})
           val c_type_instance_ct = Thm.cterm_of (thy2ctxt thy) c_type_instance_t
           val is_c_type_thm =
               Goal.prove_internal (thy2ctxt thy) [] c_type_instance_ct
@@ -720,8 +720,8 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
             val lflds = map_elim_name [] lvars
             val _ = pretty_recdef thy "myvars" lvars
             val thy = Record.add_record {overloaded=false}
-                      ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
-                      (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
+                      ([("'g",[@{class type}])], bnm NameGeneration.local_rcd_name)
+                      (SOME([TFree("'g", [@{class type}])], @{type_abbrev state}))
                       lflds thy
         in
           (thy, Sign.intern_type thy NameGeneration.local_rcd_name)

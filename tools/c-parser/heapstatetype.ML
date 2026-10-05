@@ -41,9 +41,9 @@ fun hst_htd_update_rhs_t hrs ty =
 
 
 fun hst_prove_globals fullrecname thy = let
-  val recty = Type(fullrecname, [TVar(("'a",0), ["HOL.type"])])
+  val recty = Type(fullrecname, [TVar(("'a",0), [@{class type}])])
   val hst'_instance_t =
-      Logic.mk_of_class(recty, "SepFrame.heap_state_type'")
+      Logic.mk_of_class(recty, @{class heap_state_type'})
   val hst'_instance_ct = Thm.cterm_of (thy2ctxt thy) hst'_instance_t
   val is_hst'_thm =
       Goal.prove_internal (thy2ctxt thy) [] hst'_instance_ct
@@ -63,7 +63,7 @@ fun hst_prove_globals fullrecname thy = let
   val (hst_thms, thy) = fold_map Global_Theory.add_def_overloaded defs thy
   val thy' = thy |> Context.theory_map (Simplifier.map_simpset (Simplifier.add_simps hst_thms))
   val hst_instance_t =
-      Logic.mk_of_class(recty, "SepFrame.heap_state_type")
+      Logic.mk_of_class(recty, @{class heap_state_type})
   val hst_instance_ct = Thm.cterm_of (thy2ctxt thy') hst_instance_t
   val hst_thms = @{thms "hrs_simps"} @ [@{thm "split_def"}]
   val is_hst_thm =

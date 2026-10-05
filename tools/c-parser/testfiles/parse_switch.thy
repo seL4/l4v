@@ -27,7 +27,7 @@ ML \<open>
 \<close>
 
 ML \<open>
-  \<^assert> (member (=) (map #1 cs) "CProof.strictc_errortype.C_Guard")
+  \<^assert> (member (=) (map #1 cs) @{const_name C_Guard})
 \<close>
 
 end

@@ -26,7 +26,7 @@ val symbol_table = Free ("symbol_table", @{typ "string => addr"})
 
 fun dest_array_type ty =
     case ty of
-      Type("Arrays.array", args) => (hd args, hd (tl args))
+      Type(@{type_name array}, args) => (hd args, hd (tl args))
     | _ => raise TYPE("dest_array_type: not an array type", [ty], [])
 
 fun mk_array_type (ty, n) = let
@@ -57,7 +57,7 @@ end
 fun mk_w2n t = let
   val ty = type_of t
 in
-  Const("Word.unat", ty --> nat) $ t
+  Const(@{const_abbrev unat}, ty --> nat) $ t
 end
 
 fun mk_i2w_t rty = Const(@{const_name "of_int"},
@@ -156,16 +156,16 @@ end
 val addr_ty = IntInfo.addr_ty
 val heap_ty = addr_ty --> IntInfo.char
 
-fun mk_ptr_ty ty = Type("CTypesBase.ptr", [ty])
+fun mk_ptr_ty ty = Type(@{type_name ptr}, [ty])
 fun dest_ptr_ty ty =
     case ty of
-      Type("CTypesBase.ptr", args) => hd args
+      Type(@{type_name ptr}, args) => hd args
     | _ => raise Fail "dest_ptr_ty: not a ptr type"
 val is_ptr_ty = can dest_ptr_ty
 
 (* vcg terms *)
 fun mk_ptr (w,ty) =
-    Const("CTypesBase.ptr.Ptr", addr_ty --> mk_ptr_ty ty) $ w
+    Const(@{const_name Ptr}, addr_ty --> mk_ptr_ty ty) $ w
 
 fun mk_global_addr_ptr (gname, ty) =
     mk_ptr (symbol_table $ HOLogic.mk_string gname, ty)
@@ -177,18 +177,18 @@ fun mk_fnptr _ (* thy *) s =
 
 
 (* UMM terms *)
-fun mk_heap_upd_t ty = Const("CTypesDefs.heap_update",
+fun mk_heap_upd_t ty = Const(@{const_name heap_update},
                              mk_ptr_ty ty --> ty --> heap_ty --> heap_ty)
 fun mk_heap_upd (addr_t, val_t) =
     mk_heap_upd_t (type_of val_t) $ addr_t $ val_t
 
-fun mk_lift_t ty = Const("CTypesDefs.h_val", heap_ty --> mk_ptr_ty ty --> ty)
+fun mk_lift_t ty = Const(@{const_name h_val}, heap_ty --> mk_ptr_ty ty --> ty)
 
 fun mk_lift (hp_t, addr_t) =
     mk_lift_t (dest_ptr_ty (type_of addr_t)) $ hp_t $ addr_t
 
 fun mk_ptr (w,ty) =
-    Const("CTypesBase.ptr.Ptr", addr_ty --> mk_ptr_ty ty) $ w
+    Const(@{const_name Ptr}, addr_ty --> mk_ptr_ty ty) $ w
 
 
 

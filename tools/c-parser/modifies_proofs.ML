@@ -235,7 +235,7 @@ end
 
 fun modifies_tactic mod_inv_prop ctxt = let
   val mip_intros = [mod_inv_prop] RL @{thms modifies_inv_intros}
-  val globals_equality = Proof_Context.get_thms ctxt "globals.equality"
+  val globals_equality = Proof_Context.get_thms ctxt @{unchecked_name globals.equality}
   fun asm_spec_tactic i =
     seq_all_new i [
       resolve_tac ctxt @{thms asm_spec_preserves},
@@ -259,7 +259,7 @@ fun get_mod_inv_prop ctxt post_abs mod_inv_props = let
     val mi_prop_ty = fastype_of post_abs --> HOLogic.boolT
     fun mi_goal prop = HOLogic.mk_Trueprop (Const (prop, mi_prop_ty) $ post_abs)
     fun mi_prop_tac _ = let
-      val globals_equality = Proof_Context.get_thm ctxt "globals.equality"
+      val globals_equality = Proof_Context.get_thm ctxt @{unchecked_name globals.equality}
       fun mi_refl_tac _ =
         simp_tac (ctxt |> Simplifier.clear_simpset |> Simplifier.add_simps @{thms modifies_inv_refl_def mex_def meq_def}) 1 THEN
         resolve_tac ctxt @{thms allI} 1 THEN

@@ -239,7 +239,7 @@ fun list_mk_prod_ty tys =
     | h::t => mk_prod_ty (h, list_mk_prod_ty t)
 fun dest_prod_ty ty =
     case ty of
-      Type("Product_Type.prod", [arg1, arg2]) => (arg1, arg2)
+      Type(@{type_name prod}, [arg1, arg2]) => (arg1, arg2)
     | _ => raise TYPE("Type not a product", [ty], [])
 fun mk_set_type ty = Type(@{type_name "set"}, [ty])
 fun dest_set_type ty =
@@ -248,11 +248,11 @@ fun dest_set_type ty =
   | _ => raise TYPE("Type not a set", [ty], [])
 fun dest_list_type ty =
     case ty of
-      Type("List.list", args) => hd args
+      Type(@{type_name list}, args) => hd args
     | _ => raise TYPE( "dest_list_type: not a list type", [ty], [])
 
-val alpha = TFree("'a", ["HOL.type"])
-val beta = TFree("'b", ["HOL.type"])
+val alpha = TFree("'a", [@{class type}])
+val beta = TFree("'b", [@{class type}])
 fun dom_rng ty =
     case ty of
       Type("fun", [x,y]) => (x,y)
@@ -450,11 +450,11 @@ fun mk_list_nth (list,n) = let
   val listty = type_of list
   val elty = dest_list_type listty
 in
-  Const("List.nth", listty --> nat --> elty) $ list $ n
+  Const(@{const_name nth}, listty --> nat --> elty) $ list $ n
 end
 
 fun mk_replicate (n, el) =
-    Const("List.replicate", nat --> type_of el --> mk_list_type (type_of el)) $
+    Const(@{const_name replicate}, nat --> type_of el --> mk_list_type (type_of el)) $
     n $ el
 fun list_mk_append tlist =
     case tlist of
@@ -472,7 +472,7 @@ in
                    domty --> rngty) $ f $ domval $ rngval
 end
 
-fun mk_comp_t (a_ty,b_ty,c_ty) = Const("Fun.comp", (b_ty --> c_ty) -->
+fun mk_comp_t (a_ty,b_ty,c_ty) = Const(@{const_name comp}, (b_ty --> c_ty) -->
     (a_ty --> b_ty) --> (a_ty --> c_ty))
 
 fun mk_eqt(t1, t2) = let

@@ -75,7 +75,7 @@ val mk_hrs_mem_update_t = @{const "HeapRawState.hrs_mem_update"}
 val typ_name_ty = string_ty
 
 fun mk_typ_name_tm ty =
-    Const("CTypesDefs.typ_name", mk_tag_type ty --> typ_name_ty)
+    Const(@{const_name typ_name}, mk_tag_type ty --> typ_name_ty)
 
 fun empty_tag_tm ty nm =
     Const(@{const_name "empty_typ_info"}, string_ty --> mk_tag_type ty) $
@@ -147,7 +147,7 @@ in
 end
 
 fun mk_typ_info_tm ty =
-    Const("CTypesDefs.typ_info_t", mk_itself_type ty --> mk_tag_type ty)
+    Const(@{const_name typ_info_t}, mk_itself_type ty --> mk_tag_type ty)
 
 fun mk_typ_info_of ty = mk_typ_info_tm ty $ mk_TYPE ty
 

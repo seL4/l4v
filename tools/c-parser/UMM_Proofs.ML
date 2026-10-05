@@ -215,7 +215,7 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   val _ = Feedback.informStr (0, "Proving UMM inversion for type "^recname^"... ")
   val ctxt0 = thy2ctxt thy
   val mem_type_instance_t =
-      Logic.mk_of_class(recty, "CTypesDefs.mem_type")
+      Logic.mk_of_class(recty, @{class mem_type})
 
   (* typ_tag TYPE('a struct_scheme) = struct_tag_def *)
   val t_def_thms = [typtag_thm, tag_def_thm, @{thm "align_of_def"},
@@ -320,7 +320,7 @@ fun umm_packed_type recname recty typtag_thm tag_def_thm fgthms thy = let
   val _ = Feedback.informStr (0, "Proving UMM packed type for type "^recname^"... ")
   val ctxt0 = thy2ctxt thy
   val packed_type_instance_t =
-      Logic.mk_of_class (recty, "PackedTypes.packed_type")
+      Logic.mk_of_class (recty, @{class packed_type})
   val packed_type_instance_ct = Thm.cterm_of ctxt0 packed_type_instance_t
 
   val pt_ss = (ctxt0 |> Simplifier.add_simps ([typtag_thm, tag_def_thm] @ packed_type_simps @ fgthms))
@@ -647,7 +647,7 @@ in
       val (st,thy) =
           case args of
             [] => (* will be a record type *)
-                  prove_type_in_szclass (st, thy) el_ty "ArchArraysMemInstance.array_outer_max_size"
+                  prove_type_in_szclass (st, thy) el_ty @{class array_outer_max_size}
           | [_] => (* can compute sizes for words and ptrs *)
             if tyname = @{type_name "Word.word"} then (st, thy)
             else if tyname = @{type_name "CTypesBase.ptr"} then (st, thy)
@@ -660,7 +660,7 @@ in
                                              | _ => error "Array eltype is not Type"
             in
               case aargs of
-                [] => prove_type_in_szclass (st,thy) a "ArchArraysMemInstance.array_inner_max_size"
+                [] => prove_type_in_szclass (st,thy) a @{class array_inner_max_size}
               | [_] => if atyname = @{type_name "word"} orelse
                            atyname = @{type_name "ptr"}
                         then (st, thy)

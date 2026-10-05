@@ -279,7 +279,7 @@ let
     | deref_assign l r = raise Match
   fun assign_tr [l,r] = deref_assign l r
     | assign_tr ts = raise Match
-in [("CTypesDefs.lift",K lift_tr),("_Assign",K assign_tr)] end
+in [(@{const_syntax lift},K lift_tr),("_Assign",K assign_tr)] end
 \<close>
 
 print_translation \<open>

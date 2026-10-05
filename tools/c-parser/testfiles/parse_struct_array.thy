@@ -30,7 +30,7 @@ ML \<open>
   val cs = Term.add_consts b_t []
 \<close>
 
-ML \<open>\<^assert> (member (=) (map #1 cs) "CProof.strictc_errortype.C_Guard")\<close>
+ML \<open>\<^assert> (member (=) (map #1 cs) @{const_name C_Guard})\<close>
 
 end
 

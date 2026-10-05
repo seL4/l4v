@@ -745,11 +745,11 @@ fun state_varlookup fname s state =
 
 fun strip_invs com statetype =
     case com of
-      (c as Const("Language.whileAnno", T)) $ g $ i $ v $ b => let
+      (c as Const(@{const_name whileAnno}, T)) $ g $ i $ v $ b => let
       in
         c $ g $ mk_empty_INV statetype $ v $ strip_invs b statetype
       end
-    | (Const("Language.specAnno", T) $ _ $ (Abs(_, _, bdy)) $ _ $ _) => let
+    | (Const(@{const_name specAnno}, T) $ _ $ (Abs(_, _, bdy)) $ _ $ _) => let
       in
         strip_invs bdy statetype
       end
