@@ -15,7 +15,7 @@ begin
 
 ML \<open>fun bw_tac_signed ctxt = let
   val (ss, sss) = Word_Bitwise_Tac.expand_word_eq_sss
-  val sss = nth_map 2 (fn ss => put_simpset ss ctxt addsimps @{thms len_signed} |> simpset_of) sss
+  val sss = sss |> nth_map 2 (Simplifier.simpset_map ctxt (Simplifier.add_simps @{thms len_signed}))
 in
     foldr1 (op THEN_ALL_NEW)
       ((CHANGED o safe_full_simp_tac (put_simpset ss ctxt)) ::

@@ -351,7 +351,7 @@ ML \<open>
 structure Word_Bitwise_Tac =
 struct
 
-val word_ss = simpset_of \<^theory_context>\<open>Word\<close>;
+val word_ss = Simplifier.simpset_of \<^theory_context>\<open>Word\<close>;
 
 fun mk_nat_clist ns =
   fold_rev (Thm.mk_binop \<^cterm>\<open>Cons :: nat \<Rightarrow> _\<close>)
@@ -415,40 +415,38 @@ fun nat_get_Suc_simproc_fn n_sucs ctxt ct =
         (K (simp_tac (put_simpset word_ss ctxt) 1));
   in
     Goal.prove_internal ctxt [] (propfn (curry (op $) f))
-      (K (simp_tac (put_simpset HOL_ss ctxt addsimps [eq1]) 1))
+      (K (simp_tac (ctxt |> put_simpset HOL_ss |> Simplifier.add_simp eq1) 1))
     |> mk_meta_eq |> SOME
   end handle TERM _ => NONE;
 
 fun nat_get_Suc_simproc n_sucs ts =
   Simplifier.make_simproc \<^context>
    {name = "nat_get_Suc",
-    kind = Simproc,
+    kind = Simplifier.Simproc,
     lhss = map (fn t => t $ \<^term>\<open>n :: nat\<close>) ts,
     proc = K (nat_get_Suc_simproc_fn n_sucs),
     identifier = []};
 
 val no_split_ss =
-  simpset_of (put_simpset HOL_ss \<^context>
-    |> Splitter.del_split @{thm if_split});
+  HOL_ss
+  |> Simplifier.simpset_map \<^context>
+    (Splitter.del_split @{thm if_split});
 
 val expand_word_eq_sss =
-  (simpset_of (put_simpset HOL_basic_ss \<^context>
-    |> Simplifier.add_simps @{thms word_eq_rbl_eq word_le_rbl word_less_rbl word_sle_rbl word_sless_rbl}),
-  map simpset_of [
-    put_simpset no_split_ss \<^context>
-      |> Simplifier.add_simps
+  (HOL_basic_ss
+  |> Simplifier.simpset_map \<^context>
+    (Simplifier.add_simps @{thms word_eq_rbl_eq word_le_rbl word_less_rbl word_sle_rbl word_sless_rbl}),
+  map (fn f => no_split_ss |> Simplifier.simpset_map \<^context> f) [
+      Simplifier.add_simps
         @{thms rbl_word_plus rbl_word_and rbl_word_or rbl_word_not
                                 rbl_word_neg bl_word_sub rbl_word_xor
                                 rbl_word_cat rbl_word_slice rbl_word_scast
                                 rbl_word_ucast rbl_shiftl rbl_shiftr rbl_sshiftr
                                 rbl_word_if},
-    put_simpset no_split_ss \<^context>
-      |> Simplifier.add_simps @{thms to_bl_numeral to_bl_neg_numeral to_bl_0 rbl_word_1},
-    put_simpset no_split_ss \<^context>
-      |> Simplifier.add_simps @{thms rev_rev_ident rev_replicate rev_map to_bl_upt word_size}
-      |> Simplifier.add_proc word_len_simproc,
-    put_simpset no_split_ss \<^context>
-      |> Simplifier.add_simps
+      Simplifier.add_simps @{thms to_bl_numeral to_bl_neg_numeral to_bl_0 rbl_word_1},
+      Simplifier.add_simps @{thms rev_rev_ident rev_replicate rev_map to_bl_upt word_size}
+      #> Simplifier.add_proc word_len_simproc,
+      Simplifier.add_simps
         @{thms list.simps split_conv replicate.simps list.map
                                 zip_Cons_Cons zip_Nil drop_Suc_Cons drop_0 drop_Nil
                                 foldr.simps list.map zip.simps(1) zip_Nil zip_Cons_Cons takefill_Suc_Cons
@@ -456,14 +454,14 @@ val expand_word_eq_sss =
                                 rbl_plus_simps rev_bin_to_bl_simps append.simps
                                 takefill_last_simps drop_nonempty_simps
                                 rev_bl_order_simps}
-      |> fold Simplifier.add_proc
-          [expand_upt_simproc,
-           nat_get_Suc_simproc 4
+      #> Simplifier.add_proc expand_upt_simproc
+      #> Simplifier.add_proc
+           (nat_get_Suc_simproc 4
              [\<^term>\<open>replicate\<close>, \<^term>\<open>takefill x\<close>,
               \<^term>\<open>drop\<close>, \<^term>\<open>bin_to_bl\<close>,
               \<^term>\<open>takefill_last x\<close>,
-              \<^term>\<open>drop_nonempty x\<close>]],
-    put_simpset no_split_ss \<^context> addsimps @{thms xor3_simps carry_simps if_bool_simps}
+              \<^term>\<open>drop_nonempty x\<close>]),
+      Simplifier.add_simps @{thms xor3_simps carry_simps if_bool_simps}
   ])
 
 fun tac ctxt =

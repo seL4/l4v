@@ -247,7 +247,7 @@ lemma le_shiftr:
 
 lemma le_shiftr':
   "\<lbrakk> u >> n \<le> v >> n ; u >> n \<noteq> v >> n \<rbrakk> \<Longrightarrow> (u::'a::len word) \<le> v"
-  by (metis le_cases le_shiftr verit_la_disequality)
+  by (metis le_cases le_shiftr alethe_la_disequality)
 
 lemma shiftr_mask_le:
   "n \<le> m \<Longrightarrow> mask n >> m = (0 :: 'a::len word)"
@@ -1490,7 +1490,7 @@ next
     by (simp add: not_le)
   ultimately show ?thesis
     apply (simp add: signed_ucast_eq word_size)
-    apply (transfer)
+    apply transfer
     apply (simp add: signed_take_bit_take_bit)
     apply (simp add: bit_eq_iff bit_take_bit_iff bit_signed_take_bit_iff min_def)
     by (metis atLeastLessThan_iff linorder_not_le nat_less_le not_less_eq)

@@ -98,9 +98,9 @@ let
 
   (* attempt to prove an inequality between functions i and j *)
   fun le_thm ctxt (i,j) = Goal.prove ctxt ["x", "y"] [] (stmt (i,j)) (fn _ =>
-    (asm_full_simp_tac (ctxt addsimps [@{thm all_bool_word_funs_def}])
+    (asm_full_simp_tac (ctxt |> Simplifier.add_simp @{thm all_bool_word_funs_def})
      THEN_ALL_NEW resolve_tac ctxt @{thms word_leI}
-     THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps @{thms word_eqI_simps bit_simps})) 1)
+     THEN_ALL_NEW asm_full_simp_tac (ctxt |> Simplifier.add_simps @{thms word_eqI_simps bit_simps})) 1)
 
   (* generate all combinations for (i,j), collect successful inequality theorems,
      unfold all_bool_word_funs, and put into simp normal form. We leave out 0 (bottom)

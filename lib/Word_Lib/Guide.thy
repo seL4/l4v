@@ -393,6 +393,8 @@ text \<open>
     \<^item> \<^const>\<open>Generic_set_bit.set_bit\<close> is now a regular derived operation
       without any special treatment.
 
+    \<^item> Removed theory \<^text>\<open>Strict_part_mono\<close>.
+
   \<^descr>[Changes since AFP 2024] ~
 
     \<^item> Theory \<^text>\<open>Strict_part_mono\<close> is not part of \<^text>\<open>Word_Lib_Sumo\<close> any longer.

@@ -39,8 +39,10 @@ local
   fun expand is_neg ct =
     [Thm.reflexive ct, if is_neg then expand_neg else expand_pos] MRS transitive_thm;
 
-  val ss = simpset_of (@{context} |> put_simpset HOL_ss
-    |> fold Simplifier.add_simp @{thms take_bit_0 take_bit_numeral_bit0 take_bit_numeral_bit1 take_bit_numeral_minus_bit0 take_bit_numeral_minus_bit1
+  val ss =
+    HOL_ss
+    |> Simplifier.simpset_map \<^context>
+       (Simplifier.add_simps @{thms take_bit_0 take_bit_numeral_bit0 take_bit_numeral_bit1 take_bit_numeral_minus_bit0 take_bit_numeral_minus_bit1
          pred_numeral_simps len_num0 len_num1 len_bit0 len_bit1 len_signed
          arith_simps
          mult_1 mult_1_right numeral_plus_one uminus_numeral_One take_bit_numeral_minus_1_eq
@@ -84,16 +86,25 @@ context
   notes [[simproc add: unsigned_norm unsigned_norm_neg0 unsigned_norm_neg1]]
 begin
 
-private lemma "- 2 = (13 + 1 :: 'a::len word)"
+(* Keep f in these test lemmas.
+   Checks that the simproc works on subterms, not just on top-level equalities *)
+
+private lemma "f (- 2) = f (13 + 1 :: 'a::len word)"
   using numeral_plus_one [simp]
   apply simp (* does not touch generic word length *)
   oops
 
-private lemma "7 = (3 :: 2 word)"
+private lemma "f (7 :: 2 word) = f 3"
+  by simp
+
+private lemma "f 7 = f (3 :: 2 word)"
   by simp
 
 private lemma "f (- 2) = f (22 :: 3 word)"
   by simp
+
+private lemma "f (- 2) = f (21 + 1 :: 3 word)"
+  by (simp add: numeral_plus_one arith_simps)
 
 private lemma "f (- 2) = f (0xFFFFFFFE :: 32 word)"
   by simp

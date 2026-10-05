@@ -23,7 +23,6 @@ session Word_Lib (lib) = HOL +
     Even_More_List
     More_Sublist
     More_Misc
-    Strict_part_mono
     Many_More
     Examples
   theories
