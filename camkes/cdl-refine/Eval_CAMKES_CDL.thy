@@ -543,7 +543,7 @@ lemmas word_rel_simps_small =
 (* test for simpset *)
 ML \<open>
 let
-  val eval = Raw_Simplifier.rewrite @{context} false
+  val eval = Simplifier.rewrite_wrt @{context} false
                (map_filter FP_Eval.maybe_convert_eqn @{thms word_rel_simps_small});
   fun check word_typ cmp cmp_term x y = let
     val xt = HOLogic.mk_number word_typ x;

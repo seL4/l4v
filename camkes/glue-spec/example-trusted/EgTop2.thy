@@ -57,4 +57,4 @@ lemma "\<forall>p. \<exists>e s. gs\<^sub>0 p = Some (e, s) \<and>
 
 (*<*)
 end
-(* > *)
+(*>*)
