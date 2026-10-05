@@ -663,6 +663,16 @@ lemma if_1_0_0:
   "((if P then 1 else 0) = (0 :: ('a :: zero_neq_one))) = (\<not> P)"
   by (simp split: if_split)
 
+lemma if_then_1_else_0:
+  "(if P then 1 else 0) = (0 :: 'a :: zero_neq_one) \<longleftrightarrow> \<not>P"
+  by (simp split: if_split)
+
+lemma if_then_0_else_1:
+  "(if P then 0 else 1) = (0 :: 'a :: zero_neq_one) \<longleftrightarrow> P"
+  by simp
+
+lemmas if_then_simps = if_then_0_else_1 if_then_1_else_0
+
 lemma neq_Nil_lengthI:
   "Suc 0 \<le> length xs \<Longrightarrow> xs \<noteq> []"
   by (cases xs, auto)
@@ -698,6 +708,10 @@ lemma append_len2:
 lemma if_flip:
   "(if \<not>P then T else F) = (if P then F else T)"
   by simp
+
+lemma if_if_if_same_output:
+  "(if c1 then if c2 then t else f else if c3 then t else f) = (if c1 \<and> c2 \<or> \<not>c1 \<and> c3 then t else f)"
+  by (simp split: if_splits)
 
 lemma not_in_domIff:"f x = None = (x \<notin> dom f)"
   by blast
@@ -1976,6 +1990,25 @@ lemma all_ex_eq_helper:
 lemma nat_less_cases':
   "(x::nat) < y \<Longrightarrow> x = y - 1 \<or> x < y - 1"
   by auto
+
+lemma nat_diff_diff_le_lhs:
+  "a + c - b \<le> d \<Longrightarrow> a - (b - c) \<le> (d :: nat)"
+  by arith
+
+lemma minus_minus_swap:
+  "\<lbrakk> a \<le> c; b \<le> d; b \<le> a; d \<le> c ; (d :: nat) - b = c - a \<rbrakk>
+   \<Longrightarrow> a - b = c - d"
+  by arith
+
+lemma minus_minus_swap':
+  "\<lbrakk> c \<le> a; d \<le> b; b \<le> a; d \<le> c ; (b :: nat) - d = a - c \<rbrakk>
+   \<Longrightarrow> a - b = c - d"
+  by arith
+
+lemma multi_lessD:
+  "\<lbrakk> (a :: nat) * b < c; 0 < a; 0 < b \<rbrakk>
+   \<Longrightarrow> a < c \<and> b < c"
+  by (cases a, simp_all,cases b,simp_all)
 
 lemma filter_to_shorter_upto:
   "n \<le> m \<Longrightarrow> filter (\<lambda>x. x < n) [0 ..< m] = [0 ..< n]"

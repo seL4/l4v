@@ -137,4 +137,9 @@ lemma eq_mod_iff: "0 < n \<Longrightarrow> b = b mod n \<longleftrightarrow> 0 \
   for b n :: int
   by (metis pos_mod_bound pos_mod_sign zmod_trivial_iff)
 
+lemma nat_div_less_mono:
+  fixes m n :: nat
+  shows "m div d < n div d \<Longrightarrow> m < n"
+  by (meson div_le_mono not_less)
+
 end

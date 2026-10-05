@@ -36,16 +36,6 @@ lemma lt_word_bits_lt_pow:
   "sz < word_bits \<Longrightarrow> sz < 2 ^ word_bits"
   by (simp add: word_bits_conv)
 
-lemma if_then_1_else_0:
-  "((if P then 1 else 0) = (0 :: machine_word)) = (\<not> P)"
-  by simp
-
-lemma if_then_0_else_1:
-  "((if P then 0 else 1) = (0 :: machine_word)) = (P)"
-  by simp
-
-lemmas if_then_simps = if_then_0_else_1 if_then_1_else_0
-
 lemma bool_mask [simp]:
   \<open>0 < x AND 1 \<longleftrightarrow> x AND 1 = 1\<close> for x :: machine_word
   by (rule bool_mask') auto

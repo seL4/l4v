@@ -673,6 +673,10 @@ lemma unat_minus_one_word:
   "unat (-1 :: 'a :: len word) = 2 ^ LENGTH('a) - 1"
   by (simp add: mask_eq_exp_minus_1 unsigned_minus_1_eq_mask)
 
+lemma uint_minus_1_eq:
+  \<open>uint (- 1 :: 'a word) = 2 ^ LENGTH('a::len) - 1\<close>
+  by transfer (simp add: mask_eq_exp_minus_1)
+
 lemmas word_diff_ls'' = word_diff_ls [where xa=x and x=x for x]
 lemmas word_diff_ls' = word_diff_ls'' [simplified]
 
@@ -903,6 +907,20 @@ lemma ucast_less_ucast:
 \<comment> \<open>This weaker version was previously called @{text ucast_less_ucast}. We retain it to
     support existing proofs.\<close>
 lemmas ucast_less_ucast_weak = ucast_less_ucast[OF order.strict_implies_order]
+
+lemma inj_ucast:
+  "\<lbrakk> uc = ucast; is_up uc \<rbrakk>
+   \<Longrightarrow> inj uc"
+  using down_ucast_inj is_up_down by blast
+
+lemma ucast_down_0:
+  "\<lbrakk> (ucast x :: 'b::len word) = 0; unat x < 2^LENGTH('b) \<rbrakk> \<Longrightarrow> x = 0"
+  for x :: "'a::len word"
+  by (metis Word.of_nat_unat unat_0 unat_eq_of_nat word_unat_eq_iff)
+
+lemma ucast_up_preserves_gt0:
+  "\<lbrakk> 0 < x; LENGTH('a) < LENGTH('b) \<rbrakk> \<Longrightarrow> 0 < (ucast x :: 'b::len word)" for x :: "'a::len word"
+  by (metis ucast_0 ucast_less_ucast_weak)
 
 lemma unat_Suc2:
   fixes n :: "'a :: len word"
@@ -1879,6 +1897,10 @@ lemma word_exists_nth:
 lemma max_word_not_0 [simp]:
   "- 1 \<noteq> (0 :: 'a::len word)"
   by simp
+
+lemma max_word_gt_0:
+  "0 < (- 1 :: 'a::len word)"
+  by (simp add: le_neq_trans[OF max_word_max])
 
 lemma unat_max_word_pos[simp]: "0 < unat (- 1 :: 'a::len word)"
   using unat_gt_0 [of \<open>- 1 :: 'a::len word\<close>] by simp

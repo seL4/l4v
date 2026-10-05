@@ -249,6 +249,13 @@ lemma le_shiftr':
   "\<lbrakk> u >> n \<le> v >> n ; u >> n \<noteq> v >> n \<rbrakk> \<Longrightarrow> (u::'a::len word) \<le> v"
   by (metis le_cases le_shiftr alethe_la_disequality)
 
+lemma shiftr_anti_mono:
+  "m \<le> n \<Longrightarrow> w >> n \<le> w >> m" for w :: "'a::len word"
+  apply transfer
+  apply (simp add: take_bit_drop_bit)
+  apply (simp add: drop_bit_eq_div zdiv_mono2)
+  done
+
 lemma shiftr_mask_le:
   "n \<le> m \<Longrightarrow> mask n >> m = (0 :: 'a::len word)"
   by word_eqI
@@ -358,6 +365,11 @@ lemma mask_shift:
 lemma shiftr_div_2n':
   "unat (w >> n) = unat w div 2 ^ n"
   by word_eqI
+
+lemma word_shiftr_less_mono:
+  fixes w :: "'a::len word"
+  shows "w >> n < v >> n \<Longrightarrow> w < v"
+  by (auto simp: word_less_nat_alt shiftr_div_2n' elim: nat_div_less_mono)
 
 lemma shiftl_shiftr_id:
   "\<lbrakk> n < LENGTH('a); x < 2 ^ (LENGTH('a) - n) \<rbrakk> \<Longrightarrow> x << n >> n = (x::'a::len word)"
@@ -1179,6 +1191,11 @@ lemma is_aligned_neg_mask_eq':
   "is_aligned ptr sz = (ptr AND NOT(mask sz) = ptr)"
   using is_aligned_mask mask_eq_0_eq_x by blast
 
+lemma aligned_mask_le_mask_minus:
+  "\<lbrakk> is_aligned x m; m \<le> n; n < LENGTH('a)\<rbrakk> \<Longrightarrow> x AND mask n \<le> mask n - mask m" for x :: "'a::len word"
+  by (metis and_mask_less' is_aligned_after_mask is_aligned_neg_mask_eq'
+           mask_2pm1 mask_sub neg_mask_mono_le word_less_sub_le)
+
 lemma neg_mask_mask_unat:
   "sz < LENGTH('a)
    \<Longrightarrow> unat ((ptr :: 'a :: len word) AND NOT(mask sz)) + unat (ptr AND mask sz) = unat ptr"
@@ -1418,6 +1435,31 @@ lemma sint_eq_uint_2pl:
   "\<lbrakk> (a :: 'a :: len word) < 2 ^ (LENGTH('a) - 1) \<rbrakk>
    \<Longrightarrow> sint a = uint a"
   by (simp add: not_msb_from_less sint_eq_uint word_2p_lem word_size)
+
+lemma unat_scast_up:
+  "\<lbrakk> LENGTH('a) \<le> LENGTH('b); 0 \<le> sint x \<rbrakk> \<Longrightarrow>unat (scast x::'b::len word) = unat x"
+  for x :: "'a :: len  word"
+  apply (simp flip: bit_last_iff not_less)
+  apply word_eqI
+  apply (clarsimp simp: min_def split: if_splits)
+  apply (rule conjI; clarsimp)
+   apply (drule test_bit_lenD)
+   apply clarsimp
+   apply (metis le_antisym Suc_pred len_gt_0 less_Suc_eq_le)
+  apply fastforce
+  done
+
+lemma unat_uint_less:
+  "unat x < nat i \<Longrightarrow> uint x < i" for x :: "'a :: len word"
+  by (simp add: zless_nat_eq_int_zless)
+
+lemma sint_ge_zero_uint:
+  "uint x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
+  by (simp add: sint_eq_uint_2pl word_2p_lem wsst_TYs(3))
+
+lemma sint_ge_zero_unat:
+  "unat x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
+  by (fastforce intro: sint_ge_zero_uint unat_uint_less simp: nat_power_eq)
 
 lemma pow_sub_less:
   "\<lbrakk> a + b \<le> LENGTH('a); unat (x :: 'a :: len word) = 2 ^ a \<rbrakk>

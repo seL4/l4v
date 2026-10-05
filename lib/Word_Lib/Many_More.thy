@@ -148,6 +148,43 @@ lemma takeWhile_take_has_property_nth:
   "\<lbrakk> n < length (takeWhile P xs) \<rbrakk> \<Longrightarrow> P (xs ! n)"
   by (induct xs arbitrary: n; simp split: if_split_asm) (case_tac n, simp_all)
 
+\<comment>\<open>The conditions under which `takeWhile P xs = take n xs` and `dropWhile P xs = drop n xs`\<close>
+definition list_while_len where
+  "list_while_len P n xs \<equiv> (\<forall>i. i < n \<longrightarrow> i < length xs \<longrightarrow> P (xs ! i))
+                            \<and> (n < length xs \<longrightarrow> \<not> P (xs ! n))"
+
+lemma list_while_len_iff_takeWhile_eq_take:
+  "list_while_len P n xs \<longleftrightarrow> takeWhile P xs = take n xs"
+  unfolding list_while_len_def
+  apply (rule iffI[OF takeWhile_eq_take_P_nth], simp+)
+  apply (intro conjI allI impI)
+   apply (rule takeWhile_take_has_property_nth, clarsimp)
+  apply (drule_tac f=length in arg_cong, simp)
+  apply (induct xs arbitrary: n; clarsimp split: if_splits)
+  done
+
+lemma list_while_len_exists:
+  "\<exists>n. list_while_len P n xs"
+  apply (induction xs; simp add: list_while_len_def)
+  apply (rename_tac x xs)
+  apply (erule exE)
+  apply (case_tac "P x")
+   apply (rule_tac x="Suc n" in exI, clarsimp)
+   apply (case_tac i; simp)
+  apply (rule_tac x=0 in exI, simp)
+  done
+
+lemma takeWhile_truncate:
+  "length (takeWhile P xs) \<le> m
+   \<Longrightarrow> takeWhile P (take m xs) = takeWhile P xs"
+  apply (cut_tac list_while_len_exists[where P=P and xs=xs], clarsimp)
+  apply (case_tac "n \<le> m")
+   apply (subgoal_tac "list_while_len P n (take m xs)")
+    apply(simp add: list_while_len_iff_takeWhile_eq_take)
+   apply (clarsimp simp: list_while_len_def)
+  apply (simp add: list_while_len_iff_takeWhile_eq_take)
+  done
+
 lemma takeWhile_replicate_empty:
   "\<not> f x \<Longrightarrow> takeWhile f (replicate len x) = []"
   by simp
