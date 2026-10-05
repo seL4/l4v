@@ -186,3 +186,11 @@
   the generation of modifies proofs. Default behaviour is unchanged.
 - Allow the character ' in Isabelle identifiers in FNSPEC, so that for instance
   the name StrictC'_f_spec can be used as a lemma identifier.
+
+## 1.23 (upcoming)
+
+- Builds with Isabelle2026
+- Updated SIMPL from the AFP
+- Improved pretty printing for procedure names: `Call f_'proc` now prints as
+  `PROC \<acute>f()`. Use print mode NoProc to disable the PROC syntax. This
+  change affects printing only.

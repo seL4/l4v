@@ -9,7 +9,7 @@
 NB: These instructions apply to the stand-alone release of the C parser.
 If this is in an L4.verified checkout, see the top-level README.md instead.
 
-This code requires Isabelle2023 and the MLton SML compiler.
+This code requires Isabelle2026 and the MLton SML compiler.
 
 The C parser supports multiple target architectures:
 
@@ -31,12 +31,6 @@ To build the main heap CParser, use the following command in this directory (src
 You can also build a regression test with the command
 
     isabelle env make cparser_test
-
-The regression test may require a lot of memory to run. If your computer has
-enough memory, configure your etc/settings file to use a 64-bit runtime:
-
-    ML_PLATFORM=$ISABELLE_PLATFORM64
-    ML_HOME=$(dirname "${ML_HOME}")/$ML_PLATFORM
 
 ## Loading the parser
 

@@ -26,7 +26,7 @@ structure RecursiveRecordData = Theory_Data
 (
   type T = simpset;
   val empty = HOL_basic_ss;
-  val merge = merge_ss;
+  val merge = Simplifier.merge_ss;
 );
 
 val get_simpset = RecursiveRecordData.get;
@@ -35,7 +35,7 @@ fun add_recursive_record_thms simps congs thy
     = RecursiveRecordData.map (fn ss =>
         Proof_Context.init_global thy
         |> put_simpset ss
-        |> (fn ctxt => ctxt addsimps simps)
+        |> Simplifier.add_simps simps
         |> fold Raw_Simplifier.add_cong congs
         |> simpset_of) thy
 

@@ -69,7 +69,7 @@ fun sep_point_tacs ds ctxt  = [
     REPEAT1 (dresolve_tac ctxt [@{thm sep_conj_extract1D}] 1),
     REPEAT1 (dresolve_tac ctxt [@{thm sep_conj_extract2D}] 1),
     clarify_tac ctxt 1,
-    TRY (full_simp_tac (put_simpset HOL_ss ctxt addsimps
+    TRY (full_simp_tac (put_simpset HOL_ss ctxt |> Simplifier.add_simps
         [@{thm sep_conj_extract_assoc}]) 1),
     REPEAT (dresolve_tac ctxt [@{thm sep_conj_extract_decomposeD},
         @{thm sep_conj_extract_decomposeD2}] 1 THEN
@@ -95,7 +95,7 @@ section "sep_exists_tac"
 
 ML\<open>
 fun sep_exists_tac ctxt = full_simp_tac
-    (put_simpset HOL_ss ctxt addsimps [@{thm "sep_conj_exists1"}, @{thm "sep_conj_exists2"}])
+    (put_simpset HOL_ss ctxt |> Simplifier.add_simps [@{thm "sep_conj_exists1"}, @{thm "sep_conj_exists2"}])
 \<close>
 
 method_setup sep_exists_tac =
@@ -191,17 +191,17 @@ fun sep_select_tacs s ctxt  =
       val fixes = map (fn v => (Binding.name v, NONE, Mixfix.NoSyn)) vars
   in
   [
-    TRY (simp_tac (put_simpset HOL_ss ctxt addsimps [@{thm sep_conj_assoc}]) 1),
+    TRY (simp_tac (put_simpset HOL_ss ctxt |> Simplifier.add_simps [@{thm sep_conj_assoc}]) 1),
     resolve_tac ctxt [@{thm sep_markI}] 1,
     REPEAT (Rule_Insts.res_inst_tac ctxt subst fixes @{thm sep_mark_match} 1 ORELSE
       (Rule_Insts.res_inst_tac ctxt subst fixes @{thm sep_mark_match2} 1 ORELSE
       resolve_tac ctxt [@{thm sep_mark_mismatch}] 1 ORELSE
       resolve_tac ctxt [@{thm sep_mark_mismatch2}] 1)),
-    TRY (simp_tac (put_simpset HOL_ss ctxt addsimps [@{thm sep_conj_assoc}]) 1),
+    TRY (simp_tac (put_simpset HOL_ss ctxt |> Simplifier.add_simps [@{thm sep_conj_assoc}]) 1),
     resolve_tac ctxt [@{thm sep_emp_rem}] 1,
-    TRY (simp_tac (put_simpset HOL_ss ctxt addsimps [@{thm sep_mark2_left},
+    TRY (simp_tac (put_simpset HOL_ss ctxt |> Simplifier.add_simps [@{thm sep_mark2_left},
       @{thm sep_mark2_left2}]) 1),
-    TRY (simp_tac (put_simpset HOL_ss ctxt addsimps [@{thm sep_mark2_id}]) 1)
+    TRY (simp_tac (put_simpset HOL_ss ctxt |> Simplifier.add_simps [@{thm sep_mark2_id}]) 1)
   ]
   end
 

@@ -641,7 +641,7 @@ fun prim_mk_defn s t thy = let
   val binding0 = Binding.make(s ^ "_def", Position.none)
   val binding = (binding0, []) (* [] is a Token.src list *)
   val lthy = Named_Target.theory_init thy
-  val (_, lthy') = Specification.definition NONE [] [] (binding, eqn) lthy
+  val (_, lthy') = Specification.definition {verbose = false} NONE [] [] (binding, eqn) lthy
 in
   Local_Theory.exit_global lthy'
 end

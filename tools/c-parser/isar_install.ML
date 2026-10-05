@@ -119,7 +119,7 @@ fun do_cpp {error_detail, cpp_path} {includes, filename} =
       NONE => (File.standard_path (Path.explode filename), false)
     | SOME p =>
       let
-        open OS.FileSys OS.Process
+        open OS.FileSys
         val tmpname = tmpName()
         val err_tmpname = tmpName()
         val includes_string = String.concat (map (fn s => "-I\""^s^"\" ") includes)
@@ -127,7 +127,7 @@ fun do_cpp {error_detail, cpp_path} {includes, filename} =
         val cmdline =
             p ^ " " ^ includes_string ^ " -CC \"" ^ filename ^ "\" > " ^ tmpname ^ " 2> " ^ err_tmpname
       in
-        if isSuccess (system cmdline)
+        if Isabelle_System.bash cmdline = 0
         then (OS.FileSys.remove err_tmpname; (tmpname, true))
         else let val _ = OS.FileSys.remove tmpname
                  val (msg, rest) = File.read_lines (Path.explode err_tmpname) |> chop error_detail

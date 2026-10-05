@@ -26,8 +26,7 @@ fun incifGuard (@{const "C_Guard"}) i = i + 1
 \<close>
 
 ML \<open>
-  fold_aterms incifGuard t 0 = 2 orelse
-  OS.Process.exit OS.Process.failure
+  \<^assert> (fold_aterms incifGuard t 0 = 2)
 \<close>
 
 end

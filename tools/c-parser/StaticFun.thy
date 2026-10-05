@@ -114,7 +114,7 @@ fun prove_partial_map_thms thm ctxt = let
 
 fun define_tree_and_save_thms name names mappings ord exsimps ctxt = let
     val ((tree, def_thm), ctxt) = define_partial_map_tree name mappings ord ctxt
-    val thms = prove_partial_map_thms def_thm (ctxt addsimps exsimps)
+    val thms = prove_partial_map_thms def_thm (ctxt |> Simplifier.add_simps exsimps)
     val (idents, thms) = map_split I thms
     val _ = map (fn ((x, y), (x', y')) => (x aconv x' andalso y aconv y')
         orelse raise TERM ("define_tree_and_thms: different", [x, y, x', y']))

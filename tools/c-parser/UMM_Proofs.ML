@@ -220,7 +220,7 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   (* typ_tag TYPE('a struct_scheme) = struct_tag_def *)
   val t_def_thms = [typtag_thm, tag_def_thm, @{thm "align_of_def"},
                     @{thm "size_of_def"}]
-  val t_def_step = ALLGOALS (asm_full_simp_tac (ctxt0 addsimps t_def_thms))
+  val t_def_step = ALLGOALS (asm_full_simp_tac (ctxt0 |> Simplifier.add_simps t_def_thms))
 
   (* wf_desc *)
   val wf_desc_Is = ctxt0 addIs [@{thm "wf_desc_final_pad"},
@@ -236,7 +236,7 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   (* wf_lf *)
   infix addsimps'
   fun op addsimps' (ctxt, thms) =
-      Context.proof_map (Simplifier.map_ss (fn ss => ss addsimps thms)) ctxt
+      Context.proof_map (Simplifier.map_simpset (Simplifier.add_simps thms)) ctxt
   val wf_lf_Is =
       ctxt0
         addIs [@{thm "wf_lf_final_pad"}, @{thm "wf_lf_ti_typ_pad_combine"},
@@ -256,11 +256,11 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
       dprint_tac "fu_eq_mask [v-2]" THEN
       assume_tac ctxt0 1 THEN
       dprint_tac "fu_eq_mask [v-1]" THEN
-      asm_full_simp_tac (ctxt0 addsimps (size_td_simps_arr)) 1 THEN
+      asm_full_simp_tac (ctxt0 |> Simplifier.add_simps (size_td_simps_arr)) 1 THEN
       dprint_tac "fu_eq_mask [v0]" THEN
       resolve_tac ctxt0 [@{thm "fu_eq_mask_final_pad"}] 1 THEN
       REPEAT (resolve_tac ctxt0 [@{thm "fu_eq_mask_ti_typ_pad_combine"}] 1) THEN
-      asm_full_simp_tac (ctxt0 addsimps [
+      asm_full_simp_tac (ctxt0 |> Simplifier.add_simps [
           @{thm "fu_eq_mask_empty_typ_info"}, @{thm "there_is_only_one"}]) 1 THEN
       dprint_tac "fu_eq_mask [v1]" THEN
       REPEAT (dprint_tac "forcing" THEN
@@ -271,19 +271,19 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
 
   val align_dvd_size_step =
       asm_full_simp_tac
-          (ctxt0 addsimps [
+          (ctxt0 |> Simplifier.add_simps [
              @{thm "align_of_def"}, @{thm "size_of_def"}]) 1
 
   val align_field_step =
       asm_full_simp_tac
-          (ctxt0 addsimps [
+          (ctxt0 |> Simplifier.add_simps [
              @{thm "align_td_array_tag"}, @{thm "align_field_final_pad"},
              @{thm "align_field_ti_typ_pad_combine"},
              @{thm "typ_info_array"}, @{thm "array_tag_def"}]) 1
 
   val size_lt_step =
       asm_full_simp_tac
-          (ctxt0 addsimps
+          (ctxt0 |> Simplifier.add_simps
            (size_td_simps_arr @
             [@{thm "addr_card"}, @{thm "align_of_def"},
              @{thm "size_of_def"}, @{thm "align_of_final_pad"}])) 1
@@ -323,7 +323,7 @@ fun umm_packed_type recname recty typtag_thm tag_def_thm fgthms thy = let
       Logic.mk_of_class (recty, "PackedTypes.packed_type")
   val packed_type_instance_ct = Thm.cterm_of ctxt0 packed_type_instance_t
 
-  val pt_ss = (ctxt0 addsimps ([typtag_thm, tag_def_thm] @ packed_type_simps @ fgthms))
+  val pt_ss = (ctxt0 |> Simplifier.add_simps ([typtag_thm, tag_def_thm] @ packed_type_simps @ fgthms))
 
   (* Try to solve. If we fail, we catch the exception and ignore. *)
   val is_packed_type_thm =
@@ -344,7 +344,7 @@ fun calculate_record_size recname (st, thy) ths ty =
       val ctxt = thy2ctxt thy
       val tysize_th =
           Simplifier.rewrite
-              ((thy2ctxt thy) addsimps
+              ((thy2ctxt thy) |> Simplifier.add_simps
                           ((@{thm "size_of_def"} :: @{thm "typ_info_array"} ::
                             @{thm "array_tag_def"} :: @{thm "TWO"} ::
                             @{thms "size_td_simps"} @ ths)))
@@ -439,7 +439,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
 
   val size_td_thm =
       Simplifier.asm_full_rewrite
-          ((thy2ctxt thy) addsimps (size_td_simps_arr @ [tag_def_thm, typtag_thm]))
+          ((thy2ctxt thy) |> Simplifier.add_simps (size_td_simps_arr @ [tag_def_thm, typtag_thm]))
           (Thm.cterm_of (thy2ctxt thy) (mk_sizetd typ_info_TYPE))
   val (st,thy) = calculate_record_size recname (st,thy) [size_td_thm] recty
 
@@ -449,7 +449,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
 
   val align_td_thm =
       Simplifier.asm_full_rewrite
-          ((thy2ctxt thy) addsimps (size_td_simps_arr
+          ((thy2ctxt thy) |> Simplifier.add_simps (size_td_simps_arr
                                     @ [tag_def_thm, typtag_thm, @{thm "align_of_def"}]))
           (Thm.cterm_of (thy2ctxt thy) (mk_aligntd typ_info_TYPE))
 
@@ -466,7 +466,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val _ = trac "About to type typ_name ..."
   val typ_name_thm =
       Simplifier.asm_full_rewrite
-          ((thy2ctxt thy) addsimps [tag_def_thm, typtag_thm])
+          ((thy2ctxt thy) |> Simplifier.add_simps [tag_def_thm, typtag_thm])
           (Thm.cterm_of (thy2ctxt thy) (mk_typ_name_of recty))
   val (typ_name_thm, thy) =
       Global_Theory.add_thms [((Binding.name(recname ^ "_typ_name"), typ_name_thm),
@@ -480,7 +480,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
     val fl_simps = size_td_simps_arr_fl @ @{thms "fl_simps"} @
       [tag_def_thm, typtag_thm]
     fun fl_thm f = ((Binding.name(recname^"_"^(#1 f) ^"_fl"), Drule.export_without_context (
-      Simplifier.asm_full_rewrite ((thy2ctxt thy) addsimps fl_simps)
+      Simplifier.asm_full_rewrite ((thy2ctxt thy) |> Simplifier.add_simps fl_simps)
       (Thm.cterm_of (thy2ctxt thy) (mk_field_lookup (recty,#1 f))))),[])
   in
     map fl_thm flds
@@ -495,7 +495,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
     fun fg_thm f = Goal.prove_future (thy2ctxt thy) [] []
       (mk_prop (mk_fg_cons_tm recty (#2 f) (#1 f) thy))
       (fn _ => asm_full_simp_tac
-          ((thy2ctxt thy) addsimps [@{thm "fg_cons_def"}, @{thm comp_def}]) 1)
+          ((thy2ctxt thy) |> Simplifier.add_simps [@{thm "fg_cons_def"}, @{thm comp_def}]) 1)
   in
     map fg_thm flds
   end;
@@ -509,7 +509,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
       fun fl_thm' (fl, (name, _, _)) = let
           val concl_lhs = mk_field_lookup_nofs (recty, name)
           val thm =
-              Simplifier.asm_full_rewrite ((thy2ctxt thy) addsimps [fl])
+              Simplifier.asm_full_rewrite ((thy2ctxt thy) |> Simplifier.add_simps [fl])
                                           (Thm.cterm_of (thy2ctxt thy) concl_lhs) |>
                                           Drule.export_without_context
       in
@@ -543,7 +543,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val td_names_name = recname ^ "_td_names";
   val td_names_thm =
       Simplifier.asm_full_rewrite
-          ((thy2ctxt thy) addsimps
+          ((thy2ctxt thy) |> Simplifier.add_simps
                       [tag_def_thm, typtag_thm,
                        @{thm "pad_typ_name_def"}, @{thm "insert_commute"},
                        @{thm "nat_to_bin_string.simps"}])
@@ -557,8 +557,8 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
 
   val thy =
       thy |> Context.theory_map
-               (Simplifier.map_ss
-                    (fn ss => ss addsimps (recthms @ flthms @ fgthms)))
+               (Simplifier.map_simpset
+                    (Simplifier.add_simps (recthms @ flthms @ fgthms)))
   val _ = phase "END"
   val _ = trac "done"
 in

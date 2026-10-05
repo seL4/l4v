@@ -239,7 +239,7 @@ fun modifies_tactic mod_inv_prop ctxt = let
   fun asm_spec_tactic i =
     seq_all_new i [
       resolve_tac ctxt @{thms asm_spec_preserves},
-      asm_lr_simp_tac (ctxt addsimps @{thms mex_def meq_def})
+      asm_lr_simp_tac (ctxt |> Simplifier.add_simps @{thms mex_def meq_def})
     ]
 in
   seq_all_new 1 [
@@ -261,14 +261,14 @@ fun get_mod_inv_prop ctxt post_abs mod_inv_props = let
     fun mi_prop_tac _ = let
       val globals_equality = Proof_Context.get_thm ctxt "globals.equality"
       fun mi_refl_tac _ =
-        simp_tac (clear_simpset ctxt addsimps @{thms modifies_inv_refl_def mex_def meq_def}) 1 THEN
+        simp_tac (ctxt |> Simplifier.clear_simpset |> Simplifier.add_simps @{thms modifies_inv_refl_def mex_def meq_def}) 1 THEN
         resolve_tac ctxt @{thms allI} 1 THEN
         resolve_tac ctxt @{thms CollectI} 1 THEN
         TRY (REPEAT_ALL_NEW (resolve_tac ctxt @{thms exI}) 1) THEN
         resolve_tac ctxt [globals_equality] 1 THEN
-        ALLGOALS (simp_tac (clear_simpset ctxt addsimprocs [Record.simproc]))
+        ALLGOALS (simp_tac (ctxt |> Simplifier.clear_simpset |> Simplifier.add_proc Record.simproc))
       fun mi_incl_tac _ =
-        simp_tac (clear_simpset ctxt addsimps @{thms modifies_inv_incl_def mex_def meq_def}) 1 THEN
+        simp_tac (ctxt |> Simplifier.clear_simpset |> Simplifier.add_simps @{thms modifies_inv_incl_def mex_def meq_def}) 1 THEN
         resolve_tac ctxt @{thms allI} 1 THEN
         resolve_tac ctxt @{thms allI} 1 THEN
         resolve_tac ctxt @{thms impI} 1 THEN

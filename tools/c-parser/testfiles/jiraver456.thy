@@ -30,9 +30,7 @@ in
 end
 val f = count @{const Div_0};
 
-   (f @{thm f1_body_def} = 1 andalso f @{thm f2_body_def} = 1 andalso f @{thm f0_body_def} = 1)
-   orelse
-   OS.Process.exit OS.Process.failure
+   \<^assert> (f @{thm f1_body_def} = 1 andalso f @{thm f2_body_def} = 1 andalso f @{thm f0_body_def} = 1)
 \<close>
 
 

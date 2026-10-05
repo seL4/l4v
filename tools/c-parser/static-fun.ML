@@ -94,7 +94,7 @@ val mysets = @{thms tree_vals_set_simps}
 
 val simpset =
     Simplifier.put_simpset KeyVal.ordsimps @{context}
-    |> (fn ctxt => ctxt addsimps mysets)
+    |> Simplifier.add_simps mysets
     |> Simplifier.add_cong mycg
     |> simpset_of
 
@@ -164,7 +164,7 @@ structure StaticFun = SFun
       val ord_ty = @{typ "int"}
       val ord_term = @{term "id :: int => int"}
       val ordsimps = simpset_of (
-          put_simpset HOL_basic_ss @{context} addsimps @{thms int_simpset})
+          put_simpset HOL_basic_ss @{context} |> Simplifier.add_simps @{thms int_simpset})
  end);
 
 
