@@ -1849,12 +1849,6 @@ lemma set_cap_not_quite_corres:
   apply (case_tac obj; clarsimp simp: fail_def return_def split: if_split_asm)
   done
 
-lemma pspace_relation_cte_wp_atI:
-  "\<lbrakk> pspace_relation (kheap s) (ksPSpace s'); ctes_of s' x = Some cte; valid_objs s \<rbrakk>
-   \<Longrightarrow> \<exists>c slot. cte_wp_at ((=) c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
-  for s :: "det_state" and s' :: kernel_state
-  by (erule pspace_relation_cte_wp_atI'[where x=x, simplified cte_wp_at_ctes_of]; simp)
-
 lemma caps_of_state_rev_cross:
   "\<lbrakk> ctes_of s' p = Some cte; valid_objs s; (s,s') \<in> state_relation \<rbrakk>
    \<Longrightarrow> \<exists>cap slot. caps_of_state s slot = Some cap \<and> p = cte_map slot \<and> cap_relation cap (cteCap cte)"

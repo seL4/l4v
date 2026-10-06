@@ -1871,7 +1871,8 @@ lemma update_sched_context_is_active_sc_indep:
   "\<forall>sc. sc_active (f sc) \<longleftrightarrow> sc_active sc
    \<Longrightarrow> update_sched_context ref f \<lbrace>\<lambda>s. P (is_active_sc scp s)\<rbrace>"
   apply (wpsimp wp: update_sched_context_wp)
-  by (clarsimp simp: vs_all_heap_simps obj_at_def)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+  done
 
 lemma update_sched_context_is_refill_sufficient_indep:
   "\<forall>sc. sc_refills (f sc) = sc_refills sc
@@ -1886,7 +1887,8 @@ lemma update_sched_context_is_refill_ready_indep:
 lemma sc_replies_update_sc_tcb_sc_at[wp]:
   "update_sched_context scp (sc_replies_update f) \<lbrace>\<lambda>s. N (sc_tcb_sc_at P t s)\<rbrace>"
   apply (wpsimp wp: update_sched_context_wp)
-  by (auto simp: sc_tcb_sc_at_def pred_tcb_at_def obj_at_def)
+  apply (auto simp: sc_tcb_sc_at_def pred_tcb_at_def obj_at_def)
+  done
 
 lemma set_refills_valid_ready_qs:
   "\<lbrace>\<lambda>s. valid_ready_qs s \<and>

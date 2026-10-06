@@ -1159,7 +1159,7 @@ lemma check_active_irq_corres_C:
 
 lemma cross_valid_tcbs'_cross:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); valid_objs s;
-    pspace_aligned s; pspace_distinct s; no_0_obj' s'\<rbrakk>
+    pspace_aligned' s'; pspace_distinct' s'; no_0_obj' s'\<rbrakk>
    \<Longrightarrow> cross_valid_tcbs' s'"
   apply (clarsimp simp: cross_valid_tcbs'_def tcb_st_refs_of'_def map_comp_def split: option.splits)
   apply (rename_tac tcb' ref tp)
@@ -1179,14 +1179,15 @@ lemma cross_valid_tcbs'_cross:
 
 lemma cross_valid_sched_contexts'_cross:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); sc_replies_relation s s';
-    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+    valid_objs s; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> cross_valid_sched_contexts' s'"
   apply (clarsimp simp: cross_valid_sched_contexts'_def map_comp_def split: option.splits)
   apply (fastforce elim: reply_at'_scReply)
   done
 
 lemma cross_valid_eps'_cross:
-  "\<lbrakk>(s, s') \<in> state_relation; ep_queues_blocked s; valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+  "\<lbrakk>(s, s') \<in> state_relation; ep_queues_blocked s; valid_objs s;
+    pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> cross_valid_eps' s'"
   apply (clarsimp simp: cross_valid_eps'_def map_comp_def split: option.splits)
   apply (rename_tac epPtr ep')
@@ -1204,7 +1205,7 @@ lemma cross_valid_eps'_cross:
 
 lemma cross_valid_ntfns'_cross:
   "\<lbrakk>(s, s') \<in> state_relation; ntfn_queues_blocked s;
-    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+    valid_objs s; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> cross_valid_ntfns' s'"
   apply (clarsimp simp: cross_valid_ntfns'_def map_comp_def split: option.splits)
   apply (rename_tac ntfnPtr ntfn')
@@ -1222,7 +1223,7 @@ lemma cross_valid_ntfns'_cross:
 
 lemma cross_valid_objs'_cross:
   "\<lbrakk>(s, s') \<in> state_relation; ep_queues_blocked s; ntfn_queues_blocked s; no_0_obj' s';
-    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+    valid_objs s; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> cross_valid_objs' s'"
   apply (frule state_relation_pspace_relation)
   apply (frule state_relation_sc_replies_relation)
@@ -1263,7 +1264,8 @@ lemma refinement2_both:
        apply (rule sch_act_wf_cross)
            apply force
           subgoal by (clarsimp simp: valid_sched_def)
-         apply fastforce+
+         apply fastforce
+        apply (clarsimp simp: full_invs'_def)+
       apply (clarsimp simp: lift_state_relation_def full_invs_def)
       apply (rule ksReadyQueues_asrt_cross)
          apply (erule state_relation_ready_queues_relation, fastforce+)
@@ -1299,10 +1301,11 @@ lemma refinement2_both:
            apply fastforce
           apply fastforce
          apply clarsimp
-         apply (erule (1) ct_running_cross)
-          apply fastforce
+        apply clarsimp
+        apply (erule (1) ct_running_cross)
          apply fastforce
-        apply (rule ct_running_or_idle_cross; simp?; fastforce)
+        apply fastforce
+       apply (rule ct_running_or_idle_cross; simp?; fastforce)
        apply (frule curthread_relation)
        apply clarsimp
        apply (erule schedulable_schedulable'_eq[THEN iffD1], fastforce+)

@@ -196,16 +196,24 @@ definition archMakeObjectT :: "arch_kernel_object_type \<Rightarrow> kernel_obje
      of PTET \<Rightarrow> injectKO (makeObject :: pte)
       | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool)"
 
-(* FIXME arch-split RT: split and probably move, it doesn't belong here but is used in Invariants_H *)
-lemma valid_sz_simps:
-  "objBitsKO ko < word_bits =
-    (case ko of
-      KOSchedContext sc \<Rightarrow> minSchedContextBits + scSize sc < word_bits
-    | _ \<Rightarrow>    True)"
-  by (cases ko;
-      clarsimp simp: objBits_def objBitsKO_def word_size_def archObjSize_def pageBits_def word_bits_def
-                     tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def word_size
-                     pteBits_def wordSizeCase_def wordBits_def replySizeBits_def
+lemma reply_valid_sz:
+  "objBitsKO (KOReply reply) < word_bits"
+  by (clarsimp simp: objBitsKO_def word_bits_def word_size wordSizeCase_def wordBits_def
+                     replySizeBits_def)
+
+lemma endpoint_valid_sz:
+  "objBitsKO (KOEndpoint ep) < word_bits"
+  by (clarsimp simp: objBitsKO_def word_bits_def word_size wordSizeCase_def wordBits_def
+                     epSizeBits_def)
+
+lemma cte_valid_sz:
+  "objBitsKO (KOCTE cte) < word_bits"
+  by (clarsimp simp: objBitsKO_def word_bits_def word_size wordSizeCase_def wordBits_def
+                     cteSizeBits_def)
+
+lemma arch_obj_valid_sz:
+  "objBitsKO (KOArch obj) < word_bits"
+  by (clarsimp simp: objBitsKO_def archObjSize_def pageBits_def word_bits_def pteBits_def
               split: arch_kernel_object.splits)
 
 (* no page table duplicates on this architecture, used for generic interfaces only *)
