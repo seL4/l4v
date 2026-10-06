@@ -406,29 +406,6 @@ lemma set_cap_not_quite_corres_prequel[Arch_assms]:
   apply (simp add: wf_cs_insert)
   done
 
-(* FIXME: move *)
-lemma pspace_relation_cte_wp_atI'[Arch_assms]:
-  "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
-     cte_wp_at' ((=) cte) x s'; valid_objs s \<rbrakk>
-   \<Longrightarrow> \<exists>c slot. cte_wp_at ((=) c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
-  apply (simp add: cte_wp_at_cases')
-  apply (elim disjE conjE exE)
-   apply (erule(1) pspace_dom_relatedE)
-   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)[1]
-   apply (intro exI, rule conjI[OF _ conjI [OF _ refl]])
-    apply (simp add: cte_wp_at_cases domI well_formed_cnode_invsI)
-   apply (simp split: if_split_asm)
-  apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
-  apply (subgoal_tac "n = x - y", clarsimp)
-   apply (drule tcb_cases_related2, clarsimp)
-   apply (intro exI, rule conjI)
-    apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
-    apply fastforce
-   apply simp
-  apply clarsimp
-  done
-
 lemma same_region_as_final_matters[Arch_assms]:
   "\<lbrakk>same_region_as c c'; final_matters c\<rbrakk> \<Longrightarrow> final_matters c'"
   by (rule ccontr)

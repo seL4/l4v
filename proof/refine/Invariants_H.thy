@@ -38,7 +38,11 @@ arch_requalify_facts (H)
   parseTimeArg_def
 
 arch_requalify_facts
-  valid_sz_simps
+  pageBits_less_word_bits
+  reply_valid_sz
+  endpoint_valid_sz
+  cte_valid_sz
+  arch_obj_valid_sz
 
 section "Relationship of Executable Spec to Kernel Configuration"
 
@@ -1696,6 +1700,16 @@ lemma get_refs_empty[simp]:
 
 abbreviation idle_refs :: "(machine_word \<times> reftype) set" where
   "idle_refs \<equiv> {(idle_sc_ptr, TCBSchedContext), (idle_thread_ptr, SCTcb)}"
+
+lemma valid_sz_simps:
+  "objBitsKO ko < word_bits =
+    (case ko of
+      KOSchedContext sc \<Rightarrow> minSchedContextBits + scSize sc < word_bits
+    | _ \<Rightarrow>    True)"
+  using reply_valid_sz endpoint_valid_sz cte_valid_sz arch_obj_valid_sz pageBits_less_word_bits
+  by (cases ko;
+      clarsimp simp: objBitsKO_def word_bits_def tcbBlockSizeBits_def ntfnSizeBits_def
+                     cteSizeBits_def wordSizeCase_def)
 
 lemma state_hyp_refs_of'_elemD:
   "\<lbrakk> ref \<in> state_hyp_refs_of' s x \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. ref \<in> hyp_refs_of' obj) x s"
