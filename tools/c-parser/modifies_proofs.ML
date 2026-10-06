@@ -62,26 +62,6 @@ val calculate_modifies_proofs =
 val sorry_modifies_proofs =
   Attrib.setup_config_bool @{binding sorry_modifies_proofs} (K false);
 
-fun put_conditional conf VAR ctxt =
-  let
-    val v = can getenv_strict VAR
-    val ctxt' = Config.put_generic conf v ctxt
-  in
-    Output.tracing ("Set " ^ Config.name_of conf ^ " to " ^ Config.print_value (Config.Bool v));
-    ctxt'
-  end
-
-fun cond_sorry_modifies_proofs VAR ctxt =
-  let
-    val ctxt' = put_conditional sorry_modifies_proofs VAR ctxt
-  in
-    if Config.get_generic ctxt' sorry_modifies_proofs andalso
-       not (Config.get_generic ctxt' quick_and_dirty)
-    then warning "Setting sorry_modifies_proofs without quick_and_dirty."
-    else ();
-    ctxt'
-  end
-
 fun gen_modify_goalstring csenv fname modstrings = let
   fun foldthis (vname, vset) =
       case MSymTab.lookup (ProgramAnalysis.get_addressed csenv) (MString.mk vname) of
@@ -439,11 +419,5 @@ fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
     end
   else
     thy
-
-val _ =
-  Outer_Syntax.command
-    @{command_keyword "cond_sorry_modifies_proofs"}
-    "set sorry_modifies_proof option, conditional on env variable"
-    (Parse.embedded >> (Toplevel.generic_theory o cond_sorry_modifies_proofs))
 
 end (* struct *)

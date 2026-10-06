@@ -14,7 +14,6 @@ imports
   "ML_Utils.ML_Utils"
   "HOL-Eisbach.Eisbach"
 keywords
-  "cond_sorry_modifies_proofs"
   "install_C_file"
   "install_C_types"
   "new_C_include_dir":: thy_decl

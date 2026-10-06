@@ -88,8 +88,6 @@ where
 
 lemmas ctcb_offset_defs = ctcb_offset_def ctcb_size_bits_def
 
-cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
-
 (* no modifies theorems, because we re-prove them later in kernel_all_substitute *)
 install_C_file no_modifies "../c/build/$L4V_ARCH/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
