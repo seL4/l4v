@@ -66,6 +66,16 @@ session CBaseRefine in "crefine/base" = CSpec +
     CLib
     Refine
     AutoCorres
+  directories
+    "duplicated/$L4V_DUPLICATED_PROOFS"
+  (* With L4V_DUPLICATED_PROOFS="skip", theories from existing sessions AInvs, Refine, AutoCorres
+   * and CLib are imported with skip_proofs. Include_C will see the already loaded theories.
+   * With L4V_DUPLICATED_PROOFS="check", no theories are imported, so everything Include_C imports
+   * is fully checked. If you do not want to trust this mechanism for proof checking, delete this
+   * "theories" block to remove all mention of skip_proofs.
+   *)
+  theories [quick_and_dirty, skip_proofs]
+    "duplicated/$L4V_DUPLICATED_PROOFS/Duplicated_Proofs_C"
   theories
     (* crefine/lib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
     "L4VerifiedLinks"

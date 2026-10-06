@@ -36,4 +36,13 @@ ISABELLE_JEDIT_OPTIONS="-m brackets"
 # By default, build proofs for ARM version of seL4
 : ${L4V_ARCH:="ARM"}
 
+# Skip duplicated proofs in CBaseRefine when SKIP_DUPLICATED_PROOFS is set.
+# (see CBaseRefine in proof/ROOT). By default, all proofs are checked.
+if [ -n "$SKIP_DUPLICATED_PROOFS" ]
+then
+    L4V_DUPLICATED_PROOFS="skip"
+else
+    L4V_DUPLICATED_PROOFS="check"
+fi
+
 # --- end L4.verified repository settings ---
