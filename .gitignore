@@ -8,6 +8,8 @@
 *.lev
 *.o
 *~
+*.orig
+*.rej
 .*.attrib_trace
 .*.skip
 *.lev
