@@ -23,6 +23,7 @@ imports
   Value_Type
   Named_Eta
   Clear_Named_Theorems
+  If_Env
 begin
 
 section "Detect unused meta-forall"
