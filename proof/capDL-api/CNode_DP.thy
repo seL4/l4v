@@ -569,12 +569,6 @@ lemma seL4_CNode_Move_sep:
   apply (intro conjI,fastforce+)
   done
 
-(* FIXME, move *)
-lemma update_cap_rights_reset_cap_asid:
-  "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'; rights = rights'\<rbrakk>
-  \<Longrightarrow> reset_cap_asid (update_cap_rights rights cap) = reset_cap_asid (update_cap_rights rights' cap')"
-  by (case_tac cap',auto simp: update_cap_rights_def dest!:reset_cap_asid_simps2 )
-
 
 (* Slightly different to the rules above.
  * This lemma copies a cap from the root cnode to
