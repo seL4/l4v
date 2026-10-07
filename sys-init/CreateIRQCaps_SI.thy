@@ -85,14 +85,6 @@ lemma sep_map_o_inj_on_set:
   apply simp
   done
 
-lemma sep_conj_existL: (* FIXME: move to SepAlgebra *)
-  "(P \<and>* Q) s \<Longrightarrow> \<exists>s. P s"
-  by (auto simp: sep_conj_def)
-
-lemma sep_conj_existR: (* FIXME: move to SepAlgebra *)
-  "(P \<and>* Q) s \<Longrightarrow> \<exists>s. Q s"
-  by (auto simp: sep_conj_def)
-
 lemma si_irq_nodes_def2:
   "si_irq_nodes spec =
      (\<lambda>s. \<exists>k_irq_table. inj_on k_irq_table (used_irqs spec) \<and>
