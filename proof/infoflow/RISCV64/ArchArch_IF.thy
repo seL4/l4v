@@ -150,8 +150,7 @@ lemma thread_set_non_idle_globals_equiv[Arch_IF_assms]:
 declare arch_prepare_set_domain_inv[Arch_IF_assms]
 declare arch_prepare_next_domain_inv[Arch_IF_assms]
 
-end
-
+end (* Arch *)
 
 requalify_facts
   RISCV64.set_simple_ko_globals_equiv
@@ -162,20 +161,17 @@ declare
   retype_region_irq_state_of_state[wp]
   arch_perform_invocation_irq_state_of_state[wp]
 
-
-global_interpretation Arch_IF_1?: Arch_IF_1
+global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Arch_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
-
 lemmas invs_imps =
   invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state
   invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs
   invs_cur invs_kernel_mappings
-
 
 context Arch begin global_naming RISCV64
 
@@ -230,8 +226,8 @@ lemma asid_high_bits_0_eq_1:
 
 lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq:
   "\<lbrakk> is_subject_asid aag asid; reads_equiv aag s t; asid \<noteq> 0 \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of asid) =
-         riscv_asid_table (arch_state t) (asid_high_bits_of asid)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of asid) =
+       riscv_asid_table (arch_state t) (asid_high_bits_of asid)"
   apply (erule reads_equivE)
   apply (fastforce simp: equiv_asids_def equiv_asid_def intro: aag_can_read_own_asids)
   done
@@ -244,7 +240,7 @@ lemma set_vm_root_states_equiv_for[wp]:
            simp: setVSpaceRoot_def dmo_bind_valid if_apply_def2)+
 
 lemma find_vspace_for_asid_reads_respects:
-   "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
+  "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
   unfolding find_vspace_for_asid_def
   apply wpsimp
      apply (simp add: throw_opt_def)
@@ -262,15 +258,15 @@ lemma find_vspace_for_asid_reads_respects:
 
 lemma ptes_of_reads_equiv:
   "\<lbrakk> is_subject aag (table_base ptr); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> ptes_of s ptr = ptes_of t ptr"
+   \<Longrightarrow> ptes_of s ptr = ptes_of t ptr"
   by (fastforce elim: reads_equivE equiv_forE simp: ptes_of_def obind_def opt_map_def)
 
 lemma pt_walk_reads_equiv:
   "\<lbrakk> reads_equiv aag s t; pas_refined aag s; pspace_aligned s; valid_asid_table s;
      valid_vspace_objs s; is_subject aag pt; vptr \<in> user_region;
      level \<le> max_pt_level; vs_lookup_table level asid vptr s = Some (level, pt) \<rbrakk>
-     \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of s) =
-         pt_walk level bot_level pt vptr (ptes_of t)"
+   \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of s) =
+       pt_walk level bot_level pt vptr (ptes_of t)"
   apply (induct level arbitrary: pt; clarsimp)
   apply (simp (no_asm) add: pt_walk.simps)
   apply (clarsimp simp: obind_def split: if_splits)
@@ -292,11 +288,11 @@ lemma pt_walk_reads_equiv:
   by fastforce+
 
 lemma pt_lookup_from_level_reads_respects:
-   "reads_respects aag l
-      (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
-           is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
-           (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
-      (pt_lookup_from_level level pt vref target_pt)"
+  "reads_respects aag l
+     (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
+          is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
+          (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
+     (pt_lookup_from_level level pt vref target_pt)"
   apply (induct level arbitrary: pt)
    apply (simp add: pt_lookup_from_level_simps)
    apply wp
@@ -346,7 +342,7 @@ lemma perform_page_table_invocation_reads_respects:
   apply (clarsimp simp: valid_pti_def)
   apply (frule cte_wp_valid_cap)
    apply fastforce
-  apply (clarsimp simp:  is_PageTableCap_def valid_cap_def wellformed_mapdata_def)
+  apply (clarsimp simp: is_PageTableCap_def valid_cap_def wellformed_mapdata_def)
   done
 
 lemma unmap_page_reads_respects:
@@ -396,11 +392,11 @@ lemma perform_page_invocation_reads_respects:
 
 lemma equiv_asids_riscv_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
-     \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)
-                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := (asid_table t)
-                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
+   \<Longrightarrow> equiv_asids R
+         (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)
+                                                           (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
+         (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := (asid_table t)
+                                                           (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap opt_map_def)
 
 lemma riscv_asid_table_update_reads_respects:
@@ -545,8 +541,8 @@ lemma riscv_asid_table_delete_ev2:
 lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq':
   "\<lbrakk> (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of base
               \<longrightarrow> is_subject_asid aag asid'); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
-         riscv_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
+       riscv_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (insert asid_high_bits_0_eq_1)
   apply (case_tac "base = 0")
    apply (subgoal_tac "is_subject_asid aag 1")
@@ -722,7 +718,7 @@ lemma delete_asid_pool_globals_equiv[wp]:
 lemma vs_lookup_slot_not_global:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, pte); level \<le> max_pt_level;
      pte_refs_of s pte = Some pt; vref \<in> user_region; invs s \<rbrakk>
-     \<Longrightarrow> pt \<notin> global_refs s"
+   \<Longrightarrow> pt \<notin> global_refs s"
   apply (prop_tac "vs_lookup_target level asid vref s = Some (level, pt)")
    apply (clarsimp simp: vs_lookup_target_def obind_def split: if_splits)
   apply (erule (2) vs_lookup_target_not_global)
@@ -914,7 +910,7 @@ lemma unmap_page_globals_equiv:
 
 
 definition authorised_for_globals_page_inv ::
-  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool"  where
+  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool" where
   "authorised_for_globals_page_inv pgi \<equiv> \<lambda>s.
      case pgi of PageMap cap ptr m \<Rightarrow> (\<exists>slot. cte_wp_at (parent_for_refs m) slot s) | _ \<Rightarrow> True"
 
@@ -986,7 +982,7 @@ lemma perform_pg_inv_unmap_globals_equiv:
   apply (intro conjI; clarsimp)
   apply (clarsimp split: arch_cap.splits)
   apply (drule cte_wp_valid_cap, fastforce)
-  apply (clarsimp simp:  valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
+  apply (clarsimp simp: valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
   done
 
 lemma perform_pg_inv_map_globals_equiv:
@@ -1031,7 +1027,7 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
 
 lemma perform_asid_control_invocation_globals_equiv:
   notes delete_objects_invs[wp del]
-  notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
   shows "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
          perform_asid_control_invocation aci
          \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -1047,7 +1043,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
+             hoare_vcg_all_lift get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the
@@ -1201,7 +1197,7 @@ lemma get_thread_state_globals_equiv[wp]:
 (* generalises auth_ipc_buffers_mem_Write *)
 lemma auth_ipc_buffers_mem_Write':
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
+   \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
   apply (clarsimp simp add: auth_ipc_buffers_member_def)
   apply (drule (1) cap_auth_caps_of_state)
   apply simp
@@ -1221,7 +1217,7 @@ lemma thread_set_globals_equiv:
     apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def dest: valid_global_arch_objs_pt_at)+
   done
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   authorised_for_globals_arch_inv

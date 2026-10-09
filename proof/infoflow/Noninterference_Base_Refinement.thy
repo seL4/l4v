@@ -88,8 +88,7 @@ lemma xNonleakage_gen_refinement_closed:
   apply(blast dest: reachable uwr_equiv)
   done
 
-end
-
+end (* noninterference_refinement *)
 
 locale complete_noninterference_refinement = noninterference_refinement A s0 dom uwr policy out schedDomain C
    for A :: "('a,'s,'e) data_type"
@@ -149,5 +148,5 @@ lemma Noninfluence_strong_uwr_quasi_refinement_closed:
   apply(erule abs.Noninfluence_strong_uwr_integrity_u)
   done
 
-end
+end (* complete_noninterference_refinement *)
 end

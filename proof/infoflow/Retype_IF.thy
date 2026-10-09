@@ -125,41 +125,41 @@ lemma dmo_mapM_x_ev:
   shows "equiv_valid_inv D A I (do_machine_op (mapM_x m lst))"
   using assms by (auto intro: dmo_mapM_x_ev_pre)
 
-locale Retype_IF_1 =
+locale Retype_IF =
   assumes clearMemory_ev:
     "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (clearMemory ptr bits)"
-  and freeMemory_ev:
+  assumes freeMemory_ev:
     "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (freeMemory ptr bits)"
-  and no_irq_freeMemory:
+  assumes no_irq_freeMemory:
     "no_irq (freeMemory ptr sz)"
-  and equiv_asid_detype:
+  assumes equiv_asid_detype:
     "equiv_asid asid s s' \<Longrightarrow> equiv_asid asid (detype N s) (detype N s')"
-  and clearMemory_irq_state[wp]:
+  assumes clearMemory_irq_state[wp]:
     "\<And>P. clearMemory ptr bits \<lbrace>\<lambda>s. P (irq_state s)\<rbrace>"
-  and freeMemory_irq_state[wp]:
+  assumes freeMemory_irq_state[wp]:
     "\<And>P. freeMemory ptr bits \<lbrace>\<lambda>s. P (irq_state s)\<rbrace>"
-  and dmo_clearMemory_globals_equiv:
+  assumes dmo_clearMemory_globals_equiv:
     "do_machine_op (clearMemory ptr (2 ^ bits)) \<lbrace>globals_equiv s\<rbrace>"
-  and dmo_freeMemory_globals_equiv:
+  assumes dmo_freeMemory_globals_equiv:
     "do_machine_op (freeMemory ptr bits) \<lbrace>globals_equiv s\<rbrace>"
-  and retype_region_globals_equiv:
+  assumes retype_region_globals_equiv:
     "\<lbrace>globals_equiv s and invs
                       and (\<lambda>s. \<exists>i. cte_wp_at (\<lambda>c. c = UntypedCap dev (p && ~~ mask sz) sz i) slot s \<and>
                                    (i \<le> unat (p && mask sz) \<or> pspace_no_overlap_range_cover p sz s))
                       and K (range_cover p sz (obj_bits_api type o_bits) num \<and> 0 < num)\<rbrace>
      retype_region p num o_bits type dev
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and machine_op_lift_no_hyp[wp]:
+  assumes machine_op_lift_no_hyp[wp]:
     "no_hyp (machine_op_lift mop)"
-  and machine_op_lift_no_fpu[wp]:
+  assumes machine_op_lift_no_fpu[wp]:
     "no_fpu (machine_op_lift mop)"
-  and clearMemory_no_hyp[wp]:
+  assumes clearMemory_no_hyp[wp]:
     "no_hyp (clearMemory ptr bits)"
-  and clearMemory_no_fpu[wp]:
+  assumes clearMemory_no_fpu[wp]:
     "no_fpu (clearMemory ptr bits)"
-  and freeMemory_no_hyp[wp]:
+  assumes freeMemory_no_hyp[wp]:
     "no_hyp (freeMemory ptr bits)"
-  and freeMemory_no_fpu[wp]:
+  assumes freeMemory_no_fpu[wp]:
     "no_fpu (freeMemory ptr bits)"
 begin
 
@@ -194,8 +194,7 @@ lemma dmo_freeMemory_reads_respects_g:
   apply clarsimp
   done
 
-end
-
+end (* Retype_IF *)
 
 crunch set_cdt
   for valid_arch_state[wp]: "\<lambda>s. P (valid_arch_state s)"
@@ -218,11 +217,11 @@ lemma gets_apply_ev':
   by (clarsimp simp: gets_apply_def get_def bind_def return_def equiv_valid_def2 equiv_valid_2_def)
 
 lemma do_machine_op_globals_equiv:
-   "(\<And>s sa. \<lbrakk> P sa; globals_equiv s sa \<rbrakk>
-              \<Longrightarrow> \<forall>x\<in>fst (f (machine_state sa)). globals_equiv s (sa\<lparr>machine_state := snd x\<rparr>))
-    \<Longrightarrow> \<lbrace>globals_equiv s and P\<rbrace>
-        do_machine_op f
-        \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  "(\<And>s sa. \<lbrakk> P sa; globals_equiv s sa \<rbrakk>
+            \<Longrightarrow> \<forall>x\<in>fst (f (machine_state sa)). globals_equiv s (sa\<lparr>machine_state := snd x\<rparr>))
+   \<Longrightarrow> \<lbrace>globals_equiv s and P\<rbrace>
+       do_machine_op f
+       \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding do_machine_op_def
   apply (wp | simp add: split_def)+
   done
@@ -342,7 +341,7 @@ lemma subset_thing:
 
 lemma updates_not_idle:
   "\<lbrakk> idle_equiv st s; \<forall>a \<in> S. a \<noteq> idle_thread s \<rbrakk>
-     \<Longrightarrow> idle_equiv st (s\<lparr>kheap := \<lambda>a. if a \<in> S then y else kheap s a\<rparr>)"
+   \<Longrightarrow> idle_equiv st (s\<lparr>kheap := \<lambda>a. if a \<in> S then y else kheap s a\<rparr>)"
   by (fastforce simp: idle_equiv_def tcb_at_def2)
 
 lemma post_retype_invs_valid_arch_stateI:
@@ -373,8 +372,7 @@ lemma machine_state_detype:
   "machine_state (detype S s) = machine_state s"
   by (auto simp: detype_def)
 
-
-context Retype_IF_1 begin
+context Retype_IF begin
 
 lemma retype_region_reads_respects_g:
   "reads_respects_g aag l
@@ -406,12 +404,11 @@ crunch delete_objects
   for irq_masks[wp]: "\<lambda>s. P (irq_masks (machine_state s))"
   (ignore: do_machine_op wp: dmo_wp no_irq_freeMemory no_irq simp: detype_def)
 
-end
-
+end (* Retype_IF *)
 
 lemma untyped_caps_do_not_overlap_global_refs:
   "\<lbrakk> cte_wp_at ((=) (UntypedCap dev word sz idx)) slot s; valid_global_refs s \<rbrakk>
-     \<Longrightarrow> ptr_range word sz \<inter> global_refs s = {}"
+   \<Longrightarrow> ptr_range word sz \<inter> global_refs s = {}"
   apply (simp add: cte_wp_at_caps_of_state)
   apply (drule (1) valid_global_refsD2)
   apply (fastforce simp: cap_range_def ptr_range_def)
@@ -511,7 +508,7 @@ lemma ex_tupleI:
   by blast
 
 lemma equiv_valid_obtain:
-  assumes fn_eq: "\<And>s t. I s t \<Longrightarrow> A s t \<Longrightarrow> P s \<Longrightarrow> P t \<Longrightarrow>  fn s = fn t"
+  assumes fn_eq: "\<And>s t. I s t \<Longrightarrow> A s t \<Longrightarrow> P s \<Longrightarrow> P t \<Longrightarrow> fn s = fn t"
   assumes pr: "\<And>x. equiv_valid I A B (P and (\<lambda>s. fn s = x)) f"
   shows "equiv_valid I A B P f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
@@ -523,21 +520,20 @@ lemma equiv_valid_obtain:
 
 lemma reads_equiv_cte_wp_at:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag (fst slot) \<rbrakk>
-     \<Longrightarrow> cte_wp_at P slot s = cte_wp_at P slot s'"
+   \<Longrightarrow> cte_wp_at P slot s = cte_wp_at P slot s'"
   apply (frule(1) is_subject_kheap_eq)
   apply (simp add: cte_wp_at_cases)
   done
 
 lemma reads_equiv_caps_of_state:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag (fst slot) \<rbrakk>
-     \<Longrightarrow> caps_of_state s slot = caps_of_state s' slot"
+   \<Longrightarrow> caps_of_state s slot = caps_of_state s' slot"
   apply (frule(1) reads_equiv_cte_wp_at[where P="(=) (the (caps_of_state s slot))"])
   apply (frule(1) reads_equiv_cte_wp_at[where P="\<top>"])
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
-
-locale Retype_IF_2 = Retype_IF_1 +
+locale Retype_IF_2 = Retype_IF +
   fixes aag :: "'a subject_label PAS"
   assumes invoke_untyped_reads_respects_g_wcap:
     "reads_respects_g aag l (invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz idx))
@@ -568,6 +564,6 @@ lemma invoke_untyped_reads_respects_g:
   apply (cases ui, clarsimp simp: valid_untyped_inv_wcap cte_wp_at_caps_of_state)
   done
 
-end
+end (* Retype_IF_2 *)
 
 end

@@ -26,27 +26,26 @@ lemma pas_refined_is_subject_irqD:
   "\<lbrakk> is_subject_irq aag irq; pas_refined aag s \<rbrakk> \<Longrightarrow> is_subject aag (interrupt_irq_node s irq)"
   by (simp add:pas_refined_def irq_map_wellformed_aux_def)
 
-
-locale Interrupt_AC_1 =
+locale Interrupt_AC =
   fixes arch_authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> arch_irq_control_invocation \<Rightarrow> bool"
   assumes arch_invoke_irq_control_pas_refined:
     "\<lbrace>pas_refined (aag :: 'a PAS) and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
                                   and K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
      arch_invoke_irq_control irq_ctl_inv
      \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  and arch_invoke_irq_handler_pas_refined:
+  assumes arch_invoke_irq_handler_pas_refined:
     "\<lbrace>pas_refined aag and invs and (\<lambda>s. interrupt_states s x1 \<noteq> IRQInactive)\<rbrace>
      arch_invoke_irq_handler (ACKIrq x1)
      \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  and arch_invoke_irq_control_respects:
+  assumes arch_invoke_irq_control_respects:
     "\<lbrace>integrity aag X st and pas_refined aag and K (arch_authorised_irq_ctl_inv aag acinv)\<rbrace>
      arch_invoke_irq_control acinv
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and arch_invoke_irq_handler_respects:
+  assumes arch_invoke_irq_handler_respects:
     "\<lbrace>integrity aag X st and pas_refined aag and einvs\<rbrace>
      arch_invoke_irq_handler (ACKIrq x1)
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and arch_check_irq_inv[wp]:
+  assumes arch_check_irq_inv[wp]:
     "arch_check_irq irq \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
 begin
 
@@ -119,8 +118,7 @@ lemma invoke_irq_handler_respects:
   apply (cases irq_inv, simp_all add: authorised_irq_hdl_inv_def)
   by (wpsimp wp: arch_invoke_irq_handler_respects cap_insert_integrity_autarch)+
 
-end
-
+end (* Interrupt_AC *)
 
 lemma decode_irq_handler_invocation_authorised [wp]:
   "\<lbrace>K (is_subject_irq aag irq \<and> (\<forall>cap_slot \<in> set caps. pas_cap_cur_auth aag (fst cap_slot)
@@ -134,8 +132,7 @@ lemma decode_irq_handler_invocation_authorised [wp]:
   apply (auto dest!: hd_in_set)
   done
 
-
-locale Interrupt_AC_2 = Interrupt_AC_1 +
+locale Interrupt_AC_2 = Interrupt_AC +
   assumes arch_decode_irq_control_invocation_authorised:
     "\<lbrace>pas_refined aag and
       K (is_subject aag (fst slot) \<and> (\<forall>cap \<in> set caps. pas_cap_cur_auth aag cap) \<and>
@@ -160,6 +157,6 @@ lemma decode_irq_control_invocation_authorised [wp]:
                     pas_refined_all_auth_is_owns aag_cap_auth_def)
   done
 
-end
+end (* Interrupt_AC_2 *)
 
 end

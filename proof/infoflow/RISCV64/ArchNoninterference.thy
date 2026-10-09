@@ -51,8 +51,8 @@ crunch do_user_op_if
 lemma sameFor_scheduler_affects_equiv[Noninterference_assms]:
   "\<lbrakk> (s,s') \<in> same_for aag PSched; (s,s') \<in> same_for aag (Partition l);
      invs (internal_state_if s); invs (internal_state_if s') \<rbrakk>
-     \<Longrightarrow> scheduler_equiv aag (internal_state_if s) (internal_state_if s') \<and>
-         scheduler_affects_equiv aag (OrdinaryLabel l) (internal_state_if s) (internal_state_if s')"
+   \<Longrightarrow> scheduler_equiv aag (internal_state_if s) (internal_state_if s') \<and>
+       scheduler_affects_equiv aag (OrdinaryLabel l) (internal_state_if s) (internal_state_if s')"
   apply (rule conjI)
    apply (blast intro: sameFor_scheduler_equiv)
   apply (clarsimp simp: scheduler_affects_equiv_def arch_scheduler_affects_equiv_def
@@ -81,7 +81,7 @@ lemma arch_activate_idle_thread_reads_respects_g[Noninterference_assms, wp]:
   unfolding arch_activate_idle_thread_def by wpsimp
 
 crunch handle_spurious_irq
-  for domain[wp]: "\<lambda>s.  Q (domain_time s) (domain_index s) (domain_list s)"
+  for domain[wp]: "\<lambda>s. Q (domain_time s) (domain_index s) (domain_list s)"
   and irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
 
 lemma handle_spurious_irq_reads_respect_scheduler[Noninterference_assms]:
@@ -103,8 +103,8 @@ lemma arch_globals_equiv_strengthener_thread_independent[Noninterference_assms]:
   by auto
 
 lemma integrity_asids_update_reference_state[Noninterference_assms]:
-   "is_subject aag t
-    \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  "is_subject aag t
+   \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
   by (clarsimp simp: integrity_asids_def opt_map_def)
 
 lemma inte_obj_arch:
@@ -141,7 +141,7 @@ qed
 lemma asid_pool_into_aag:
   "\<lbrakk> pool_for_asid asid s = Some p; kheap s p = Some (ArchObj (ASIDPool pool));
      pool r = Some p'; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag Control p p'"
+   \<Longrightarrow> abs_has_auth_to aag Control p p'"
   apply (rule pas_refined_mem [rotated], assumption)
   apply (rule sta_vref)
   apply (rule state_vrefsD)
@@ -155,7 +155,7 @@ lemma owns_mapping_owns_asidpool:
   "\<lbrakk> pool_for_asid asid s = Some p; kheap s p = Some (ArchObj (ASIDPool pool));
      pool r = Some p'; pas_refined aag s; is_subject aag p';
      pas_wellformed (aag\<lparr>pasSubject := (pasObjectAbs aag p)\<rparr>) \<rbrakk>
-     \<Longrightarrow> is_subject aag p"
+   \<Longrightarrow> is_subject aag p"
   apply (frule asid_pool_into_aag)
      apply assumption+
   apply (drule pas_wellformed_pasSubject_update_Control)
@@ -168,7 +168,7 @@ lemma partitionIntegrity_subjectAffects_aobj':
      pas_refined aag s; silc_inv aag st s; pas_wellformed_noninterference aag;
      arch_integrity_obj_atomic (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
                                {pasSubject aag} (pasObjectAbs aag x) ao ao' \<rbrakk>
-     \<Longrightarrow> subject_can_affect_label_directly aag (pasObjectAbs aag x)"
+   \<Longrightarrow> subject_can_affect_label_directly aag (pasObjectAbs aag x)"
   unfolding arch_integrity_obj_atomic.simps asid_pool_integrity_def
   apply clarsimp
   apply (rule ccontr)
@@ -187,11 +187,11 @@ lemma partitionIntegrity_subjectAffects_aobj':
 
 lemma partitionIntegrity_subjectAffects_aobj[Noninterference_assms]:
   assumes par_inte: "partitionIntegrity aag s s'"
-  and "kheap s x = Some (ArchObj ao)"
-      "kheap s x \<noteq> kheap s' x"
-      "silc_inv aag st s"
-      "pas_refined aag s"
-      "pas_wellformed_noninterference aag"
+  assumes "kheap s x = Some (ArchObj ao)"
+          "kheap s x \<noteq> kheap s' x"
+          "silc_inv aag st s"
+          "pas_refined aag s"
+          "pas_wellformed_noninterference aag"
   notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
                             THEN spec[where x=x], simplified integrity_obj_def, simplified]
   shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"
@@ -222,7 +222,7 @@ lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
   "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
      valid_arch_state s; valid_arch_state s'; pas_wellformed_noninterference aag;
      silc_inv aag st s'; invs s'; \<not> equiv_asids (\<lambda>x. pasASIDAbs aag x = a) s s' \<rbrakk>
-     \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+   \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
   apply (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
   apply (case_tac "riscv_asid_table (arch_state s) (asid_high_bits_of asid) =
                    riscv_asid_table (arch_state s') (asid_high_bits_of asid)")
@@ -320,12 +320,12 @@ lemma ev2_invisible'[Noninterference_assms]:
        \<And>st :: det_state. f \<lbrace>\<lambda>s. arch_globals_equiv_strengthener (machine_state st) (machine_state s)\<rbrace>;
        \<And>st :: det_state. g \<lbrace>\<lambda>s. arch_globals_equiv_strengthener (machine_state st) (machine_state s)\<rbrace>;
        \<forall>s t. P s \<and> P' t \<longrightarrow> (\<forall>(rva,s') \<in> fst (f s). \<forall>(rvb,t') \<in> fst (g t). W rva rvb) \<rbrakk>
-       \<Longrightarrow> equiv_valid_2 (reads_equiv_g aag)
-                         (\<lambda>s s'. affects_equiv aag l s s' \<and>
-                                 arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
-                         (\<lambda>s s'. affects_equiv aag l s s' \<and>
-                                 arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
-                         W (P and Q) (P' and Q') f g"
+     \<Longrightarrow> equiv_valid_2 (reads_equiv_g aag)
+                       (\<lambda>s s'. affects_equiv aag l s s' \<and>
+                               arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
+                       (\<lambda>s s'. affects_equiv aag l s s' \<and>
+                               arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
+                       W (P and Q) (P' and Q') f g"
   apply (clarsimp simp: equiv_valid_2_def)
   apply (rule conjI)
    apply blast
@@ -428,18 +428,18 @@ lemma arch_prepare_next_domain_reads_respects_g[Noninterference_assms]:
 
 lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
   assumes par_inte: "partitionIntegrity aag s s'"
-  and "kheap s x = Some (TCB tcb)"
-      "kheap s' x = Some (TCB tcb')"
-      "tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>"
-      "arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb)"
-      "tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb)"
-      "kheap s x \<noteq> kheap s' x"
-      "silc_inv aag st s"
-      "pas_wellformed_noninterference aag"
-      "pas_refined aag s" "pas_refined aag s'"
-      "pas_cur_domain aag s" "pas_cur_domain aag s'"
-      "cur_fpu_in_cur_domain s" "cur_fpu_in_cur_domain s'"
-      "invs s" "invs s'"
+  assumes "kheap s x = Some (TCB tcb)"
+          "kheap s' x = Some (TCB tcb')"
+          "tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>"
+          "arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb)"
+          "tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb)"
+          "kheap s x \<noteq> kheap s' x"
+          "silc_inv aag st s"
+          "pas_wellformed_noninterference aag"
+          "pas_refined aag s" "pas_refined aag s'"
+          "pas_cur_domain aag s" "pas_cur_domain aag s'"
+          "cur_fpu_in_cur_domain s" "cur_fpu_in_cur_domain s'"
+          "invs s" "invs s'"
   notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
                             THEN spec[where x=x], simplified integrity_obj_def, simplified]
   shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"
@@ -451,21 +451,18 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
   apply (rule user_context.expand; clarsimp)
   done
 
-end
-
+end (* Arch *)
 
 requalify_consts RISCV64.arch_globals_equiv_strengthener
 requalify_facts RISCV64.arch_globals_equiv_strengthener_thread_independent
 
-
-global_interpretation Noninterference_1?: Noninterference_1 _ arch_globals_equiv_strengthener
+global_interpretation Noninterference?: Noninterference _ arch_globals_equiv_strengthener
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>
                                                     | solves \<open>wp only: Noninterference_assms; simp\<close>)?)
 qed
-
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?:
   Noninterference_valid_initial_state arch_globals_equiv_strengthener ..

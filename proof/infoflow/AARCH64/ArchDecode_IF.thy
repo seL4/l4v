@@ -62,23 +62,21 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
   apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
   done
 
-end
+end (* Arch *)
 
-
-global_interpretation Decode_IF_1?: Decode_IF_1
+global_interpretation Decode_IF?: Decode_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Decode_IF_assms)?)
 qed
 
-
 context Arch begin arch_global_naming
 
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq'':
   "\<lbrakk> \<forall>asid. is_subject_asid aag asid; reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
-         arm_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
+       arm_asid_table (arch_state t) (asid_high_bits_of base)"
   supply asid_high_bits_of_0[simp del]
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply (case_tac "base = 0")
@@ -89,7 +87,7 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq'':
 
 lemma pas_cap_cur_auth_ASIDControlCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap ASIDControlCap); reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) = arm_asid_table (arch_state t)"
+   \<Longrightarrow> arm_asid_table (arch_state s) = arm_asid_table (arch_state t)"
   apply (rule ext)
   apply (subst asid_high_bits_of_shift[symmetric])
   apply (subst (3) asid_high_bits_of_shift[symmetric])
@@ -144,7 +142,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
         (decode_asid_control_invocation label args slot cap excaps)"
   unfolding decode_asid_control_invocation_def
   apply (rule equiv_valid_guard_imp)
-   apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply (wp check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
              reads_respects_f_inv'[OF ensure_no_children_rev]
@@ -196,7 +194,7 @@ lemma decode_frame_invocation_reads_respects_f:
             check_vp_alignment_def gets_the_def
   apply (rule gen_asm_ev)+
   apply (rule equiv_valid_guard_imp)
-   apply ((wp gets_ev' check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply ((wp gets_ev' check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
@@ -333,22 +331,22 @@ lemma decode_vspace_invocation_reads_respects_f:
 
 lemma aag_cap_auth_VCPUCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (VCPUCap vcpu_ptr)); pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject aag vcpu_ptr"
+   \<Longrightarrow> is_subject aag vcpu_ptr"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
                 cli_no_irqs pas_refined_all_auth_is_owns)
 
 lemma decode_vcpu_inject_irq_reads_respects_f:
   "\<lbrakk> cap = VCPUCap vcpu_ptr; invocation_type label = ArchInvocationLabel ARMVCPUInjectIRQ\<rbrakk>
-     \<Longrightarrow> reads_respects_f aag l
-           (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
-                            and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
-                            and valid_arch_cap cap
-                            and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
-                                     aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
-                                     is_subject aag (fst slot) \<and>
-                                     (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
-            (decode_vcpu_inject_irq args (VCPUCap vcpu_ptr))"
+   \<Longrightarrow> reads_respects_f aag l
+         (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
+                          and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
+                          and valid_arch_cap cap
+                          and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
+                                   aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
+                                   is_subject aag (fst slot) \<and>
+                                   (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
+          (decode_vcpu_inject_irq args (VCPUCap vcpu_ptr))"
   unfolding decode_vcpu_inject_irq_def range_check_def unlessE_whenE
   apply (wpsimp wp: reads_respects_f[OF get_vcpu_reads_respects, where st=st])
   apply (prop_tac "valid_numlistregs x")
@@ -408,8 +406,7 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
       | fastforce dest: caps_of_state_valid cte_wp_at_caps_of_state'
                   simp: valid_cap_def valid_arch_cap_def)+
 
-end
-
+end (* Arch *)
 
 global_interpretation Decode_IF_2?: Decode_IF_2
 proof goal_cases

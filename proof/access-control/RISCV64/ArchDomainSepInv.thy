@@ -47,16 +47,14 @@ lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
 
 declare init_arch_objects_inv[DomainSepInv_assms]
 
-end
+end (* Arch *)
 
-
-global_interpretation DomainSepInv_1?: DomainSepInv_1
+global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact DomainSepInv_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -87,7 +85,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_domain_sep_inv' set_cap_domain_sep_inv
             get_cap_domain_sep_inv_cap[where st=st] hoare_weak_lift_imp
-         | wpc | simp )+
+         | wpc | simp)+
   done
 
 lemma perform_asid_pool_invocation_domain_sep_inv:
@@ -125,8 +123,7 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
    apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)+
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases

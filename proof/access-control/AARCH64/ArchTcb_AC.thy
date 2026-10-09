@@ -97,10 +97,9 @@ crunch arch_post_set_flags
   and pas_refined[Tcb_AC_assms,wp]: "pas_refined aag"
   (simp: crunch_simps)
 
-end
+end (* Arch *)
 
-
-global_interpretation Tcb_AC_1?: Tcb_AC_1
+global_interpretation Tcb_AC?: Tcb_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

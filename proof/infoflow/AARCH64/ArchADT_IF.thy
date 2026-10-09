@@ -101,16 +101,14 @@ lemmas [ADT_IF_assms] =
   activate_thread_cur_fpu_in_cur_domain
   activate_thread_valid_cur_vcpu
 
-end
+end (* Arch *)
 
-
-global_interpretation ADT_IF_1?: ADT_IF_1
+global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact ADT_IF_assms[folded valid_cur_hyp_def cur_hyp_in_cur_domain_def])?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -195,7 +193,7 @@ lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
   by (cases a; wpsimp)
 
 lemma getActiveIRQ_None[ADT_IF_assms]:
-  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s)  \<Longrightarrow>
+  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s) \<Longrightarrow>
    irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
   apply (erule use_valid)
    apply (wp dmo_getActiveIRQ_wp)
@@ -342,7 +340,7 @@ lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (case_tac tinv)
-       apply ((wp hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
+       apply ((wp hoare_vcg_if_lift mapM_x_wp[OF _ subset_refl]
                | wpc
                | simp split del: if_split add: check_cap_at_def
                | clarsimp
@@ -449,8 +447,7 @@ crunch init_arch_objects
   for irq_states_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp)
 
-end
-
+end (* Arch *)
 
 global_interpretation ADT_IF_2?: ADT_IF_2
 proof goal_cases

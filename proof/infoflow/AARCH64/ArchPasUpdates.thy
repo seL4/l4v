@@ -75,10 +75,9 @@ lemma state_asids_to_policy_pasMayEditReadyQueues_update[PasUpdates_assms]:
    state_asids_to_policy aag s"
   by (simp add: state_asids_to_policy_aux_pasMayEditReadyQueues_update)
 
-end
+end (* Arch *)
 
-
-global_interpretation PasUpdates_1?: PasUpdates_1
+global_interpretation PasUpdates?: PasUpdates
 proof goal_cases
   interpret Arch .
   case 1 show ?case

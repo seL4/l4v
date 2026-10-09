@@ -81,16 +81,14 @@ lemma arch_tcb_setRegister[Ipc_AC_assms]:
                 arch_tcb_get_registers_def arch_tcb_set_registers_def
                 setRegister_def modify_def get_def put_def bind_def)
 
-end
+end (* Arch *)
 
-
-global_interpretation Ipc_AC_1?: Ipc_AC_1
+global_interpretation Ipc_AC?: Ipc_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Ipc_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -192,7 +190,7 @@ lemma handle_arch_fault_reply_respects[Ipc_AC_assms]:
 lemma auth_ipc_buffers_kheap_update[Ipc_AC_assms]:
   "\<lbrakk> x \<in> auth_ipc_buffers st thread; kheap st thread = Some (TCB tcb);
      kheap s thread = Some (TCB tcb'); tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk>
-     \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
+   \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
   by (clarsimp simp: auth_ipc_buffers_member_def get_tcb_def caps_of_state_tcb)
 
 lemma auth_ipc_buffers_machine_state_update[Ipc_AC_assms, simp]:
@@ -235,8 +233,7 @@ lemma integrity_fpu_kh_updI[Ipc_AC_assms]:
 declare handle_arch_fault_reply_inv[Ipc_AC_assms]
 declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
-end
-
+end (* Arch *)
 
 context is_extended begin interpretation Arch .
 
@@ -260,8 +257,7 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   apply (clarsimp simp: tcb_states_of_state_def get_tcb_def fun_upd_def)
   done
 
-end
-
+end (* is_extended *)
 
 global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases

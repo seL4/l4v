@@ -175,7 +175,7 @@ lemma update_cdt_reads_respects:
   done
 
 lemma update_cdt_list_reads_respects:
-  "reads_respects aag l (K  (\<forall>rv rv'.
+  "reads_respects aag l (K (\<forall>rv rv'.
       equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) id rv rv' \<longrightarrow>
       equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) f rv rv'))
      (update_cdt_list f)"
@@ -316,15 +316,14 @@ lemma domain_sep_inv_refl:
   "domain_sep_inv irqs st s \<Longrightarrow> domain_sep_inv irqs s s"
   by (fastforce simp: domain_sep_inv_def)
 
-
-locale CNode_IF_1 =
+locale CNode_IF =
   fixes state_ext_t :: "'s :: state_ext itself"
   and irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option"
   assumes set_cap_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_cap cap p
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and arch_globals_equiv_irq_state_update[simp]:
+  assumes arch_globals_equiv_irq_state_update[simp]:
     "arch_globals_equiv ct it kh kh' as as' ms (irq_state_update f ms') =
      arch_globals_equiv ct it kh kh' as as' ms ms'"
     "arch_globals_equiv ct it kh kh' as as' (irq_state_update f ms) ms' =
@@ -373,10 +372,9 @@ text \<open>
 definition only_timer_irq :: "irq \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "only_timer_irq irq s \<equiv> (\<forall>x. interrupt_states s x = IRQTimer \<longrightarrow> x = irq) \<and> irq_is_recurring irq s"
 
-end
+end (* CNode_IF *)
 
-
-locale CNode_IF_2 = CNode_IF_1 state_ext_t
+locale CNode_IF_2 = CNode_IF state_ext_t
   for state_ext_t :: "'s :: state_ext itself"
   and f :: "('s state, 'a) nondet_monad" +
   assumes is_irq_at_triv:
@@ -386,7 +384,7 @@ locale CNode_IF_2 = CNode_IF_1 state_ext_t
      \<Longrightarrow> \<lbrace>(\<lambda>s. P (is_irq_at s)) and Q\<rbrace>
          f
          \<lbrace>\<lambda>rv s. P (is_irq_at s)\<rbrace>"
-  and is_irq_at_not_masked:
+  assumes is_irq_at_not_masked:
     "is_irq_at (s :: det_state) irq pos \<Longrightarrow> \<not> irq_masks (machine_state s) irq"
 begin
 
@@ -477,8 +475,7 @@ crunch reset_work_units, work_units_limit_reached, update_work_units
   for only_timer_irq_inv[wp]: "only_timer_irq_inv irq st"
   (simp: only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
 
-end
-
+end (* CNode_IF_2 *)
 
 lemma gets_irq_masks_equiv_valid:
   "equiv_valid_inv I A (\<lambda>s. \<not> (irq_masks s) irq \<and> (\<forall>x. x \<noteq> irq \<longrightarrow> (irq_masks s) x)) (gets irq_masks)"
@@ -508,7 +505,7 @@ lemma irq_state_increment_reads_respects_device:
 
 lemma use_equiv_valid_inv:
   "\<lbrakk> x \<in> fst (f st); y \<in> fst (f s); g s; g st; I s st; P s st; equiv_valid_inv I P g f \<rbrakk>
-     \<Longrightarrow> fst x = fst y \<and> P (snd y) (snd x) \<and> I (snd y) (snd x)"
+   \<Longrightarrow> fst x = fst y \<and> P (snd y) (snd x) \<and> I (snd y) (snd x)"
   apply (clarsimp simp add: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
   apply (drule spec)+
   apply (erule impE)
@@ -518,7 +515,7 @@ lemma use_equiv_valid_inv:
 
 lemma equiv_valid_inv_conj_lift:
   assumes P: "equiv_valid_inv I (\<lambda>s s'. P s s') g f"
-      and P': "equiv_valid_inv I (\<lambda>s s'. P' s s') g f"
+  assumes P': "equiv_valid_inv I (\<lambda>s s'. P' s s') g f"
   shows "equiv_valid_inv I (\<lambda>s s'. P s s' \<and> P' s s') g f"
   apply (clarsimp simp add: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
   apply (frule_tac st = t and s = st in use_equiv_valid_inv[OF _ _ _ _ _ _ P])
@@ -570,7 +567,7 @@ lemma preemption_point_def2:
 
 lemma all_children_descendants_equal:
   "\<lbrakk> equiv_for P id s t; all_children P s; all_children P t; P slot \<rbrakk>
-     \<Longrightarrow> descendants_of slot s = descendants_of slot t"
+   \<Longrightarrow> descendants_of slot s = descendants_of slot t"
   apply (clarsimp | rule equalityI)+
    apply (frule_tac p="(a, b)" and q="slot" and m=s in all_children_descendants_of)
      apply (simp)+
@@ -592,7 +589,7 @@ lemma all_children_descendants_equal:
 
 lemma cca_can_read:
   "\<lbrakk> valid_mdb s; valid_objs s; cdt_change_allowed' aag slot s; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> aag_can_read aag (fst slot)"
+   \<Longrightarrow> aag_can_read aag (fst slot)"
   apply (frule(3) cdt_change_allowed_delete_derived)
   by (rule read_delder_thread_read_thread_rev[OF reads_lrefl])
 
@@ -622,7 +619,7 @@ lemma gets_descendants_of_revrv:
 
 lemma silc_dom_equiv_trans[elim]:
   "\<lbrakk> silc_dom_equiv aag s t; silc_dom_equiv aag t u \<rbrakk>
-     \<Longrightarrow> silc_dom_equiv aag s u"
+   \<Longrightarrow> silc_dom_equiv aag s u"
   by (auto simp: silc_dom_equiv_def elim: equiv_for_trans)
 
 lemma silc_dom_equiv_sym[elim]:
@@ -631,7 +628,7 @@ lemma silc_dom_equiv_sym[elim]:
 
 lemma reads_respects_f:
   "\<lbrakk> reads_respects aag l P f; \<lbrace>silc_inv aag st and Q\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and P and Q) f"
+   \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and P and Q) f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def reads_equiv_f_def)
   apply (rule conjI, fastforce)
   apply (rule conjI, fastforce)
@@ -644,12 +641,11 @@ lemma reads_respects_f:
   apply (erule (1) use_valid, simp)
   done
 
-
 locale CNode_IF_3 = CNode_IF_2 +
   fixes aag :: "'a subject_label PAS"
   assumes dmo_getActiveIRQ_reads_respects:
     "reads_respects aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
-  and dmo_getActiveIRQ_globals_equiv:
+  assumes dmo_getActiveIRQ_globals_equiv:
     "do_machine_op (getActiveIRQ in_kernel) \<lbrace>globals_equiv st\<rbrace>"
 begin
 
@@ -679,8 +675,7 @@ lemma preemption_point_reads_respects_f:
    apply (wp, force+)
   done
 
-end
-
+end (* CNode_IF_3 *)
 
 abbreviation
   reads_spec_equiv_valid_f ::
@@ -711,7 +706,7 @@ lemma reads_equiv_f_g_conj:
 
 lemma reads_respects_f_g:
   "\<lbrakk> reads_respects_f aag l P f; doesnt_touch_globals Q f \<rbrakk>
-     \<Longrightarrow> reads_respects_f_g aag l (P and Q) f"
+   \<Longrightarrow> reads_respects_f_g aag l (P and Q) f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
   apply (subst (asm) reads_equiv_f_g_conj, erule conjE)
   apply (subst reads_equiv_f_g_conj)

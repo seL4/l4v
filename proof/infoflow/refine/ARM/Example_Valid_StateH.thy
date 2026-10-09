@@ -124,7 +124,7 @@ where
 text \<open>Low's VSpace (PageDirectory)\<close>
 
 definition
-  Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
+  Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte"
 where
   "Low_pt'H \<equiv> (\<lambda>_. ARM_H.InvalidPTE)
             (0 := ARM_H.SmallPagePTE shared_page_ptr_phys (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
@@ -145,7 +145,7 @@ definition
 
 
 definition
-  Low_pd'H :: "12 word \<Rightarrow> ARM_H.pde "
+  Low_pd'H :: "12 word \<Rightarrow> ARM_H.pde"
 where
   "Low_pd'H \<equiv>
     global_pdH
@@ -170,7 +170,7 @@ text \<open>High's VSpace (PageDirectory)\<close>
 
 
 definition
-  High_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
+  High_pt'H :: "word8 \<Rightarrow> ARM_H.pte"
 where
   "High_pt'H \<equiv>
     (\<lambda>_. ARM_H.InvalidPTE)
@@ -188,14 +188,14 @@ where
 
 
 definition
-  High_pd'H :: "12 word \<Rightarrow> ARM_H.pde "
+  High_pd'H :: "12 word \<Rightarrow> ARM_H.pde"
 where
   "High_pd'H \<equiv>
     global_pdH
      (0 := ARM_H.PageTablePDE
              (addrFromPPtr High_pt_ptr)
              (ParityEnabled \<in> {})
-             undefined )"
+             undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -401,7 +401,7 @@ lemma pd_offs_in_range:
 
 lemma pd_offs_range_correct':
   "\<lbrakk>x \<in> pd_offs_range ptr; is_aligned ptr 14\<rbrakk>
-    \<Longrightarrow> \<exists>y. x = ptr + (ucast (y:: 12 word) << 2)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y:: 12 word) << 2)"
   apply (clarsimp simp: pd_offs_range_def s0_ptr_defs cte_level_bits_def)
   apply (rule_tac x="ucast ((x - ptr) >> 2)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -495,7 +495,7 @@ lemma pt_offs_in_range:
 
 lemma pt_offs_range_correct':
   "\<lbrakk>x \<in> pt_offs_range ptr; is_aligned ptr 10\<rbrakk>
-    \<Longrightarrow> \<exists>y. x = ptr + (ucast (y:: 8 word) << 2)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y:: 8 word) << 2)"
   apply (clarsimp simp: pt_offs_range_def s0_ptr_defs cte_level_bits_def)
   apply (rule_tac x="ucast ((x - ptr) >> 2)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -627,7 +627,7 @@ lemma word_div_mult':
 
 lemma cnode_offs_range_correct':
   "\<lbrakk>x \<in> cnode_offs_range ptr; is_aligned ptr 14\<rbrakk>
-    \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = ptr + of_bl y * 0x10)"
+   \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = ptr + of_bl y * 0x10)"
   apply (clarsimp simp: cnode_offs_range_def s0_ptr_defs cte_level_bits_def)
   apply (rule_tac x="to_bl (ucast ((x - ptr) div 0x10):: 10 word)" in exI)
   apply (clarsimp simp: to_bl_ucast of_bl_drop)
@@ -709,7 +709,7 @@ lemma tcb_offs_in_range:
 
 lemma tcb_offs_range_correct':
   "\<lbrakk>x \<in> tcb_offs_range ptr; is_aligned ptr 9\<rbrakk>
-    \<Longrightarrow> \<exists>y. x = ptr + ucast (y:: 9 word)"
+   \<Longrightarrow> \<exists>y. x = ptr + ucast (y:: 9 word)"
   apply (clarsimp simp: tcb_offs_range_def s0_ptr_defs cte_level_bits_def)
   apply (rule_tac x="ucast (x - ptr)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -1655,9 +1655,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None split: option.splits)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1676,7 +1676,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1695,7 +1695,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1714,7 +1714,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1732,9 +1732,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None split: option.splits)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1753,7 +1753,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1772,7 +1772,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1791,7 +1791,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1971,7 +1971,7 @@ lemma s0H_pspace_distinct':
 
 lemma pspace_distinctD'':
   "\<lbrakk>\<exists>v. ksPSpace s x = Some v \<and> objBitsKO v = n; pspace_distinct' s\<rbrakk>
-    \<Longrightarrow> ps_clear x n s"
+   \<Longrightarrow> ps_clear x n s"
   apply clarsimp
   apply (drule(1) pspace_distinctD')
   apply simp
@@ -2259,7 +2259,7 @@ lemmas the_nat_to_bl_simps =
 lemma ucast_shiftr_13E:
   "\<lbrakk>ucast (p - ptr >> 4) = (0x13E::10 word); p \<le> 0x3FFF + ptr; ptr \<le> p;
     is_aligned ptr 14; is_aligned p 4\<rbrakk>
-    \<Longrightarrow> p = (ptr::word32) + 0x13E0"
+   \<Longrightarrow> p = (ptr::word32) + 0x13E0"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=32])
    apply simp
   apply simp
@@ -2284,7 +2284,7 @@ lemma ucast_shiftr_13E:
 lemma ucast_shiftr_3:
   "\<lbrakk>ucast (p - ptr >> 4) = (3::10 word); p \<le> 0x3FFF + ptr; ptr \<le> p;
     is_aligned ptr 14; is_aligned p 4\<rbrakk>
-    \<Longrightarrow> p = (ptr::word32) + 0x30"
+   \<Longrightarrow> p = (ptr::word32) + 0x30"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=32])
    apply simp
   apply simp
@@ -2309,7 +2309,7 @@ lemma ucast_shiftr_3:
 lemma ucast_shiftr_2:
   "\<lbrakk>ucast (p - ptr >> 4) = (2::10 word); p \<le> 0x3FFF + ptr; ptr \<le> p;
     is_aligned ptr 14; is_aligned p 4\<rbrakk>
-    \<Longrightarrow> p = (ptr::word32) + 0x20"
+   \<Longrightarrow> p = (ptr::word32) + 0x20"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=32])
    apply simp
   apply simp
@@ -2334,7 +2334,7 @@ lemma ucast_shiftr_2:
 lemma ucast_shiftr_1:
   "\<lbrakk>ucast (p - ptr >> 4) = (1::10 word); p \<le> 0x3FFF + ptr; ptr \<le> p;
     is_aligned ptr 14; is_aligned p 4\<rbrakk>
-    \<Longrightarrow> p = (ptr::word32) + 0x10"
+   \<Longrightarrow> p = (ptr::word32) + 0x10"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=32])
    apply simp
   apply simp
@@ -2496,20 +2496,17 @@ lemma map_to_ctes_not_SGISignal[simp]:
 lemma sameRegionAs_s0H:
   "\<lbrakk>map_to_ctes kh0H p = Some (CTE cap mdb); map_to_ctes kh0H p' = Some (CTE cap' mdb');
     sameRegionAs cap cap'; p \<noteq> p'\<rbrakk>
-    \<Longrightarrow> (p = Low_cnode_ptr + 0x13E0 \<and>
-          (p' = Silc_cnode_ptr + 0x13E0 \<or> p' = High_cnode_ptr + 0x13E0) \<or>
-       p = Silc_cnode_ptr + 0x13E0 \<and>
-          (p' = Low_cnode_ptr + 0x13E0 \<or> p' = High_cnode_ptr + 0x13E0) \<or>
-       p = High_cnode_ptr + 0x13E0 \<and>
-          (p' = Low_cnode_ptr + 0x13E0 \<or> p' = Silc_cnode_ptr + 0x13E0) \<or>
-       p = Low_tcb_ptr \<and> p' = Low_cnode_ptr + 0x20 \<or>
-       p = Low_cnode_ptr + 0x20 \<and> p' = Low_tcb_ptr \<or>
-       p = Low_tcb_ptr + 0x10 \<and> p' = Low_cnode_ptr + 0x30 \<or>
-       p = Low_cnode_ptr + 0x30 \<and> p' = Low_tcb_ptr + 0x10 \<or>
-       p = High_tcb_ptr \<and> p' = High_cnode_ptr + 0x20 \<or>
-       p = High_cnode_ptr + 0x20 \<and> p' = High_tcb_ptr \<or>
-       p = High_tcb_ptr + 0x10 \<and> p' = High_cnode_ptr + 0x30 \<or>
-       p = High_cnode_ptr + 0x30 \<and> p' = High_tcb_ptr + 0x10)"
+   \<Longrightarrow> (p = Low_cnode_ptr + 0x13E0 \<and> (p' = Silc_cnode_ptr + 0x13E0 \<or> p' = High_cnode_ptr + 0x13E0) \<or>
+        p = Silc_cnode_ptr + 0x13E0 \<and> (p' = Low_cnode_ptr + 0x13E0 \<or> p' = High_cnode_ptr + 0x13E0) \<or>
+        p = High_cnode_ptr + 0x13E0 \<and> (p' = Low_cnode_ptr + 0x13E0 \<or> p' = Silc_cnode_ptr + 0x13E0) \<or>
+        p = Low_tcb_ptr \<and> p' = Low_cnode_ptr + 0x20 \<or>
+        p = Low_cnode_ptr + 0x20 \<and> p' = Low_tcb_ptr \<or>
+        p = Low_tcb_ptr + 0x10 \<and> p' = Low_cnode_ptr + 0x30 \<or>
+        p = Low_cnode_ptr + 0x30 \<and> p' = Low_tcb_ptr + 0x10 \<or>
+        p = High_tcb_ptr \<and> p' = High_cnode_ptr + 0x20 \<or>
+        p = High_cnode_ptr + 0x20 \<and> p' = High_tcb_ptr \<or>
+        p = High_tcb_ptr + 0x10 \<and> p' = High_cnode_ptr + 0x30 \<or>
+        p = High_cnode_ptr + 0x30 \<and> p' = High_tcb_ptr + 0x10)"
   supply option.case_cong[cong] if_cong[cong]
   apply (frule_tac x=p in map_to_ctes_kh0H_SomeD)
   apply (elim disjE, simp_all)
@@ -2864,7 +2861,7 @@ end
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
    We use an axiomatization for the moment. *)
-axiomatization  where
+axiomatization where
   kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
   kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
 

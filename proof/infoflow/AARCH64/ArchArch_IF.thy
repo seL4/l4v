@@ -35,7 +35,6 @@ hide_fact
   dmo_doSMC_mop_reads_respects
   dmo_addressTranslateS1_reads_respects
 
-
 context Arch begin arch_global_naming
 
 named_theorems Arch_IF_assms
@@ -197,8 +196,7 @@ lemma equiv_fpu_machine_state_rest_update[Arch_IF_assms]:
   "equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := r\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
   by (simp add: equiv_fpu_def equiv_for_def)
 
-end
-
+end (* Arch *)
 
 (* FIXME AARCH64 IF: add to interface *)
 arch_requalify_facts
@@ -210,20 +208,17 @@ declare
   retype_region_irq_state_of_state[wp]
   arch_perform_invocation_irq_state_of_state[wp]
 
-
-global_interpretation Arch_IF_1?: Arch_IF_1
+global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Arch_IF_assms)?)
 qed
 
-
 lemmas invs_imps =
   invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state
   invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs
   invs_cur invs_kernel_mappings
-
 
 context Arch begin arch_global_naming
 
@@ -278,14 +273,14 @@ lemma asid_high_bits_0_eq_1:
 
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq:
   "\<lbrakk> is_subject_asid aag asid; reads_equiv aag s t; asid \<noteq> 0 \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of asid) =
-         arm_asid_table (arch_state t) (asid_high_bits_of asid)"
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of asid) =
+       arm_asid_table (arch_state t) (asid_high_bits_of asid)"
   apply (erule reads_equivE)
   apply (fastforce simp: equiv_asids_def equiv_asid_def intro: aag_can_read_own_asids)
   done
 
 lemma find_vspace_for_asid_reads_respects:
-   "reads_respects aag l (K (aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
+  "reads_respects aag l (K (aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
   unfolding find_vspace_for_asid_def
   apply wpsimp
      apply (simp add: throw_opt_def)
@@ -319,7 +314,7 @@ lemma invalidate_tlb_by_asid_va_reads_respects:
 
 lemma ptes_of_reads_equiv:
   "\<lbrakk> is_subject aag (table_base pt_t ptr); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> ptes_of s pt_t ptr = ptes_of t pt_t ptr"
+   \<Longrightarrow> ptes_of s pt_t ptr = ptes_of t pt_t ptr"
   by (fastforce elim: reads_equivE equiv_forE simp: ptes_of_def obind_def opt_map_def)
 
 (* FIXME AARCH64 IF: consolidate with ArchArchAcc_R *)
@@ -329,8 +324,8 @@ lemma pt_walk_reads_equiv:
   "\<lbrakk> reads_equiv aag s t; pas_refined aag s; pspace_aligned s; valid_asid_table s;
      valid_vspace_objs s; is_subject aag pt; vptr \<in> user_region;
      level \<le> max_pt_level; vs_lookup_table level asid vptr s = Some (level, pt) \<rbrakk>
-     \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of s) =
-         pt_walk level bot_level pt vptr (ptes_of t)"
+   \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of s) =
+       pt_walk level bot_level pt vptr (ptes_of t)"
   apply (induct level arbitrary: pt; clarsimp)
   apply (simp (no_asm) add: pt_walk.simps)
   apply (clarsimp simp: obind_def split: if_splits)
@@ -352,11 +347,11 @@ lemma pt_walk_reads_equiv:
   by fastforce+
 
 lemma pt_lookup_from_level_reads_respects:
-   "reads_respects aag l
-      (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
-           is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
-           (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
-      (pt_lookup_from_level level pt vref target_pt)"
+  "reads_respects aag l
+     (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
+          is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
+          (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
+     (pt_lookup_from_level level pt vref target_pt)"
   apply (induct level arbitrary: pt)
    apply (simp add: pt_lookup_from_level_simps)
    apply wp
@@ -461,11 +456,11 @@ lemma perform_page_invocation_reads_respects:
 
 lemma equiv_asids_arm_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
-     \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)
-                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := (asid_table t)
-                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
+   \<Longrightarrow> equiv_asids R
+         (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)
+                                                           (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
+         (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := (asid_table t)
+                                                           (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap opt_map_def)
 
 lemma arm_asid_table_update_reads_respects:
@@ -577,8 +572,8 @@ lemma arm_asid_table_delete_ev2:
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
   "\<lbrakk> (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of base
               \<longrightarrow> is_subject_asid aag asid'); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
-         arm_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
+       arm_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (insert asid_high_bits_0_eq_1)
   apply (case_tac "base = 0")
    apply (subgoal_tac "is_subject_asid aag 1")
@@ -851,7 +846,7 @@ lemma delete_asid_pool_globals_equiv[wp]:
 lemma vs_lookup_slot_not_global:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, pte); level \<le> max_pt_level;
      pte_refs_of (level_type level) pte s = Some pt; vref \<in> user_region; invs s \<rbrakk>
-     \<Longrightarrow> pt \<notin> global_refs s"
+   \<Longrightarrow> pt \<notin> global_refs s"
   apply (prop_tac "vs_lookup_target level asid vref s = Some (level, pt)")
    apply (clarsimp simp: vs_lookup_target_def obind_def split: if_splits)
   apply (erule (2) vs_lookup_target_not_global)
@@ -1000,7 +995,7 @@ lemma unmap_page_globals_equiv:
 
 
 definition authorised_for_globals_page_inv ::
-  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool"  where
+  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool" where
   "authorised_for_globals_page_inv pgi \<equiv> \<lambda>s.
      case pgi of PageMap cap ptr m \<Rightarrow> (\<exists>slot. cte_wp_at (parent_for_refs m) slot s) | _ \<Rightarrow> True"
 
@@ -1058,7 +1053,7 @@ lemma perform_pg_inv_unmap_globals_equiv:
   apply (intro conjI; clarsimp)
   apply (clarsimp split: arch_cap.splits)
   apply (drule cte_wp_valid_cap, fastforce)
-  apply (clarsimp simp:  valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
+  apply (clarsimp simp: valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
   done
 
 lemma perform_pg_inv_map_globals_equiv:
@@ -1110,7 +1105,7 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
 
 lemma perform_asid_control_invocation_globals_equiv:
   notes delete_objects_invs[wp del]
-  notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
   shows "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
          perform_asid_control_invocation aci
          \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -1126,7 +1121,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
+             hoare_vcg_all_lift get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the
@@ -1307,7 +1302,7 @@ lemma states_equiv_valid_2_invisible:
   "\<lbrakk> modifies_at_most aag {l. \<not>L l} Q f; modifies_at_most aag {l. \<not>L l} Q' g;
      \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>; \<And>P. g \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>;
      \<forall>s t. P s \<and> P' t \<longrightarrow> (\<forall>(rva,s') \<in> fst (f s). \<forall>(rvb,t') \<in> fst (g t). R rva rvb) \<rbrakk>
-     \<Longrightarrow> states_equiv_valid_2 aag L R (P and Q) (P' and Q') f g"
+   \<Longrightarrow> states_equiv_valid_2 aag L R (P and Q) (P' and Q') f g"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def modifies_at_most_def)
   apply (rename_tac u s' v t')
   apply (drule_tac x=s in spec)
@@ -1338,13 +1333,13 @@ lemma states_equiv_valid_2_invisible:
 lemma states_equiv_valid_invisible:
   "\<lbrakk> modifies_at_most aag {l. \<not>L l} Q f; \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>;
      \<forall>s t. P s \<and> P t \<longrightarrow> (\<forall>(rva,s') \<in> fst (f s). \<forall>(rvb,t') \<in> fst (f t). rva = rvb) \<rbrakk>
-     \<Longrightarrow> states_equiv_valid aag L (P and Q) f"
+   \<Longrightarrow> states_equiv_valid aag L (P and Q) f"
   unfolding equiv_valid_def2 by (fastforce intro!: states_equiv_valid_2_invisible)
 
 lemma states_equiv_valid_unit_cases':
   "\<lbrakk> states_equiv_valid aag L (P and K (L (pasObjectAbs aag ptr))) f;
      modifies_at_most aag {pasObjectAbs aag ptr} Q f; \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> states_equiv_valid aag L (if L (pasObjectAbs aag ptr) then P else Q) (f :: (det_state,unit) nondet_monad)"
+   \<Longrightarrow> states_equiv_valid aag L (if L (pasObjectAbs aag ptr) then P else Q) (f :: (det_state,unit) nondet_monad)"
   apply (case_tac "L (pasObjectAbs aag ptr)")
    apply (erule equiv_valid_guard_imp, clarsimp)
   apply clarsimp
@@ -1420,7 +1415,7 @@ lemma reads_respects_from_labels:
 
 lemma equiv_valid_guard_necessary:
   assumes hoare: "\<lbrace>not P'\<rbrace> f \<lbrace>\<bottom>\<bottom>\<rbrace>"
-  and ev: "equiv_valid I A B (P and P') f"
+  assumes ev: "equiv_valid I A B (P and P') f"
   shows "equiv_valid I A B P f"
   using ev
   apply (simp add: equiv_valid_def2 equiv_valid_2_def)
@@ -1580,7 +1575,7 @@ lemma vcpu_save_reg_equiv_but_for_labels[wp]:
   by wpsimp
 
 lemma save_virt_timer_equiv_but_for_labels[wp]:
-   "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> pasObjectAbs aag vr \<in> L \<and> cur_vcpu_of s vr \<noteq> None\<rbrace>
+  "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> pasObjectAbs aag vr \<in> L \<and> cur_vcpu_of s vr \<noteq> None\<rbrace>
    save_virt_timer vr
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding save_virt_timer_def
@@ -1776,13 +1771,13 @@ lemma cur_vcpu_for_eq_Some[simp]:
 
 lemma cur_vcpu_for_equiv_l:
   "\<lbrakk> equiv_for P cur_vcpu_of st s \<rbrakk>
-     \<Longrightarrow> cur_vcpu_for P st = cur_vcpu_for P s"
+   \<Longrightarrow> cur_vcpu_for P st = cur_vcpu_for P s"
   apply (case_tac "current_vcpu st"; case_tac "current_vcpu s")
   by (auto simp: cur_vcpu_for_None cur_vcpu_for_Some equiv_for_def cur_vcpu_of_def split: if_splits)
 
 lemma numlistregs_for_equiv_l:
   "\<lbrakk> equiv_for P (K \<circ> numlistregs) st s \<rbrakk>
-     \<Longrightarrow> numlistregs_for P st = numlistregs_for P s"
+   \<Longrightarrow> numlistregs_for P st = numlistregs_for P s"
   by (auto simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def
                  equiv_hyp_def equiv_for_def numlistregs_for_def)
 
@@ -2077,7 +2072,7 @@ lemma vcpu_save_lrs_states_equiv_valid[wp]:
 lemma equiv_valid_cases'':
   "\<lbrakk> \<And>s t. \<lbrakk> A s t; I s t; R s; R t \<rbrakk> \<Longrightarrow> P s = P t;
      equiv_valid I A B (R and P) f; equiv_valid I A B ((\<lambda>s. \<not>P s) and R) f \<rbrakk>
-     \<Longrightarrow> equiv_valid I A B R f"
+   \<Longrightarrow> equiv_valid I A B R f"
   by (fastforce simp: equiv_valid_def2 equiv_valid_2_def)
 
 lemma hw_vcpu_Some_True[simp]:
@@ -2317,7 +2312,7 @@ definition states_equiv_for_non_hyp ::
      equiv_for (P \<circ> fst) is_original_cap s s' \<and>
      equiv_for Q interrupt_states s s' \<and>
      equiv_for Q interrupt_irq_node s s' \<and>
-     equiv_for S  ready_queues s s' \<and>
+     equiv_for S ready_queues s s' \<and>
      equiv_asids R s s' \<and>
      equiv_fpu P s s'"
 
@@ -2331,7 +2326,7 @@ lemma states_equiv_for_non_hyp_sym:
 
 lemma states_equiv_for_non_hyp_trans:
   "\<lbrakk> states_equiv_for_non_hyp P Q R S s t; states_equiv_for_non_hyp P Q R S t u \<rbrakk>
-     \<Longrightarrow> states_equiv_for_non_hyp P Q R S s u"
+   \<Longrightarrow> states_equiv_for_non_hyp P Q R S s u"
   by (auto simp: states_equiv_for_non_hyp_def
           intro: equiv_for_trans equiv_asids_trans equiv_hyp_trans equiv_fpu_trans equiv_forI
            elim: equiv_forE)
@@ -2344,7 +2339,7 @@ lemma states_equiv_for_non_hyp_lift:
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for (P \<circ> fst) is_original_cap st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for Q interrupt_states st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for Q interrupt_irq_node st s\<rbrace>"
-  assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for S  ready_queues st s\<rbrace>"
+  assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for S ready_queues st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_asids R st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_fpu P st s\<rbrace>"
   shows "f \<lbrace>states_equiv_for_non_hyp P Q R S st\<rbrace>"
@@ -2398,7 +2393,7 @@ crunch vcpu_restore
 
 lemma equiv_machine_state_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P  (device_state (machine_state s))\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (device_state (machine_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. equiv_machine_state P ms (machine_state s)\<rbrace>"
   by (wpsimp wp: assms equiv_for_lift2)
 
@@ -2435,7 +2430,7 @@ lemma vcpu_restore_helper:
    vcpu_restore vr
    \<lbrace>\<lambda>_ s. vcpu_mask (numlistregs s) (vcpu_state.truncate vcpu) = vcpu_mask (numlistregs s) (vcpu_state (machine_state s))\<rbrace>"
   apply (rule_tac P'="\<lambda>s. vcpus_of s vr = Some vcpu \<and> valid_arch_state s \<and>
-                          Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj UNIV UNIV True True True vr s "
+                          Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj UNIV UNIV True True True vr s"
               and Q'="\<lambda>_ s. vcpus_of s vr = Some vcpu \<and>
                             Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj {} {} False False False vr s"
                in hoare_chain)
@@ -2650,7 +2645,7 @@ lemma vcpu_enable_2_states_equiv_valid:
             apply (wpsimp)+
     apply (rule vcpu_enable_2_reads_respects_hyp_l[of "L o pasObjectAbs aag"])
      apply (auto simp: states_equiv_for_def equiv_for_def
-                       states_equiv_for_non_hyp_def  equiv_hyp_def)
+                       states_equiv_for_non_hyp_def equiv_hyp_def)
   done
 
 lemma states_equiv_valid_modify_disable:
@@ -2698,9 +2693,9 @@ lemma ev_evrv:
 
 lemma ev2_case_option:
   assumes "\<lbrakk>x = None; y = None\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R P1 Q1 f g"
-  and "\<And>b. \<lbrakk>x = None; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R P2 (Q2 b) f (g' b)"
-  and "\<And>a. \<lbrakk>x = Some a; y = None\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P3 a) Q3 (f' a) g"
-  and "\<And>a b. \<lbrakk>x = Some a; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P4 a) (Q4 b) (f' a) (g' b)"
+  assumes "\<And>b. \<lbrakk>x = None; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R P2 (Q2 b) f (g' b)"
+  assumes "\<And>a. \<lbrakk>x = Some a; y = None\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P3 a) Q3 (f' a) g"
+  assumes "\<And>a b. \<lbrakk>x = Some a; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P4 a) (Q4 b) (f' a) (g' b)"
   shows "equiv_valid_2 I A B R (case_option (P1 and P2) (P3 and P4) x)
                                (case_option (Q1 and Q3) (Q2 and Q4) y)
                                (case_option f f' x) (case_option g g' y)"
@@ -3311,7 +3306,7 @@ lemma vcpu_save_reg_range_globals_equiv[wp]:
 
 lemma dmo_globals_equiv:
   "\<lbrakk> \<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> \<rbrakk>
-     \<Longrightarrow> do_machine_op f \<lbrace>globals_equiv st\<rbrace>"
+   \<Longrightarrow> do_machine_op f \<lbrace>globals_equiv st\<rbrace>"
   apply (simp add: do_machine_op_def)
   apply (wp modify_wp | simp add: split_def)+
   apply (clarsimp simp: globals_equiv_def idle_equiv_def)
@@ -3481,7 +3476,7 @@ crunch arch_post_cap_deletion
 (* generalises auth_ipc_buffers_mem_Write *)
 lemma auth_ipc_buffers_mem_Write':
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
+   \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
   apply (clarsimp simp add: auth_ipc_buffers_member_def)
   apply (drule (1) cap_auth_caps_of_state)
   apply simp
@@ -3491,7 +3486,7 @@ lemma auth_ipc_buffers_mem_Write':
    apply (auto dest: ipcframe_subset_page)
   done
 
-end
+end (* Arch *)
 
 (* FIXME AARCH64 IF: add to interface *)
 

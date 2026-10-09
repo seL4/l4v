@@ -24,12 +24,12 @@ begin
 section \<open>Generic big step automaton\<close>
 
 inductive_set sub_big_steps ::
-  "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool)  \<Rightarrow>  'a  \<Rightarrow> ('a \<times> 'c list) set"
+  "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'c list) set"
   for A :: "('a,'b,'c) data_type" and R :: "('a \<Rightarrow> 'a \<Rightarrow> bool)" and s :: "'a" where
   nil: "\<lbrakk> evlist = []; t = s; \<not> R s s \<rbrakk>
-          \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s"
+          \<Longrightarrow> (t,evlist) \<in> sub_big_steps A R s"
 | step: "\<lbrakk> evlist = evlist' @ [e]; (s',evlist') \<in> sub_big_steps A R s; (s',t) \<in> Step A e; \<not> R s t \<rbrakk>
-           \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s"
+           \<Longrightarrow> (t,evlist) \<in> sub_big_steps A R s"
 
 text \<open>
   Turn the (observable) multi-step executions of one automaton into the
@@ -67,7 +67,7 @@ lemma big_stepsE:
   obtains s' as a where "(s',as) \<in> sub_big_steps A R s"
                         "(s',t) \<in> Step A a"
                         "R s t"
-                        "ev =  exmap (as @ [a])"
+                        "ev = exmap (as @ [a])"
   using bs[THEN big_stepsD] by blast
 
 
@@ -108,11 +108,11 @@ lemma rel_terminateE:
   assumes b:
     "\<lbrakk> (\<And>s s' as s'' a. \<lbrakk> s \<in> I; \<exists>s0'\<in> Init A s0. R\<^sup>*\<^sup>* s0' s; (s',as) \<in> sub_big_steps A R s;
                           (s',s'') \<in> Step A a; measuref s s' > 0; measuref s s'' = 0 \<rbrakk>
-                          \<Longrightarrow> R s s'');
+                        \<Longrightarrow> R s s'');
        (\<And>s s' as s'' a. \<lbrakk> s \<in> I; \<exists>s0'\<in> Init A s0. R\<^sup>*\<^sup>* s0' s;
                           (s',as) \<in> sub_big_steps A R s; (s',s'') \<in> Step A a \<rbrakk>
-                          \<Longrightarrow> measuref s s'' < measuref s s') \<rbrakk>
-       \<Longrightarrow> C"
+                        \<Longrightarrow> measuref s s'' < measuref s s') \<rbrakk>
+     \<Longrightarrow> C"
  shows "C"
   using a b by (fastforce simp: rel_terminate_def)
 
@@ -125,7 +125,7 @@ lemma Run_big_steps_tranclp:
 
 lemma Step_system_reachable_trans:
   "\<lbrakk> Step_system A s0; system.reachable A s0 s; system.reachable A s s' \<rbrakk>
-     \<Longrightarrow> system.reachable A s0 s'"
+   \<Longrightarrow> system.reachable A s0 s'"
   apply (clarsimp simp: system.reachable_def)
   apply (rule Step_system.reachable_execution[simplified system.reachable_def])
     apply blast+
@@ -133,7 +133,7 @@ lemma Step_system_reachable_trans:
 
 lemma Step_system_reachable:
   "\<lbrakk> Step_system A s0; system.reachable A s0 s \<rbrakk>
-     \<Longrightarrow> Step_system A s"
+   \<Longrightarrow> Step_system A s"
   apply (subst Step_system_def)
   apply (rule conjI)
    apply (fastforce simp: system.reachable_def Step_system.execution_Run intro: exI[where x="[]"])
@@ -160,7 +160,7 @@ definition step_measuref_rel_from ::
 
 lemma wf_step_measuref_rel_from:
   "\<lbrakk> rel_terminate A s0 R I measuref; s \<in> I; \<exists>s0'\<in> Init A s0. R\<^sup>*\<^sup>* s0' s \<rbrakk>
-     \<Longrightarrow> wf (step_measuref_rel_from A R s)"
+   \<Longrightarrow> wf (step_measuref_rel_from A R s)"
   apply (cut_tac wf_measure[where f="measuref s"])
   apply (erule wf_subset)
   apply (fastforce simp: measure_def inv_image_def step_measuref_rel_from_def rel_terminate_def)
@@ -202,7 +202,6 @@ lemma inv_holds_steps:
   apply simp
   done
 
-
 locale serial_system_weak = system +
   fixes I
   assumes I: "A [> I"
@@ -223,12 +222,11 @@ lemma step_serial:
   apply (fastforce simp: steps_def)
   done
 
-end
-
+end (* serial_system_weak *)
 
 lemma sub_big_steps_I_holds:
   "\<lbrakk> A [> I; s \<in> I; (x, xs) \<in> sub_big_steps A R s \<rbrakk>
-     \<Longrightarrow> x \<in> I"
+   \<Longrightarrow> x \<in> I"
   apply (erule sub_big_steps.induct)
    apply simp
   apply (simp add: inv_holds_def)
@@ -293,7 +291,7 @@ lemma Step_system_to_enabled_system:
   shows "enabled_system A s0"
   apply (clarsimp simp: enabled_system_def)
 proof -
-  fix s  js jsa
+  fix s js jsa
   assume a: "s \<in> execution A s0 js"
   show "\<exists>s'. s' \<in> execution A s jsa"
   proof -
@@ -326,7 +324,6 @@ lemma steps_subset:
    apply simp
   apply force
   done
-
 
 locale Init_Fin_serial_weak = serial_system_weak +
   assumes Init_Fin: "\<And>s'. s' \<in> I \<Longrightarrow> s' \<in> Init A (Fin A s')"
@@ -371,8 +368,7 @@ lemma enabled:
   apply force
   done
 
-end
-
+end (* Init_Fin_serial_weak *)
 
 lemma invariant_holds_steps:
   assumes I: "A \<Turnstile> I"
@@ -394,7 +390,6 @@ lemma invariant_holds_steps:
    apply assumption
   apply simp
   done
-
 
 locale serial_system = system +
   fixes I
@@ -436,8 +431,7 @@ lemma fw_sim_serial:
   apply blast
   done
 
-end
-
+end (* serial_system *)
 
 locale Init_Fin_serial = serial_system +
   assumes Init_Fin: "\<And>s'. s' \<in> I \<Longrightarrow> s' \<in> Init A (Fin A s')"
@@ -476,8 +470,7 @@ lemma enabled:
   apply (rule I[simplified invariant_holds_def, THEN conjunct1,rule_format])
   done
 
-end
-
+end (* Init_Fin_serial *)
 
 sublocale Init_Fin_serial \<subseteq> enabled_system by (rule enabled)
 
@@ -500,9 +493,9 @@ lemma big_step_adt_R_tranclp_inv:
   apply simp
   done
 
-lemma  big_steps_I_holds:
+lemma big_steps_I_holds:
   "\<lbrakk> (xa, x) \<in> big_steps A R exmap j; xa \<in> I; A [> I \<rbrakk>
-     \<Longrightarrow> x \<in> I"
+   \<Longrightarrow> x \<in> I"
   apply (erule big_stepsE)
   apply (frule sub_big_steps_I_holds, assumption+)
   apply (simp add: inv_holds_def)
@@ -611,7 +604,7 @@ lemma reachable_reachable_i:
 
 lemma reachable_i_reachable:
   "\<lbrakk> reachable_i A s0' s'; s0' \<in> Init A s0; Fin A s' = s \<rbrakk>
-     \<Longrightarrow> system.reachable A s0 s"
+   \<Longrightarrow> system.reachable A s0 s"
   by (force simp: system.reachable_def reachable_i_def execution_def steps_eq_Run)
 
 lemma reachable_big_step_adt:
@@ -883,179 +876,178 @@ definition irq_state_next where
                                                   (irq_masks (machine_state s))"
 
 
-locale ADT_IF_1 =
+locale ADT_IF =
   assumes dmo_getActiveIRQ_wp':
     "\<lbrace>(\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
              (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))
       and domain_sep_inv False (st :: det_state) and valid_irq_states\<rbrace>
      do_machine_op (getActiveIRQ in_kernel)
      \<lbrace>P\<rbrace>"
-  and dmo_getActiveIRQ_wp:
+  assumes dmo_getActiveIRQ_wp:
     "\<lbrace>\<lambda>s :: det_state. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
                          (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
      do_machine_op (getActiveIRQ False)
      \<lbrace>P\<rbrace>"
-  and dmo_getActiveIRQ_valid_irq_states[wp]:
+  assumes dmo_getActiveIRQ_valid_irq_states[wp]:
     "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and deleted_irq_handler_valid_irq_states[wp]:
+  assumes deleted_irq_handler_valid_irq_states[wp]:
     "deleted_irq_handler irq \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and arch_finalise_cap_valid_irq_states[wp]:
+  assumes arch_finalise_cap_valid_irq_states[wp]:
     "arch_finalise_cap c x \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and arch_post_cap_deletion_valid_irq_states[wp]:
+  assumes arch_post_cap_deletion_valid_irq_states[wp]:
     "arch_post_cap_deletion c \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and prepare_thread_delete_valid_irq_states[wp]:
+  assumes prepare_thread_delete_valid_irq_states[wp]:
     "prepare_thread_delete ptr \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and cur_hyp_in_cur_domain_machine_state_update[simp]:
+  assumes cur_hyp_in_cur_domain_machine_state_update[simp]:
     "\<And>f. cur_hyp_in_cur_domain (machine_state_update f s) = cur_hyp_in_cur_domain s"
-  and cur_fpu_in_cur_domain_machine_state_update[simp]:
+  assumes cur_fpu_in_cur_domain_machine_state_update[simp]:
     "\<And>f. cur_fpu_in_cur_domain (machine_state_update f s) = cur_fpu_in_cur_domain s"
-  and thread_set_no_etcb_change_cur_fpu_in_cur_domain:
+  assumes thread_set_no_etcb_change_cur_fpu_in_cur_domain:
     "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and thread_set_no_etcb_change_cur_hyp_in_cur_domain:
+  assumes thread_set_no_etcb_change_cur_hyp_in_cur_domain:
     "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and thread_set_tcb_context_valid_cur_hyp[wp]:
+  assumes thread_set_tcb_context_valid_cur_hyp[wp]:
     "thread_set (tcb_arch_update (arch_tcb_context_set tc)) tcb \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
-  and maybe_handle_interrupt_cur_hyp_in_cur_domain:
+  assumes maybe_handle_interrupt_cur_hyp_in_cur_domain:
     "maybe_handle_interrupt in_kernel \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and maybe_handle_interrupt_cur_fpu_in_cur_domain:
+  assumes maybe_handle_interrupt_cur_fpu_in_cur_domain:
     "maybe_handle_interrupt in_kernel \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and maybe_handle_interrupt_valid_cur_hyp:
+  assumes maybe_handle_interrupt_valid_cur_hyp:
     "\<lbrace>valid_cur_hyp and invs\<rbrace> maybe_handle_interrupt in_kernel \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
-  and handle_event_cur_hyp_in_cur_domain[wp]:
+  assumes handle_event_cur_hyp_in_cur_domain[wp]:
     "\<lbrace>cur_hyp_in_cur_domain and invs and ct_in_cur_domain and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_event e
      \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
-  and handle_event_cur_fpu_in_cur_domain[wp]:
+  assumes handle_event_cur_fpu_in_cur_domain[wp]:
     "\<lbrace>cur_fpu_in_cur_domain and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_event e
      \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
-  and handle_event_valid_cur_hyp:
+  assumes handle_event_valid_cur_hyp:
     "\<lbrace>valid_cur_hyp and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_event e
      \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
-  and schedule_cur_hyp_in_cur_domain:
+  assumes schedule_cur_hyp_in_cur_domain:
     "\<lbrace>\<lambda>s. cur_hyp_in_cur_domain s \<and> valid_sched s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
      schedule
      \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
-  and schedule_cur_fpu_in_cur_domain:
+  assumes schedule_cur_fpu_in_cur_domain:
     "\<lbrace>\<lambda>s. cur_fpu_in_cur_domain s \<and> valid_sched s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
      schedule
      \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
-  and schedule_valid_cur_hyp:
+  assumes schedule_valid_cur_hyp:
     "\<lbrace>valid_cur_hyp and valid_idle\<rbrace>
      schedule
      \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
-  and activate_thread_cur_hyp_in_cur_domain:
+  assumes activate_thread_cur_hyp_in_cur_domain:
     "activate_thread \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and activate_thread_cur_fpu_in_cur_domain:
+  assumes activate_thread_cur_fpu_in_cur_domain:
     "activate_thread \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and activate_thread_valid_cur_hyp:
+  assumes activate_thread_valid_cur_hyp:
     "activate_thread \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
-  and do_user_op_if_cur_hyp_in_cur_domain[wp]:
+  assumes do_user_op_if_cur_hyp_in_cur_domain[wp]:
     "do_user_op_if uop tc \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and do_user_op_if_cur_fpu_in_cur_domain[wp]:
+  assumes do_user_op_if_cur_fpu_in_cur_domain[wp]:
     "do_user_op_if uop tc \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and do_user_op_if_valid_cur_hyp[wp]:
+  assumes do_user_op_if_valid_cur_hyp[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
 
-
-locale ADT_IF_2 = ADT_IF_1 +
+locale ADT_IF_2 = ADT_IF +
   fixes initial_aag :: "'a subject_label PAS"
   assumes do_user_op_if_invs[wp]:
     "do_user_op_if uop tc \<lbrace>invs and ct_running :: det_state \<Rightarrow> bool\<rbrace>"
-  and do_user_op_if_domain_sep_inv[wp]:
+  assumes do_user_op_if_domain_sep_inv[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s. domain_sep_inv irqs (st :: det_state) (s :: det_state)\<rbrace>"
-  and do_user_op_if_valid_sched[wp]:
+  assumes do_user_op_if_valid_sched[wp]:
     "do_user_op_if uop tc \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  and do_user_op_if_irq_masks[wp]:
+  assumes do_user_op_if_irq_masks[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and do_user_op_if_valid_list[wp]:
+  assumes do_user_op_if_valid_list[wp]:
     "do_user_op_if uop tc \<lbrace>valid_list\<rbrace>"
-  and do_user_op_if_scheduler_action[wp]:
+  assumes do_user_op_if_scheduler_action[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
-  and do_user_op_silc_inv[wp]:
+  assumes do_user_op_silc_inv[wp]:
     "do_user_op_if uop tc \<lbrace>silc_inv (aag :: 'a subject_label PAS) st\<rbrace>"
-  and do_user_op_pas_refined[wp]:
+  assumes do_user_op_pas_refined[wp]:
     "do_user_op_if uop tc \<lbrace>pas_refined aag\<rbrace>"
-  and do_user_op_cur_thread[wp]:
+  assumes do_user_op_cur_thread[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and do_user_op_cur_domain[wp]:
+  assumes do_user_op_cur_domain[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
-  and do_user_op_idle_thread[wp]:
+  assumes do_user_op_idle_thread[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
-  and do_user_op_domain_fields[wp]:
+  assumes do_user_op_domain_fields[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>domain_fields P\<rbrace>"
-  and do_use_op_guarded_pas_domain[wp]:
+  assumes do_use_op_guarded_pas_domain[wp]:
     "do_user_op_if uop tc \<lbrace>guarded_pas_domain aag\<rbrace>"
-  and tcb_arch_ref_tcb_context_set[simp]:
+  assumes tcb_arch_ref_tcb_context_set[simp]:
     "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set uc) tcb) = tcb_arch_ref tcb"
-  and arch_switch_to_thread_cur_thread[wp]:
+  assumes arch_switch_to_thread_cur_thread[wp]:
     "\<And>P. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and arch_activate_idle_thread_cur_thread[wp]:
+  assumes arch_activate_idle_thread_cur_thread[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and arch_activate_idle_thread_scheduler_action[wp]:
+  assumes arch_activate_idle_thread_scheduler_action[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
-  and handle_reserved_irq_non_kernel_IRQs:
+  assumes handle_reserved_irq_non_kernel_IRQs:
     "\<And>P. \<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s :: det_state. P s\<rbrace>"
-  and arch_perform_invocation_noErr[wp]:
+  assumes arch_perform_invocation_noErr[wp]:
     "\<And>Q. \<lbrace>\<top>\<rbrace> arch_perform_invocation i -, \<lbrace>\<lambda>rv s :: det_state. Q rv s\<rbrace>"
-  and arch_invoke_irq_control_noErr[wp]:
+  assumes arch_invoke_irq_control_noErr[wp]:
     "\<And>Q. \<lbrace>\<top>\<rbrace> arch_invoke_irq_control ici -, \<lbrace>\<lambda>rv s :: det_state. Q rv s\<rbrace>"
-  and init_arch_objects_irq_state_of_state[wp]:
+  assumes init_arch_objects_irq_state_of_state[wp]:
     "\<And>P. init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and getActiveIRQ_None:
+  assumes getActiveIRQ_None:
     "(None, s') \<in> fst (do_machine_op (getActiveIRQ False) (s :: det_state))
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
-  and getActiveIRQ_Some:
+  assumes getActiveIRQ_Some:
     "(Some irq, s') \<in> fst (do_machine_op (getActiveIRQ False) s)
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = Some irq"
-  and kernel_entry_if_idle_equiv:
+  assumes kernel_entry_if_idle_equiv:
     "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv irqs st and idle_equiv st
            and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
      kernel_entry_if e tc
      \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and handle_preemption_idle_equiv[wp]:
+  assumes handle_preemption_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and schedule_if_idle_equiv[wp]:
+  assumes schedule_if_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> schedule_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and do_user_op_if_idle_equiv[wp]:
+  assumes do_user_op_if_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> do_user_op_if uop tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and kernel_entry_if_valid_vspace_objs_if[wp]:
+  assumes kernel_entry_if_valid_vspace_objs_if[wp]:
     "\<lbrace>valid_vspace_objs_if and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
      kernel_entry_if e tc
      \<lbrace>\<lambda>_. valid_vspace_objs_if\<rbrace>"
-  and handle_preemption_if_valid_pdpt_objs[wp]:
+  assumes handle_preemption_if_valid_pdpt_objs[wp]:
     "handle_preemption_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
-  and schedule_if_valid_pdpt_objs[wp]:
+  assumes schedule_if_valid_pdpt_objs[wp]:
     "schedule_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
-  and do_user_op_if_valid_pdpt_objs[wp]:
+  assumes do_user_op_if_valid_pdpt_objs[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_vspace_objs_if s\<rbrace>"
-  and valid_vspace_objs_if_ms_update[simp]:
+  assumes valid_vspace_objs_if_ms_update[simp]:
     "\<And>f. valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
-  and do_user_op_if_irq_state_of_state:
+  assumes do_user_op_if_irq_state_of_state:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and do_user_op_if_irq_masks_of_state:
+  assumes do_user_op_if_irq_masks_of_state:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and do_user_op_if_irq_measure_if:
+  assumes do_user_op_if_irq_measure_if:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (irq_measure_if s)\<rbrace>"
-  and invoke_tcb_irq_state_inv:
+  assumes invoke_tcb_irq_state_inv:
     "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False (sta :: det_state) and valid_irq_states
                                and tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
-  and reset_untyped_cap_irq_state_inv:
+  assumes reset_untyped_cap_irq_state_inv:
     "\<lbrace>irq_state_inv st and domain_sep_inv False sta and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
      reset_untyped_cap slot
      \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
-  and handle_vm_fault_irq_state_of_state[wp]:
+  assumes handle_vm_fault_irq_state_of_state[wp]:
     "handle_vm_fault t vmft \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and handle_hypervisor_fault_irq_state_of_state[wp]:
+  assumes handle_hypervisor_fault_irq_state_of_state[wp]:
     "handle_hypervisor_fault t hft \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and create_cap_irq_state_of_state[wp]:
+  assumes create_cap_irq_state_of_state[wp]:
     "create_cap type bits untyped dev sl \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_invoke_irq_control_irq_state_of_state[wp]:
+  assumes arch_invoke_irq_control_irq_state_of_state[wp]:
     "arch_invoke_irq_control ici \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and thread_set_context_pas_refined:
+  assumes thread_set_context_pas_refined:
     "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
 begin
 
@@ -1169,8 +1161,7 @@ lemma activate_thread_guarded_pas_domain[wp]:
   "activate_thread \<lbrace>guarded_pas_domain aag\<rbrace>"
   by (rule guarded_pas_domain_lift; wp activate_thread_cur_thread)
 
-end
-
+end (* ADT_IF_2 *)
 
 lemma kernel_entry_if_guarded_pas_domain:
   "kernel_entry_if e tc \<lbrace>guarded_pas_domain aag\<rbrace>"
@@ -1192,7 +1183,6 @@ lemma handle_preemption_if_invs:
   unfolding handle_preemption_if_def
   by (wpsimp wp: handle_spurious_irq_invs)
 
-
 context ADT_IF_2 begin
 
 crunch handle_preemption_if
@@ -1213,7 +1203,7 @@ lemma handle_preemption_if_domain_sep_inv:
   "handle_preemption_if e \<lbrace>domain_sep_inv irqs st\<rbrace>"
   apply (wpsimp simp: handle_preemption_if_def maybe_handle_interrupt_def
                 wp: handle_kernel_interrupt_domain_sep_inv)
-   apply (rule_tac Q'="\<lambda>rv s. domain_sep_inv  irqs st s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
+   apply (rule_tac Q'="\<lambda>rv s. domain_sep_inv irqs st s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
                 in hoare_strengthen_post)
     apply (wpsimp wp: getActiveIRQ_rv_None)+
   done
@@ -1246,8 +1236,7 @@ lemma handle_preemption_if_valid_domain_list[wp]:
   unfolding handle_preemption_if_def
   by (wpsimp wp: valid_domain_list_lift)
 
-end
-
+end (* ADT_IF_2 *)
 
 lemma handle_preemption_if_silc_inv[wp]:
   "\<lbrace>silc_inv aag st and domain_sep_inv False st\<rbrace>
@@ -1356,7 +1345,6 @@ lemma set_thread_state_scheduler_action:
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
 
-
 context ADT_IF_2 begin
 
 lemma schedule_guarded_pas_domain:
@@ -1413,8 +1401,7 @@ lemma kernel_entry_if_only_timer_irq_inv:
    by (wp only_timer_irq_inv_pres kernel_entry_if_irq_masks kernel_entry_if_domain_sep_inv
        | simp | blast)+
 
-end
-
+end (* ADT_IF_2 *)
 
 crunch schedule_if
   for valid_sched[wp]: "valid_sched :: det_state \<Rightarrow> _"
@@ -1512,7 +1499,6 @@ definition ADT_A_if ::
                                       kernel_handle_preemption_if kernel_schedule_if kernel_exit_A_if
                \<inter> {(s,s'). step_restrict s'})\<rparr>"
 
-
 context ADT_IF_2 begin
 
 lemma check_active_irq_if_wp:
@@ -1527,8 +1513,7 @@ lemma handle_preemption_if_only_timer_irq_inv[wp]:
   by (wp only_timer_irq_inv_pres handle_preemption_if_irq_masks handle_preemption_if_domain_sep_inv
       | simp | blast)+
 
-end
-
+end (* ADT_IF_2 *)
 
 lemma schedule_if_only_timer_irq_inv[wp]:
   "\<lbrace>only_timer_irq_inv irq st and domain_sep_inv False st and valid_irq_states\<rbrace>
@@ -1634,6 +1619,10 @@ locale invariant_over_ADT_if =
            check_active_irq_if tc
            \<lbrace>\<lambda>rv. case (fst rv) of Some irq \<Rightarrow> det_inv (KernelEntry Interrupt) (snd rv)
                                 | None \<Rightarrow> det_inv InIdleMode (snd rv)\<rbrace>"
+
+(*
+^(context|locale) (?!begin)(\w+)(?:(?!\b(?:begin|end|context|locale)\b)[\s\S])*?\bbegin\b(?:(?!\b(?:begin|end|context|locale)\b)[\s\S])*?\bend\b
+*)
 
 
 locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch-split *)
@@ -1804,8 +1793,7 @@ lemma kernel_entry_if_domain_time_sched_action:
        apply wpsimp+
   done
 
-end
-
+end (* ADT_IF_2 *)
 
 subsection \<open>to split generic preservation lemma\<close>
 
@@ -1896,12 +1884,12 @@ lemma ct_active_not_idle':
 
 lemma Init_Fin_serial_weak_strengthen:
   "\<lbrakk> Init_Fin_serial_weak A s0 I; A [> J; J \<subseteq> I; Init A s0 \<subseteq> J \<rbrakk>
-     \<Longrightarrow> Init_Fin_serial_weak A s0 J"
+   \<Longrightarrow> Init_Fin_serial_weak A s0 J"
   by (force simp: Init_Fin_serial_weak_def serial_system_weak_def Init_Fin_serial_weak_axioms_def)
 
 lemma rel_terminate_weaken:
   "\<lbrakk> rel_terminate A s0 R I measuref; J \<subseteq> I \<rbrakk>
-     \<Longrightarrow> rel_terminate A s0 R J measuref"
+   \<Longrightarrow> rel_terminate A s0 R J measuref"
   by (force simp: rel_terminate_def)
 
 
@@ -2055,7 +2043,7 @@ lemma pasPolicy_current_aag:
 
 lemma guarded_pas_is_subject_current_aag:
   "\<lbrakk> guarded_pas_domain (current_aag s) s; invs s \<rbrakk>
-     \<Longrightarrow> ct_active s \<longrightarrow> is_subject (current_aag s) (cur_thread s)"
+   \<Longrightarrow> ct_active s \<longrightarrow> is_subject (current_aag s) (cur_thread s)"
   apply (clarsimp simp add: guarded_pas_domain_def current_aag_def)
   apply (rule sym)
   apply (blast intro: the_elemI
@@ -2070,7 +2058,7 @@ lemma handle_event_was_not_Interrupt:
 
 lemma kernel_entry_if_was_not_Interrupt:
   "(x, ba) \<in> fst (kernel_entry_if e a b)
-   \<Longrightarrow> (case fst x of Inr a \<Rightarrow> True | _ \<Rightarrow>  e \<noteq> Interrupt)"
+   \<Longrightarrow> (case fst x of Inr a \<Rightarrow> True | _ \<Rightarrow> e \<noteq> Interrupt)"
   apply (simp add: kernel_entry_if_def)
   apply (erule use_valid)
    apply wp
@@ -2141,7 +2129,6 @@ lemma handle_preemption_if_valid_sched[wp]:
     apply clarsimp
    apply (wpsimp wp: getActiveIRQ_neq_non_kernel)+
   done
-
 
 locale ADT_valid_initial_state =
   ADT_IF_2 initial_aag + valid_initial_state _ _ _ initial_aag for initial_aag
@@ -2339,8 +2326,7 @@ lemma execution_invs:
   apply (clarsimp simp: Fin_ADT_if ADT_A_if_def)
   done
 
-end
-
+end (* ADT_valid_initial_state *)
 
 lemma execution_restrict:
   assumes e: "s \<in> execution (ADT_A_if utf) s0 js"
@@ -2358,14 +2344,13 @@ lemma Step_ADT_A_if':
   apply fastforce
   done
 
-
 context valid_initial_state begin
 
 lemma invs_if_full_invs_if:
   "invs_if s \<Longrightarrow> s \<in> full_invs_if"
   by (clarsimp simp: full_invs_if_def invs_if_def Invs_def no_domain_caps_strg)
 
-end
+end (* valid_initial_state *)
 
 context ADT_valid_initial_state begin
 
@@ -2416,8 +2401,7 @@ lemma ADT_A_if_enabled_Step_system:
   "enabled_Step_system (ADT_A_if utf) s0"
   by (simp add: enabled_Step_system_def ADT_A_if_Step_system ADT_A_if_enabled_system)
 
-end
-
+end (* ADT_valid_initial_state *)
 
 section \<open>IRQs and big step automaton enabledness\<close>
 
@@ -2440,12 +2424,12 @@ crunch device_memory_update
 
 lemma next_irq_state_Suc:
   "\<lbrakk> irq_at cur masks = None; next_irq_state_dom (cur,masks) \<rbrakk>
-     \<Longrightarrow> next_irq_state (Suc cur) masks = next_irq_state cur masks"
+   \<Longrightarrow> next_irq_state (Suc cur) masks = next_irq_state cur masks"
   by (simp add: next_irq_state.psimps split: if_splits)
 
 lemma next_irq_state_Suc':
   "\<lbrakk> irq_at cur masks = Some i; next_irq_state_dom (cur,masks) \<rbrakk>
-     \<Longrightarrow> next_irq_state cur masks = cur"
+   \<Longrightarrow> next_irq_state cur masks = cur"
   by (simp add: next_irq_state.psimps split: if_splits)
 
 lemma is_irq_at_next_irq_state_dom':
@@ -2456,7 +2440,7 @@ lemma is_irq_at_next_irq_state_dom':
 
 lemma is_irq_at_next_irq_state_dom:
   "\<lbrakk> pos \<le> next; is_irq_at s irq next \<rbrakk>
-     \<Longrightarrow> next_irq_state_dom (pos,irq_masks (machine_state s))"
+   \<Longrightarrow> next_irq_state_dom (pos,irq_masks (machine_state s))"
   apply (induct rule: inc_induct)
    apply (erule is_irq_at_next_irq_state_dom')
   apply (rule next_irq_state.domintros)
@@ -2473,7 +2457,7 @@ lemma is_irq_at_next_irq_state:
 
 lemma next_irq_state_le:
   "\<lbrakk> irq_is_recurring irq s; masks = (irq_masks (machine_state s)) \<rbrakk>
-     \<Longrightarrow> cur \<le> next_irq_state cur masks"
+   \<Longrightarrow> cur \<le> next_irq_state cur masks"
   apply (clarsimp simp: irq_is_recurring_def)
   apply (drule_tac x=cur in spec)
   apply (erule exE)
@@ -2552,7 +2536,7 @@ lemma recurring_next_irq_state_dom:
 
 lemma next_irq_state_less:
   "\<lbrakk> irq_at cur masks = None; irq_is_recurring irq s; masks = (irq_masks (machine_state s)) \<rbrakk>
-     \<Longrightarrow> cur < next_irq_state cur masks"
+   \<Longrightarrow> cur < next_irq_state cur masks"
   apply (frule_tac n=cur in recurring_next_irq_state_dom)
   apply (simp add: next_irq_state.psimps)
   apply (rule less_le_trans[OF _ next_irq_state_le])
@@ -2614,7 +2598,7 @@ lemma validE_validE_E':
 
 lemma hoare_add_postE:
   "\<lbrakk> \<lbrace>S\<rbrace> f \<lbrace>\<lambda>_. S'\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. S' s \<longrightarrow> Q r s\<rbrace>, \<lbrace>\<lambda>r s. S' s \<longrightarrow> E r s\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>P and S\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+   \<Longrightarrow> \<lbrace>P and S\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (clarsimp simp: validE_def)
   apply (rule hoare_add_post)
     apply assumption
@@ -2624,8 +2608,7 @@ lemma hoare_add_postE:
     apply (assumption, simp, fastforce split: sum.splits)
   done
 
-
-context ADT_IF_1 begin
+context ADT_IF begin
 
 lemma preemption_point_valid_irq_states[wp]:
   "preemption_point \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
@@ -2788,8 +2771,7 @@ lemma invoke_cnode_irq_state_inv:
   apply fastforce
   done
 
-end
-
+end (* ADT_IF *)
 
 lemma checked_insert_irq_state_of_state[wp]:
   "check_cap_at a b (check_cap_at c d (cap_insert e f g)) \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
@@ -2839,7 +2821,6 @@ lemma irq_state_inv_trivE':
   apply simp
   done
 
-
 context ADT_IF_2 begin
 
 crunch invoke_irq_control
@@ -2861,12 +2842,12 @@ lemma invoke_untyped_irq_state_inv:
   done
 
 lemma perform_invocation_irq_state_inv:
-   "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states
-                      and valid_invocation op and K (irq_is_recurring irq st)
-                      and (\<lambda>s. \<forall>i. op = InvokeIRQHandler i \<longrightarrow>
-                                   (\<exists>p. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv i))) p s))\<rbrace>
-    perform_invocation x y op
-    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states
+                     and valid_invocation op and K (irq_is_recurring irq st)
+                     and (\<lambda>s. \<forall>i. op = InvokeIRQHandler i \<longrightarrow>
+                                  (\<exists>p. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv i))) p s))\<rbrace>
+   perform_invocation x y op
+   \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (case_tac op; simp;
          (solves \<open>(wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv
                       invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def]
@@ -2889,10 +2870,10 @@ lemma hoare_drop_impE:
   using assms by (fastforce simp: validE_def valid_def split: sum.splits)
 
 lemma handle_invocation_irq_state_inv:
-   "\<lbrace>invs and domain_sep_inv False (sta :: det_state)
-          and irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
-    handle_invocation x y
-    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  "\<lbrace>invs and domain_sep_inv False (sta :: det_state)
+         and irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+   handle_invocation x y
+   \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc
               split del: if_split)
@@ -2926,8 +2907,7 @@ lemma handle_event_irq_state_inv:
            irq_state_inv_triv
            irq_state_inv_triv[OF handle_reply_irq_state_of_state])+
 
-end
-
+end (* ADT_IF_2 *)
 
 lemma schedule_if_irq_state_of_state[wp]:
   "schedule_if tc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
@@ -2986,13 +2966,12 @@ lemma irq_state_inv_irq_is_recurring:
 abbreviation next_irq_state_of_state where
   "next_irq_state_of_state s \<equiv> next_irq_state (Suc (irq_state_of_state s)) (irq_masks_of_state s)"
 
-
 context ADT_IF_2 begin
 
 lemma kernel_entry_if_next_irq_state_of_state:
   "\<lbrakk> event \<noteq> Interrupt; invs i_s; domain_sep_inv False (st :: det_state) i_s;
      irq_is_recurring irq i_s; ((Inr (), a), b) \<in> fst (kernel_entry_if event uc i_s) \<rbrakk>
-     \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
+   \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
   apply (simp add: kernel_entry_if_def in_bind in_return | elim conjE exE)+
   apply (erule use_validE_R)
    apply (rule_tac Q'="\<lambda>_. irq_state_inv i_s" in hoare_strengthen_postE_R)
@@ -3012,7 +2991,7 @@ lemma kernel_entry_if_next_irq_state_of_state:
 lemma kernel_entry_if_next_irq_state_of_state_next:
   "\<lbrakk> event \<noteq> Interrupt; invs i_s; domain_sep_inv False (st :: det_state) i_s;
      irq_is_recurring irq i_s; ((Inl r, a), b) \<in> fst (kernel_entry_if event uc i_s) \<rbrakk>
-     \<Longrightarrow> irq_state_of_state b = next_irq_state_of_state i_s"
+   \<Longrightarrow> irq_state_of_state b = next_irq_state_of_state i_s"
   apply (simp add: kernel_entry_if_def in_bind in_return | elim conjE exE)+
   apply (erule use_validE_E)
    apply (rule validE_validE_E)
@@ -3033,7 +3012,7 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
 lemma kernel_entry_if_irq_measure:
   "\<lbrakk> event \<noteq> Interrupt; invs i_s; domain_sep_inv False (st :: det_state) i_s;
      irq_is_recurring irq i_s; ((Inr (), a), b) \<in> fst (kernel_entry_if event uc i_s) \<rbrakk>
-     \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
+   \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
   apply (fold irq_measure_if_inv_def)
   apply (rule mp)
    apply (erule_tac P="(=) i_s" and Q="\<lambda>rv s. (isRight (fst rv)) \<longrightarrow> Q s" for Q in use_valid)
@@ -3048,12 +3027,11 @@ lemma kernel_entry_if_irq_measure:
   apply (simp add: irq_measure_if_inv_def)
   done
 
-end
-
+end (* ADT_IF_2 *)
 
 lemma schedule_if_irq_measure_if:
   "\<lbrakk> (r, b) \<in> fst (schedule_if uc i_s); domain_sep_inv False st i_s; valid_irq_states i_s \<rbrakk>
-     \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
+   \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
   apply (fold irq_measure_if_inv_def)
   apply (erule use_valid[OF _ irq_measure_if_inv'] | wp schedule_if_irq_state_inv | simp)+
   apply (simp add: irq_measure_if_inv_def domain_sep_inv_refl)
@@ -3061,7 +3039,7 @@ lemma schedule_if_irq_measure_if:
 
 lemma schedule_if_next_irq_state_of_state:
   "\<lbrakk> (r, b) \<in> fst (schedule_if uc i_s); domain_sep_inv False st i_s; valid_irq_states i_s \<rbrakk>
-     \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
+   \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
   apply (erule use_valid)
    apply (rule_tac Q'="\<lambda>_. irq_state_inv i_s" in hoare_strengthen_post)
     apply (wp schedule_if_irq_state_inv)
@@ -3091,7 +3069,6 @@ lemma kernel_exit_irq_masks[wp]:
   apply wp
   done
 
-
 context valid_initial_state begin
 
 lemma invs_if_irq_is_recurring[simp]:
@@ -3108,7 +3085,7 @@ lemma tranclp_s0:
 
 lemma ADT_A_if_sub_big_steps_measuref_if:
   "\<lbrakk> (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; big_step_R\<^sup>*\<^sup>* s0 s \<rbrakk>
-     \<Longrightarrow> measuref_if s s' > 0"
+   \<Longrightarrow> measuref_if s s' > 0"
   apply (drule tranclp_s0)
   apply (erule sub_big_steps.induct)
    apply (clarsimp simp: big_step_R_def measuref_if_def)
@@ -3128,8 +3105,7 @@ lemma invs_if_invs[intro]:
   "invs_if ((a,s),b) \<Longrightarrow> invs s"
   by (simp add: invs_if_def Invs_def)
 
-end
-
+end (* valid_initial_state *)
 
 context ADT_valid_initial_state begin
 
@@ -3138,11 +3114,11 @@ lemmas do_user_op_if_next_irq_state_of_state =
 
 lemma ADT_A_if_Step_measure_if':
   "\<lbrakk> (s,s') \<in> data_type.Step (ADT_A_if utf) x; invs_if s; measuref_if y s > 0 \<rbrakk>
-     \<Longrightarrow> measuref_if y s' < measuref_if y s \<and>
-         (\<not> interrupted_modes (snd s)
-          \<longrightarrow> \<not> interrupted_modes (snd s')
-              \<longrightarrow> next_irq_state_of_state (internal_state_if s') =
-                  next_irq_state_of_state (internal_state_if s))"
+   \<Longrightarrow> measuref_if y s' < measuref_if y s \<and>
+       (\<not> interrupted_modes (snd s)
+        \<longrightarrow> \<not> interrupted_modes (snd s')
+            \<longrightarrow> next_irq_state_of_state (internal_state_if s') =
+                next_irq_state_of_state (internal_state_if s))"
   apply (frule invs_if_irq_is_recurring)
   apply (case_tac s, clarsimp)
   apply (rename_tac uc i_s mode)
@@ -3226,11 +3202,11 @@ lemma ADT_A_if_Step_measure_if':
 
 lemma ADT_A_if_Step_measure_if'':
   "\<lbrakk> (s,s') \<in> data_type.Step (ADT_A_if utf) x; invs_if s; measuref_if y s > 0 \<rbrakk>
-     \<Longrightarrow> measuref_if y s' < measuref_if y s \<and>
-         (\<not> interrupted_modes (snd s)
-          \<longrightarrow> interrupted_modes (snd s')
-              \<longrightarrow> irq_state_of_state (internal_state_if s') =
-                  next_irq_state_of_state (internal_state_if s))"
+   \<Longrightarrow> measuref_if y s' < measuref_if y s \<and>
+       (\<not> interrupted_modes (snd s)
+        \<longrightarrow> interrupted_modes (snd s')
+            \<longrightarrow> irq_state_of_state (internal_state_if s') =
+                next_irq_state_of_state (internal_state_if s))"
   apply (frule invs_if_irq_is_recurring)
   apply (case_tac s, clarsimp)
   apply (rename_tac uc i_s mode)
@@ -3318,13 +3294,13 @@ lemma ADT_A_if_Step_measure_if'':
 
 lemma ADT_A_if_Step_irq_masks:
   "\<lbrakk> (s,s') \<in> data_type.Step (ADT_A_if utf) x; invs_if s \<rbrakk>
-     \<Longrightarrow> irq_masks_of_state (internal_state_if s') = irq_masks_of_state (internal_state_if s)"
+   \<Longrightarrow> irq_masks_of_state (internal_state_if s') = irq_masks_of_state (internal_state_if s)"
   apply (case_tac s, clarsimp)
   apply (rename_tac uc i_s mode)
   apply (case_tac mode)
        apply (simp_all add: system.Step_def steps_def ADT_A_if_def in_monad rah_simp execution_def
                             global_automaton_if_def check_active_irq_A_if_def do_user_op_A_if_def
-                            check_active_irq_if_def kernel_schedule_if_def  kernel_call_A_if_def
+                            check_active_irq_if_def kernel_schedule_if_def kernel_call_A_if_def
                             kernel_handle_preemption_if_def kernel_exit_A_if_def measuref_if_def
               | safe | split if_splits)+
            apply (erule use_valid[OF _ do_user_op_if_irq_masks_of_state]
@@ -3343,15 +3319,14 @@ lemma ADT_A_if_Step_irq_masks:
   apply simp
   done
 
-end
-
+end (* ADT_valid_initial_state *)
 
 lemma steps_preserves_equivalence:
   "\<lbrakk> (s', as) \<in> sub_big_steps A R s1; \<forall>t t' as a. (t, as) \<in> sub_big_steps A R s1
                                                   \<longrightarrow> (t, t') \<in> Step A a
                                                   \<longrightarrow> \<not> R s1 t'
                                                   \<longrightarrow> f t = f t' \<rbrakk>
-     \<Longrightarrow> f s1 = f s'"
+   \<Longrightarrow> f s1 = f s'"
   by (fastforce elim: sub_big_steps.induct)
 
 lemma step_out_equivalent:
@@ -3360,7 +3335,7 @@ lemma step_out_equivalent:
                  \<longrightarrow> (t, t') \<in> data_type.Step A a
                  \<longrightarrow> \<not> R s1 t'
                  \<longrightarrow> f (g t) = f (g t') \<rbrakk>
-     \<Longrightarrow> f (g s1) = g s2"
+   \<Longrightarrow> f (g s1) = g s2"
   by (fastforce elim: steps_preserves_equivalence)
 
 (*Clagged from Noninterference*)
@@ -3380,7 +3355,7 @@ lemma small_step_to_big_step:
   assumes a:
     "\<And>s' evs. \<lbrakk> (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s1;
                 (s', s2) \<in> data_type.Step (ADT_A_if utf) a; big_step_R s1 s2 \<rbrakk>
-                \<Longrightarrow> S"
+               \<Longrightarrow> S"
   assumes b: "(s1, s2) \<in> data_type.Step (big_step_ADT_A_if utf) a"
   shows S
   apply (insert b)
@@ -3409,12 +3384,11 @@ lemma step_restrict_inv_holds_ADT_A_if:
   apply (clarsimp simp: Image_def ADT_A_if_def)
   done
 
-
 context ADT_valid_initial_state begin
 
 lemma invs_if_sub_big_steps_ADT_A_if:
   "\<lbrakk> (s', evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; invs_if s \<rbrakk>
-     \<Longrightarrow> invs_if s'"
+   \<Longrightarrow> invs_if s'"
   apply (erule sub_big_steps.induct)
    apply simp
   apply (simp add: invs_if_Step_ADT_A_if)
@@ -3424,7 +3398,7 @@ lemma small_step_irq_state_next_irq:
   "\<lbrakk> invs_if s1; (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s1;
      (s', s2) \<in> Step (ADT_A_if utf) a; big_step_R\<^sup>*\<^sup>* s0 s1;
      snd s1 = KernelExit; interrupted_modes (snd s2) \<rbrakk>
-     \<Longrightarrow> next_irq_state_of_state (internal_state_if s1) = irq_state_of_state (internal_state_if s2)"
+   \<Longrightarrow> next_irq_state_of_state (internal_state_if s1) = irq_state_of_state (internal_state_if s2)"
   apply (subgoal_tac "invs_if s'")
    apply (rule step_out_equivalent[where f="\<lambda>(states,mask). (next_irq_state (Suc states) mask,mask)"
                                      and g="\<lambda>s. (irq_state_of_state (internal_state_if s),
@@ -3458,7 +3432,7 @@ lemma small_step_irq_state_next_irq:
 lemma big_step_irq_state_next_irq:
   "\<lbrakk> invs_if s1; big_step_R\<^sup>*\<^sup>* s0 s1; (s1, s2) \<in> Step (big_step_ADT_A_if utf) a;
      snd s1 = KernelExit; i_s1 = internal_state_if s1; i_s2 = internal_state_if s2 \<rbrakk>
-     \<Longrightarrow> next_irq_state_of_state i_s1 = irq_state_of_state i_s2"
+   \<Longrightarrow> next_irq_state_of_state i_s1 = irq_state_of_state i_s2"
   apply simp
   apply (rule small_step_to_big_step)
    apply (rule small_step_irq_state_next_irq,(simp add: big_step_R_def)+)
@@ -3526,8 +3500,7 @@ lemma big_step_ADT_A_if_enabled_Step_system:
   apply simp
   done
 
-end
-
+end (* ADT_valid_initial_state *)
 
 section \<open>Generic big step refinement\<close>
 
@@ -3540,9 +3513,9 @@ lemma invariant_holds_inv_holds:
 
 lemma inv_holdsE:
   assumes I: "A [> I"
-  and step: "(s, t) \<in> Step A e"
-  and s_I: "s \<in> I"
-  and t_I: "t \<in> I \<Longrightarrow> P"
+  assumes step: "(s, t) \<in> Step A e"
+  assumes s_I: "s \<in> I"
+  assumes t_I: "t \<in> I \<Longrightarrow> P"
   shows "P"
   apply (rule t_I)
   apply (insert step I s_I)
@@ -3552,7 +3525,7 @@ lemma inv_holdsE:
 lemma LI_sub_big_steps:
   "\<lbrakk> (s',as) \<in> sub_big_steps C (internal_R C R) s;
      LI A C S (Ia \<times> Ic); A \<Turnstile> Ia; C \<Turnstile> Ic; (t, s) \<in> S; s \<in> Ic; t \<in> Ia \<rbrakk>
-     \<Longrightarrow> \<exists>t'. (t',as) \<in> sub_big_steps A (internal_R A R) t \<and> (t', s') \<in> S \<and> t' \<in> Ia"
+   \<Longrightarrow> \<exists>t'. (t',as) \<in> sub_big_steps A (internal_R A R) t \<and> (t', s') \<in> S \<and> t' \<in> Ia"
   apply (induct rule: sub_big_steps.induct)
    apply (clarsimp simp: LI_def)
    apply (rule_tac x=t in exI)
@@ -3592,7 +3565,7 @@ lemma LI_sub_big_steps:
 lemma LI_big_steps:
   "\<lbrakk> (s, s') \<in> big_steps C (internal_R C R) exmap ev;
      LI A C S (Ia \<times> Ic); A \<Turnstile> Ia; C \<Turnstile> Ic; (t, s) \<in> S; s \<in> Ic; t \<in> Ia \<rbrakk>
-     \<Longrightarrow> \<exists>t'. (t, t') \<in> big_steps A (internal_R A R) exmap ev \<and> (t', s') \<in> S \<and> t' \<in> Ia"
+   \<Longrightarrow> \<exists>t'. (t, t') \<in> big_steps A (internal_R A R) exmap ev \<and> (t', s') \<in> S \<and> t' \<in> Ia"
   apply (drule big_stepsD)
   apply clarsimp
   apply (frule(2) sub_big_steps_I_holds[OF invariant_holds_inv_holds])
@@ -3626,7 +3599,7 @@ lemma LI_big_steps:
 
 lemma inv_holds_Run_big_steps:
   "\<lbrakk> A [> I; s \<in> I; (s, t) \<in> Run (big_steps A R exmap) js \<rbrakk>
-     \<Longrightarrow> t \<in> I"
+   \<Longrightarrow> t \<in> I"
   apply (induct js arbitrary: t rule: rev_induct)
    apply force
   apply (force intro: big_steps_I_holds dest: Run_mid)
@@ -3635,7 +3608,7 @@ lemma inv_holds_Run_big_steps:
 lemma refines_Run_big_steps:
   "\<lbrakk> (s, s') \<in> Run (big_steps C (internal_R C R) exmap) js;
      LI A C S (Ia \<times> Ic); A \<Turnstile> Ia; C \<Turnstile> Ic; (t, s) \<in> S; s \<in> Ic; t \<in> Ia \<rbrakk>
-     \<Longrightarrow> \<exists>t'. (t, t') \<in> Run (big_steps A (internal_R A R) exmap) js \<and> (t', s') \<in> S \<and> t' \<in> Ia"
+   \<Longrightarrow> \<exists>t'. (t, t') \<in> Run (big_steps A (internal_R A R) exmap) js \<and> (t', s') \<in> S \<and> t' \<in> Ia"
   apply (induct js arbitrary: s' rule: rev_induct)
    apply force
   apply (frule Run_mid)
@@ -3658,7 +3631,7 @@ text\<open>
 
 lemma big_step_adt_refines:
   "\<lbrakk> LI A C S (Ia \<times> Ic); A \<Turnstile> Ia; C \<Turnstile> Ic \<rbrakk>
-     \<Longrightarrow> refines (big_step_adt C (internal_R C R) exmap) (big_step_adt A (internal_R A R) exmap)"
+   \<Longrightarrow> refines (big_step_adt C (internal_R C R) exmap) (big_step_adt A (internal_R A R) exmap)"
   apply (subst refines_def)
   apply (clarsimp simp: execution_def steps_eq_Run)
   apply (clarsimp simp: image_def)

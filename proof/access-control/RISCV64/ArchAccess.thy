@@ -65,17 +65,17 @@ fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
 inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
   sata_asid:
     "\<lbrakk> caps ptr = Some (ArchObjectCap acap); asid \<in> acap_asid' acap \<rbrakk>
-       \<Longrightarrow> (pasObjectAbs aag (fst ptr), Control, pasASIDAbs aag asid)
-             \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
+     \<Longrightarrow> (pasObjectAbs aag (fst ptr), Control, pasASIDAbs aag asid)
+           \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 | sata_asid_lookup:
     "\<lbrakk> asid_tab (asid_high_bits_of asid) = Some poolptr;
        (pdptr, ucast (asid && mask asid_low_bits), AASIDPool, a) \<in> vrefs poolptr \<rbrakk>
-       \<Longrightarrow> (pasASIDAbs aag asid, a, pasObjectAbs aag pdptr)
-             \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
+     \<Longrightarrow> (pasASIDAbs aag asid, a, pasObjectAbs aag pdptr)
+           \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 | sata_asidpool:
     "\<lbrakk> asid_tab (asid_high_bits_of asid) = Some poolptr; asid \<noteq> 0 \<rbrakk>
-       \<Longrightarrow> (pasObjectAbs aag poolptr, AAuth ASIDPoolMapsASID, pasASIDAbs aag asid)
-             \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
+     \<Longrightarrow> (pasObjectAbs aag poolptr, AAuth ASIDPoolMapsASID, pasASIDAbs aag asid)
+           \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 
 definition
   "state_asids_to_policy_arch aag caps astate vrefs \<equiv>
@@ -91,7 +91,7 @@ definition integrity_asids_2 ::
   "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> arch_state \<Rightarrow> arch_state \<Rightarrow>
    (obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> (obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> bool"
 where
-  "integrity_asids_2 aag subjects x asid as as' ao ao'  \<equiv>
+  "integrity_asids_2 aag subjects x asid as as' ao ao' \<equiv>
      (riscv_asid_table as (asid_high_bits_of asid) \<noteq> riscv_asid_table as' (asid_high_bits_of asid)
       \<longrightarrow> (\<forall>x. riscv_asid_table as' (asid_high_bits_of asid) = Some x \<longrightarrow> pasObjectAbs aag x \<in> subjects) \<and>
           (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid
@@ -144,7 +144,7 @@ inductive arch_integrity_obj_atomic ::
   arch_troa_asidpool_clear:
     "\<lbrakk> ao = ASIDPool pool; ao' = ASIDPool pool';
        asid_pool_integrity subjects aag pool pool' \<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+     \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
 
 inductive arch_integrity_obj_alt ::
    "'a PAS \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> arch_kernel_obj \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
@@ -152,7 +152,7 @@ inductive arch_integrity_obj_alt ::
   arch_tro_alt_asidpool_clear:
     "\<lbrakk> ao = ASIDPool pool; ao' = ASIDPool pool';
        asid_pool_integrity subjects aag pool pool'\<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_alt aag subjects l' ao ao'"
+     \<Longrightarrow> arch_integrity_obj_alt aag subjects l' ao ao'"
 
 definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> obj_ref set" where
   "auth_ipc_buffers s \<equiv> \<lambda>p. case (get_tcb p s) of
@@ -165,6 +165,6 @@ definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> obj_ref \<Righ
           else {}
       | _ \<Rightarrow> {})"
 
-end
+end (* Arch *)
 
 end

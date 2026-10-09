@@ -79,7 +79,6 @@ definition handleVMFaultEvent_C_body_if
           FI;;
             \<acute>ret__unsigned_long :== scast EXCEPTION_NONE))"
 
-
 context kernel_m begin
 
 definition
@@ -88,7 +87,7 @@ definition
   "checkActiveIRQ_C_if tc \<equiv>
    do
       getActiveIRQ_C;
-      irq \<leftarrow>  gets ret__unsigned_long_';
+      irq \<leftarrow> gets ret__unsigned_long_';
       return (if irq = ucast irqInvalid then None else Some (ucast irq), tc)
    od"
 
@@ -106,10 +105,9 @@ definition
   handlePreemption_C_if :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
   "handlePreemption_C_if tc \<equiv> do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
 
-end
+end (* kernel_m *)
 
-
-locale ADT_IF_Refine_1 = kernel_m +
+locale ADT_IF_Refine = kernel_m +
   fixes doUserOp_C_if ::
     "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
   and handleHypervisorFault_C_body_if :: "machine_word \<Rightarrow> (globals myvars, int, strictc_errortype) com"
@@ -117,12 +115,12 @@ locale ADT_IF_Refine_1 = kernel_m +
   assumes do_user_op_if_C_corres:
     "corres_underlying rf_sr False False (=) (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f))
                        \<top> (doUserOp_if f tc) (doUserOp_C_if f tc)"
-  and handleInvocation_ccorres':
+  assumes handleInvocation_ccorres':
     "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
              (invs' and arch_extras and ct_active' and sch_act_simple)
              (UNIV \<inter> {s. isCall_' s = from_bool isCall} \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
              (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
-  and handleHypervisorFault_C_body_ccorres:
+  assumes handleHypervisorFault_C_body_ccorres:
     "ccorres ((\<lambda>irq :: irq. K dc irq) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
              (invs' and arch_extras and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
              (UNIV) []
@@ -130,15 +128,15 @@ locale ADT_IF_Refine_1 = kernel_m +
                         handleHypervisorFault thread flt
                      od))
              (handleHypervisorFault_C_body_if (hyp_fault_type_from_H flt))"
-  and checkInterrupt_ccorres':
+  assumes checkInterrupt_ccorres':
     "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
              (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
-  and hvmf_invs_lift:
+  assumes hvmf_invs_lift:
     "\<lbrakk> \<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s \<rbrakk>
      \<Longrightarrow> \<lbrace>P\<rbrace> handleVMFault t hf \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  and check_active_irq_corres_C:
+  assumes check_active_irq_corres_C:
     "corres_underlying rf_sr False False (=) \<top> \<top> (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
-  and obs_cpspace_user_data_relation:
+  assumes obs_cpspace_user_data_relation:
     "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
        cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
      \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
@@ -148,7 +146,7 @@ begin
 definition
   "callKernel_C_body_if e \<equiv> case e of
     SyscallEvent n \<Rightarrow> (handleSyscall_C_body_if (ucast (syscall_from_H n)))
-  | UnknownSyscall n \<Rightarrow>  (handleUnknownSyscall_C_body_if (of_nat n))
+  | UnknownSyscall n \<Rightarrow> (handleUnknownSyscall_C_body_if (of_nat n))
   | UserLevelFault w1 w2 \<Rightarrow> (handleUserLevelFault_C_body_if w1 w2)
   | Interrupt \<Rightarrow> (handleInterruptEntry_C_body_if)
   | VMFaultEvent t \<Rightarrow> (handleVMFaultEvent_C_body_if (vm_fault_type_from_H t))
@@ -374,7 +372,7 @@ lemma kernelEntry_corres_C:
          scheduler_action s = resume_cur_thread \<and> domain_time s \<noteq> 0 \<and> valid_domain_list s) \<and>
       (invs' s' \<and>
         (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and> (ct_running' s' \<or> ct_idle' s') \<and>
-        ksSchedulerAction s' = ResumeCurrentThread  \<and> ksDomainTime s' \<noteq> 0 \<and> arch_extras s'))
+        ksSchedulerAction s' = ResumeCurrentThread \<and> ksDomainTime s' \<noteq> 0 \<and> arch_extras s'))
      \<top>
      (kernelEntry_if e tc) (kernelEntry_C_if fp e tc)"
   using corres_nofail[OF kernel_entry_if_corres[of e tc], simplified]
@@ -511,7 +509,7 @@ definition
 
 lemma ccorres_corres_u':
   "\<lbrakk> ccorres dc xfdc P' Q' [] H C; no_fail P'' H; (\<And>s. P s \<Longrightarrow> P' s \<and> P'' s); (Collect Q) \<subseteq> Q' \<rbrakk>
-     \<Longrightarrow> corres_underlying rf_sr nf nf' dc P Q H (exec_C \<Gamma> C)"
+   \<Longrightarrow> corres_underlying rf_sr nf nf' dc P Q H (exec_C \<Gamma> C)"
   apply (rule ccorres_corres_u)
    apply (rule ccorres_guard_imp)
      apply assumption
@@ -580,8 +578,7 @@ definition kernel_exit_C_if where
      {(s, m, s'). s' \<in> fst (split kernelExit_C_if s) \<and>
                   m = (if ct_running_C (snd s') then InUserMode else InIdleMode)}"
 
-end
-
+end (* ADT_IF_Refine *)
 
 lemma corres_underlying_nf_imp2:
   "corres_underlying rf_sr nf True a b c d e \<Longrightarrow> corres_underlying rf_sr nf nf' a b c d e"
@@ -600,11 +597,10 @@ lemma corres_select_f':
    \<Longrightarrow> corres_underlying sr nf nf' rvr P P' (select_f S) (select_f S')"
   by (clarsimp simp: select_f_def corres_underlying_def)
 
-
 context kernel_m begin
 
 lemma cur_thread_of_absKState[simp]:
-   "cur_thread (absKState s) = (ksCurThread s)"
+  "cur_thread (absKState s) = (ksCurThread s)"
    by (clarsimp simp: cstate_relation_def Let_def absKState_def cstate_to_H_def)
 
 lemma absKState_crelation:
@@ -621,10 +617,9 @@ lemma absKState_crelation:
                      obj_at'_def typ_at'_def ps_clear_def
               split: if_splits)
 
-end
+end (* kernel_m *)
 
-
-context ADT_IF_Refine_1 begin
+context ADT_IF_Refine begin
 
 definition do_user_op_C_if where
   "do_user_op_C_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_C_if uop) s)}"
@@ -654,18 +649,18 @@ lemma full_invs_all_invs[simp]:
 lemma obs_cpspace_device_data_relation:
   "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
      cpspace_device_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
-     \<Longrightarrow> cpspace_device_data_relation (ksPSpace bd)
-           (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
+   \<Longrightarrow> cpspace_device_data_relation (ksPSpace bd)
+         (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
    apply (clarsimp simp: cmap_relation_def dom_heap_to_device_data)
    apply (drule bspec,fastforce)
    apply (clarsimp simp: cuser_user_data_device_relation_def observable_memory_def
-                         heap_to_user_data_def  map_comp_def Let_def
+                         heap_to_user_data_def map_comp_def Let_def
                   split: option.split_asm)
    done
 
 lemma cstate_relation_observable_memory:
   "\<lbrakk> invs' bs; cstate_relation bs gs \<rbrakk>
-     \<Longrightarrow> cstate_relation (bs\<lparr>ksMachineState := observable_memory (ksMachineState bs) (user_mem' bs)\<rparr>) gs"
+   \<Longrightarrow> cstate_relation (bs\<lparr>ksMachineState := observable_memory (ksMachineState bs) (user_mem' bs)\<rparr>) gs"
   by (clarsimp simp: cstate_relation_def Let_def obs_cpspace_user_data_relation
                      obs_cpspace_device_data_relation cpspace_relation_def invs'_def
                      valid_state'_def valid_pspace'_def
@@ -704,7 +699,7 @@ lemma c_to_haskell:
           apply (clarsimp simp: full_invs_if'_def)
           apply (rename_tac uc mode s' uc' s)
           apply (frule ex_abs_ksReadyQueues_asrt)
-          apply (clarsimp simp: absKState_crelation  rf_sr_def)
+          apply (clarsimp simp: absKState_crelation rf_sr_def)
           apply (frule invs_valid_stateI')
           apply (rule_tac x="((uc,s),mode)" in bexI)
            apply simp
@@ -766,6 +761,6 @@ theorem infoflow_refinement_A: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp u
   apply (erule sim_imp_refines[OF infoflow_fw_sim_A])
   done
 
-end
+end (* ADT_IF_Refine *)
 
 end

@@ -21,7 +21,7 @@ lemma state_vrefs_clear_asid_table:
 
 lemma state_vrefs_clear_asid_pool:
   assumes "asid_table s (asid_high_bits_of asid) = Some pool_ptr"
-  and "ako_at (ASIDPool pool) pool_ptr s"
+  assumes "ako_at (ASIDPool pool) pool_ptr s"
   shows "state_vrefs (s\<lparr>kheap := (kheap s)(pool_ptr \<mapsto> ArchObj
            (ASIDPool (\<lambda>a. if a = asid_low_bits_of asid then None else pool a)))\<rparr>) x
            \<subseteq> state_vrefs s x"
@@ -49,16 +49,14 @@ lemma set_vcpu_state_vrefs[wp]:
 
 lemma state_vrefs_set_asid_pool_vmid:
   assumes "pool_for_asid asid s = Some pool_ptr"
-      and "asid_pools_of s pool_ptr = Some pool"
-      and "pool (asid_low_bits_of asid) = Some entry"
-    shows "state_vrefs
-            (s\<lparr>kheap := (kheap s)
-                 (pool_ptr \<mapsto>
-                  ArchObj
-                   (ASIDPool
-                     (\<lambda>a. if a = asid_low_bits_of asid
-                           then Some (ASIDPoolVSpace (ap_vspace entry)) else pool a)))\<rparr>)
-            x
+  assumes "asid_pools_of s pool_ptr = Some pool"
+  assumes "pool (asid_low_bits_of asid) = Some entry"
+  shows "state_vrefs
+           (s\<lparr>kheap := (kheap s)
+                (pool_ptr \<mapsto> ArchObj (ASIDPool
+                   (\<lambda>a. if a = asid_low_bits_of asid
+                        then Some (ASIDPoolVSpace (ap_vspace entry))
+                        else pool a)))\<rparr>) x
            \<subseteq> state_vrefs s x"
   (is "state_vrefs ?s' _ \<subseteq> state_vrefs _ _")
   apply (rule state_vrefs_subseteq)
@@ -206,7 +204,7 @@ lemma save_fpu_state_cur_fpu_of[wp]:
   done
 
 lemma load_fpu_state_machine_fpu[wp]:
- " \<lbrace>\<lambda>s. tcb_at t s \<longrightarrow> P (the (tcb_fpu_of s t))\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at t s \<longrightarrow> P (the (tcb_fpu_of s t))\<rbrace>
    load_fpu_state t
    \<lbrace>\<lambda>_ s. P (machine_fpu s)\<rbrace>"
   unfolding load_fpu_state_def as_user_def writeFpuState_def getFPUState_def
@@ -377,7 +375,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
 
 lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
   "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
-     \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
+   \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   by simp
 
 lemma update_asid_pool_entry_vmid_integrity:
@@ -499,16 +497,14 @@ declare unbind_notification_valid_cur_fpu[Finalise_AC_assms]
 declare finalise_cap_valid_list[Finalise_AC_assms]
 declare finalise_cap_replaceable[Finalise_AC_assms]
 
-end
+end (* Arch *)
 
-
-global_interpretation Finalise_AC_1?: Finalise_AC_1
+global_interpretation Finalise_AC?: Finalise_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Finalise_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -554,8 +550,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   apply (wp | simp | (rule hoare_pre, wpc))+
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation Finalise_AC_2?: Finalise_AC_2
 proof goal_cases

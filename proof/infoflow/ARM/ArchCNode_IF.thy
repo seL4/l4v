@@ -68,7 +68,7 @@ lemma arch_globals_equiv_irq_state_update[CNode_IF_assms, simp]:
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 
@@ -76,14 +76,12 @@ requalify_consts irq_at
 
 end
 
-
-global_interpretation CNode_IF_1?: CNode_IF_1 _ irq_at
+global_interpretation CNode_IF?: CNode_IF _ irq_at
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_IF_assms)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -101,8 +99,7 @@ lemma is_irq_at_not_masked[CNode_IF_assms]:
   "is_irq_at s irq pos \<Longrightarrow> \<not> irq_masks (machine_state s) irq"
   by (clarsimp simp: is_irq_at_def irq_at_def split: option.splits simp: Let_def split: if_splits)
 
-end
-
+end (* Arch *)
 
 global_interpretation CNode_IF_2?: CNode_IF_2 irq_at
 proof goal_cases
@@ -110,7 +107,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact CNode_IF_assms)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -136,8 +132,7 @@ lemma dmo_getActiveIRQ_globals_equiv[CNode_IF_assms]:
   apply clarsimp
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation CNode_IF_3?: CNode_IF_3 irq_at
 proof goal_cases

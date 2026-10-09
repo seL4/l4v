@@ -39,7 +39,7 @@ lemma sata_update[CNode_AC_assms]:
   "\<lbrakk> pas_wellformed aag;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                  elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -50,7 +50,7 @@ lemma sata_update2[CNode_AC_assms]:
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr')) cap';
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                 elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -81,7 +81,7 @@ lemma state_vrefs_tcb_upd[CNode_AC_assms]:
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
   "\<lbrakk> ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
+   \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (rule ext)
   apply (auto simp: state_vrefs_def vs_refs_no_global_pts_def obj_at_def partial_inv_def a_type_def
              split: kernel_object.splits arch_kernel_obj.splits if_splits)
@@ -96,8 +96,7 @@ lemma arch_post_cap_deletion_integrity[CNode_AC_assms]:
   "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
   by wpsimp
 
-end
-
+end (* Arch *)
 
 context is_extended begin interpretation Arch .
 
@@ -105,7 +104,7 @@ lemma list_integ_lift[CNode_AC_assms]:
   assumes li:
     "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
      f
-     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag}  (cdt st) (tcb_states_of_state st)) st\<rbrace>"
+     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
    apply (unfold integrity_def[abs_def] integrity_asids_def)
@@ -123,16 +122,14 @@ lemma set_irq_state_respects[CNode_AC_assms,wp]:
   unfolding set_irq_state_def maskInterrupt_def
   by (wpsimp wp: dmo_no_mem_respects simp: integrity_subjects_def integrity_interrupts_def)
 
-end
+end (* is_extended *)
 
-
-global_interpretation CNode_AC_1?: CNode_AC_1
+global_interpretation CNode_AC?: CNode_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms | solves \<open>wp only: CNode_AC_assms; simp\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -150,8 +147,7 @@ crunch set_cdt_list, update_cdt_list
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
 
-end
-
+end (* Arch *)
 
 global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
@@ -159,7 +155,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -174,14 +169,13 @@ lemma aobj_ref'_same_aobject[CNode_AC_assms]:
 lemma thread_set_arch_trivT[CNode_AC_assms]:
   assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
   shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: thread_set_def wp: set_object_wp )
+  apply (wpsimp simp: thread_set_def wp: set_object_wp)
   apply (erule_tac P=P in back_subst)
   apply (rule ext)
   apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
   done
 
-end
-
+end (* Arch *)
 
 context is_extended begin interpretation Arch .
 
@@ -194,8 +188,7 @@ lemma pas_refined_tcb_domain_map_wellformed[CNode_AC_assms, wp]:
    apply simp+
   done
 
-end
-
+end (* is_extended *)
 
 global_interpretation CNode_AC_3?: CNode_AC_3
 proof goal_cases
@@ -203,7 +196,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -302,8 +294,7 @@ lemma arch_update_cap_cap_auth_conferred_subset[CNode_AC_assms]:
   "y \<in> cap_auth_conferred (arch_update_cap_data b w acap) \<Longrightarrow> y \<in> arch_cap_auth_conferred acap"
   by (simp add: arch_update_cap_data_def cap_auth_conferred_def)
 
-end
-
+end (* Arch *)
 
 global_interpretation CNode_AC_4?: CNode_AC_4
 proof goal_cases
@@ -311,7 +302,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -449,7 +439,7 @@ lemma store_pde_thread_bound_ntfns[wp]:
 lemma store_pde_pas_refined[wp]:
   "\<lbrace>pas_refined aag and
     K ((ucast (p && mask pd_bits >> 2)::12 word) < (ucast (kernel_base >> 20))
-       \<longrightarrow> (\<forall>x. pde_ref2 pde = Some x \<longrightarrow>  (\<forall>a \<in> snd (snd x). \<forall>p' \<in> ptr_range (fst x) (fst (snd x)).
+       \<longrightarrow> (\<forall>x. pde_ref2 pde = Some x \<longrightarrow> (\<forall>a \<in> snd (snd x). \<forall>p' \<in> ptr_range (fst x) (fst (snd x)).
             auth_graph_map (pasObjectAbs aag) {(p && ~~ mask pd_bits, a, p')} \<subseteq> pasPolicy aag)))\<rbrace>
    store_pde p pde
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
@@ -539,6 +529,6 @@ crunch set_asid_pool
   for integrity_autarch: "integrity aag X st"
   (wp: crunch_wps)
 
-end
+end (* Arch *)
 
 end

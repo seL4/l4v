@@ -47,7 +47,7 @@ lemma set_pd_silc_inv[wp]:
   done
 
 lemma set_asid_pool_silc_inv[wp]:
-   "set_asid_pool ptr pool \<lbrace>silc_inv aag st\<rbrace>"
+  "set_asid_pool ptr pool \<lbrace>silc_inv aag st\<rbrace>"
   unfolding set_asid_pool_def
   apply (rule silc_inv_pres)
     apply (wpsimp wp: set_object_wp_strong simp: a_type_def split: kernel_object.splits)
@@ -84,27 +84,25 @@ lemma arch_derive_cap_silc[FinalCaps_assms]:
   apply (auto simp: cap_points_to_label_def slots_holding_overlapping_caps_def)
   done
 
-end
+end (* Arch *)
 
-
-global_interpretation FinalCaps_1?: FinalCaps_1
+global_interpretation FinalCaps?: FinalCaps
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
 
-
 context Arch begin global_naming ARM
 
 lemma perform_page_table_invocation_silc_inv_get_cap_helper:
-   "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_pg_cap) xa\<rbrace>
-    get_cap xa
-    \<lbrace>(\<lambda>capa s. (\<not> cap_points_to_label aag (ArchObjectCap $ update_map_data capa None)
-                                           (pasObjectAbs aag (fst xa))
-                \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps
-                                       (ArchObjectCap $ update_map_data capa None) s \<and>
-                             pasObjectAbs aag (fst lslot) = SilcLabel))) \<circ> the_arch_cap\<rbrace>"
+  "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_pg_cap) xa\<rbrace>
+   get_cap xa
+   \<lbrace>(\<lambda>capa s. (\<not> cap_points_to_label aag (ArchObjectCap $ update_map_data capa None)
+                                          (pasObjectAbs aag (fst xa))
+               \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps
+                                      (ArchObjectCap $ update_map_data capa None) s \<and>
+                            pasObjectAbs aag (fst lslot) = SilcLabel))) \<circ> the_arch_cap\<rbrace>"
   apply (wp get_cap_wp)
   apply clarsimp
   apply (drule cte_wp_at_norm)
@@ -214,7 +212,7 @@ lemma perform_asid_control_invocation_silc_inv:
   apply (wp modify_wp cap_insert_silc_inv' retype_region_silc_inv[where sz=pageBits]
             set_cap_silc_inv get_cap_slots_holding_overlapping_caps[where st=st]
             delete_objects_silc_inv hoare_weak_lift_imp
-         | wpc | simp )+
+         | wpc | simp)+
   apply (clarsimp simp: authorised_asid_control_inv_def silc_inv_def valid_aci_def ptr_range_def page_bits_def)
   apply (rule conjI)
    apply (clarsimp simp: range_cover_def obj_bits_api_def default_arch_object_def asid_bits_def pageBits_def)
@@ -350,8 +348,7 @@ lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
 
-end
-
+end (* Arch *)
 
 global_interpretation FinalCaps_2?: FinalCaps_2
 proof goal_cases
@@ -359,7 +356,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
-
 
 global_interpretation FinalCaps_3?: FinalCaps_3
 proof goal_cases

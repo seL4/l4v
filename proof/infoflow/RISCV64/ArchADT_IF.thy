@@ -74,16 +74,14 @@ lemmas [ADT_IF_assms] =
   cur_fpu_in_cur_domain_wp
   valid_cur_hyp_triv
 
-end
+end (* Arch *)
 
-
-global_interpretation ADT_IF_1?: ADT_IF_1
+global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact ADT_IF_assms | solves \<open>wp only: ADT_IF_assms; simp\<close>)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 
@@ -168,7 +166,7 @@ lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
   by (cases a; wpsimp)
 
 lemma getActiveIRQ_None[ADT_IF_assms]:
-  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s)  \<Longrightarrow>
+  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s) \<Longrightarrow>
    irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
   apply (erule use_valid)
    apply (wp dmo_getActiveIRQ_wp)
@@ -313,7 +311,7 @@ lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (case_tac tinv)
-       apply ((wp hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
+       apply ((wp hoare_vcg_if_lift mapM_x_wp[OF _ subset_refl]
                | wpc
                | simp split del: if_split add: check_cap_at_def
                | clarsimp
@@ -385,10 +383,10 @@ lemma handle_reserved_irq_non_kernel_IRQs[ADT_IF_assms]:
 
 lemma thread_set_pas_refined[ADT_IF_assms]:
   assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
-       and st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
-      and ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
-       and dom: "\<And>tcb. tcb_domain (f tcb) = tcb_domain tcb"
-     shows "thread_set f t \<lbrace>pas_refined aag\<rbrace>"
+  assumes st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
+  assumes ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
+  assumes dom: "\<And>tcb. tcb_domain (f tcb) = tcb_domain tcb"
+  shows "thread_set f t \<lbrace>pas_refined aag\<rbrace>"
   by (wpsimp wp: tcb_domain_map_wellformed_lift_strong thread_set_state_vrefs thread_set_edomains[OF dom]
            simp: pas_refined_def state_objs_to_policy_def
       | wps thread_set_caps_of_state_trivial[OF cps]
@@ -398,7 +396,7 @@ lemma thread_set_pas_refined[ADT_IF_assms]:
 
 lemma thread_set_context_state_hyp_refs_of:
   "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  by (wpsimp simp: thread_set_def wp: set_object_wp )
+  by (wpsimp simp: thread_set_def wp: set_object_wp)
 
 lemma thread_set_context_pas_refined[ADT_IF_assms]:
   "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
@@ -410,7 +408,7 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
     apply (rule hoare_lift_Pf2[where f="thread_st_auth"])
      apply (rule hoare_lift_Pf2[where f="thread_bound_ntfns"])
       apply wp
-     apply (wpsimp wp: thread_set_thread_bound_ntfns_trivT )
+     apply (wpsimp wp: thread_set_thread_bound_ntfns_trivT)
     apply (wpsimp wp: thread_set_thread_st_auth_trivT)
    apply (wpsimp wp: thread_set_caps_of_state_trivial simp: ran_tcb_cap_cases)
   apply simp
@@ -418,8 +416,7 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
 
 declare init_arch_objects_inv[ADT_IF_assms]
 
-end
-
+end (* Arch *)
 
 global_interpretation ADT_IF_2?: ADT_IF_2
 proof goal_cases

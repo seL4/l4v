@@ -177,9 +177,9 @@ lemma corres_underlying_split5:
   by (cases x; simp)
 
 lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
-   "corres_underlying rf_sr False False (=)
-   (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f)) \<top>
-   (doUserOp_if f tc) (doUserOp_C_if f tc)"
+  "corres_underlying rf_sr False False (=)
+     (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f)) \<top>
+     (doUserOp_if f tc) (doUserOp_C_if f tc)"
   apply (rule corres_gen_asm)
   apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_nonempty_def del: split_paired_All)
   apply (rule corres_gets_same)
@@ -242,8 +242,8 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
                 apply (rule corres_split[OF corres_dmo_setExMonitor_C,
                               where R="\<top>\<top>" and R'="\<top>\<top>"])
                   apply (wp | simp)+
-   apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
-                          invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
+   apply (clarsimp simp: ex_abs_def restrict_map_def invs_pspace_aligned'
+                         invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
                   split: if_splits)
    apply (drule ptable_rights_imp_UserData[rotated -1])
        apply ((fastforce | intro conjI)+)[4]
@@ -278,8 +278,8 @@ lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
 lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:
   "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
      cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
-     \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
-           (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
+   \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
+         (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
    apply (clarsimp simp: cmap_relation_def dom_heap_to_user_data)
    apply (drule bspec, fastforce)
    apply (clarsimp simp: cuser_user_data_relation_def observable_memory_def
@@ -351,10 +351,9 @@ lemma handleHypervisorFault_C_body_ccorres[ADT_IF_Refine_assms]:
     apply (auto simp: return_def)
   done
 
-end
+end (* kernel_m *)
 
-
-sublocale kernel_m \<subseteq> ADT_IF_Refine_1?: ADT_IF_Refine_1 _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
+sublocale kernel_m \<subseteq> ADT_IF_Refine?: ADT_IF_Refine _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
 proof goal_cases
   interpret Arch .
   case 1 show ?case
