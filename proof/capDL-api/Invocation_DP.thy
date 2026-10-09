@@ -1188,6 +1188,11 @@ lemma reset_cap_asid_update_cap_rights:
   "reset_cap_asid (update_cap_rights rights b) = update_cap_rights rights (reset_cap_asid b)"
   by (case_tac b,simp_all add:update_cap_rights_def reset_cap_asid_def)
 
+lemma update_cap_rights_reset_cap_asid:
+  "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'; rights = rights'\<rbrakk>
+  \<Longrightarrow> reset_cap_asid (update_cap_rights rights cap) = reset_cap_asid (update_cap_rights rights' cap')"
+  by (case_tac cap',auto simp: update_cap_rights_def dest!:reset_cap_asid_simps2 )
+
 lemma use_sep_true_for_sep_map_c:
   "\<lbrakk> < slot \<mapsto>c cap \<and>* (\<lambda>s. True)> s ; < slot \<mapsto>c - \<and>* R> s\<rbrakk>
   \<Longrightarrow> < slot \<mapsto>c cap \<and>* R > s"
