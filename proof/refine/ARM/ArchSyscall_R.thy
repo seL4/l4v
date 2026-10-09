@@ -81,10 +81,11 @@ lemma handleSpuriousIRQ_corres[Arch_assms, corres]:
   by (corres corres: corres_machine_op)
 
 lemma handleHypervisorFault_corres[Arch_assms]:
-  "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread)
-             (invs' and sch_act_not thread
-                    and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
-          (handle_hypervisor_fault thread fault) (handleHypervisorFault thread fault)"
+  "corres dc
+     (einvs and st_tcb_at active thread and ex_nonz_cap_to thread)
+     (invs' and sch_act_not thread
+            and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
+     (handle_hypervisor_fault thread fault) (handleHypervisorFault thread fault)"
   by (cases fault; clarsimp simp: handleHypervisorFault_def split del: if_split)
 
 lemma hvmf_invs_lift[Arch_assms]:

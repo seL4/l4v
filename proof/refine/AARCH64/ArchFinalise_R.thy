@@ -618,12 +618,6 @@ lemma isFinal_no_descendants[Arch_assms]:
 sublocale cancelIPC: typ_at_props' "cancelIPC tptr"
   by typ_at_props'
 
-sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr"
-  by typ_at_props'
-
-sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr"
-  by typ_at_props'
-
 sublocale suspend: typ_at_props' "suspend target"
   by typ_at_props'
 

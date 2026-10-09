@@ -186,9 +186,9 @@ lemmas Schedule_AI_assms = Arch_assms (* extract accumulated assumptions *)
 end
 
 interpretation Schedule_AI?: Schedule_AI
-  proof goal_cases
+proof goal_cases
   case 1 show ?case
-  by (intro_locales; unfold_locales; (fact X64.Schedule_AI_assms)?)
-  qed
+    by (intro_locales; unfold_locales; (fact X64.Schedule_AI_assms)?)
+qed
 
 end

@@ -5862,7 +5862,7 @@ proof (induct rule: finalise_spec_induct)
           apply (wp | simp)+
        apply (rule hoare_strengthen_post)
         apply (rule hoare_vcg_conj_lift[where Q="\<lambda>rv. cte_at' slot"])
-         apply (wp gen_typ_at_lifts [OF finaliseCap_typ_at'])[1]
+         apply wp
         apply (rule finaliseCap_cases)
        apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (wp getCTE_wp isFinalCapability_inv | simp)+

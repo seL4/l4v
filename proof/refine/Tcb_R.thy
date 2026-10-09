@@ -1025,7 +1025,7 @@ lemmas check_cap_pspace_distinct[wp] = check_cap_inv[of pspace_distinct]
 
 lemma getThreadBufferSlot_dom_tcb_cte_cases:
   "\<lbrace>\<top>\<rbrace> getThreadBufferSlot a \<lbrace>\<lambda>rv s. rv \<in> (+) a ` dom tcb_cte_cases\<rbrace>"
-  unfolding tcbIPCBufferSlot_def getThreadBufferSlot_def locateSlot_conv
+  unfolding getThreadBufferSlot_def locateSlot_conv
   by (wpsimp simp: cteSizeBits_cte_level_bits[symmetric] shiftl_t2n[symmetric])
 
 lemma tcb_at'_cteInsert[wp]:
@@ -1750,7 +1750,7 @@ lemma invokeTCB_corres:
   apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb' simp: valid_tcb'_def)
   done
 
-end (* Tcb_R *)
+end (* Tcb_R_2 *)
 
 lemma tcbBoundNotification_caps_safe[simp]:
   "\<forall>(getF, setF)\<in>ran tcb_cte_cases.

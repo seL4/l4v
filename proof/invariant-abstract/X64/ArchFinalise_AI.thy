@@ -684,9 +684,9 @@ lemmas Finalise_AI_assms = Arch_assms (* extract accumulated assumptions *)
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; fact X64.Finalise_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 

@@ -450,9 +450,9 @@ lemmas DetSchedSchedule_AI_assms = Arch_assms (* extract accumulated assumptions
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (unfold_locales; (fact ARM_HYP.DetSchedSchedule_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -526,8 +526,8 @@ lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (unfold_locales; (fact ARM_HYP.DetSchedSchedule_AI_handle_hypervisor_fault_assms)?)
-  qed
+qed
 
 end

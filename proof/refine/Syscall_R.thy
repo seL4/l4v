@@ -1944,8 +1944,8 @@ lemma (in Syscall_R) maybeHandleInterrupt_corres:
                  in hoare_strengthen_post)
      apply (rule hoare_pre_disj[where P="_ and K (in_kernel)" and P'="_ and K(\<not>in_kernel)"];
             rule hoare_gen_asm; simp)
-      apply ((wp | wp hoare_vcg_all_lift doMachineOp_getActiveIRQ_IRQ_active'
-                 | simp | simp add: imp_conjR | wp hoare_drop_imps)+)
+      apply (wp | wp hoare_vcg_all_lift doMachineOp_getActiveIRQ_IRQ_active'
+                | simp | simp add: imp_conjR | wp hoare_drop_imps)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
