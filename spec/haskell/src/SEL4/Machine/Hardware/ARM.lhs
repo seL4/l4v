@@ -859,6 +859,12 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > set_gic_vcpu_ctrl_apr :: Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
 
+> get_gic_vcpu_ctrl_ap0r :: MachineMonad Word
+> get_gic_vcpu_ctrl_ap0r = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_ap0r :: Word -> MachineMonad ()
+> set_gic_vcpu_ctrl_ap0r = error "FIXME ARMHYP Unimplemented callback"
+
 > get_gic_vcpu_ctrl_vtr :: MachineMonad Word
 > get_gic_vcpu_ctrl_vtr = error "FIXME ARMHYP Unimplemented callback"
 

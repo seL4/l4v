@@ -292,6 +292,9 @@ assumes get_gic_vcpu_ctrl_vmcr_ccorres:
 assumes get_gic_vcpu_ctrl_apr_ccorres:
   "ccorres (=) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_apr) (Call get_gic_vcpu_ctrl_apr_'proc)"
+assumes get_gic_vcpu_ctrl_ap0r_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_ap0r) (Call get_gic_vcpu_ctrl_ap0r_'proc)"
 assumes get_gic_vcpu_ctrl_vtr_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_vtr) (Call get_gic_vcpu_ctrl_vtr_'proc)"
@@ -314,6 +317,9 @@ assumes set_gic_vcpu_ctrl_vmcr_ccorres:
 assumes set_gic_vcpu_ctrl_apr_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>apr = v \<rbrace>) []
      (doMachineOp (set_gic_vcpu_ctrl_apr v)) (Call set_gic_vcpu_ctrl_apr_'proc)"
+assumes set_gic_vcpu_ctrl_ap0r_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>ap0r = v \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_ap0r v)) (Call set_gic_vcpu_ctrl_ap0r_'proc)"
 
 assumes set_gic_vcpu_ctrl_lr_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>num = scast n \<rbrace> \<inter> \<lbrace>virq_to_H \<acute>lr = lr \<rbrace>) []

@@ -5405,7 +5405,7 @@ lemma magnitudeCheck_assert2':
 
 (* VCPU when recast from memset 0 *)
 abbreviation (input) fromzeroVCPU :: vcpu where
-  "fromzeroVCPU \<equiv> vcpu.VCPUObj None (VGICInterface 0 0 0 (\<lambda>_. 0)) (const 0) (const False)"
+  "fromzeroVCPU \<equiv> vcpu.VCPUObj None (VGICInterface 0 0 0 0 (\<lambda>_. 0)) (const 0) (const False)"
 
 lemma monadic_rewrite_setObject_vcpu_as_init:
   defines "vcpu0 \<equiv> fromzeroVCPU"

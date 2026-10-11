@@ -318,6 +318,7 @@ crunch
    simp: crunch_simps no_irq_modify
          set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
+         get_gic_vcpu_ctrl_ap0r_def set_gic_vcpu_ctrl_ap0r_def
          get_gic_vcpu_ctrl_vmcr_def
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
          set_gic_vcpu_ctrl_lr_def

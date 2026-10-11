@@ -91,8 +91,9 @@ crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
 
 crunch readVCPUHardwareReg, check_export_arch_timer, writeVCPUHardwareReg, maskInterrupt,
        enableFpuEL01, isb, dsb, setHCR, setSCTLR, sendSGI, set_gic_vcpu_ctrl_hcr,
-       set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_hcr,
-       get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_vmcr, do_flush,
+       set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_ap0r, set_gic_vcpu_ctrl_vmcr,
+       get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_ap0r,
+       get_gic_vcpu_ctrl_vmcr, do_flush,
        invalidateTranslationASID, writeFpuState, disableFpu, enableFpu, deactivateInterrupt
   for irq_state[wp]: "\<lambda>ms. P (irq_state ms)"
 
@@ -1265,6 +1266,12 @@ definition vcpu_save_apr where
      vgic_update vr (vgic_apr_update (\<lambda>_. apr))
    od"
 
+definition vcpu_save_ap0r where
+  "vcpu_save_ap0r vr \<equiv> do
+     ap0r <- do_machine_op get_gic_vcpu_ctrl_ap0r;
+     vgic_update vr (vgic_ap0r_update (\<lambda>_. ap0r))
+   od"
+
 definition vcpu_save_lr where
   "vcpu_save_lr vr reg \<equiv> do
      lr <- do_machine_op (get_gic_vcpu_ctrl_lr (word_of_nat reg));
@@ -1283,6 +1290,7 @@ lemmas vcpu_save_vgic_defs =
   vcpu_save_hcr_def
   vcpu_save_vmcr_def
   vcpu_save_apr_def
+  vcpu_save_ap0r_def
   vcpu_save_lr_def
   vcpu_save_lrs_def
 
@@ -1644,6 +1652,18 @@ lemma dmo_set_apr_equiv_but_for_labels[wp]:
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   by (wpsimp wp: dmo_equiv_but_for_labels_vcpu)
 
+lemma dmo_get_ap0r_equiv_but_for_labels[wp]:
+  "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s\<rbrace>
+   do_machine_op get_gic_vcpu_ctrl_ap0r
+   \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
+  by (wpsimp wp: dmo_equiv_but_for_labels_lift)
+
+lemma dmo_set_ap0r_equiv_but_for_labels[wp]:
+  "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> cur_vcpu_for (\<lambda>x. pasObjectAbs aag x \<notin> L) s = None\<rbrace>
+   do_machine_op (set_gic_vcpu_ctrl_ap0r val)
+   \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
+  by (wpsimp wp: dmo_equiv_but_for_labels_vcpu)
+
 lemma dmo_get_vmcr_equiv_but_for_labels[wp]:
   "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s\<rbrace>
    do_machine_op get_gic_vcpu_ctrl_vmcr
@@ -1968,6 +1988,15 @@ lemma get_gic_vcpu_ctrl_apr_states_equiv_valid[wp]:
   apply (clarsimp simp: equiv_for_def equiv_hyp_state_def cur_vcpu_for_Some hw_vcpu_def)
   done
 
+lemma get_gic_vcpu_ctrl_ap0r_states_equiv_valid[wp]:
+  "states_equiv_valid aag L (\<lambda>s. \<exists>b. cur_vcpu_for (L o pasObjectAbs aag) s = Some b)
+                      (do_machine_op (get_gic_vcpu_ctrl_ap0r))"
+  unfolding get_gic_vcpu_ctrl_ap0r_def dmo_distr
+  apply (rule use_spec_ev)
+  apply (wpsimp wp: do_machine_op_states_equiv_valid')
+  apply (clarsimp simp: equiv_for_def equiv_hyp_state_def cur_vcpu_for_Some hw_vcpu_def)
+  done
+
 lemma cur_fpu_for_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (cur_fpu_for Q s)\<rbrace>"
@@ -2035,6 +2064,16 @@ lemma vcpu_save_apr_states_equiv_valid[wp]:
      apply wpsimp+
   done
 
+lemma vcpu_save_ap0r_states_equiv_valid[wp]:
+  "states_equiv_valid aag L (\<lambda>s. \<exists>b. current_vcpu s = Some (vr,b))
+                      (vcpu_save_ap0r vr)"
+  (is "states_equiv_valid _ _ ?P _")
+  unfolding vcpu_save_ap0r_def
+  apply (rule wp_pre)
+   apply (rule_tac P="?P" and ptr=vr in states_equiv_valid_unit_cases)
+     apply wpsimp+
+  done
+
 lemma vcpu_save_lr_states_equiv_valid[wp]:
   "states_equiv_valid aag L (\<lambda>s. (\<exists>b. current_vcpu s = Some (vr,b)) \<and> valid_numlistregs s \<and> reg < numlistregs s)
                       (vcpu_save_lr vr reg)"
@@ -2051,7 +2090,7 @@ lemma vcpu_save_lr_states_equiv_valid[wp]:
   apply (clarsimp simp: cur_vcpu_for_def)
   done
 
-crunch vcpu_save_hcr, vcpu_save_vmcr, vcpu_save_apr, vcpu_save_lr, vcpu_save_lrs
+crunch vcpu_save_hcr, vcpu_save_vmcr, vcpu_save_apr, vcpu_save_ap0r, vcpu_save_lr, vcpu_save_lrs
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (wp: mapM_x_wp_inv)
 
@@ -2416,7 +2455,7 @@ lemma equiv_valid_split:
 
 lemma vcpus_of_vcpu_proj:
   "vcpus_of s vr = Some vcpu
-   \<Longrightarrow> vcpu_proj UNIV UNIV True True True vr s = Some (vcpu_mask (numlistregs s) vcpu)"
+   \<Longrightarrow> vcpu_proj UNIV UNIV True True True True vr s = Some (vcpu_mask (numlistregs s) vcpu)"
   by (clarsimp simp: vcpu_proj_def cong: if_cong)
 
 lemma vcpu_mask_truncate_helper:
@@ -2425,9 +2464,9 @@ lemma vcpu_mask_truncate_helper:
   by (clarsimp simp: vcpu_state.defs)
 
 lemma vcpu_restore_vcpu_proj':
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj UNIV UNIV True True True vr s \<and> valid_arch_state s\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj UNIV UNIV True True True True vr s \<and> valid_arch_state s\<rbrace>
    vcpu_restore vr
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj {} {} False False False vr s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj {} {} False False False False vr s\<rbrace>"
   by (wpsimp wp: vcpu_restore_vcpu_proj)
 
 lemma vcpu_restore_helper:
@@ -2435,9 +2474,9 @@ lemma vcpu_restore_helper:
    vcpu_restore vr
    \<lbrace>\<lambda>_ s. vcpu_mask (numlistregs s) (vcpu_state.truncate vcpu) = vcpu_mask (numlistregs s) (vcpu_state (machine_state s))\<rbrace>"
   apply (rule_tac P'="\<lambda>s. vcpus_of s vr = Some vcpu \<and> valid_arch_state s \<and>
-                          Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj UNIV UNIV True True True vr s "
+                          Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj UNIV UNIV True True True True vr s "
               and Q'="\<lambda>_ s. vcpus_of s vr = Some vcpu \<and>
-                            Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj {} {} False False False vr s"
+                            Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj {} {} False False False False vr s"
                in hoare_chain)
     apply (rule hoare_weaken_pre)
      apply (rule hoare_vcg_conj_lift)
@@ -2570,9 +2609,9 @@ lemma vcpu_restore_2_states_equiv_valid:
   done
 
 lemma vcpu_enable_2_vcpu_proj:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj savedWhenDisabledRegs {} True False False vr s \<and> valid_arch_state s\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj savedWhenDisabledRegs {} True False False False vr s \<and> valid_arch_state s\<rbrace>
    vcpu_enable_2 vr
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj {} {} False False False vr s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj {} {} False False False False vr s\<rbrace>"
   by (wpsimp wp: vcpu_enable_vcpu_proj simp: vcpu_enable_2_def)
 
 crunch vcpu_enable_2
@@ -2613,8 +2652,8 @@ lemma vcpu_enable_2_reads_respects_hyp_l:
    apply (prop_tac "vcpu' = vcpu")
     apply (clarsimp simp: opt_map_def)
    apply clarsimp
-   apply (prop_tac "vcpu_proj savedWhenDisabledRegs {} True False False vr s =
-                    vcpu_proj savedWhenDisabledRegs {} True False False vr t")
+   apply (prop_tac "vcpu_proj savedWhenDisabledRegs {} True False False False vr s =
+                    vcpu_proj savedWhenDisabledRegs {} True False False False vr t")
     apply (clarsimp simp: vcpu_proj_def hw_vcpu_def)
     apply (case_tac vcpu; clarsimp)
     apply (case_tac vcpu_vgic; clarsimp)
@@ -2627,9 +2666,9 @@ lemma vcpu_enable_2_reads_respects_hyp_l:
     apply (erule use_valid, wpsimp, clarsimp simp: opt_map_def)
    apply (drule use_valid, rule vcpu_enable_2_vcpu_proj, solves simp)
    apply simp
-   apply (thin_tac "vcpu_proj _ _ _ _ _ _ _ = vcpu_proj _ _ _ _ _ _ _")
+   apply (thin_tac "vcpu_proj _ _ _ _ _ _ _ _ = vcpu_proj _ _ _ _ _ _ _ _")
    apply (drule use_valid, rule vcpu_enable_2_vcpu_proj, solves simp)
-   apply (thin_tac "vcpu_proj _ _ _ _ _ _ _ = vcpu_proj _ _ _ _ _ _ _")
+   apply (thin_tac "vcpu_proj _ _ _ _ _ _ _ _ = vcpu_proj _ _ _ _ _ _ _ _")
    apply (clarsimp simp: vcpu_proj_def)
    apply (case_tac vcpu; clarsimp)
    apply (case_tac vcpu_vgic; clarsimp cong: if_cong)

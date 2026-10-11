@@ -62,7 +62,7 @@ definition absPageDirectory ::
 
 definition absVGIC :: "gicvcpuinterface \<Rightarrow> gic_vcpu_interface" where
   "absVGIC v \<equiv> case v of
-    VGICInterface hcr vmcr apr lr \<Rightarrow> gic_vcpu_interface.make hcr vmcr apr lr"
+    VGICInterface hcr vmcr apr ap0r lr \<Rightarrow> gic_vcpu_interface.make hcr vmcr apr ap0r lr"
 
 lemma absVGIC_eq[simp]:
   "absVGIC (vgic_map vgic) = vgic"

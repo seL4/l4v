@@ -261,6 +261,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     invalidateTranslationSingle_impl
     isb_impl
     resetTimer_impl
+    set_gic_vcpu_ctrl_ap0r_impl
     set_gic_vcpu_ctrl_apr_impl
     set_gic_vcpu_ctrl_hcr_impl
     set_gic_vcpu_ctrl_lr_impl
@@ -300,6 +301,7 @@ crunch
   getDFSR,
   getESR,
   getFAR,
+  get_gic_vcpu_ctrl_ap0r,
   get_gic_vcpu_ctrl_apr,
   get_gic_vcpu_ctrl_eisr0,
   get_gic_vcpu_ctrl_eisr1,
@@ -321,6 +323,7 @@ crunch
   invalidateTranslationSingle,
   isb,
   resetTimer,
+  set_gic_vcpu_ctrl_ap0r,
   set_gic_vcpu_ctrl_apr,
   set_gic_vcpu_ctrl_hcr,
   set_gic_vcpu_ctrl_lr,

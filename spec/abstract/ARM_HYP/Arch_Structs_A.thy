@@ -131,6 +131,7 @@ record  gic_vcpu_interface =
   vgic_hcr  :: machine_word
   vgic_vmcr :: machine_word
   vgic_apr  :: machine_word
+  vgic_ap0r :: machine_word
   vgic_lr   :: "nat \<Rightarrow> ARM_HYP_A.virq"
 
 record vcpu =
@@ -153,6 +154,7 @@ where
       vgic_hcr  = vgicHCREN,
       vgic_vmcr = 0,
       vgic_apr  = 0,
+      vgic_ap0r = 0,
       vgic_lr   = \<lambda>_. 0 \<rparr>"
 
 definition

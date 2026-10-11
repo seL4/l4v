@@ -68,6 +68,7 @@ definition hw_vcpu :: "nat \<Rightarrow> bool option \<Rightarrow> vcpu_state \<
        \<lparr>vcpu_vgic = \<lparr>vgic_hcr = if \<not>enabled then undefined else vgic_hcr (vcpu_vgic vcpu),
                      vgic_vmcr = vgic_vmcr (vcpu_vgic vcpu),
                      vgic_apr = vgic_apr (vcpu_vgic vcpu),
+                     vgic_ap0r = vgic_ap0r (vcpu_vgic vcpu),
                      vgic_lr = \<lambda>r. if r < n then vgic_lr (vcpu_vgic vcpu) r else undefined\<rparr>,
         vcpu_regs = \<lambda>r. if \<not>enabled \<and> vcpuRegSavedWhenDisabled r
                         then undefined

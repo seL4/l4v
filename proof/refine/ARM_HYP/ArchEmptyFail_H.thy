@@ -49,7 +49,7 @@ crunch
   makeArchFaultMessage
   for (empty_fail) empty_fail[Arch_assms, intro!, wp, simp]
   (rule: ARM_HYP_H.finaliseCap_def
-   ignore: get_gic_vcpu_ctrl_vmcr get_gic_vcpu_ctrl_apr)
+   ignore: get_gic_vcpu_ctrl_vmcr get_gic_vcpu_ctrl_apr get_gic_vcpu_ctrl_ap0r)
 
 crunch
   decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeVCPUReadReg, doFlush, decodeVCPUAckVPPI,

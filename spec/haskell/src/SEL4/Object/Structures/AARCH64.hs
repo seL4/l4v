@@ -135,6 +135,7 @@ data GICVCPUInterface = VGICInterface {
                            vgicHCR :: Word32,
                            vgicVMCR :: Word32,
                            vgicAPR :: Word32,
+                           vgicAP0R :: Word32,
                            vgicLR :: Array Int VIRQ }
     deriving Show
 
@@ -161,6 +162,7 @@ makeVCPUObject =
                           vgicHCR = vgicHCREN
                         , vgicVMCR = 0
                         , vgicAPR = 0
+                        , vgicAP0R = 0
                         , vgicLR = vgicLR
                         }
         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrEL1VM)]
