@@ -190,8 +190,9 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 
 > data GICVCPUInterface = VGICInterface {
 >                        vgicHCR :: Word,
->                        vgicVMCR :: Word, -- FIXME ARMHYP UNUSED?
+>                        vgicVMCR :: Word,
 >                        vgicAPR :: Word,
+>                        vgicAP0R :: Word,
 >                        vgicLR :: Array Int VIRQ
 >                        }
 >     deriving Show
@@ -220,6 +221,7 @@ makeObject specialised to VCPUs.
 >                           vgicHCR = vgicHCREN
 >                         , vgicVMCR = 0
 >                         , vgicAPR = 0
+>                         , vgicAP0R = 0
 >                         , vgicLR = vgicLR
 >                         }
 >         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrDefault)

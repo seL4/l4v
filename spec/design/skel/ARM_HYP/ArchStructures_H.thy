@@ -24,17 +24,18 @@ context Arch begin arch_global_naming (H)
 defs makeVCPUObject_def:
 "makeVCPUObject \<equiv>
     VCPUObj_ \<lparr>
-          vcpuTCBPtr= Nothing
-        , vcpuVGIC= VGICInterface_ \<lparr>
-                          vgicHCR= vgicHCREN
-                        , vgicVMCR= 0
-                        , vgicAPR= 0
-                        , vgicLR= (\<lambda>_. 0)
-                        \<rparr>
-        , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)
-                                             ,(VCPURegACTLR, actlrDefault)]
-        , vcpuVPPIMasked= (\<lambda>_. False)
-        \<rparr>"
+      vcpuTCBPtr= Nothing,
+      vcpuVGIC= VGICInterface_ \<lparr>
+                   vgicHCR= vgicHCREN,
+                   vgicVMCR= 0,
+                   vgicAPR= 0,
+                   vgicAP0R= 0,
+                   vgicLR= (\<lambda>_. 0)
+                 \<rparr>,
+      vcpuRegs= funArray (const 0) aLU [(VCPURegSCTLR, sctlrDefault),
+                                        (VCPURegACTLR, actlrDefault)],
+      vcpuVPPIMasked= (\<lambda>_. False)
+    \<rparr>"
 
 datatype arch_kernel_object_type =
     PDET

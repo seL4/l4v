@@ -425,6 +425,12 @@ get_gic_vcpu_ctrl_apr = error "Unimplemented - machine op"
 set_gic_vcpu_ctrl_apr :: Word32 -> MachineMonad ()
 set_gic_vcpu_ctrl_apr = error "Unimplemented - machine op"
 
+get_gic_vcpu_ctrl_ap0r :: MachineMonad Word32
+get_gic_vcpu_ctrl_ap0r = error "Unimplemented - machine op"
+
+set_gic_vcpu_ctrl_ap0r :: Word32 -> MachineMonad ()
+set_gic_vcpu_ctrl_ap0r = error "Unimplemented - machine op"
+
 get_gic_vcpu_ctrl_vtr :: MachineMonad Word32
 get_gic_vcpu_ctrl_vtr = error "Unimplemented - machine op"
 

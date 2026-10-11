@@ -71,6 +71,7 @@ record gic_vcpu_interface =
   vgic_hcr  :: word32
   vgic_vmcr :: word32
   vgic_apr  :: word32
+  vgic_ap0r :: word32
   vgic_lr   :: "nat \<Rightarrow> AARCH64.virq"
 
 record vcpu_state =
@@ -135,6 +136,7 @@ definition default_gic_vcpu_interface :: gic_vcpu_interface where
       vgic_hcr  = vgicHCREN,
       vgic_vmcr = 0,
       vgic_apr  = 0,
+      vgic_ap0r = 0,
       vgic_lr   = \<lambda>_. 0
    \<rparr>"
 

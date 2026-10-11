@@ -306,6 +306,16 @@ definition set_gic_vcpu_ctrl_apr :: "32 word \<Rightarrow> unit machine_monad" w
      machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)
    od"
 
+definition get_gic_vcpu_ctrl_ap0r :: "32 word machine_monad" where
+  "get_gic_vcpu_ctrl_ap0r \<equiv> gets (\<lambda>ms. vgic_ap0r (vcpu_vgic (vcpu_state ms)))"
+
+consts' set_gic_vcpu_ctrl_ap0r_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
+definition set_gic_vcpu_ctrl_ap0r :: "32 word \<Rightarrow> unit machine_monad" where
+  "set_gic_vcpu_ctrl_ap0r w \<equiv> do
+     modify (vcpu_state_update (vcpu_vgic_update (vgic_ap0r_update (\<lambda>_. w))));
+     machine_op_lift (set_gic_vcpu_ctrl_ap0r_impl w)
+   od"
+
 consts' gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> 32 word"
 definition get_gic_vcpu_ctrl_vtr :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_vtr \<equiv> gets gic_vcpu_ctrl_vtr_val"

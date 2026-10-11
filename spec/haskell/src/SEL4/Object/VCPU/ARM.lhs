@@ -417,6 +417,9 @@ For initialisation, see makeVCPUObject.
 >
 >     apr <- doMachineOp get_gic_vcpu_ctrl_apr
 >     vgicUpdate vcpuPtr (\vgic -> vgic { vgicAPR = apr })
+
+>     ap0r <- doMachineOp get_gic_vcpu_ctrl_ap0r
+>     vgicUpdate vcpuPtr (\vgic -> vgic { vgicAP0R = ap0r })
 >
 >     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
 >     let gicIndices = init [0..numListRegs]
@@ -443,6 +446,7 @@ For initialisation, see makeVCPUObject.
 >     doMachineOp $ do
 >         set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic)
 >         set_gic_vcpu_ctrl_apr (vgicAPR vgic)
+>         set_gic_vcpu_ctrl_ap0r (vgicAP0R vgic)
 >
 >         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 >

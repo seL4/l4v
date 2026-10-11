@@ -178,6 +178,9 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
           apr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_apr;
           vgic_update vr (\<lambda>vgic. vgic \<lparr>vgic_apr := apr\<rparr>);
 
+          ap0r \<leftarrow> do_machine_op get_gic_vcpu_ctrl_ap0r;
+          vgic_update vr (\<lambda>vgic. vgic \<lparr>vgic_ap0r := ap0r\<rparr>);
+
           num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs \<circ> arch_state);
           gicIndices \<leftarrow> return [0..<num_list_regs];
 
@@ -205,6 +208,7 @@ definition vcpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" 
      do_machine_op $ do
          set_gic_vcpu_ctrl_vmcr (vgic_vmcr vgic);
          set_gic_vcpu_ctrl_apr (vgic_apr vgic);
+         set_gic_vcpu_ctrl_ap0r (vgic_ap0r vgic);
          mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_nat (fst p)) (snd p))
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;

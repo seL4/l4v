@@ -637,6 +637,20 @@ where
   "set_gic_vcpu_ctrl_apr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)"
 
 consts'
+  gic_vcpu_ctrl_ap0r_val :: "machine_state \<Rightarrow> machine_word"
+definition
+  get_gic_vcpu_ctrl_ap0r :: "machine_word machine_monad"
+where
+  "get_gic_vcpu_ctrl_ap0r \<equiv> gets gic_vcpu_ctrl_ap0r_val"
+
+consts'
+  set_gic_vcpu_ctrl_ap0r_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  set_gic_vcpu_ctrl_ap0r :: "machine_word \<Rightarrow> unit machine_monad"
+where
+  "set_gic_vcpu_ctrl_ap0r w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_ap0r_impl w)"
+
+consts'
   gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_gic_vcpu_ctrl_vtr :: "machine_word machine_monad"
