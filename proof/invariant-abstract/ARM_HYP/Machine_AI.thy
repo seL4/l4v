@@ -501,6 +501,12 @@ lemma no_irq_get_gic_vcpu_ctrl_apr: "no_irq get_gic_vcpu_ctrl_apr"
 lemma no_irq_set_gic_vcpu_ctrl_apr: "no_irq (set_gic_vcpu_ctrl_apr w)"
   by (simp add: set_gic_vcpu_ctrl_apr_def)
 
+lemma no_irq_get_gic_vcpu_ctrl_ap0r: "no_irq get_gic_vcpu_ctrl_ap0r"
+  by (simp add: get_gic_vcpu_ctrl_ap0r_def)
+
+lemma no_irq_set_gic_vcpu_ctrl_ap0r: "no_irq (set_gic_vcpu_ctrl_ap0r w)"
+  by (simp add: set_gic_vcpu_ctrl_ap0r_def)
+
 lemma no_irq_get_gic_vcpu_ctrl_lr: "no_irq (get_gic_vcpu_ctrl_lr n)"
   apply (clarsimp simp add: get_gic_vcpu_ctrl_lr_def no_irq_def, wp)
   apply (simp only: atomize_all)
@@ -800,6 +806,14 @@ lemma empty_fail_get_gic_vcpu_ctrl_apr[simp, intro!]:
 lemma empty_fail_set_gic_vcpu_ctrl_apr[simp, intro!]:
   "empty_fail (set_gic_vcpu_ctrl_apr w)"
   by (simp add: set_gic_vcpu_ctrl_apr_def)
+
+lemma empty_fail_get_gic_vcpu_ctrl_ap0r[simp, intro!]:
+  "empty_fail get_gic_vcpu_ctrl_ap0r"
+  by (simp add: get_gic_vcpu_ctrl_ap0r_def)
+
+lemma empty_fail_set_gic_vcpu_ctrl_ap0r[simp, intro!]:
+  "empty_fail (set_gic_vcpu_ctrl_ap0r w)"
+  by (simp add: set_gic_vcpu_ctrl_ap0r_def)
 
 lemma empty_fail_get_gic_vcpu_ctrl_lr[simp, intro!]:
   "empty_fail (get_gic_vcpu_ctrl_lr n)"

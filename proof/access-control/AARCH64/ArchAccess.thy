@@ -141,6 +141,7 @@ where
                                    else vgic_hcr (vcpu_vgic vst),
                        vgic_vmcr := vgic_vmcr (vcpu_vgic vst),
                        vgic_apr := vgic_apr (vcpu_vgic vst),
+                       vgic_ap0r := vgic_ap0r (vcpu_vgic vst),
                        vgic_lr := vgic_lr (vcpu_vgic vst)\<rparr>\<rparr>))"
 
 (* A vcpu's vgic_lr field is a total function from nats to virqs, with the domain restricted only

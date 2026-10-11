@@ -1567,6 +1567,31 @@ lemma vgicUpdate_APR_ccorres:
   apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
   done
 
+(* FIXME: same as above, structure is from vgicUpdate_HCR_ccorres; sync with AARCH64 *)
+lemma vgicUpdate_AP0R_ccorres:
+  "ccorres dc xfdc \<top> UNIV hs
+        (vgicUpdate vcpuptr (vgicAP0R_update (\<lambda>_. hcr)))
+        (Basic_heap_update
+          (\<lambda>_. word_Ptr &(vgic_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vgic_C''])\<rightarrow>[''ap0r_C''])) (\<lambda>_. hcr))"
+  apply (rule ccorres_guard_imp)
+  apply (simp add: vgicUpdate_def vcpuUpdate_def)
+  apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV],
+           rule conseqPre, vcg)
+      apply clarsimp
+      apply (rule cmap_relationE1[OF cmap_relation_vcpu];
+             (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+        apply (assumption, erule ko_at_projectKO_opt)
+      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                            cmachine_state_relation_def update_vcpu_map_to_vcpu
+                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+      apply (erule (1) cmap_relation_updI;
+             clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def
+                            cvcpu_vppi_masked_relation_def;
+             (rule refl)?)
+  apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+  done
+
 (* FIXME generalise if possible, proof is copied from vgicUpdate_HCR_ccorres *)
 lemma vgicUpdate_VMCR_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
@@ -2109,49 +2134,51 @@ lemma vcpu_restore_ccorres:
      apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_vmcr_ccorres)
       apply (rule_tac P="ko_at' vcpu vcpuPtr" in ccorres_cross_over_guard)
       apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_apr_ccorres)
-       apply (rule_tac xf'=lr_num_' and R="\<lambda>s. lr_num = (armKSGICVCPUNumListRegs \<circ> ksArchState) s"
-                   and val="of_nat lr_num" in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
-          apply vcg
-          apply (fastforce intro!: rf_sr_armKSGICVCPUNumListRegs)
-         apply ceqv
-        apply (rule ccorres_rhs_assoc2)
-        apply (rule ccorres_split_nothrow_novcg)
-            (* the loop *)
-            apply (rule_tac P="lr_num \<le> 63" in ccorres_gen_asm)
-            apply (rule_tac F="\<lambda>_ s. lr_num \<le> 63 \<and> ko_at' vcpu vcpuPtr s" in ccorres_mapM_x_while)
-                apply (intro allI impI)
-                apply clarsimp
-                apply (rule ccorres_guard_imp2)
-                 apply (rule_tac P="\<lambda>s. lr_num \<le> 63" in ccorres_cross_over_guard)
-                 apply (rule ccorres_Guard)
-                 apply (rule_tac val="of_nat n" in ccorres_abstract_known[where xf'=i_'], ceqv)
-                 apply (rule_tac P="n \<le> 63" in ccorres_gen_asm)
-                 apply (rule ccorres_move_c_guard_vcpu)
-                 apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_lr_ccorres)
-                apply (clarsimp simp: virq_to_H_def ko_at_vcpu_at'D upt_Suc)
-                apply (rule conjI[rotated])
+       apply (rule_tac P="ko_at' vcpu vcpuPtr" in ccorres_cross_over_guard)
+       apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_ap0r_ccorres)
+        apply (rule_tac xf'=lr_num_' and R="\<lambda>s. lr_num = (armKSGICVCPUNumListRegs \<circ> ksArchState) s"
+                    and val="of_nat lr_num" in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+           apply vcg
+           apply (fastforce intro!: rf_sr_armKSGICVCPUNumListRegs)
+          apply ceqv
+         apply (rule ccorres_rhs_assoc2)
+         apply (rule ccorres_split_nothrow_novcg)
+             (* the loop *)
+             apply (rule_tac P="lr_num \<le> 63" in ccorres_gen_asm)
+             apply (rule_tac F="\<lambda>_ s. lr_num \<le> 63 \<and> ko_at' vcpu vcpuPtr s" in ccorres_mapM_x_while)
+                 apply (intro allI impI)
+                 apply clarsimp
+                 apply (rule ccorres_guard_imp2)
+                  apply (rule_tac P="\<lambda>s. lr_num \<le> 63" in ccorres_cross_over_guard)
+                  apply (rule ccorres_Guard)
+                  apply (rule_tac val="of_nat n" in ccorres_abstract_known[where xf'=i_'], ceqv)
+                  apply (rule_tac P="n \<le> 63" in ccorres_gen_asm)
+                  apply (rule ccorres_move_c_guard_vcpu)
+                  apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_lr_ccorres)
+                 apply (clarsimp simp: virq_to_H_def ko_at_vcpu_at'D upt_Suc)
+                 apply (rule conjI[rotated])
   subgoal (* FIXME extract into separate lemma *)
     by (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)
-                apply (frule (1) vcpu_at_rf_sr)
-                apply (clarsimp simp: typ_heap_simps cvcpu_relation_regs_def cvgic_relation_def virq_to_H_def unat_of_nat)
-               apply (simp add: word_less_nat_alt upt_Suc)
-              apply vcg
-              apply clarsimp
-             apply wpsimp
-            apply (simp add: upt_Suc)
-            apply (fastforce simp: word_less_nat_alt unat_of_nat_eq word_bits_def elim: order_less_le_trans)
-           apply ceqv
-          apply (ctac add: vcpu_restore_reg_range_ccorres)
-            apply (ctac add: vcpu_enable_ccorres)
-           apply wpsimp
-          apply (vcg exspec=vcpu_restore_reg_range_modifies)
-         apply (wpsimp wp: crunch_wps)
-        apply (wpsimp simp: guard_is_UNIV_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv
-               | rule UNIV_I
-               | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
-        apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_defs)
-       apply (clarsimp simp: guard_is_UNIV_def)
-      apply (wpsimp simp: vcpu_at_ko'_eq wp: hoare_vcg_imp_lift')+
+                 apply (frule (1) vcpu_at_rf_sr)
+                 apply (clarsimp simp: typ_heap_simps cvcpu_relation_regs_def cvgic_relation_def virq_to_H_def unat_of_nat)
+                apply (simp add: word_less_nat_alt upt_Suc)
+               apply vcg
+               apply clarsimp
+              apply wpsimp
+             apply (simp add: upt_Suc)
+             apply (fastforce simp: word_less_nat_alt unat_of_nat_eq word_bits_def elim: order_less_le_trans)
+            apply ceqv
+           apply (ctac add: vcpu_restore_reg_range_ccorres)
+             apply (ctac add: vcpu_enable_ccorres)
+            apply wpsimp
+           apply (vcg exspec=vcpu_restore_reg_range_modifies)
+          apply (wpsimp wp: crunch_wps)
+         apply (wpsimp simp: guard_is_UNIV_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv
+                | rule UNIV_I
+                | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
+         apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_defs)
+        apply (clarsimp simp: guard_is_UNIV_def)
+       apply (wpsimp simp: vcpu_at_ko'_eq wp: hoare_vcg_imp_lift')+
   apply (rule conjI)
    apply (fastforce simp: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   apply (rule conjI)
@@ -2260,35 +2287,39 @@ lemma vcpu_save_ccorres:
           apply (rule ccorres_move_c_guard_vcpu)
           apply clarsimp
           apply (ctac (no_vcg) add: vgicUpdate_APR_ccorres)
-            apply (ctac (no_vcg) add: ccorres_gets_armKSGICVCPUNumListRegs)
-              apply (rename_tac lr_num lr_num')
-              apply (rule ccorres_rhs_assoc2)
-              apply (rule ccorres_split_nothrow_novcg)
-                  (* the loop *)
-                  apply (rule_tac P="lr_num \<le> 63" in ccorres_gen_asm)
-                  apply (rule_tac F="\<lambda>_ s. lr_num \<le> 63 \<and> vcpu_at' vcpuPtr s" in ccorres_mapM_x_while)
-                      apply (intro allI impI)
-                      apply clarsimp
-                      apply (rule ccorres_guard_imp2)
-                       apply (rule_tac P="\<lambda>s. lr_num \<le> 63" in ccorres_cross_over_guard)
-                       apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_lr_ccorres)
-                        apply (rule ccorres_Guard)
-                        apply (rule_tac val="of_nat n" in ccorres_abstract_known[where xf'=i_'], ceqv)
-                        apply (rule_tac P="n \<le> 63" in ccorres_gen_asm)
-                        apply (rule ccorres_move_c_guard_vcpu)
-                        apply (clarsimp simp: unat_of_nat_eq)
-                        apply (ctac (no_vcg) add: vgicUpdateLR_ccorres)
-                       apply (wpsimp simp: virq_to_H_def)+
-                      apply (fastforce intro: word_of_nat_less)
-                     apply fastforce
-                    apply clarsimp
-                    apply (rule conseqPre, vcg exspec=get_gic_vcpu_ctrl_lr_modifies)
-                    apply fastforce
-                   apply wpsimp
-                  apply (fastforce simp: word_bits_def)
-                 apply ceqv
-                apply (ctac (no_vcg) add: armv_vcpu_save_ccorres)
-               apply (wpsimp simp: guard_is_UNIV_def wp: mapM_x_wp_inv)+
+            apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_ap0r_ccorres)
+             apply (rule ccorres_move_c_guard_vcpu)
+             apply clarsimp
+             apply (ctac (no_vcg) add: vgicUpdate_AP0R_ccorres)
+               apply (ctac (no_vcg) add: ccorres_gets_armKSGICVCPUNumListRegs)
+                 apply (rename_tac lr_num lr_num')
+                 apply (rule ccorres_rhs_assoc2)
+                 apply (rule ccorres_split_nothrow_novcg)
+                     (* the loop *)
+                     apply (rule_tac P="lr_num \<le> 63" in ccorres_gen_asm)
+                     apply (rule_tac F="\<lambda>_ s. lr_num \<le> 63 \<and> vcpu_at' vcpuPtr s" in ccorres_mapM_x_while)
+                         apply (intro allI impI)
+                         apply clarsimp
+                         apply (rule ccorres_guard_imp2)
+                          apply (rule_tac P="\<lambda>s. lr_num \<le> 63" in ccorres_cross_over_guard)
+                          apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_lr_ccorres)
+                           apply (rule ccorres_Guard)
+                           apply (rule_tac val="of_nat n" in ccorres_abstract_known[where xf'=i_'], ceqv)
+                           apply (rule_tac P="n \<le> 63" in ccorres_gen_asm)
+                           apply (rule ccorres_move_c_guard_vcpu)
+                           apply (clarsimp simp: unat_of_nat_eq)
+                           apply (ctac (no_vcg) add: vgicUpdateLR_ccorres)
+                          apply (wpsimp simp: virq_to_H_def)+
+                         apply (fastforce intro: word_of_nat_less)
+                        apply fastforce
+                       apply clarsimp
+                       apply (rule conseqPre, vcg exspec=get_gic_vcpu_ctrl_lr_modifies)
+                       apply fastforce
+                      apply wpsimp
+                     apply (fastforce simp: word_bits_def)
+                    apply ceqv
+                   apply (ctac (no_vcg) add: armv_vcpu_save_ccorres)
+                  apply (wpsimp simp: guard_is_UNIV_def wp: mapM_x_wp_inv)+
   apply (simp add: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   done
 

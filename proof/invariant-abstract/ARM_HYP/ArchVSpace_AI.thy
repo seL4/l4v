@@ -109,6 +109,7 @@ crunch_ignore (add: writeContextIDAndPD_impl addressTranslateS1_impl
            check_export_arch_timer_impl
            set_gic_vcpu_ctrl_vmcr_impl
            set_gic_vcpu_ctrl_apr_impl
+           set_gic_vcpu_ctrl_ap0r_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_lr_impl
            writeVCPUHardwareReg_impl
            set_gic_vcpu_ctrl_hcr_impl
@@ -2178,7 +2179,8 @@ crunch writeVCPUHardwareReg, readVCPUHardwareReg
 crunch setSCTLR,setHCR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 crunch
-  get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
+  get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_ap0r,set_gic_vcpu_ctrl_ap0r,
+  get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 crunch check_export_arch_timer
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
@@ -2190,6 +2192,8 @@ crunch dsb,isb,writeContextIDAndPD,addressTranslateS1
 crunch get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
 crunch get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr
+  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
+crunch get_gic_vcpu_ctrl_ap0r,set_gic_vcpu_ctrl_ap0r
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
 crunch get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
@@ -2212,6 +2216,8 @@ lemmas get_gic_vcpu_ctrl_vmcr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_vmc
 lemmas set_gic_vcpu_ctrl_vmcr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_vmcr]
 lemmas get_gic_vcpu_ctrl_apr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_apr]
 lemmas set_gic_vcpu_ctrl_apr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_apr]
+lemmas get_gic_vcpu_ctrl_ap0r_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_ap0r]
+lemmas set_gic_vcpu_ctrl_ap0r_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_ap0r]
 lemmas get_gic_vcpu_ctrl_lr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_lr]
 lemmas set_gic_vcpu_ctrl_lr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_lr]
 lemmas get_gic_vcpu_ctrl_hcr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_hcr]
@@ -2308,6 +2314,26 @@ lemma dmo_set_gic_vcpu_ctrl_apr_invs[wp]:
      apply (rule set_gic_vcpu_ctrl_apr_underlying_memory)
     apply fastforce+
   apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_apr_irq_masks])
+  done
+
+lemma dmo_get_gic_vcpu_ctrl_ap0r_invs[wp]:
+  "do_machine_op (get_gic_vcpu_ctrl_ap0r) \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule use_valid)
+     apply (rule get_gic_vcpu_ctrl_ap0r_underlying_memory)
+    apply fastforce+
+  apply (erule (1) use_valid[OF _ get_gic_vcpu_ctrl_ap0r_irq_masks])
+  done
+
+lemma dmo_set_gic_vcpu_ctrl_ap0r_invs[wp]:
+  "do_machine_op (set_gic_vcpu_ctrl_ap0r x) \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule use_valid)
+     apply (rule set_gic_vcpu_ctrl_ap0r_underlying_memory)
+    apply fastforce+
+  apply (erule (1) use_valid[OF _ set_gic_vcpu_ctrl_ap0r_irq_masks])
   done
 
 lemma dmo_get_gic_vcpu_ctrl_lr_invs[wp]:

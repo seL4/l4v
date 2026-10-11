@@ -152,6 +152,7 @@ crunch maskInterrupt, empty_slot,
    ignore: do_machine_op set_gic_vcpu_ctrl_hcr_impl
            writeVCPUHardwareReg_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
+           set_gic_vcpu_ctrl_ap0r_impl
            writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
            set_gic_vcpu_ctrl_lr_impl)
 

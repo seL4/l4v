@@ -50,11 +50,13 @@ lemma dmos_invs_no_cicd'[wp]:
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w x. doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  "\<And>w. doMachineOp (set_gic_vcpu_ctrl_ap0r w) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w. doMachineOp (setHCR w) \<lbrace>invs_no_cicd'\<rbrace>"
   "doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w. doMachineOp (get_gic_vcpu_ctrl_lr w) \<lbrace>invs_no_cicd'\<rbrace>"
   "doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp get_gic_vcpu_ctrl_ap0r \<lbrace>invs_no_cicd'\<rbrace>"
   "doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>invs_no_cicd'\<rbrace>"
   "doMachineOp enableFpuEL01 \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>r. doMachineOp (readVCPUHardwareReg r) \<lbrace>invs_no_cicd'\<rbrace>"
@@ -73,11 +75,13 @@ lemma dmos_invs'[wp]:
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs'\<rbrace>"
   "\<And>w x. doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>invs'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs'\<rbrace>"
+  "\<And>w. doMachineOp (set_gic_vcpu_ctrl_ap0r w) \<lbrace>invs'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>invs'\<rbrace>"
   "\<And>w. doMachineOp (setHCR w) \<lbrace>invs'\<rbrace>"
   "doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>invs'\<rbrace>"
   "\<And>w. doMachineOp (get_gic_vcpu_ctrl_lr w) \<lbrace>invs'\<rbrace>"
   "doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>invs'\<rbrace>"
+  "doMachineOp get_gic_vcpu_ctrl_ap0r \<lbrace>invs'\<rbrace>"
   "doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>invs'\<rbrace>"
   "doMachineOp enableFpuEL01 \<lbrace>invs'\<rbrace>"
   "\<And>r. doMachineOp (readVCPUHardwareReg r) \<lbrace>invs'\<rbrace>"
@@ -397,20 +401,24 @@ lemma vcpuSave_corres:
                apply (rule corres_Id; wpsimp)
               apply (rule corres_split[OF vgicUpdate_corres])
                  apply (clarsimp simp: vgic_map_def)
-                apply (rule corres_split_eqr)
-                   apply (rule corres_trivial)
-                   apply (fastforce simp add: state_relation_def arch_state_relation_def)
-                  apply (simp add: mapM_discarded)
-                  apply (rule corres_split[OF corres_mapM_x[OF _ _ _ _ subset_refl]])
-                        apply (rule corres_split_eqr[OF corres_machine_op])
-                           apply (rule corres_Id; wpsimp)
-                          apply (clarsimp, fold dc_def)
-                          apply (rule vgicUpdateLR_corres)
-                         apply wpsimp+
-                    apply (rule corres_split[OF corres_when[OF refl vcpuSaveReg_corres]])
-                      apply (rule vcpuSaveRegRange_corres)
-                     apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
-                                 simp: if_apply_def2)+
+                apply (rule corres_split_eqr[OF corres_machine_op])
+                   apply (rule corres_Id; wpsimp)
+                  apply (rule corres_split[OF vgicUpdate_corres])
+                     apply (clarsimp simp: vgic_map_def)
+                    apply (rule corres_split_eqr)
+                       apply (rule corres_trivial)
+                       apply (fastforce simp add: state_relation_def arch_state_relation_def)
+                      apply (simp add: mapM_discarded)
+                      apply (rule corres_split[OF corres_mapM_x[OF _ _ _ _ subset_refl]])
+                            apply (rule corres_split_eqr[OF corres_machine_op])
+                               apply (rule corres_Id; wpsimp)
+                              apply (clarsimp, fold dc_def)
+                              apply (rule vgicUpdateLR_corres)
+                             apply wpsimp+
+                        apply (rule corres_split[OF corres_when[OF refl vcpuSaveReg_corres]])
+                          apply (rule vcpuSaveRegRange_corres)
+                         apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
+                                     simp: if_apply_def2)+
   done
 
 lemma vcpuDisable_corres:
@@ -478,11 +486,13 @@ lemma vcpuRestore_corres:
                apply (rule corres_Id; wpsimp)
               apply (rule corres_split_dc[OF corres_machine_op])
                  apply (rule corres_Id; wpsimp)
-                apply (rule corres_split)
-                   apply (rule corres_machine_op, rule corres_Id; wpsimp wp: no_fail_mapM)
-                  apply (rule corres_split_dc[OF vcpuRestoreRegRange_corres])
-                    apply (rule vcpuEnable_corres)
-                   apply wpsimp+
+                apply (rule corres_split_dc[OF corres_machine_op])
+                   apply (rule corres_Id; wpsimp)
+                  apply (rule corres_split)
+                     apply (rule corres_machine_op, rule corres_Id; wpsimp wp: no_fail_mapM)
+                    apply (rule corres_split_dc[OF vcpuRestoreRegRange_corres])
+                      apply (rule vcpuEnable_corres)
+                     apply wpsimp+
   done
 
 lemma vcpuSwitch_corres:
@@ -1122,7 +1132,7 @@ lemma vcpuRestore_invs'[wp]:
 lemma vcpuSave_invs'[wp]:
   "\<lbrace>invs'\<rbrace> vcpuSave v \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wpsimp simp: vcpuSave_def doMachineOp_mapM armvVCPUSave_def
-                   get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def
+                   get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_ap0r_def get_gic_vcpu_ctrl_vmcr_def
                    get_gic_vcpu_ctrl_hcr_def getSCTLR_def
              wp: dmo'_gets_wp vgicUpdate_invs' mapM_x_wp[OF _ subset_refl])
 

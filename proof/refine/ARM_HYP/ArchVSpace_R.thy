@@ -935,21 +935,25 @@ lemma vcpuSave_corres:
                apply (rule corres_Id; wpsimp)
               apply (rule corres_split[OF vgicUpdate_corres])
                  apply (clarsimp simp: vgic_map_def)
-                apply (rule corres_split_eqr)
-                   apply (rule corres_trivial)
-                   apply (fastforce simp add: state_relation_def arch_state_relation_def)
-                  apply (simp add: mapM_discarded)
-                  apply (rule corres_split[OF corres_mapM_x[OF _ _ _ _ subset_refl]])
-                        apply (rule corres_split_eqr[OF corres_machine_op])
-                           apply (rule corres_Id; wpsimp)
-                          apply (clarsimp, fold dc_def)
-                          apply (rule vgicUpdateLR_corres)
-                         apply wpsimp+
-                    apply (rule corres_split[OF vcpuSaveRegRange_corres])
-                      apply (rule corres_machine_op)
-                      apply (rule corres_Id; wpsimp)
-                     apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
-                                 simp: if_apply_def2)+
+                apply (rule corres_split_eqr[OF corres_machine_op])
+                   apply (rule corres_Id; wpsimp)
+                  apply (rule corres_split[OF vgicUpdate_corres])
+                     apply (clarsimp simp: vgic_map_def)
+                    apply (rule corres_split_eqr)
+                       apply (rule corres_trivial)
+                       apply (fastforce simp add: state_relation_def arch_state_relation_def)
+                      apply (simp add: mapM_discarded)
+                      apply (rule corres_split[OF corres_mapM_x[OF _ _ _ _ subset_refl]])
+                            apply (rule corres_split_eqr[OF corres_machine_op])
+                               apply (rule corres_Id; wpsimp)
+                              apply (clarsimp, fold dc_def)
+                              apply (rule vgicUpdateLR_corres)
+                             apply wpsimp+
+                        apply (rule corres_split[OF vcpuSaveRegRange_corres])
+                          apply (rule corres_machine_op)
+                          apply (rule corres_Id; wpsimp)
+                         apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
+                                     simp: if_apply_def2)+
   done
 
 lemma vcpuDisable_corres:
@@ -1021,11 +1025,13 @@ lemma vcpuRestore_corres:
                apply (rule corres_Id; wpsimp)
               apply (rule corres_split_dc[OF corres_machine_op])
                  apply (rule corres_Id; wpsimp)
-                apply (rule corres_split)
-                   apply (rule corres_machine_op, rule corres_Id; wpsimp wp: no_fail_mapM)
-                  apply (rule corres_split_dc[OF vcpuRestoreRegRange_corres])
-                    apply (rule vcpuEnable_corres)
-                   apply wpsimp+
+                apply (rule corres_split_dc[OF corres_machine_op])
+                   apply (rule corres_Id; wpsimp)
+                  apply (rule corres_split)
+                     apply (rule corres_machine_op, rule corres_Id; wpsimp wp: no_fail_mapM)
+                    apply (rule corres_split_dc[OF vcpuRestoreRegRange_corres])
+                      apply (rule vcpuEnable_corres)
+                     apply wpsimp+
   done
 
 lemma vcpuSwitch_corres:
@@ -3516,6 +3522,15 @@ lemma set_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
                         machine_rest_lift_def split_def)+
   done
 
+lemma set_gic_vcpu_ctrl_ap0r_invs_no_cicd'[wp]:
+  "doMachineOp (set_gic_vcpu_ctrl_ap0r w) \<lbrace>invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_ap0r no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+                   in use_valid)
+  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_ap0r_def
+                      machine_rest_lift_def split_def)+
+  done
+
 lemma set_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
@@ -3552,6 +3567,11 @@ lemma get_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_apr no_irq
            simp: get_gic_vcpu_ctrl_apr_def gets_def in_monad)
+
+lemma get_gic_vcpu_ctrl_ap0r_invs_no_cicd'[wp]:
+  "doMachineOp get_gic_vcpu_ctrl_ap0r \<lbrace>invs_no_cicd'\<rbrace>"
+  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_ap0r no_irq
+           simp: get_gic_vcpu_ctrl_ap0r_def gets_def in_monad)
 
 lemma get_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
@@ -3967,6 +3987,15 @@ lemma dmo_set_gic_vcpu_ctrl_apr_invs'[wp]:
   apply (wpsimp simp: set_gic_vcpu_ctrl_apr_def)+
   done
 
+lemma dmo_set_gic_vcpu_ctrl_ap0r_invs'[wp]:
+  "doMachineOp (set_gic_vcpu_ctrl_ap0r addr) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_ap0r no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+                   in use_valid)
+    apply (wpsimp simp: set_gic_vcpu_ctrl_ap0r_def)+
+  done
+
 lemma dmo_set_gic_vcpu_ctrl_vmcr_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
@@ -4067,7 +4096,7 @@ lemma vcpuRestore_invs'[wp]:
 lemma vcpuSave_invs'[wp]:
   "\<lbrace>invs'\<rbrace> vcpuSave v \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wpsimp simp: vcpuSave_def doMachineOp_mapM armvVCPUSave_def
-                   get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def
+                   get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_ap0r_def get_gic_vcpu_ctrl_vmcr_def
                    get_gic_vcpu_ctrl_hcr_def getSCTLR_def
              wp: dmo'_gets_wp vgicUpdate_invs' mapM_x_wp[OF _ subset_refl])
 

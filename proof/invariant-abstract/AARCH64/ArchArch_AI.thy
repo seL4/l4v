@@ -1075,8 +1075,9 @@ crunch vcpu_switch
   for valid_irq_states[wp]: valid_irq_states
   (wp: crunch_wps dmo_valid_irq_states set_gic_vcpu_ctrl_hcr_irq_masks
        set_gic_vcpu_ctrl_vmcr_irq_masks set_gic_vcpu_ctrl_lr_irq_masks
-       set_gic_vcpu_ctrl_apr_irq_masks
+       set_gic_vcpu_ctrl_apr_irq_masks set_gic_vcpu_ctrl_ap0r_irq_masks
    simp: get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def
+         get_gic_vcpu_ctrl_ap0r_def
          get_gic_vcpu_ctrl_hcr_def maskInterrupt_def isb_def setHCR_def)
 
 lemma associate_vcpu_tcb_valid_irq_states[wp]:

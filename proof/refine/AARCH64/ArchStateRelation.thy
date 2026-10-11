@@ -63,7 +63,8 @@ lemma asid_pool_relation_def':
   by (auto simp add: asid_pool_relation_def)
 
 definition vgic_map :: "gic_vcpu_interface \<Rightarrow> gicvcpuinterface" where
-  "vgic_map \<equiv> \<lambda>v. VGICInterface (vgic_hcr v) (vgic_vmcr v) (vgic_apr v) (vgic_lr v)"
+  "vgic_map \<equiv> \<lambda>v. VGICInterface (vgic_hcr v) (vgic_vmcr v) (vgic_apr v) (vgic_ap0r v)
+                                  (vgic_lr v)"
 
 definition vcpu_relation :: "AARCH64_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool" where
   "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>

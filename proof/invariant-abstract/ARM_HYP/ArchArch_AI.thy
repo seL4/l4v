@@ -1064,8 +1064,9 @@ crunch vcpu_switch
   for valid_irq_states[wp]: valid_irq_states
   (wp: crunch_wps dmo_valid_irq_states set_gic_vcpu_ctrl_hcr_irq_masks
        set_gic_vcpu_ctrl_vmcr_irq_masks set_gic_vcpu_ctrl_lr_irq_masks
-       set_gic_vcpu_ctrl_apr_irq_masks
+       set_gic_vcpu_ctrl_apr_irq_masks set_gic_vcpu_ctrl_ap0r_irq_masks
    simp: get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def
+         get_gic_vcpu_ctrl_ap0r_def
          get_gic_vcpu_ctrl_hcr_def maskInterrupt_def isb_def setHCR_def)
 
 lemma associate_vcpu_tcb_valid_irq_states[wp]:
@@ -1117,15 +1118,18 @@ lemma dmo_valid_machine_state[wp]:
   "do_machine_op (set_gic_vcpu_ctrl_hcr f) \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (set_gic_vcpu_ctrl_lr n w'') \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (set_gic_vcpu_ctrl_apr w''') \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (set_gic_vcpu_ctrl_ap0r w''') \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (set_gic_vcpu_ctrl_vmcr w''') \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (get_gic_vcpu_ctrl_lr w'''') \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op get_gic_vcpu_ctrl_ap0r \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op get_gic_vcpu_ctrl_hcr \<lbrace>valid_machine_state\<rbrace>"
   unfolding valid_machine_state_def set_cntv_cval_64_def set_cntv_off_64_def
             maskInterrupt_def setHCR_def set_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_lr_def
             set_gic_vcpu_ctrl_apr_def set_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_lr_def
             get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_hcr_def
+            set_gic_vcpu_ctrl_ap0r_def get_gic_vcpu_ctrl_ap0r_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift)+
 
 crunch restore_virt_timer, vcpu_restore_reg_range, vcpu_save_reg_range, vgic_update_lr

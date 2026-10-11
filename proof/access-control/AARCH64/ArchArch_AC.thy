@@ -1883,8 +1883,9 @@ lemma integrity_no_hyp_arm_current_vcpu[simp]:
 
 crunch readVCPUHardwareReg, writeVCPUHardwareReg,
        check_export_arch_timer, maskInterrupt, setHCR, setSCTLR, enableFpuEL01,
-       set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_lr,
-       get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr
+       set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_ap0r,
+       set_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr,
+       get_gic_vcpu_ctrl_ap0r, get_gic_vcpu_ctrl_lr
   for fpu_state[wp]: "\<lambda>s. P (fpu_state s)"
 
 crunch vcpu_switch
@@ -1894,7 +1895,7 @@ crunch vcpu_switch
 \<comment> \<open>VCPU Projections\<close>
 
 definition vcpu_proj where
-  "vcpu_proj regs lrs hcr vmcr apr vcpu_ptr s \<equiv> case vcpus_of s vcpu_ptr of
+  "vcpu_proj regs lrs hcr vmcr apr ap0r vcpu_ptr s \<equiv> case vcpus_of s vcpu_ptr of
      None \<Rightarrow> None
    | Some vcpu \<Rightarrow> Some (vcpu\<lparr>vcpu_regs := \<lambda>reg. if reg \<in> regs then vcpu_regs vcpu reg
                                                 else vcpu_regs (vcpu_state (machine_state s)) reg,
@@ -1905,6 +1906,8 @@ definition vcpu_proj where
                                              else vgic_vmcr (vcpu_vgic (vcpu_state (machine_state s))),
                                 vgic_apr := if apr then vgic_apr (vcpu_vgic vcpu)
                                             else vgic_apr (vcpu_vgic (vcpu_state (machine_state s))),
+                                vgic_ap0r := if ap0r then vgic_ap0r (vcpu_vgic vcpu)
+                                             else vgic_ap0r (vcpu_vgic (vcpu_state (machine_state s))),
                                 vgic_lr := \<lambda>r. if r \<ge> (arm_gicvcpu_numlistregs (arch_state s)) then undefined
                                                else if r \<in> lrs then vgic_lr (vcpu_vgic vcpu) r
                                                else vgic_lr (vcpu_vgic (vcpu_state (machine_state s))) r\<rparr>\<rparr>)"
@@ -1921,15 +1924,15 @@ lemma savedWhenDisabledRegs_def:
 lemma vcpu_proj_of_state:
   "vcpu_of_state (vcpu_state (machine_state s)) cv
                  (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s vr) =
-   (if cv = Some True then vcpu_proj {} {} False False False vr s
-    else if cv = Some False then vcpu_proj savedWhenDisabledRegs {} True False False vr s
-    else vcpu_proj UNIV UNIV True True True vr s)"
+   (if cv = Some True then vcpu_proj {} {} False False False False vr s
+    else if cv = Some False then vcpu_proj savedWhenDisabledRegs {} True False False False vr s
+    else vcpu_proj UNIV UNIV True True True True vr s)"
   unfolding savedWhenDisabledRegs_def vcpu_proj_def vcpu_of_state_def
   by (auto split: option.splits)
 
 lemma dmo_lift_vcpu_proj:
   assumes r: "\<And>P. mop \<lbrace>\<lambda>ms. P (vcpu_state ms)\<rbrace>"
-  shows "do_machine_op mop \<lbrace>\<lambda>s. P (vcpu_proj r l h v a vr s)\<rbrace>"
+  shows "do_machine_op mop \<lbrace>\<lambda>s. P (vcpu_proj r l h v a a0 vr s)\<rbrace>"
   unfolding vcpu_proj_def
   apply (rule hoare_weaken_pre)
    apply (wps r | wp dmo_machine_state_lift | simp)+
@@ -1938,7 +1941,7 @@ lemma dmo_lift_vcpu_proj:
 crunch maskInterrupt, setHCR, get_gic_vcpu_ctrl_lr
   for vcpu_state[wp]: "\<lambda>ms. P (vcpu_state ms)"
 
-crunch get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr
+crunch get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_ap0r
   for inv[wp]: P
 
 \<comment> \<open>VGIC\<close>
@@ -1950,9 +1953,13 @@ lemma get_gic_vcpu_ctrl_rvs[wp]:
  "\<lbrace>\<top>\<rbrace> do_machine_op get_gic_vcpu_ctrl_apr
   \<lbrace>\<lambda>apr s. apr = vgic_apr (vcpu_vgic (vcpu_state (machine_state s)))\<rbrace>"
 
+ "\<lbrace>\<top>\<rbrace> do_machine_op get_gic_vcpu_ctrl_ap0r
+  \<lbrace>\<lambda>ap0r s. ap0r = vgic_ap0r (vcpu_vgic (vcpu_state (machine_state s)))\<rbrace>"
+
  "\<lbrace>\<top>\<rbrace> do_machine_op get_gic_vcpu_ctrl_vmcr
   \<lbrace>\<lambda>vmcr s. vmcr = vgic_vmcr (vcpu_vgic (vcpu_state (machine_state s)))\<rbrace>"
-  unfolding get_gic_vcpu_ctrl_hcr_def get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def
+  unfolding get_gic_vcpu_ctrl_hcr_def get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_ap0r_def
+            get_gic_vcpu_ctrl_vmcr_def
   by (wpsimp wp: dmo_wp)+
 
 lemma get_lr_rv[wp]:
@@ -1963,30 +1970,36 @@ lemma get_lr_rv[wp]:
   by (wpsimp wp: dmo_wp simp: valid_arch_state_def valid_numlistregs_def unat_of_nat64)
 
 lemma set_gic_vcpu_ctrl_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l True v a p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l True v a a0 p s \<and>
         (\<forall>vcpu. vopt = Some vcpu \<and> \<not>h \<longrightarrow> val = vgic_hcr (vcpu_vgic vcpu))\<rbrace>
    do_machine_op (set_gic_vcpu_ctrl_hcr val)
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
 
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h True a p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h True a a0 p s \<and>
         (\<forall>vcpu. vopt = Some vcpu \<and> \<not>v \<longrightarrow> val = vgic_vmcr (vcpu_vgic vcpu))\<rbrace>
    do_machine_op (set_gic_vcpu_ctrl_vmcr val)
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
 
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v True p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v True a0 p s \<and>
         (\<forall>vcpu. vopt = Some vcpu \<and> \<not>a \<longrightarrow> val = vgic_apr (vcpu_vgic vcpu))\<rbrace>
    do_machine_op (set_gic_vcpu_ctrl_apr val)
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
+
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v a True p s \<and>
+        (\<forall>vcpu. vopt = Some vcpu \<and> \<not>a0 \<longrightarrow> val = vgic_ap0r (vcpu_vgic vcpu))\<rbrace>
+   do_machine_op (set_gic_vcpu_ctrl_ap0r val)
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   unfolding set_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def
+            set_gic_vcpu_ctrl_ap0r_def
   by (wpsimp wp: dmo_wp simp: vcpu_proj_def)+
 
 lemma set_lr_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r (insert n l) h v a p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r (insert n l) h v a a0 p s \<and>
         n < arm_gicvcpu_numlistregs (arch_state s) \<and>
         (\<forall>v. vopt = Some v \<and> n \<notin> l \<longrightarrow> w = vgic_lr (vcpu_vgic v) n) \<and>
         valid_arch_state s\<rbrace>
    do_machine_op (set_gic_vcpu_ctrl_lr (word_of_nat n) w)
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   unfolding set_gic_vcpu_ctrl_lr_def vcpu_proj_def valid_arch_state_def valid_numlistregs_def
   apply (wpsimp wp: dmo_wp)
   apply (auto intro!: vcpu.equality gic_vcpu_interface.equality
@@ -1994,11 +2007,11 @@ lemma set_lr_vcpu_proj[wp]:
   done
 
 lemma set_lrs_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r UNIV h v a p s \<and> valid_arch_state s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r UNIV h v a a0 p s \<and> valid_arch_state s \<and>
         ls = [0..<arm_gicvcpu_numlistregs (arch_state s)] \<and>
         (\<forall>v. vcpus_of s p = Some v \<and> l \<noteq> UNIV \<longrightarrow> f = vgic_lr (vcpu_vgic v))\<rbrace>
    do_machine_op (mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (word_of_nat (fst p)) (snd p)) (map (\<lambda>i. (i, f i)) ls))
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   (is "valid (\<lambda>s. ?V UNIV s \<and> ?I s) _ _")
   apply (rule valid_return_unit)
   apply (simp add: dom_mapM comp_def mapM_x_mapM[symmetric])
@@ -2007,29 +2020,34 @@ lemma set_lrs_vcpu_proj[wp]:
   done
 
 lemma vgic_update_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l (h \<and> vr \<noteq> p) v a p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l (h \<and> vr \<noteq> p) v a a0 p s \<and>
         val = vgic_hcr (vcpu_vgic (vcpu_state (machine_state s)))\<rbrace>
    vgic_update vr (vgic_hcr_update (\<lambda>_. val))
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
 
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h (v \<and> vr \<noteq> p) a p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h (v \<and> vr \<noteq> p) a a0 p s \<and>
         val = vgic_vmcr (vcpu_vgic (vcpu_state (machine_state s)))\<rbrace>
    vgic_update vr (vgic_vmcr_update (\<lambda>_. val))
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
 
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v (a \<and> vr \<noteq> p) p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v (a \<and> vr \<noteq> p) a0 p s \<and>
         val = vgic_apr (vcpu_vgic (vcpu_state (machine_state s)))\<rbrace>
    vgic_update vr (vgic_apr_update (\<lambda>_. val))
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
+
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v a (a0 \<and> vr \<noteq> p) p s \<and>
+        val = vgic_ap0r (vcpu_vgic (vcpu_state (machine_state s)))\<rbrace>
+   vgic_update vr (vgic_ap0r_update (\<lambda>_. val))
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   unfolding vgic_update_def vcpu_update_def vcpu_proj_def
   by (wp set_vcpu_wp get_vcpu_wp, fastforce)+
 
 lemma save_lr_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r (if vr = p then l - {n} else l) h v a p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r (if vr = p then l - {n} else l) h v a a0 p s \<and>
         irq = vgic_lr (vcpu_vgic (vcpu_state (machine_state s))) n \<and>
         n < arm_gicvcpu_numlistregs (arch_state s)\<rbrace>
    vgic_update_lr vr n irq
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   unfolding vgic_update_lr_def vgic_update_def vcpu_update_def
   apply (wp set_vcpu_wp get_vcpu_wp)
   apply (auto intro!: vcpu.equality gic_vcpu_interface.equality
@@ -2037,10 +2055,10 @@ lemma save_lr_vcpu_proj[wp]:
   done
 
 lemma save_lrs_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r (if vr = p then {} else l) h v a p s \<and>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r (if vr = p then {} else l) h v a a0 p s \<and>
         ls = [0..<arm_gicvcpu_numlistregs (arch_state s)] \<and> valid_arch_state s\<rbrace>
    mapM (\<lambda>r. do_machine_op (get_gic_vcpu_ctrl_lr (word_of_nat r)) >>= vgic_update_lr vr r) ls
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
    (is "valid (\<lambda>s. ?V {} s \<and> ?I s) _ _")
   apply (rule valid_return_unit)
   apply (fold mapM_x_mapM)
@@ -2052,34 +2070,34 @@ lemma save_lrs_vcpu_proj[wp]:
 \<comment> \<open>Disable/Save\<close>
 
 lemma vcpu_save_reg_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then r - {reg} else r) h v a lr p s\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then r - {reg} else r) h v a lr a0 p s\<rbrace>
    vcpu_save_reg vr reg
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r h v a lr p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r h v a lr a0 p s\<rbrace>"
   unfolding vcpu_save_reg_def vcpu_update_def readVCPUHardwareReg_def
   apply (wpsimp wp: set_vcpu_wp get_vcpu_wp dmo_wp)
   apply (fastforce intro: vcpu.equality simp: vcpu_proj_def)
   done
 
 lemma vcpu_save_reg_range_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then (r - set [from .e. to]) else r) l h v a p s\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then (r - set [from .e. to]) else r) l h v a a0 p s\<rbrace>
    vcpu_save_reg_range vr from to
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   (is "valid (\<lambda>s. ?V [_ .e. _] s) _ _")
   unfolding vcpu_save_reg_range_def
   by (wpsimp wp: mapM_x_inv_wp2[where I=\<top> and V="?V"] simp: Diff_insert[symmetric])
 
 lemma modify_reg_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v a p s \<and> reg \<in> r\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l h v a a0 p s \<and> reg \<in> r\<rbrace>
    do_machine_op (modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(reg := f r)))))
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   apply (wpsimp wp: dmo_wp simp: vcpu_proj_def)
   apply (fastforce intro: vcpu.equality split: option.splits)
   done
 
 lemma save_virt_timer_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then r - vtimerRegs else r) l h v a p s \<and> vtimerRegs \<subseteq> r\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then r - vtimerRegs else r) l h v a a0 p s \<and> vtimerRegs \<subseteq> r\<rbrace>
    save_virt_timer vr
-   \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   by (wpsimp wp: vcpu_save_reg_vcpu_proj modify_reg_vcpu_proj
            simp: save_virt_timer_def dmo_distr Diff_insert[symmetric]
                  writeVCPUHardwareReg_def check_export_arch_timer_def
@@ -2088,21 +2106,21 @@ lemma save_virt_timer_vcpu_proj[wp]:
 
 lemma vcpu_disable_vcpu_proj[wp]:
   "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vcpu = Some p then r - savedWhenDisabledRegs else r) l
-                         (vcpu \<noteq> Some p) v a p s \<and> savedWhenDisabledRegs \<subseteq> r \<and> h\<rbrace>
+                         (vcpu \<noteq> Some p) v a a0 p s \<and> savedWhenDisabledRegs \<subseteq> r \<and> h\<rbrace>
    vcpu_disable vcpu
-   \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   supply if_split[split del] if_split_asm[split]
   apply (case_tac vcpu; simp add: vcpu_disable_def enableFpuEL01_def setSCTLR_def dmo_distr)
   by (wpsimp wp: vcpu_save_reg_vcpu_proj modify_reg_vcpu_proj
            simp: insert_commute Diff_insert[symmetric] | wp dmo_lift_vcpu_proj)+
 
 lemma vcpu_save_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. (if vr \<noteq> p then vopt = vcpu_proj r l h v a p s
-         else if b then vopt = vcpu_proj {} {} False False False p s
-         else vopt = vcpu_proj savedWhenDisabledRegs {} h False False p s) \<and>
+  "\<lbrace>\<lambda>s. (if vr \<noteq> p then vopt = vcpu_proj r l h v a a0 p s
+         else if b then vopt = vcpu_proj {} {} False False False False p s
+         else vopt = vcpu_proj savedWhenDisabledRegs {} h False False False p s) \<and>
         r = UNIV \<and> arm_current_vcpu (arch_state s) = Some (vr,b) \<and> valid_arch_state s\<rbrace>
    vcpu_save (Some (vr,b))
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   apply (wpsimp wp: save_virt_timer_vcpu_proj hoare_weak_lift_imp dmo_lift_vcpu_proj
               simp: vcpu_save_def if_fun_split split_del: if_split)
   by (auto intro: vcpureg.exhaust intro!: arg_cong[where f="\<lambda>x. _ (vcpu_proj x)"]
@@ -2111,40 +2129,41 @@ lemma vcpu_save_vcpu_proj[wp]:
 \<comment> \<open>Enable/Restore\<close>
 
 lemma vcpu_restore_reg_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (insert reg r) l h v a p s \<and> (vr \<noteq> p \<longrightarrow> reg \<in> r)\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (insert reg r) l h v a a0 p s \<and> (vr \<noteq> p \<longrightarrow> reg \<in> r)\<rbrace>
    vcpu_restore_reg vr reg
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   unfolding vcpu_restore_reg_def writeVCPUHardwareReg_def vcpu_proj_def
   apply (wpsimp wp: get_vcpu_wp dmo_wp)
   apply (auto intro!: vcpu.equality gic_vcpu_interface.equality split: if_splits option.splits)
   done
 
 lemma restore_virt_timer_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (vtimerRegs \<union> r) l h v a p s \<and> (vr \<noteq> p \<longrightarrow> vtimerRegs \<subseteq> r)\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (vtimerRegs \<union> r) l h v a a0 p s \<and> (vr \<noteq> p \<longrightarrow> vtimerRegs \<subseteq> r)\<rbrace>
    restore_virt_timer vr
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   by (wpsimp wp: dmo_lift_vcpu_proj simp: restore_virt_timer_def insert_commute)
 
 lemma vcpu_enable_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (savedWhenDisabledRegs \<union> r) l True v a p s \<and> (vr \<noteq> p \<longrightarrow> h \<and> r = UNIV)\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (savedWhenDisabledRegs \<union> r) l True v a a0 p s \<and> (vr \<noteq> p \<longrightarrow> h \<and> r = UNIV)\<rbrace>
    vcpu_enable vr
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   by (wpsimp simp: vcpu_enable_def dmo_distr wp: get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift
       | wp dmo_lift_vcpu_proj | fastforce simp: vcpu_proj_def insert_commute)+
 
 lemma vcpu_restore_reg_range_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (set [from .e. to] \<union> r) l h v a p s \<and> (vr \<noteq> p \<longrightarrow> r = UNIV)\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (set [from .e. to] \<union> r) l h v a a0 p s \<and> (vr \<noteq> p \<longrightarrow> r = UNIV)\<rbrace>
    vcpu_restore_reg_range vr from to
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   (is "valid (\<lambda>s. ?V [_ .e. _] s) _ _")
   unfolding vcpu_restore_reg_range_def
   by (wpsimp wp: mapM_x_inv_wp2[where I=\<top> and V="?V"])
 
 lemma vcpu_restore_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj UNIV UNIV True True True p s \<and> valid_arch_state s \<and>
-        (if vr \<noteq> p then r = UNIV \<and> l = UNIV \<and> h \<and> v \<and> a else r = {} \<and> l = {} \<and> \<not>h \<and> \<not>v \<and> \<not>a)\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj UNIV UNIV True True True True p s \<and> valid_arch_state s \<and>
+        (if vr \<noteq> p then r = UNIV \<and> l = UNIV \<and> h \<and> v \<and> a \<and> a0
+                    else r = {} \<and> l = {} \<and> \<not>h \<and> \<not>v \<and> \<not>a \<and> \<not>a0)\<rbrace>
    vcpu_restore vr
-   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   apply (wpsimp wp: get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift
               simp: vcpu_restore_def dmo_distr split_del: if_split
          | wp dmo_lift_vcpu_proj)+
@@ -2158,7 +2177,7 @@ lemma vcpu_restore_vcpu_proj[wp]:
 
 lemma vcpu_proj_arch_state_update[simp]:
   "arm_gicvcpu_numlistregs (f (arch_state s)) = arm_gicvcpu_numlistregs (arch_state s)
-   \<Longrightarrow> vcpu_proj r l h v a p (arch_state_update f s) = vcpu_proj r l h v a p s"
+   \<Longrightarrow> vcpu_proj r l h v a a0 p (arch_state_update f s) = vcpu_proj r l h v a a0 p s"
   by (simp add: vcpu_proj_def)
 
 crunch vcpu_switch
@@ -2248,9 +2267,9 @@ lemma vcpu_invalidate_active_respects[wp]:
 \<comment> \<open>Flush\<close>
 
 lemma vcpu_invalidate_active_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l True v a p s \<and> savedWhenDisabledRegs \<subseteq> r \<and> h\<rbrace>
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l True v a a0 p s \<and> savedWhenDisabledRegs \<subseteq> r \<and> h\<rbrace>
    vcpu_invalidate_active
-   \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+   \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a a0 p s\<rbrace>"
   supply if_split[split del] if_split_asm[split]
   unfolding vcpu_invalidate_active_def
   by wpsimp
