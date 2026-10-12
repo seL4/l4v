@@ -308,6 +308,10 @@ lemma dcorres_returnOk:
   dcorres (dc \<oplus> r) \<top> \<top> (returnOk a) (returnOk b)"
  by (clarsimp simp:corres_underlying_def return_def returnOk_def)
 
+lemma dcorres_return:
+  "r a b \<Longrightarrow> dcorres (r) (\<lambda>_. True) (\<lambda>_. True) (return a) (return b)"
+  by (clarsimp simp:return_def corres_underlying_def)
+
 lemma split_return_throw_thingy:
   "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> rvP rv\<rbrace>,\<lbrace>\<lambda>ft. (=) s\<rbrace>;
      \<And>rv. rvP rv \<Longrightarrow> corres_underlying sr nf nf' (dc \<oplus> r) P P' (f \<sqinter> throwError e) (h rv);
