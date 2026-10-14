@@ -2764,13 +2764,13 @@ lemma decodeARMFrameInvocation_ccorres:
              apply csymbr
              (* can't csymbr the IF calculation because of the function calls, but we can show
                 it's the same as the condition on the Haskell side*)
-             apply (rule ccorres_rhs_assoc2)
+             apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
              apply (rule_tac xf'=ret__int_' and R'=UNIV and R=\<top> and
                              val="from_bool (
                                     addrFromPPtr v0 + hd args < physBase \<or>
-                                    ARM_HYP_H.fromPAddr paddrTop
-                                      < hd (drop (Suc 0) args) - hd args +
-                                        ARM_HYP_H.fromPAddr (addrFromPPtr v0 + hd args))"
+                                    paddrTop < addrFromPPtr v0 + hd args \<or>
+                                    ARM_HYP_H.fromPAddr (paddrTop - (addrFromPPtr v0 + hd args))
+                                      < hd (drop (Suc 0) args) - hd args)"
                              in ccorres_symb_exec_r_known_rv)
                 apply (rule conseqPre, vcg)
                 apply (clarsimp dest!: ccap_relation_PageCap_generics)
@@ -3324,6 +3324,13 @@ lemma injection_handler_stateAssert_relocate:
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
 
+(* VCG result shape for a C condition "P || Q || R" with function calls in Q and R *)
+lemma vcg_helper_if_disj3_cases_conj:
+  "(P \<longrightarrow> (if P \<or> Q \<or> R then a else b) = a) \<and>
+   (\<not> P \<longrightarrow> (Q \<longrightarrow> (if P \<or> Q \<or> R then a else b) = a) \<and>
+   (\<not> Q \<longrightarrow> (if R then a else b) = (if P \<or> Q \<or> R then a else b)))"
+  by auto
+
 lemma decodeARMPageDirectoryInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -3483,20 +3490,41 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply csymbr
              apply (rule ccorres_Guard_Seq)
              apply csymbr
-             apply (ctac add: setThreadState_ccorres)
-               apply (simp add:bindE_assoc)
-               apply (ctac add: performPageDirectoryInvocationFlush_ccorres)
-                  apply (rule ccorres_alternative2)
-                  apply (simp add:returnOk_liftE[symmetric])
-                  apply (rule ccorres_return_CE,simp+)[1]
-                 apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                apply (rule hoareE_TrueI[where P = \<top>])
+             (* csymbr fails for the condition because of the physBase() calls, and rv is a large
+                instantation, so we use ccorres_symb_exec_r_known_rv with a schematic rv. This gets
+                instantiated to the value of ret__int by vcg + vcg_helper_if_disj3_cases_conj below. *)
+             apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
+             apply (rule ccorres_symb_exec_r_known_rv[where xf'=ret__int_' and R'=UNIV and R=\<top>])
+                apply (rule conseqPre, vcg)
+                apply clarsimp
+                apply (rule vcg_helper_if_disj3_cases_conj)
+               apply ceqv
+              apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+                 apply vcg
+                apply (clarsimp simp: resolve_ret_rel_def to_option_def rel_option_alt_def
+                                      framesize_from_to_H mask_def
+                                      fromPAddr_def paddrTop_def pptrBase_def pptrTop_def
+                                      pptrBaseOffset_def add.commute
+                                split: option.splits if_splits)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases)
+              apply (simp add: performARMMMUInvocations)
+              apply (ctac add: setThreadState_ccorres)
+                apply (simp add:bindE_assoc)
+                apply (ctac add: performPageDirectoryInvocationFlush_ccorres)
+                   apply (rule ccorres_alternative2)
+                   apply (simp add:returnOk_liftE[symmetric])
+                   apply (rule ccorres_return_CE,simp+)[1]
+                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+                 apply (rule hoareE_TrueI[where P=\<top>])
+                apply simp
+                apply (vcg exspec=performPDFlush_modifies)
+               apply (wp sts_invs_minor' sts_Restart_ct_active)
                apply simp
-               apply (vcg exspec=performPDFlush_modifies)
-              apply (wp sts_invs_minor' sts_Restart_ct_active)
               apply simp
+              apply (vcg exspec=setThreadState_modifies)
              apply simp
-             apply (vcg exspec=setThreadState_modifies)
+             apply vcg
             apply (rule_tac P = "(the v1 \<le> mask asid_bits)" in hoare_gen_asm)
             apply simp
             apply (rule hoare_post_imp[OF _ resolveVAddr_ret

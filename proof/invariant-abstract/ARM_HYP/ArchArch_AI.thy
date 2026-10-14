@@ -1592,6 +1592,15 @@ lemma decode_sgi_signal_invocation_wf[wp]:
   unfolding decode_sgi_signal_invocation_def
   by (wpsimp simp: Let_def valid_arch_inv_def)
 
+lemma flush_window_check:
+  "\<lbrakk> start < end; \<not> ptop < pstart; \<not> ptop - pstart < end - start \<rbrakk> \<Longrightarrow>
+   pstart < ptop \<and> end - 1 - start < ptop - pstart"
+   for pstart :: "'a::len word"
+  apply (subst diff_right_commute)
+  apply (simp add: not_less word_le_nat_alt word_less_nat_alt unat_sub order_less_imp_le)
+  apply arith
+  done
+
 lemma arch_decode_inv_wf[wp]:
   "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
     cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
@@ -1719,10 +1728,12 @@ lemma arch_decode_inv_wf[wp]:
       apply (cases "isPageFlushLabel (invocation_type label)")
        apply simp
        apply (rule hoare_pre)
-        apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imps)
+        apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_vcg_const_imp_liftE_R)
           apply (simp add: valid_arch_inv_def valid_page_inv_def)
-          apply (wp find_pd_for_asid_pd_at_asid | wpc)+
-       apply (clarsimp simp: valid_cap_def mask_def)
+          apply (wp find_pd_for_asid_pd_at_asid hoare_vcg_const_imp_liftE_R | wpc)+
+       apply (clarsimp simp: valid_cap_def mask_def not_le)
+       apply (frule (2) flush_window_check[where start="args ! 0"])
+       apply (clarsimp simp: algebra_simps not_less word_neq_0_conv)
       apply simp
       apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
        apply simp
@@ -1801,6 +1812,9 @@ lemma arch_decode_inv_wf[wp]:
     apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def cong: if_cong)
     apply (cases "isPDFlushLabel (invocation_type label)")
      apply simp
+     apply (cases "args ! Suc 0 \<le> args ! 0")
+      apply (simp cong: if_cong)
+      apply wpsimp
      apply (rule hoare_pre)
       apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imp | wpc | simp)+
             apply (simp add: resolve_vaddr_def)
@@ -1808,7 +1822,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (clarsimp simp: valid_arch_inv_def valid_pdi_def)+
           apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_strengthen_postE_R)
            apply wp
-          apply clarsimp
+          apply (clarsimp simp: not_le not_less flush_window_check[simplified not_less])
          apply (wp | wpc)+
      apply (clarsimp simp: valid_cap_def mask_def)
     apply (clarsimp, wp throwError_validE_R)

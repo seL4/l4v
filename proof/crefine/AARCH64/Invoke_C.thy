@@ -2013,6 +2013,10 @@ lemma archNoOverlap_retype_have_size:
   apply clarsimp
   done
 
+lemma archNoOverlap_kernel_window:
+  "\<not> archOverlap s (\<lambda>x. p \<le> x \<and> x \<le> p') \<Longrightarrow> in_kernel_window {p .. p'}"
+  by (simp add: archOverlap_def flip: atLeastAtMost_iff)
+
 lemma range_cover_compare_bound_word:
   "range_cover ptr sz sbit n
     \<Longrightarrow> (of_nat n * 2 ^ sbit) + (ptr && mask sz) \<le> 2 ^ sz"
@@ -2890,7 +2894,8 @@ lemma invokeUntyped_Retype_ccorres:
         apply (frule invokeUntyped_proofs.szw)
         apply (frule invokeUntyped_proofs.descendants_range(2), simp)
         apply (simp add: cNodeNoOverlap_retype_have_size shiftL_nat mult.commute
-                         archNoOverlap_retype_have_size[simplified o_def])
+                         archNoOverlap_retype_have_size[simplified o_def]
+                         archNoOverlap_kernel_window)
         apply (clarsimp simp: getFreeIndex_def conj_comms shiftL_nat
                               is_aligned_weaken[OF range_cover.funky_aligned]
                               invs_valid_pspace' isCap_simps

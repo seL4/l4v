@@ -5060,6 +5060,15 @@ lemma placeNewObject_user_data:
   apply (clarsimp simp: objBitsKO_def)
   done
 
+lemma kernel_window_intvl_addrFromPPtr:
+  "\<lbrakk> in_kernel_window {p..+2 ^ n}; is_aligned p n; n < word_bits \<rbrakk> \<Longrightarrow>
+   paddrBase \<le> addrFromPPtr p \<and> addrFromPPtr p < AARCH64.paddrTop \<and>
+   mask n < AARCH64.paddrTop - addrFromPPtr p"
+  apply (rule addrFromPPtr_kernel_window)
+   apply (simp add: upto_intvl_eq word_bits_def mask_2pm1 add_diff_eq)
+  apply (erule is_aligned_no_overflow_mask)
+  done
+
 definition
   createObject_hs_preconds :: "machine_word \<Rightarrow> object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -5069,6 +5078,7 @@ where
            and (\<lambda>s. 2 ^ (getObjectSize newType userSize) \<le> gsMaxObjectSize s)
            and K(regionBase \<noteq> 0 \<and> canonical_address regionBase
                    \<and> ({regionBase..+2 ^ (getObjectSize newType userSize)} \<inter> kernel_data_refs = {})
+                   \<and> in_kernel_window {regionBase..+2 ^ (getObjectSize newType userSize)}
                    \<and> range_cover regionBase (getObjectSize newType userSize) (getObjectSize newType userSize) (Suc 0)
                    \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> userSize \<le> maxUntypedSizeBits)
                    \<and> (newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> userSize < 59)
@@ -5870,6 +5880,8 @@ proof -
     apply (rule ccorres_gen_asm)
     apply clarsimp
     apply (frule range_cover.aligned)
+    apply (frule kernel_window_intvl_addrFromPPtr, assumption)
+     apply (erule range_cover.sz[where 'a=machine_word_len, folded word_bits_def])
     apply (cut_tac t)
     apply (case_tac newType; simp add: toAPIType_def bind_assoc)
 
@@ -8358,6 +8370,8 @@ shows  "ccorres dc xfdc
                     \<and> canonical_address (ptr && ~~ mask sz)
                     \<and> {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
                       \<inter> kernel_data_refs = {}
+                    \<and> in_kernel_window
+                        {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
                     \<and> cnodeptr \<notin> {ptr .. ptr + (of_nat (length destSlots) << APIType_capBits newType userSize) - 1}
                     \<and> 0 \<notin> {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
                     \<and> is_aligned ptr 4
@@ -8481,7 +8495,8 @@ shows  "ccorres dc xfdc
             apply (clarsimp simp:createObject_hs_preconds_def conj_comms add.commute[where b=ptr]
                    invs_valid_pspace' invs_pspace_distinct' invs_pspace_aligned'
                    invs_ksCurDomain_maxDomain')
-            apply (subst intvl_range_conv)
+            (* for both in_kernel_window and caps_overlap_reserved' *)
+            apply (subst (1 2) intvl_range_conv)
               apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                subgoal by (simp add:is_aligned_shiftl_self)
               apply (fold_subgoals (prefix))[2]
@@ -8517,15 +8532,9 @@ shows  "ccorres dc xfdc
                            by (simp add: range_cover_sz'[where 'a=machine_word_len, folded word_bits_def]
                                          range_cover.sz[where 'a=machine_word_len, folded word_bits_def])+
                 apply (simp add: word_bits_def range_cover_def)
-(*
-               apply (rule range_cover_full)
-                apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
-                 apply (simp add:is_aligned_shiftl_self)
-                apply (fold_subgoals (prefix))[2]
-               subgoal premises prems using prems
-                         by (simp add: range_cover_sz'[where 'a=machine_word_len, folded word_bits_def]
-                                       range_cover.sz[where 'a=machine_word_len, folded word_bits_def])+
-*)
+              apply (erule in_kernel_window_subset)
+              apply (rule_tac p1=n in subset_trans[OF _ range_cover_subset];
+                     simp add: shiftl_t2n mult.commute)
               apply (erule caps_overlap_reserved'_subseteq)
               apply (frule_tac x="of_nat n" in range_cover_bound3)
                apply (rule word_of_nat_less)
