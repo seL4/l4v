@@ -15,7 +15,7 @@ lemma ensure_empty_rev:
 
 lemma prop_of_obj_ref_of_cnode_cap:
   "\<lbrakk> is_cnode_cap cap; \<forall>r\<in>obj_refs_ac cap. P r \<rbrakk>
-     \<Longrightarrow> P (obj_ref_of cap)"
+   \<Longrightarrow> P (obj_ref_of cap)"
   by (case_tac cap, simp_all)
 
 lemma get_irq_state_rev:
@@ -34,7 +34,7 @@ lemma is_irq_active_rev:
 
 (* FIXME: move *)
 lemma if_apply_ev:
-  "equiv_valid I A B P (if a then b x  else c x) \<Longrightarrow>
+  "equiv_valid I A B P (if a then b x else c x) \<Longrightarrow>
    equiv_valid I A B P ((if a then b else c) x)"
   by (simp split: if_split_asm)
 
@@ -88,7 +88,7 @@ lemma range_check_ev:
 lemma aag_has_auth_to_obj_refs_of_owned_cap:
   "\<lbrakk> pas_refined aag s; is_subject aag (fst slot); cte_wp_at ((=) cap) slot s;
      a \<in> cap_auth_conferred cap; x \<in> obj_refs_ac cap \<rbrakk>
-     \<Longrightarrow> aag_has_auth_to aag a x"
+   \<Longrightarrow> aag_has_auth_to aag a x"
   apply (drule sym, erule ssubst)
   apply (rule_tac s=s in pas_refined_mem)
    apply (fastforce intro: sta_caps[OF cte_wp_at_caps_of_state'])
@@ -132,7 +132,7 @@ lemma no_state_changes:
 
 lemma OR_choice_def2:
   "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \<lbrace>\<lambda>_. P\<rbrace>; empty_fail c \<rbrakk>
-     \<Longrightarrow> (OR_choice c f g) = (do b \<leftarrow> c; if b then f else g od)"
+   \<Longrightarrow> (OR_choice c f g) = (do b \<leftarrow> c; if b then f else g od)"
   apply (simp add: OR_choice_def wrap_ext_bool_det_ext_ext_def ef_mk_ef)
   by (subst no_state_changes[where f=c], simp, fastforce simp: bind_assoc split_def)
 
@@ -164,18 +164,17 @@ lemma decode_set_sched_params_rev:
   apply (case_tac excs; clarsimp)
   done
 
-
-locale Decode_IF_1 =
+locale Decode_IF =
   fixes aag :: "'a subject_label PAS"
   assumes data_to_obj_type_rev:
     "reads_equiv_valid_inv A aag \<top> (data_to_obj_type type)"
-  and check_valid_ipc_buffer_rev:
+  assumes check_valid_ipc_buffer_rev:
     "reads_equiv_valid_inv A aag \<top> (check_valid_ipc_buffer vptr cap)"
-  and arch_check_irq_rev[wp]:
+  assumes arch_check_irq_rev[wp]:
     "reads_equiv_valid_inv A aag \<top> (arch_check_irq irq)"
-  and vspace_cap_rights_to_auth_mono:
+  assumes vspace_cap_rights_to_auth_mono:
     "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R exec \<subseteq> vspace_cap_rights_to_auth S exec"
-  and arch_decode_irq_control_invocation_rev:
+  assumes arch_decode_irq_control_invocation_rev:
     "reads_equiv_valid_inv A aag
        (pas_refined aag and
         K (is_subject aag (fst slot) \<and>
@@ -259,7 +258,7 @@ lemma decode_irq_control_invocation_rev:
   "reads_equiv_valid_inv A aag
      (pas_refined aag and
       K (is_subject aag (fst slot) \<and> (\<forall>cap\<in>set caps. pas_cap_cur_auth aag cap) \<and>
-         (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0)))  \<in> pasPolicy aag)))
+         (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag)))
      (decode_irq_control_invocation label args slot caps)"
   unfolding decode_irq_control_invocation_def
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev
@@ -281,8 +280,7 @@ lemma vspace_cap_rights_to_auth_mask_vm_rights:
   apply (auto simp: mask_vm_rights_def dest: subsetD[OF validate_vm_rights_subseteq])
   done
 
-end
-
+end (* Decode_IF *)
 
 (* this one doesn't read from the state at all *)
 lemma decode_irq_handler_invocation_rev:
@@ -300,7 +298,7 @@ lemma gets_applyE:
 
 lemma owns_cnode_owns_obj_ref_of_child_cnodes:
   "\<lbrakk> pas_refined aag s; is_subject aag (fst slot); cte_wp_at ((=) cap) slot s; is_cnode_cap cap \<rbrakk>
-     \<Longrightarrow> is_subject aag (obj_ref_of cap)"
+   \<Longrightarrow> is_subject aag (obj_ref_of cap)"
   by (blast intro: owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies)
 
 lemma select_ext_ev_bind:
@@ -333,7 +331,7 @@ lemma decode_domain_invocation_reads_respects_f:
   "reads_respects_f aag l \<bottom> (decode_domain_invocation label args excaps)"
   by (rule ev_pre_cont)
 
-locale Decode_IF_2 = Decode_IF_1 +
+locale Decode_IF_2 = Decode_IF +
   assumes arch_decode_invocation_reads_respects_f:
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -402,6 +400,6 @@ lemmas decode_invocation_reads_respects_f_g =
   reads_respects_f_g[OF decode_invocation_reads_respects_f doesnt_touch_globalsI,
                      where Q="\<top>", simplified, OF decode_inv_inv]
 
-end
+end (* Decode_IF_2 *)
 
 end

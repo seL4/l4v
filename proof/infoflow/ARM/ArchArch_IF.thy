@@ -153,7 +153,7 @@ lemma thread_set_non_idle_globals_equiv[Arch_IF_assms]:
 declare arch_prepare_set_domain_inv[Arch_IF_assms]
 declare arch_prepare_next_domain_inv[Arch_IF_assms]
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 
@@ -168,26 +168,23 @@ declare
 
 end
 
-
-global_interpretation Arch_IF_1?: Arch_IF_1
+global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Arch_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
-
 lemmas invs_imps =
   invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state invs_valid_global_objs
   invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs invs_cur invs_kernel_mappings
-
 
 context Arch begin global_naming ARM
 
 lemma cte_wp_at_page_directory_not_in_globals:
   "\<lbrakk> cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap word optiona))) slot s;
      x \<le> (kernel_base >> 20) - 1; valid_objs s; valid_global_refs s \<rbrakk>
-     \<Longrightarrow> (x << 2) + word && ~~ mask pd_bits \<notin> global_refs s"
+   \<Longrightarrow> (x << 2) + word && ~~ mask pd_bits \<notin> global_refs s"
   apply (frule (1) cte_wp_at_valid_objs_valid_cap)
   apply (simp add: cte_wp_at_caps_of_state)
   apply (drule (1) valid_global_refsD2)
@@ -203,9 +200,9 @@ lemma not_in_global_not_arm:
   "A \<notin> global_refs s \<Longrightarrow> A \<noteq> arm_global_pd (arch_state s)"
   by (simp add: global_refs_def)
 
-lemma cte_wp_at_page_cap_bits :
+lemma cte_wp_at_page_cap_bits:
   "\<lbrakk> cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot s; valid_objs s \<rbrakk>
-     \<Longrightarrow> cte_wp_at (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` set [word, word + 4 .e. word + 2 ^ pt_bits - 1]
+   \<Longrightarrow> cte_wp_at (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` set [word, word + 4 .e. word + 2 ^ pt_bits - 1]
                         \<subseteq> obj_refs c \<and> is_pt_cap c) slot s"
   apply (frule (1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
@@ -233,7 +230,7 @@ lemma mapM_x_swp_store_pte_invs' :
 lemma cte_wp_at_page_directory_not_in_kernel_mappings:
   "\<lbrakk> cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap word optiona))) slot s;
      x \<le> (kernel_base >> 20) - 1; valid_objs s; valid_global_refs s \<rbrakk>
-     \<Longrightarrow> ucast ((x << 2) + word && mask pd_bits >> 2) \<notin> kernel_mapping_slots"
+   \<Longrightarrow> ucast ((x << 2) + word && mask pd_bits >> 2) \<notin> kernel_mapping_slots"
   apply (frule (1) cte_wp_at_valid_objs_valid_cap)
   apply (simp add: cte_wp_at_caps_of_state)
   apply (drule (1) valid_global_refsD2)
@@ -344,8 +341,8 @@ lemma asid_high_bits_0_eq_1:
 
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq:
   "\<lbrakk> is_subject_asid aag asid; reads_equiv aag s t; asid \<noteq> 0 \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of asid) =
-         arm_asid_table (arch_state t) (asid_high_bits_of asid)"
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of asid) =
+       arm_asid_table (arch_state t) (asid_high_bits_of asid)"
   apply (erule reads_equivE)
   apply (fastforce simp: equiv_asids_def equiv_asid_def intro: aag_can_read_own_asids)
   done
@@ -760,10 +757,10 @@ lemma perform_page_invocation_reads_respects:
   apply (rule equiv_valid_guard_imp)
   apply wpc
       apply (simp add: mapM_discarded swp_def)
-      apply (wp dmo_mol_reads_respects dmo_cacheRangeOp_reads_respects  mapM_x_ev''
+      apply (wp dmo_mol_reads_respects dmo_cacheRangeOp_reads_respects mapM_x_ev''
                 store_pte_reads_respects set_cap_reads_respects mapM_ev'' store_pde_reads_respects
                 unmap_page_reads_respects set_vm_root_reads_respects
-                set_vm_root_for_flush_reads_respects get_cap_rev  do_flush_reads_respects
+                set_vm_root_for_flush_reads_respects get_cap_rev do_flush_reads_respects
                 invalidate_tlb_by_asid_reads_respects get_master_pte_reads_respects
                 get_master_pde_reads_respects set_mrs_reads_respects set_message_info_reads_respects
              | simp add: cleanByVA_PoU_def pte_check_if_mapped_def pde_check_if_mapped_def dmo_distr
@@ -778,11 +775,11 @@ lemma perform_page_invocation_reads_respects:
 
 lemma equiv_asids_arm_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
-     \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)
-                                                            (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := (asid_table t)
-                                                            (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
+   \<Longrightarrow> equiv_asids R
+         (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)
+                                                          (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
+         (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := (asid_table t)
+                                                          (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
 
 lemma arm_asid_table_update_reads_respects:
@@ -916,8 +913,8 @@ crunch flush_space
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
   "\<lbrakk> (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of base
               \<longrightarrow> is_subject_asid aag asid'); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
-         arm_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
+       arm_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (insert asid_high_bits_0_eq_1)
   apply (case_tac "base = 0")
    apply (subgoal_tac "is_subject_asid aag 1")
@@ -1220,7 +1217,7 @@ crunch page_table_mapped
 lemma not_in_global_refs_vs_lookup2:
   "\<lbrakk> valid_vs_lookup s; valid_global_refs s; valid_arch_state s;
      valid_global_objs s; page_directory_at p s; (\<exists>\<rhd> p) s \<rbrakk>
-     \<Longrightarrow> p \<notin> global_refs s"
+   \<Longrightarrow> p \<notin> global_refs s"
   apply (insert not_in_global_refs_vs_lookup[where p=p and s=s])
   apply simp
   done
@@ -1357,7 +1354,7 @@ lemma mapM_swp_store_pte_valid_arch_state[wp]:
   "mapM (swp store_pte A) slots \<lbrace>valid_arch_state\<rbrace>"
   by (wp mapM_wp' | simp)+
 
-lemma mapM_x_swp_store_pde_globals_equiv :
+lemma mapM_x_swp_store_pde_globals_equiv:
   "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>x \<in> set slots. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s))\<rbrace>
    mapM_x (swp store_pde A) slots
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -1416,7 +1413,7 @@ lemma unmap_page_globals_equiv:
 
 lemma cte_wp_parent_not_global_pd:
   "\<lbrakk> valid_global_refs s; cte_wp_at (parent_for_refs (Inr (a,b))) k s \<rbrakk>
-     \<Longrightarrow> \<forall>x \<in> set b. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s)"
+   \<Longrightarrow> \<forall>x \<in> set b. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s)"
   apply (simp only: cte_wp_at_caps_of_state)
   apply (elim exE conjE)
   apply (drule valid_global_refsD2,simp)
@@ -1428,7 +1425,7 @@ lemma cte_wp_parent_not_global_pd:
   done
 
 definition authorised_for_globals_page_inv ::
-  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool"  where
+  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool" where
   "authorised_for_globals_page_inv pgi \<equiv> \<lambda>s.
      case pgi of PageMap asid cap ptr m \<Rightarrow> \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
 
@@ -1500,7 +1497,7 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
 
 lemma perform_asid_control_invocation_globals_equiv:
   notes delete_objects_invs[wp del]
-  notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
   shows "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
          perform_asid_control_invocation aci
          \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -1516,7 +1513,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
+             hoare_vcg_all_lift get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the
@@ -1697,8 +1694,8 @@ lemma delete_asid_valid_vspace_objs[wp]:
 lemma cte_wp_at_pt_exists_cap:
   "\<lbrakk> valid_objs s; cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot s;
      x \<in> set [word , word + 4 .e. word + 2 ^ pt_bits - 1] \<rbrakk>
-     \<Longrightarrow> \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and>
-                   x && ~~ mask pt_bits \<in> obj_refs cap \<and> is_pt_cap cap"
+   \<Longrightarrow> \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and>
+                 x && ~~ mask pt_bits \<in> obj_refs cap \<and> is_pt_cap cap"
   apply (case_tac slot)
   apply (rule_tac x=a in exI)
   apply (rule_tac x=b in exI)
@@ -1748,7 +1745,7 @@ qed
 
 lemma pd_bits_store_pde_helper:
   "\<lbrakk> x \<le> (kernel_base >> 20) - 1; is_aligned word pd_bits \<rbrakk>
-     \<Longrightarrow> ((x << 2) + word && ~~ mask pd_bits) = word"
+   \<Longrightarrow> ((x << 2) + word && ~~ mask pd_bits) = word"
   apply (clarsimp simp: field_simps)
   apply (subst is_aligned_add_helper)
     apply simp
@@ -1798,7 +1795,7 @@ lemma get_thread_state_globals_equiv[wp]:
 (* generalises auth_ipc_buffers_mem_Write *)
 lemma auth_ipc_buffers_mem_Write':
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
+   \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
   apply (clarsimp simp add: auth_ipc_buffers_member_def)
   apply (drule (1) cap_auth_caps_of_state)
   apply simp

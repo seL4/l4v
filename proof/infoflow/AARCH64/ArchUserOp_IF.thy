@@ -59,8 +59,8 @@ definition do_user_op_if ::
          executable, it does not fault on AArch64, even when no other rights exist.\<close>
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {} \<or> \<not> pxn x});
 
-      allow_read \<leftarrow> return  {y. EX x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not> pxn x)};
-      allow_write \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
+      allow_read \<leftarrow> return {y. EX x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not> pxn x)};
+      allow_write \<leftarrow> return {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
 
       \<comment> \<open>Get the current thread.\<close>
       t \<leftarrow> gets cur_thread;
@@ -118,18 +118,16 @@ lemma no_fpu_modify[UserOp_IF_assms]:
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
   by wpsimp+
 
-end
-
+end (* Arch *)
 
 arch_requalify_types user_transition_if
 
-global_interpretation UserOp_IF_1?: UserOp_IF_1
+global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact UserOp_IF_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -138,7 +136,7 @@ lemma requiv_get_pt_of_thread_eq:
      pt_ref \<noteq> arm_us_global_vspace (arch_state s); pt_ref' \<noteq> arm_us_global_vspace (arch_state s');
      get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) = pt_ref;
      get_vspace_of_thread (kheap s') (arch_state s') (cur_thread s') = pt_ref' \<rbrakk>
-     \<Longrightarrow> pt_ref = pt_ref'"
+   \<Longrightarrow> pt_ref = pt_ref'"
   apply (erule reads_equivE)
   apply (erule equiv_forE)
   apply (subgoal_tac "aag_can_read aag (cur_thread s)")
@@ -149,7 +147,7 @@ lemma requiv_get_pt_of_thread_eq:
 lemma requiv_get_pt_entry_eq:
   "\<lbrakk> reads_equiv aag s t; invs s; pas_refined aag s; is_subject aag pt; vref \<in> user_region;
      \<exists>asid vref. vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, pt) \<rbrakk>
-     \<Longrightarrow> pt_lookup_slot pt vref (ptes_of s) = pt_lookup_slot pt vref (ptes_of t)"
+   \<Longrightarrow> pt_lookup_slot pt vref (ptes_of s) = pt_lookup_slot pt vref (ptes_of t)"
   apply (clarsimp simp: pt_lookup_slot_def)
   apply (clarsimp simp: pt_lookup_slot_from_level_def)
   apply (frule_tac pt=pt and vptr=vref in pt_walk_reads_equiv[where bot_level=0])
@@ -162,7 +160,7 @@ lemma requiv_get_pt_entry_eq:
 lemma requiv_get_page_info_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; invs s; is_subject aag pt;
      \<exists>asid. vs_lookup_table max_pt_level asid x s = Some (max_pt_level, pt) \<rbrakk>
-     \<Longrightarrow> get_page_info (aobjs_of s) pt x = get_page_info (aobjs_of s') pt x"
+   \<Longrightarrow> get_page_info (aobjs_of s) pt x = get_page_info (aobjs_of s') pt x"
   apply (clarsimp simp: get_page_info_def obind_def)
   apply (subgoal_tac "pt_lookup_slot pt x (ptes_of s) = pt_lookup_slot pt x (ptes_of s')")
    apply (clarsimp split: option.splits)
@@ -177,7 +175,7 @@ lemma requiv_get_page_info_eq:
 lemma requiv_vspace_of_thread_global_pt:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag (cur_thread s); invs s; pas_refined aag s;
      get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) = global_pt s \<rbrakk>
-     \<Longrightarrow> get_vspace_of_thread (kheap s') (arch_state s') (cur_thread s') = global_pt s'"
+   \<Longrightarrow> get_vspace_of_thread (kheap s') (arch_state s') (cur_thread s') = global_pt s'"
   apply (erule reads_equivE)
   apply (erule equiv_forE)
   apply (prop_tac "aag_can_read aag (cur_thread s)", simp)
@@ -223,7 +221,7 @@ lemma vspace_for_asid_get_vspace_of_thread:
 lemma pt_of_thread_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag tcb_ptr;
      get_vspace_of_thread (kheap s) (arch_state s) tcb_ptr = pt; pt \<noteq> global_pt s \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag tcb_ptr = pasObjectAbs aag pt"
+   \<Longrightarrow> pasObjectAbs aag tcb_ptr = pasObjectAbs aag pt"
   apply (rule_tac aag="pasPolicy aag" in aag_wellformed_Control[rotated])
    apply (fastforce simp: pas_refined_def)
   apply (rule pas_refined_mem[rotated], simp)
@@ -242,7 +240,7 @@ lemma pt_of_thread_same_agent:
 lemma requiv_ptable_rights_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
      is_subject aag (cur_thread s); invs s; invs s' \<rbrakk>
-     \<Longrightarrow> ptable_rights_s s = ptable_rights_s s'"
+   \<Longrightarrow> ptable_rights_s s = ptable_rights_s s'"
   apply (simp add: ptable_rights_s_def)
   apply (rule ext)
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) = global_pt s")
@@ -266,7 +264,7 @@ lemma requiv_ptable_rights_eq:
 lemma requiv_ptable_attrs_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
      is_subject aag (cur_thread s); invs s; invs s' \<rbrakk>
-     \<Longrightarrow> ptable_attrs_s s x = ptable_attrs_s s' x"
+   \<Longrightarrow> ptable_attrs_s s x = ptable_attrs_s s' x"
   apply (simp add: ptable_attrs_s_def ptable_rights_s_def)
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) =
                    arm_us_global_vspace (arch_state s)")
@@ -300,7 +298,7 @@ lemma requiv_ptable_attrs_eq:
 lemma requiv_ptable_lift_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s'; invs s;
      invs s'; is_subject aag (cur_thread s) \<rbrakk>
-     \<Longrightarrow> ptable_lift_s s x = ptable_lift_s s' x"
+   \<Longrightarrow> ptable_lift_s s x = ptable_lift_s s' x"
   apply (simp add: ptable_lift_s_def ptable_rights_s_def)
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) =
                    arm_us_global_vspace (arch_state s)")
@@ -334,12 +332,12 @@ lemma requiv_ptable_lift_eq:
 lemma requiv_ptable_xn_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
      is_subject aag (cur_thread s); invs s; invs s' \<rbrakk>
-     \<Longrightarrow> ptable_xn_s s x = ptable_xn_s s' x"
+   \<Longrightarrow> ptable_xn_s s x = ptable_xn_s s' x"
   by (simp add: ptable_xn_s_def requiv_ptable_attrs_eq)
 
 lemma data_at_obj_range:
   "\<lbrakk> data_at sz ptr s; pspace_aligned s; valid_objs s \<rbrakk>
-     \<Longrightarrow> ptr + (offset && mask (pageBitsForSize sz)) \<in> obj_range ptr (ArchObj (DataPage dev sz))"
+   \<Longrightarrow> ptr + (offset && mask (pageBitsForSize sz)) \<in> obj_range ptr (ArchObj (DataPage dev sz))"
   apply (clarsimp simp: data_at_def)
   apply (elim disjE)
    apply (clarsimp simp: obj_at_def)
@@ -365,7 +363,7 @@ lemma pspace_distinct_def':
 lemma data_at_disjoint_equiv:
   "\<lbrakk> ptr' \<noteq> ptr;data_at sz' ptr' s; data_at sz ptr s; valid_objs s; pspace_aligned s;
      pspace_distinct s; ptr' \<in> obj_range ptr (ArchObj (DataPage dev sz)) \<rbrakk>
-     \<Longrightarrow> False"
+   \<Longrightarrow> False"
   apply (frule (2) data_at_obj_range[where offset = 0,simplified])
   apply (clarsimp simp: data_at_def obj_at_def)
   apply (elim disjE)
@@ -393,10 +391,10 @@ lemma pageBitsForSize_le_canonical_bit:
 lemma data_at_same_size:
   assumes dat_sz':
     "data_at sz' (ptrFromPAddr base) s"
-  and dat_sz:
+  assumes dat_sz:
     "data_at sz
        (ptrFromPAddr (base + (x && mask (pageBitsForSize sz'))) && ~~ mask (pageBitsForSize sz)) s"
-  and vs:
+  assumes vs:
     "pspace_distinct s" "pspace_aligned s" "valid_objs s"
   shows "sz' = sz"
 proof -
@@ -473,7 +471,7 @@ lemma level_le_2_cases:
 lemma pt_walk_vref_for_levelD:
   "\<lbrakk> pt_walk top_level bot_level pt vref ptes = Some (level,ptr);
      level \<le> top_level; top_level \<le> max_pt_level \<rbrakk>
-     \<Longrightarrow> pt_walk top_level bot_level pt (vref_for_level vref level) ptes = Some (level,ptr)"
+   \<Longrightarrow> pt_walk top_level bot_level pt (vref_for_level vref level) ptes = Some (level,ptr)"
   apply (induct top_level arbitrary: pt)
    apply (simp add: pt_walk.simps Let_def oapply_def)
   apply (case_tac "top_level=bot_level")
@@ -489,9 +487,9 @@ lemma pt_walk_vref_for_levelD:
 
 lemma ptable_lift_data_consistant:
   assumes vs: "valid_state s"
-  and pt_lift: "ptable_lift t s x = Some ptr"
-  and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
-  and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> arm_us_global_vspace (arch_state s)"
+  assumes pt_lift: "ptable_lift t s x = Some ptr"
+  assumes dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
+  assumes misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> arm_us_global_vspace (arch_state s)"
   shows "ptable_lift t s (x && ~~ mask (pageBitsForSize sz)) =
          Some (ptr && ~~ mask (pageBitsForSize sz))"
 proof -
@@ -514,7 +512,7 @@ proof -
      apply (fastforce simp: table_base_pt_slot_offset[OF vs_lookup_table_is_aligned]
                       dest: valid_arch_state_asid_table dest!: pt_lookup_vs_lookupI
                      intro: vs_lookup_level)
-    apply (erule disjE[OF _  _ FalseE])
+    apply (erule disjE[OF _ _ FalseE])
      prefer 2
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad pt_walk.simps)
      apply (clarsimp split: if_splits)
@@ -550,9 +548,9 @@ lemma valid_vspace_objs_pte:
 
 lemma ptable_rights_data_consistant:
   assumes vs: "valid_state s"
-  and pt_lift: "ptable_lift t s x = Some ptr"
-  and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
-  and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
+  assumes pt_lift: "ptable_lift t s x = Some ptr"
+  assumes dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
+  assumes misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
              arm_us_global_vspace (arch_state s)"
   shows "ptable_rights t s (x && ~~ mask (pageBitsForSize sz)) = ptable_rights t s x"
 proof -
@@ -638,8 +636,8 @@ lemma user_op_access_data_at:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
      data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s;
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
-     \<Longrightarrow> (pasObjectAbs aag tcb, auth,
-          pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
+   \<Longrightarrow> (pasObjectAbs aag tcb, auth,
+        pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) tcb = arm_us_global_vspace (arch_state s)")
    apply (clarsimp simp: ptable_lift_def ptable_rights_def split: option.splits)
    apply (frule get_page_info_gpd_kmaps[rotated 3];
@@ -653,12 +651,12 @@ lemma user_op_access_data_at:
 
 lemma user_frame_at_equiv:
   "\<lbrakk> typ_at (AArch (AUserData sz)) p s; equiv_for P kheap s s'; P p \<rbrakk>
-     \<Longrightarrow> typ_at (AArch (AUserData sz)) p s'"
+   \<Longrightarrow> typ_at (AArch (AUserData sz)) p s'"
   by (clarsimp simp: equiv_for_def obj_at_def)
 
 lemma device_frame_at_equiv:
   "\<lbrakk> typ_at (AArch (ADeviceData sz)) p s; equiv_for P kheap s s'; P p \<rbrakk>
-     \<Longrightarrow> typ_at (AArch (ADeviceData sz)) p s'"
+   \<Longrightarrow> typ_at (AArch (ADeviceData sz)) p s'"
   by (clarsimp simp: equiv_for_def obj_at_def)
 
 lemma typ_at_user_data_at:
@@ -673,7 +671,7 @@ lemma requiv_device_mem_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s';
      is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> device_mem s (ptrFromPAddr y) = device_mem s' (ptrFromPAddr y)"
+   \<Longrightarrow> device_mem s (ptrFromPAddr y) = device_mem s' (ptrFromPAddr y)"
   apply (simp add: device_mem_def)
   apply (rule conjI)
    apply (erule reads_equivE)
@@ -710,7 +708,7 @@ lemma requiv_user_mem_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s';
      is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x \<or> \<not>ptable_xn_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> user_mem s (ptrFromPAddr y) = user_mem s' (ptrFromPAddr y)"
+   \<Longrightarrow> user_mem s (ptrFromPAddr y) = user_mem s' (ptrFromPAddr y)"
   apply (simp add: user_mem_def)
   apply (rule conjI)
    apply clarsimp
@@ -762,7 +760,7 @@ lemma requiv_user_device_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s';
      is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x \<or> \<not> ptable_xn_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> device_state (machine_state s) (ptrFromPAddr y) =
+   \<Longrightarrow> device_state (machine_state s) (ptrFromPAddr y) =
          device_state (machine_state s') (ptrFromPAddr y)"
   apply (erule reads_equivE)
   apply clarsimp
@@ -837,7 +835,7 @@ lemma do_user_op_reads_respects_g:
    apply (erule impE)
     prefer 2
     apply assumption
-   apply (clarsimp simp: context_matches_state_def comp_def  reads_equiv_g_def globals_equiv_def)
+   apply (clarsimp simp: context_matches_state_def comp_def reads_equiv_g_def globals_equiv_def)
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 
@@ -846,7 +844,7 @@ definition valid_vspace_objs_if where
 
 declare valid_vspace_objs_if_def[simp]
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   do_user_op_if

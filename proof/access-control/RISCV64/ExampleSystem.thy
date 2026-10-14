@@ -83,7 +83,7 @@ where
   "the_nat_to_bl sz n \<equiv> the (nat_to_bl sz n)"
 
 definition
-  the_nat_to_bl_10  :: "nat \<Rightarrow> bool list"
+  the_nat_to_bl_10 :: "nat \<Rightarrow> bool list"
 where
   "the_nat_to_bl_10 n \<equiv> the_nat_to_bl 10 n"
 
@@ -208,7 +208,7 @@ where
         (the_nat_to_bl_10 3)
            \<mapsto> ArchObjectCap (PageTableCap 0xBF9 (Some (asid1_0xBF9,0))),
         (the_nat_to_bl_10 318)
-           \<mapsto> EndpointCap 9 0 {AllowRecv}) "
+           \<mapsto> EndpointCap 9 0 {AllowRecv})"
 
 definition
   obj1_0x7 :: kernel_object
@@ -243,7 +243,7 @@ where
     (\<lambda>_. InvalidPTE)
      (0 := PageTablePTE
               (ucast (addrFromPPtr 0xC00000 >> pageBits))
-              undefined )"
+              undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -277,7 +277,7 @@ where
     (\<lambda>_. InvalidPTE)
      (0 := PageTablePTE
              (ucast (addrFromPPtr 0xC05000 >> pageBits))
-             undefined )"
+             undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -369,7 +369,7 @@ definition exst1 :: "det_ext" where
 definition
   s1 :: "det_ext state"
 where
-  "s1 \<equiv>  \<lparr>
+  "s1 \<equiv> \<lparr>
     kheap = kh1,
     cdt = Map.empty,
     is_original_cap = undefined,
@@ -414,7 +414,7 @@ where
       0xC00000 := UT1,
       0xC05000 := T1,
       0xC07 := UT1,
-      0xC08 := T1 )"
+      0xC08 := T1)"
 
 lemma Sys1AgentMap_simps:
   "Sys1AgentMap 0x6 = UT1"
@@ -490,21 +490,21 @@ lemma s1_caps_of_state :
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 0xC07),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
          ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF7 (Some (asid1_0xBF7, 0)))),
-         ((6::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowSend}),
+         ((6::obj_ref,(the_nat_to_bl_10 318)),EndpointCap 9 0 {AllowSend}),
          ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 0xC08),
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
          ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF9 (Some (asid1_0xBF9, 0)))),
-         ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowRecv}) ,
-         ((0xC07::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
+         ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap 9 0 {AllowRecv}) ,
+         ((0xC07::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined),
          ((0xC07::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF7 (Some (asid1_0xBF7, 0)))),
          ((0xC07::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC07 True {AllowGrant,AllowWrite}),
          ((0xC07::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((0xC07::obj_ref, (tcb_cnode_index 4)), NullCap),
-         ((0xC08::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
+         ((0xC08::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined),
          ((0xC08::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF9 (Some (asid1_0xBF9, 0)))),
          ((0xC08::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC08 True {AllowGrant,AllowWrite}),
          ((0xC08::obj_ref, (tcb_cnode_index 3)), NullCap),
-         ((0xC08::obj_ref, (tcb_cnode_index 4)), NullCap)} "
+         ((0xC08::obj_ref, (tcb_cnode_index 4)), NullCap)}"
   apply (insert caps1_0x7_well_formed)
   apply (insert caps1_0x6_well_formed)
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s1_def kh1_def kh1_obj_def)
@@ -513,7 +513,7 @@ lemma s1_caps_of_state :
      apply (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def
                      split: if_split_asm)+
    apply (clarsimp simp: caps1_0x7_def split: if_splits)
-  apply (clarsimp simp: caps1_0x6_def cte_wp_at_cases  split: if_splits)
+  apply (clarsimp simp: caps1_0x6_def cte_wp_at_cases split: if_splits)
   done
 
 
@@ -531,7 +531,7 @@ lemma tcb_states_of_state_1:
   unfolding s1_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
-  apply (simp add: kh1_def kh1_obj_def )
+  apply (simp add: kh1_def kh1_obj_def)
   done
 
 lemma thread_bound_ntfns_1:
@@ -539,7 +539,7 @@ lemma thread_bound_ntfns_1:
   unfolding s1_def thread_bound_ntfns_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
-  apply (simp add: kh1_def kh1_obj_def )
+  apply (simp add: kh1_def kh1_obj_def)
   done
 
 declare AllowSend_def[simp] AllowRecv_def[simp]
@@ -594,7 +594,7 @@ lemma "pas_refined Sys1PAS s1"
                complete_AuthGraph_def
                Sys1AuthGraph_aux_def
                split: if_splits)
-       apply (simp add:  thread_bound_ntfns_1)
+       apply (simp add: thread_bound_ntfns_1)
       apply (simp add: s1_def) (* this is OK because cdt is empty..*)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
     apply (fastforce simp: state_vrefs_def vs_refs_aux_def s1_def kh1_def kh1_obj_def
@@ -755,7 +755,7 @@ where
            \<mapsto> ArchObjectCap (PageTableCap 0xBF9
                                             (Some (asid2_0xBF9, 0))),
         (the_nat_to_bl_10 4)
-            \<mapsto> CNodeCap 5 undefined undefined) "
+            \<mapsto> CNodeCap 5 undefined undefined)"
 
 definition
   obj2_0x7 :: kernel_object
@@ -791,7 +791,7 @@ where
     (\<lambda>_. InvalidPTE)
      (0 := PageTablePTE
               (ucast (addrFromPPtr 0xC00000 >> pageBits))
-              undefined )"
+              undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -824,7 +824,7 @@ where
     (\<lambda>_. InvalidPTE)
      (0 := PageTablePTE
              (ucast (addrFromPPtr 0xC05000 >> pageBits))
-             undefined )"
+             undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -908,7 +908,7 @@ lemmas kh2_obj_def =
 definition
   s2 :: "det_ext state"
 where
-  "s2 \<equiv>  \<lparr>
+  "s2 \<equiv> \<lparr>
     kheap = kh2,
     cdt = Map.empty,
     is_original_cap = undefined,
@@ -954,7 +954,7 @@ where
       0xC05000 := T2,
       0xC07 := UT2,
       0xC08 := T2,
-      9001 := IRQ2 )"
+      9001 := IRQ2)"
 
 
 definition
@@ -975,7 +975,7 @@ where
   "Sys2ASIDMap \<equiv>
     (\<lambda>_. undefined)
      (asid2_0xBF7 := UT2,
-      asid2_0xBF9 := T2 )"
+      asid2_0xBF9 := T2)"
 
 definition Sys2DomainMap :: "Sys2Labels agent_domain_map" where
   "Sys2DomainMap \<equiv> (\<lambda>_. {}) (0 := {UT2, T2})"
@@ -1022,16 +1022,16 @@ lemma s2_caps_of_state :
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
          ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageTableCap 0xBF9 (Some (asid2_0xBF9, 0)))),
          ((7::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
-         ((0xC07::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
+         ((0xC07::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined),
          ((0xC07::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF7 (Some (asid2_0xBF7, 0)))),
          ((0xC07::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC07 True {AllowGrant,AllowWrite}),
          ((0xC07::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((0xC07::obj_ref, (tcb_cnode_index 4)), NullCap),
-         ((0xC08::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
+         ((0xC08::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined),
          ((0xC08::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageTableCap 0xBF9 (Some (asid2_0xBF9, 0)))),
          ((0xC08::obj_ref, (tcb_cnode_index 2)), ReplyCap 0xC08 True {AllowGrant,AllowWrite}),
          ((0xC08::obj_ref, (tcb_cnode_index 3)), NullCap),
-         ((0xC08::obj_ref, (tcb_cnode_index 4)), NullCap)} "
+         ((0xC08::obj_ref, (tcb_cnode_index 4)), NullCap)}"
   apply (insert caps2_0x7_well_formed)
   apply (insert caps2_0x6_well_formed)
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s2_def kh2_def kh2_obj_def)
@@ -1039,7 +1039,7 @@ lemma s2_caps_of_state :
   apply (clarsimp simp: cte_wp_at_cases split: if_splits)
      apply (clarsimp simp: tcb_cap_cases_def split: if_splits)+
    apply (clarsimp simp: caps2_0x7_def split: if_splits)
-  apply (clarsimp simp: caps2_0x6_def cte_wp_at_cases  split: if_splits)
+  apply (clarsimp simp: caps2_0x6_def cte_wp_at_cases split: if_splits)
   done
 
 lemma Sys2_wellformed: "pas_wellformed Sys2PAS"

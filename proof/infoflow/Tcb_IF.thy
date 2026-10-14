@@ -103,7 +103,7 @@ next
                      in hoare_vcg_conj_lift)
          apply (wp finalise_cap_invs[where slot=slot]
                    finalise_cap_replaceable[where sl=slot]
-                   Finalise_AC_1.finalise_cap_makes_halted[where slot=slot]
+                   Finalise_AC.finalise_cap_makes_halted[where slot=slot]
                    finalise_cap_P)[1]
         apply (rule finalise_cap_cases[where slot=slot])
        apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -175,22 +175,21 @@ lemma rec_del_preservation2:
    apply (rule rec_del_preservation2' [where R=R],simp+)
   done
 
-
-locale Tcb_IF_1 =
+locale Tcb_IF =
   fixes aag :: "'a subject_label PAS"
   assumes valid_arch_caps_vs_lookup:
     "valid_arch_caps s \<Longrightarrow> valid_vs_lookup s"
-  and no_cap_to_idle_thread':
+  assumes no_cap_to_idle_thread':
     "valid_global_refs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
-  and no_cap_to_idle_thread'':
+  assumes no_cap_to_idle_thread'':
     "valid_global_refs s \<Longrightarrow> caps_of_state s ref \<noteq> Some (ThreadCap (idle_thread s))"
-  and arch_post_modify_registers_globals_equiv[wp]:
+  assumes arch_post_modify_registers_globals_equiv[wp]:
     "arch_post_modify_registers cur t \<lbrace>globals_equiv s\<rbrace>"
-  and arch_post_modify_registers_valid_arch_state[wp]:
+  assumes arch_post_modify_registers_valid_arch_state[wp]:
     "arch_post_modify_registers cur t \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
-  and arch_post_modify_registers_reads_respects_f[wp]:
+  assumes arch_post_modify_registers_reads_respects_f[wp]:
     "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
-  and arch_get_sanitise_register_info_reads_respects_f[wp]:
+  assumes arch_get_sanitise_register_info_reads_respects_f[wp]:
     "reads_respects_f aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
 begin
 
@@ -229,13 +228,12 @@ lemma cap_delete_globals_equiv:
   done
 
 lemma no_cap_to_idle_thread:
-   "invs (s :: det_state) \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
+  "invs (s :: det_state) \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
   apply (rule no_cap_to_idle_thread')
   apply clarsimp
   done
 
-end
-
+end (* Tcb_IF *)
 
 crunch set_mcpriority
   for idle_thread_inv[wp]: "\<lambda>s. P (idle_thread s)"
@@ -272,8 +270,7 @@ definition authorised_tcb_inv_extra where
   "authorised_tcb_inv_extra aag ti \<equiv>
     (case ti of ThreadControl _ slot _ _ _ _ _ _ \<Rightarrow> is_subject aag (fst slot) | _ \<Rightarrow> True)"
 
-
-locale Tcb_IF_2 = Tcb_IF_1 +
+locale Tcb_IF_2 = Tcb_IF +
   assumes invoke_tcb_thread_preservation:
     "\<lbrakk> \<And>slot. \<lbrace>invs and P and emptyable slot\<rbrace> cap_delete slot \<lbrace>\<lambda>_.P\<rbrace>;
        \<And>new_cap src dest. \<lbrace>invs and P\<rbrace> cap_insert new_cap src dest \<lbrace>\<lambda>_.P\<rbrace>;
@@ -283,22 +280,22 @@ locale Tcb_IF_2 = Tcb_IF_1 +
        \<And>prio ptr. \<lbrace>invs and P\<rbrace> set_priority ptr prio \<lbrace>\<lambda>_.P\<rbrace>;
        reschedule_required \<lbrace>P\<rbrace>;
        \<And>f s. P (trans_state f s) = P s \<rbrakk>
-       \<Longrightarrow> \<lbrace>P and invs and tcb_inv_wf (ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
-           invoke_tcb (ThreadControl t sl ep mcp prio croot vroot buf)
-           \<lbrace>\<lambda>rv s :: det_state. P s\<rbrace>"
-  and tc_reads_respects_f:
+     \<Longrightarrow> \<lbrace>P and invs and tcb_inv_wf (ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
+         invoke_tcb (ThreadControl t sl ep mcp prio croot vroot buf)
+         \<lbrace>\<lambda>rv s :: det_state. P s\<rbrace>"
+  assumes tc_reads_respects_f:
     "\<lbrakk> pas_domains_distinct aag; ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48 \<rbrakk>
-       \<Longrightarrow> reads_respects_f aag l
-             (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action
-                              and pas_refined aag and pas_cur_domain aag and tcb_inv_wf ti
-                              and is_subject aag \<circ> cur_thread
-                              and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
-             (invoke_tcb ti)"
-  and arch_post_set_flags_globals_equiv[wp]:
+     \<Longrightarrow> reads_respects_f aag l
+           (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action
+                            and pas_refined aag and pas_cur_domain aag and tcb_inv_wf ti
+                            and is_subject aag \<circ> cur_thread
+                            and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
+           (invoke_tcb ti)"
+  assumes arch_post_set_flags_globals_equiv[wp]:
     "\<lbrace>globals_equiv st and invs\<rbrace>
      arch_post_set_flags t flags
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_post_set_flags_reads_respects_f:
+  assumes arch_post_set_flags_reads_respects_f:
     "pas_domains_distinct aag \<Longrightarrow>
      reads_respects_f aag l (silc_inv aag st and valid_cur_fpu and K (is_subject aag t)) (arch_post_set_flags t flags)"
 begin
@@ -333,8 +330,7 @@ lemma invoke_tcb_globals_equiv:
          | fastforce)+
   done
 
-end
-
+end (* Tcb_IF_2 *)
 
 section "reads respects"
 
@@ -476,7 +472,6 @@ lemmas reschedule_required_reads_respects_f =
   reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified,
                    OF _ reschedule_required_silc_inv]
 
-
 context Tcb_IF_2 begin
 
 lemma thread_set_tcb_flags_update_silc_inv[wp]:
@@ -516,9 +511,9 @@ lemma invoke_tcb_reads_respects_f:
           apply (solves \<open>auto intro!: det_zipWithM
                                simp: det_setRegister det_getRestartPC det_setNextPC
                                      authorised_tcb_inv_def reads_equiv_f_def\<close>)
-         apply (wp as_user_reads_respects_f suspend_silc_inv when_ev  suspend_reads_respects_f
+         apply (wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f
                 | simp | elim conjE, assumption)+
-         apply (solves \<open>auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
+         apply (solves \<open>auto simp: authorised_tcb_inv_def det_getRegister reads_equiv_f_def
                           intro!: det_mapM[OF _ subset_refl]\<close>)
         apply (wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
                   as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift
@@ -570,8 +565,7 @@ lemma invoke_tcb_reads_respects_f_g:
    apply (wp invoke_tcb_globals_equiv | clarsimp | assumption | force)+
   done
 
-end
-
+end (* Tcb_IF_2 *)
 
 lemma decode_tcb_invocation_authorised_extra:
   "\<lbrace>K (is_subject aag (fst slot))\<rbrace>

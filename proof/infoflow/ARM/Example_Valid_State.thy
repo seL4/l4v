@@ -292,12 +292,12 @@ where
       the (nat_to_bl sz (n mod 2^sz))"
 
 abbreviation (input)
-  the_nat_to_bl_10  :: "nat \<Rightarrow> bool list"
+  the_nat_to_bl_10 :: "nat \<Rightarrow> bool list"
 where
   "the_nat_to_bl_10 n \<equiv> the_nat_to_bl 10 n"
 
 lemma len_the_nat_to_bl [simp]:
-    "length (the_nat_to_bl x y) = x"
+  "length (the_nat_to_bl x y) = x"
   apply (clarsimp simp: the_nat_to_bl_def nat_to_bl_def)
   apply safe
    apply (metis le_def mod_less_divisor nat_zero_less_power_iff zero_less_numeral)
@@ -309,11 +309,11 @@ lemma tcb_cnode_index_nat_to_bl [simp]:
   by (clarsimp simp: tcb_cnode_index_def intro!: length_neq)
 
 lemma mod_less_self [simp]:
-    "a \<le> b mod a \<longleftrightarrow> ((a :: nat) = 0)"
+  "a \<le> b mod a \<longleftrightarrow> ((a :: nat) = 0)"
   by (metis mod_less_divisor nat_neq_iff not_less not_less0)
 
 lemma split_div_mod:
-    "a = (b::nat) \<longleftrightarrow> (a div k = b div k \<and> a mod k = b mod k)"
+  "a = (b::nat) \<longleftrightarrow> (a div k = b div k \<and> a mod k = b mod k)"
   by (metis mult_div_mod_eq)
 
 lemma nat_to_bl_eq:
@@ -344,7 +344,7 @@ lemma nat_to_bl_eq:
   done
 
 lemma nat_to_bl_mod_n_eq [simp]:
-    "nat_to_bl n a = nat_to_bl n b \<longleftrightarrow> ((a = b \<and> a < 2 ^ n) \<or> (a \<ge> 2 ^ n \<and> b \<ge> 2 ^ n))"
+  "nat_to_bl n a = nat_to_bl n b \<longleftrightarrow> ((a = b \<and> a < 2 ^ n) \<or> (a \<ge> 2 ^ n \<and> b \<ge> 2 ^ n))"
   apply (rule iffI)
   apply (clarsimp simp: not_le)
   apply (subst (asm) nat_to_bl_eq, simp)
@@ -355,11 +355,11 @@ lemma nat_to_bl_mod_n_eq [simp]:
   done
 
 lemma the_the_eq:
-    "\<lbrakk> x \<noteq> None; y \<noteq> None \<rbrakk> \<Longrightarrow> (the x = the y) = (x = y)"
+  "\<lbrakk> x \<noteq> None; y \<noteq> None \<rbrakk> \<Longrightarrow> (the x = the y) = (x = y)"
   by auto
 
 lemma the_nat_to_bl_eq [simp]:
-    "(the_nat_to_bl n a = the_nat_to_bl m b) \<longleftrightarrow> (n = m \<and> (a mod 2 ^ n = b mod 2 ^ n))"
+  "(the_nat_to_bl n a = the_nat_to_bl m b) \<longleftrightarrow> (n = m \<and> (a mod 2 ^ n = b mod 2 ^ n))"
   apply (case_tac "n = m")
    apply (clarsimp simp: the_nat_to_bl_def)
    apply (subst the_the_eq)
@@ -371,11 +371,11 @@ lemma the_nat_to_bl_eq [simp]:
   done
 
 lemma empty_cnode_eq_Some [simp]:
-    "(empty_cnode n x = Some y) = (length x = n \<and> y = NullCap)"
+  "(empty_cnode n x = Some y) = (length x = n \<and> y = NullCap)"
   by (clarsimp simp: empty_cnode_def, metis)
 
 lemma empty_cnode_eq_None [simp]:
-    "(empty_cnode n x = None) = (length x \<noteq> n)"
+  "(empty_cnode n x = None) = (length x \<noteq> n)"
   by (clarsimp simp: empty_cnode_def)
 
 text \<open>Low's CSpace\<close>
@@ -401,16 +401,16 @@ where
   "Low_cnode \<equiv> CNode 10 Low_caps"
 
 lemma ran_empty_cnode [simp]:
-    "ran (empty_cnode C) = {NullCap}"
+  "ran (empty_cnode C) = {NullCap}"
   by (auto simp: empty_cnode_def ran_def Ex_list_of_length intro: set_eqI)
 
 lemma empty_cnode_app [simp]:
-    "length x = n \<Longrightarrow> empty_cnode n x = Some NullCap"
+  "length x = n \<Longrightarrow> empty_cnode n x = Some NullCap"
   by (auto simp: empty_cnode_def)
 
 lemma in_ran_If [simp]:
-      "(x \<in> ran (\<lambda>n. if P n then A n else B n))
-            \<longleftrightarrow>  (\<exists>n. P n \<and> A n = Some x) \<or> (\<exists>n. \<not> P n \<and> B n = Some x)"
+  "(x \<in> ran (\<lambda>n. if P n then A n else B n))
+   \<longleftrightarrow> (\<exists>n. P n \<and> A n = Some x) \<or> (\<exists>n. \<not> P n \<and> B n = Some x)"
  by (auto simp: ran_def)
 
 
@@ -444,7 +444,7 @@ where
            \<mapsto> ArchObjectCap (PageDirectoryCap High_pd_ptr
                                             (Some High_asid)),
         (the_nat_to_bl_10 318)
-           \<mapsto> NotificationCap ntfn_ptr 0 {AllowRecv}) "
+           \<mapsto> NotificationCap ntfn_ptr 0 {AllowRecv})"
 
 definition
   High_cnode :: kernel_object
@@ -507,7 +507,7 @@ where
 text \<open>Low's VSpace (PageDirectory)\<close>
 
 definition
-  Low_pt' :: "word8 \<Rightarrow> pte "
+  Low_pt' :: "word8 \<Rightarrow> pte"
 where
   "Low_pt' \<equiv> (\<lambda>_. InvalidPTE)
             (0 := SmallPagePTE shared_page_ptr_phys {} vm_read_write)"
@@ -519,14 +519,14 @@ where
 
 
 definition
-  Low_pd' :: "12 word \<Rightarrow> pde "
+  Low_pd' :: "12 word \<Rightarrow> pde"
 where
   "Low_pd' \<equiv>
     global_pd
      (0 := PageTablePDE
               (addrFromPPtr Low_pt_ptr)
               {}
-              undefined )"
+              undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -541,7 +541,7 @@ text \<open>High's VSpace (PageDirectory)\<close>
 
 
 definition
-  High_pt' :: "word8 \<Rightarrow> pte "
+  High_pt' :: "word8 \<Rightarrow> pte"
 where
   "High_pt' \<equiv>
     (\<lambda>_. InvalidPTE)
@@ -555,14 +555,14 @@ where
 
 
 definition
-  High_pd' :: "12 word \<Rightarrow> pde "
+  High_pd' :: "12 word \<Rightarrow> pde"
 where
   "High_pd' \<equiv>
     global_pd
      (0 := PageTablePDE
              (addrFromPPtr High_pt_ptr)
              {}
-             undefined )"
+             undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -840,11 +840,11 @@ definition arch_state0 :: "arch_state" where
 definition
   s0_internal :: "det_ext state"
 where
-  "s0_internal \<equiv>  \<lparr>
+  "s0_internal \<equiv> \<lparr>
     kheap = kh0,
     cdt = Map.empty,
-    is_original_cap =  (\<lambda>_. False) ((Low_tcb_ptr, tcb_cnode_index 2) := True,
-                                    (High_tcb_ptr, tcb_cnode_index 2) := True),
+    is_original_cap = (\<lambda>_. False) ((Low_tcb_ptr, tcb_cnode_index 2) := True,
+                                   (High_tcb_ptr, tcb_cnode_index 2) := True),
     cur_thread = Low_tcb_ptr,
     idle_thread = idle_tcb_ptr,
     scheduler_action = resume_cur_thread,
@@ -902,7 +902,7 @@ lemma Sys1AgentMap_simps:
       "Sys1AgentMap High_tcb_ptr = partition_label High"
       "Sys1AgentMap idle_tcb_ptr = partition_label Low"
       "\<And>p. p \<in> ptr_range shared_page_ptr_virt pageBits
-          \<Longrightarrow> Sys1AgentMap p = partition_label Low"
+           \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
   apply simp_all
   by (auto simp: s0_ptr_defs ptr_range_def pageBits_def)
@@ -933,15 +933,15 @@ definition Sys1PAS :: "(auth_graph_label subject_label) PAS" where
 subsubsection \<open>Proof of pas_refined for Sys1\<close>
 
 lemma High_caps_well_formed: "well_formed_cnode_n 10 High_caps"
-  by (auto simp: High_caps_def well_formed_cnode_n_def  split: if_split_asm)
+  by (auto simp: High_caps_def well_formed_cnode_n_def split: if_split_asm)
 
 lemma Low_caps_well_formed: "well_formed_cnode_n 10 Low_caps"
-  by (auto simp: Low_caps_def well_formed_cnode_n_def  split: if_split_asm)
+  by (auto simp: Low_caps_def well_formed_cnode_n_def split: if_split_asm)
 
 lemma Silc_caps_well_formed: "well_formed_cnode_n 10 Silc_caps"
-  by (auto simp: Silc_caps_def well_formed_cnode_n_def  split: if_split_asm)
+  by (auto simp: Silc_caps_def well_formed_cnode_n_def split: if_split_asm)
 
-lemma s0_caps_of_state :
+lemma s0_caps_of_state:
   "caps_of_state s0_internal p = Some cap \<Longrightarrow>
      cap = NullCap \<or>
      (p,cap) \<in>
@@ -952,7 +952,7 @@ lemma s0_caps_of_state :
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap High_tcb_ptr),
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))),
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap ntfn_ptr 0 {AllowRecv}) ,
          ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap ntfn_ptr 0 {AllowSend}),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 0)), CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
@@ -964,7 +964,7 @@ lemma s0_caps_of_state :
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 2)), ReplyCap High_tcb_ptr True {AllowGrant, AllowWrite}),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 3)), NullCap),
-         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 4)), NullCap)} "
+         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 4)), NullCap)}"
   supply if_cong[cong]
   apply (insert High_caps_well_formed)
   apply (insert Low_caps_well_formed)
@@ -1051,7 +1051,7 @@ lemma Sys1_pas_refined:
      apply (simp add: s0_internal_def) (* this is OK because cdt is empty..*)
     apply (clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
-                           s0_internal_def kh0_def  Sys1AgentMap_simps
+                           s0_internal_def kh0_def Sys1AgentMap_simps
                            kh0_obj_def comp_def Low_pt'_def High_pt'_def
                            pte_ref_def pde_ref2_def Low_pd'_def High_pd'_def
                            Sys1AuthGraph_def ptr_range_def vspace_cap_rights_to_auth_def
@@ -1072,10 +1072,10 @@ lemma Sys1_pas_refined:
      apply (simp add: Sys1AuthGraph_def Sys1PAS_def Sys1ASIDMap_def)
      apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def
                                             cap_rights_to_auth_def Low_asid_def High_asid_def
-       asid_low_bits_def asid_high_bits_of_def )[1]
+       asid_low_bits_def asid_high_bits_of_def)[1]
     apply (clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
-                           s0_internal_def kh0_def  Sys1AgentMap_simps
+                           s0_internal_def kh0_def Sys1AgentMap_simps
                            kh0_obj_def comp_def Low_pt'_def High_pt'_def
                            pte_ref_def pde_ref2_def Low_pd'_def High_pd'_def
                            Sys1AuthGraph_def ptr_range_def
@@ -1088,7 +1088,7 @@ lemma Sys1_pas_refined:
    apply (drule s0_caps_of_state)
    apply (simp add: Sys1AuthGraph_def Sys1PAS_def Sys1ASIDMap_def)
    apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def Low_asid_def High_asid_def
-     asid_low_bits_def asid_high_bits_of_def )[1]
+     asid_low_bits_def asid_high_bits_of_def)[1]
    done
 
 lemma Sys1_pas_cur_domain:
@@ -1152,7 +1152,7 @@ lemma silc_inv_s0:
   apply (intro conjI)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
-  apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state )
+  apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state)
   by (auto simp:is_transferable.simps dest:s0_caps_of_state)
 
 
@@ -1226,7 +1226,7 @@ lemma valid_obj_s0[simp]:
   "valid_obj Low_cnode_ptr  Low_cnode s0_internal"
   "valid_obj High_cnode_ptr High_cnode s0_internal"
   "valid_obj Silc_cnode_ptr Silc_cnode s0_internal"
-  "valid_obj ntfn_ptr        ntfn s0_internal"
+  "valid_obj ntfn_ptr       ntfn s0_internal"
   "valid_obj irq_cnode_ptr  irq_cnode s0_internal"
   "valid_obj Low_pd_ptr     Low_pd s0_internal"
   "valid_obj High_pd_ptr    High_pd s0_internal"
@@ -1517,8 +1517,8 @@ lemma valid_reply_caps_s0[simp]:
   "valid_reply_caps s0_internal"
   apply (clarsimp simp: valid_reply_caps_def)
   apply (rule conjI)
-   apply (force  dest: s0_caps_of_state
-                 simp: Invariants_AI.cte_wp_at_caps_of_state has_reply_cap_def is_reply_cap_to_def)
+   apply (force dest: s0_caps_of_state
+                simp: Invariants_AI.cte_wp_at_caps_of_state has_reply_cap_def is_reply_cap_to_def)
   apply (clarsimp simp: unique_reply_caps_def)
   apply (drule s0_caps_of_state)+
   apply (erule disjE | simp add: is_reply_cap_def)+
@@ -1528,7 +1528,7 @@ lemma valid_reply_masters_s0[simp]:
   "valid_reply_masters s0_internal"
   apply (clarsimp simp: valid_reply_masters_def)
   apply (force dest: s0_caps_of_state
-               simp: Invariants_AI.cte_wp_at_caps_of_state  is_master_reply_cap_to_def)
+               simp: Invariants_AI.cte_wp_at_caps_of_state is_master_reply_cap_to_def)
   done
 
 lemma valid_global_refs_s0[simp]:

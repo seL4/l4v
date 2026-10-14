@@ -28,7 +28,7 @@ lemma sbn_st_vrefs[Finalise_AC_assms, wp]:
   done
 
 lemma arch_finalise_cap_auth'[Finalise_AC_assms]:
-   "\<lbrace>pas_refined aag\<rbrace> arch_finalise_cap x12 final \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag (fst rv)\<rbrace>"
+  "\<lbrace>pas_refined aag\<rbrace> arch_finalise_cap x12 final \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag (fst rv)\<rbrace>"
   unfolding arch_finalise_cap_def
   by (wp | wpc | simp add: comp_def hoare_TrueI[where P = \<top>] split del: if_split)+
 
@@ -45,7 +45,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
 
 lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
   "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
-     \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
+   \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   by simp
 
 lemma arch_finalise_cap_respects[Finalise_AC_assms, wp]:
@@ -68,16 +68,14 @@ declare prepare_thread_delete_st_tcb_at_halted[Finalise_AC_assms]
 declare prepare_thread_delete_pas_refined[Finalise_AC_assms]
 declare valid_cur_fpu_lift_arch[Finalise_AC_assms]
 
-end
+end (* Arch *)
 
-
-global_interpretation Finalise_AC_1?: Finalise_AC_1
+global_interpretation Finalise_AC?: Finalise_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Finalise_AC_assms | solves \<open>wp only: Finalise_AC_assms; simp\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -123,8 +121,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   apply (wp | simp | (rule hoare_pre, wpc))+
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation Finalise_AC_2?: Finalise_AC_2
 proof goal_cases

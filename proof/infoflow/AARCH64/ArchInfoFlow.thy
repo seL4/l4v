@@ -122,7 +122,7 @@ definition arch_globals_equiv ::
 
 declare arch_globals_equiv_def[simp]
 
-end
+end (* Arch *)
 
 (* FIXME AARCH64 IF: requalify elsewhere *)
 arch_requalify_consts

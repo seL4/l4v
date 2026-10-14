@@ -188,7 +188,7 @@ lemma dmo_no_mem_globals_equiv:
   "\<lbrakk> \<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>;
      \<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>;
      \<And>P. f \<lbrace>\<lambda>ms. P (exclusive_state ms)\<rbrace> \<rbrakk>
-     \<Longrightarrow> do_machine_op f \<lbrace>globals_equiv s\<rbrace>"
+   \<Longrightarrow> do_machine_op f \<lbrace>globals_equiv s\<rbrace>"
   unfolding do_machine_op_def
   apply (wp | simp add: split_def)+
   apply atomize
@@ -321,7 +321,7 @@ lemma retype_region_globals_equiv[Retype_IF_assms]:
     apply (clarsimp simp: p_assoc_help)
     apply (drule disjoint_subset_neg1[OF _ subset_thing], rule is_aligned_no_wrap')
         apply (clarsimp simp: valid_pspace_def pspace_aligned_def)
-        apply (drule_tac x="arm_global_pd (arch_state sa)" and A="dom (kheap sa)"  in bspec)
+        apply (drule_tac x="arm_global_pd (arch_state sa)" and A="dom (kheap sa)" in bspec)
          apply (simp add: domI)
         apply simp
        apply (rule word_power_less_1)
@@ -350,7 +350,7 @@ lemma retype_region_globals_equiv[Retype_IF_assms]:
    apply (clarsimp simp: p_assoc_help)
    apply (drule disjoint_subset_neg1[OF _ subset_thing], rule is_aligned_no_wrap')
        apply (clarsimp simp: valid_pspace_def pspace_aligned_def)
-       apply (drule_tac x="idle_thread sa" and A="dom (kheap sa)"  in bspec)
+       apply (drule_tac x="idle_thread sa" and A="dom (kheap sa)" in bspec)
         apply (simp add: domI)
        apply simp
       apply uint_arith
@@ -376,16 +376,14 @@ lemma equiv_asid_detype[Retype_IF_assms]:
   "equiv_asid asid s s' \<Longrightarrow> equiv_asid asid (detype N s) (detype N s')"
   by (auto simp: equiv_asid_def)
 
-end
+end (* Arch *)
 
-
-global_interpretation Retype_IF_1?: Retype_IF_1
+global_interpretation Retype_IF?: Retype_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Retype_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -734,8 +732,7 @@ lemma invoke_untyped_globals_equiv:
   apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation Retype_IF_2?: Retype_IF_2
 proof goal_cases
@@ -743,7 +740,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact Retype_IF_assms)?)
 qed
-
 
 context begin interpretation Arch .
 

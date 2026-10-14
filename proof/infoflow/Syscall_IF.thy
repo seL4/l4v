@@ -39,60 +39,59 @@ crunch cap_move
   for valid_global_objs[wp]: valid_global_objs
   (wp: cap_move_ext.valid_global_objs dxo_wp_weak)
 
-
-locale Syscall_IF_1 =
+locale Syscall_IF =
   fixes aag :: "'a subject_label PAS"
   assumes globals_equiv_irq_state_update[simp]:
     "\<And>f. globals_equiv st (s\<lparr>machine_state :=
                               machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
           globals_equiv st s"
-  and thread_set_globals_equiv':
+  assumes thread_set_globals_equiv':
     "\<And>f. \<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
           thread_set f tptr
           \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and sts_authorised_for_globals_inv:
+  assumes sts_authorised_for_globals_inv:
     "\<And>f. set_thread_state d f \<lbrace>\<lambda>s :: det_state. authorised_for_globals_inv oper s\<rbrace>"
-  and dmo_maskInterrupt_globals_equiv[wp]:
+  assumes dmo_maskInterrupt_globals_equiv[wp]:
     "do_machine_op (maskInterrupt b irq) \<lbrace>globals_equiv s\<rbrace>"
-  and dmo_ackInterrupt_globals_equiv[wp]:
+  assumes dmo_ackInterrupt_globals_equiv[wp]:
     "do_machine_op (ackInterrupt irq) \<lbrace>globals_equiv s\<rbrace>"
-  and dmo_resetTimer_globals_equiv[wp]:
+  assumes dmo_resetTimer_globals_equiv[wp]:
     "do_machine_op resetTimer \<lbrace>globals_equiv s\<rbrace>"
-  and arch_mask_irq_signal_globals_equiv[wp]:
+  assumes arch_mask_irq_signal_globals_equiv[wp]:
     "arch_mask_irq_signal irq \<lbrace>globals_equiv st\<rbrace>"
-  and handle_reserved_irq_globals_equiv[wp]:
+  assumes handle_reserved_irq_globals_equiv[wp]:
      "\<lbrace>globals_equiv st and invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and handle_spurious_irq_globals_equiv[wp]:
+  assumes handle_spurious_irq_globals_equiv[wp]:
     "handle_spurious_irq \<lbrace>globals_equiv st\<rbrace>"
-  and arch_prepare_set_domain_globals_equiv[wp]:
+  assumes arch_prepare_set_domain_globals_equiv[wp]:
     "\<lbrace>globals_equiv st and invs\<rbrace> arch_prepare_set_domain t new_dom \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_prepare_set_domain_valid_arch_state[wp]:
+  assumes arch_prepare_set_domain_valid_arch_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
-  and handle_vm_fault_reads_respects:
+  assumes handle_vm_fault_reads_respects:
     "reads_respects aag l (pas_refined aag and valid_cur_hyp
                            and schact_is_rct and ct_in_cur_domain
                            and is_subject aag \<circ> cur_thread and K (is_subject aag thread))
                     (handle_vm_fault thread vmfault_type)"
-  and handle_hypervisor_fault_reads_respects:
+  assumes handle_hypervisor_fault_reads_respects:
     "pas_domains_distinct aag \<Longrightarrow>
      reads_respects aag l (invs and pas_refined aag and pas_cur_domain aag
                            and is_subject aag \<circ> cur_thread and K (is_subject aag thread))
                     (handle_hypervisor_fault thread hypfault_type)"
-  and handle_vm_fault_globals_equiv:
+  assumes handle_vm_fault_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      handle_vm_fault thread vmfault_type
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and handle_hypervisor_fault_globals_equiv:
+  assumes handle_hypervisor_fault_globals_equiv:
     "\<lbrace>globals_equiv st and invs\<rbrace> handle_hypervisor_fault thread hypfault_type \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_activate_idle_thread_globals_equiv[wp]:
+  assumes arch_activate_idle_thread_globals_equiv[wp]:
     "arch_activate_idle_thread t \<lbrace>globals_equiv st\<rbrace>"
-  and select_f_setNextPC_reads_respects[wp]:
+  assumes select_f_setNextPC_reads_respects[wp]:
     "reads_respects aag l \<top> (select_f (setNextPC pc f))"
-  and select_f_getRestartPC_reads_respects[wp]:
+  assumes select_f_getRestartPC_reads_respects[wp]:
     "reads_respects aag l \<top> (select_f (getRestartPC f))"
-  and arch_activate_idle_thread_reads_respects[wp]:
+  assumes arch_activate_idle_thread_reads_respects[wp]:
     "reads_respects aag l \<top> (arch_activate_idle_thread t)"
-  and decode_arch_invocation_authorised_for_globals:
+  assumes decode_arch_invocation_authorised_for_globals:
     "\<lbrace>invs and cte_wp_at ((=) (ArchObjectCap acap)) slot
            and (\<lambda>s :: det_state. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)\<rbrace>
      arch_decode_invocation label msg x_slot slot acap excaps
@@ -123,8 +122,7 @@ lemma invoke_cnode_globals_equiv:
   apply (case_tac cinv; clarsimp simp: real_cte_emptyable_strg)
   done
 
-end
-
+end (* Syscall_IF *)
 
 (* The contents of the delete_confidentiality locale *)
 
@@ -159,7 +157,7 @@ lemma next_revoke_eq:
 
 lemma next_revoke_eq':
   "\<lbrakk> reads_equiv_f aag s t; is_subject aag (fst src_slot) \<rbrakk>
-     \<Longrightarrow> next_revoke_cap src_slot s = next_revoke_cap src_slot t"
+   \<Longrightarrow> next_revoke_cap src_slot s = next_revoke_cap src_slot t"
   apply (rule next_revoke_eq)
    apply (fastforce simp: reads_equiv_f_def reads_equiv_def2 states_equiv_for_def equiv_for_def)
   apply simp
@@ -264,7 +262,7 @@ lemma invoke_cnode_reads_respects_f:
                   reads_respects_f[OF cap_move_reads_respects] cap_move_silc_inv get_cap_auth_wp
                   cap_revoke_reads_respects_f cap_delete_reads_respects_f cap_swap_silc_inv
                   reads_respects_f[OF cap_swap_reads_respects] cap_move_cte_wp_at_other
-                  reads_respects_f[OF get_cap_rev]  cancel_badged_sends_reads_respects_f
+                  reads_respects_f[OF get_cap_rev] cancel_badged_sends_reads_respects_f
              | simp add: when_def split del: if_split
              | elim conjE, assumption)+
   apply (clarsimp simp: cnode_inv_auth_derivations_def authorised_cnode_inv_def)
@@ -300,7 +298,7 @@ lemma cap_move_reads_respects_g:
 (* FIXME: MOVE *)
 lemma reads_respects_f_g':
   "\<lbrakk> reads_respects_g aag l P f; \<lbrace>silc_inv aag st and Q\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects_f_g aag l (silc_inv aag st and P and Q) f"
+   \<Longrightarrow> reads_respects_f_g aag l (silc_inv aag st and P and Q) f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def reads_equiv_f_g_def reads_equiv_g_def)
   apply (rule conjI, fastforce)
   apply (rule conjI, fastforce)
@@ -318,7 +316,7 @@ lemma invoke_domain_reads_respects_f_g:
   "reads_respects_f_g aag l \<bottom> (invoke_domain di)"
   by (rule ev_pre_cont)
 
-context Syscall_IF_1 begin
+context Syscall_IF begin
 
 lemma invoke_cnode_reads_respects_f_g:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -423,8 +421,7 @@ next
     by (fastforce simp: authorised_invocation_def authorised_for_globals_inv_def)
 qed
 
-end
-
+end (* Syscall_IF *)
 
 crunch reply_from_kernel
   for valid_arch_state[wp]: valid_arch_state (simp: crunch_simps)
@@ -461,7 +458,7 @@ lemma syscall_requiv_f_g:
      \<And>v. reads_respects_f_g aag l (Q' v) (h_fault v);
      \<And>v. \<lbrace>Q''' v\<rbrace> m_error v \<lbrace>R''\<rbrace>, \<lbrace>R'\<rbrace>;
      \<lbrace>P\<rbrace> m_fault \<lbrace>\<lambda>rv. Q'' rv and Q''' rv\<rbrace>, \<lbrace>Q'\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects_f_g aag l P (syscall m_fault h_fault m_error h_error m_finalise)"
+   \<Longrightarrow> reads_respects_f_g aag l P (syscall m_fault h_fault m_error h_error m_finalise)"
   apply (rule syscall_reads_respects_f_g[where Q''="\<lambda>rv. Q'' rv and Q''' rv"])
         apply (unfold validE_def)
         apply (assumption)+
@@ -570,8 +567,7 @@ lemma ct_active_not_idle:
   "\<lbrakk> invs s; ct_active s \<rbrakk> \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
   by (clarsimp simp: ct_active_cur_thread_not_idle_thread invs_valid_idle)
 
-
-context Syscall_IF_1 begin
+context Syscall_IF begin
 
 lemma decode_invocation_authorised_globals_inv:
   "\<lbrace>invs and domain_sep_inv irqs st and cte_wp_at ((=) cap) slot
@@ -666,8 +662,7 @@ lemma handle_invocation_reads_respects_g:
   apply (force simp: only_timer_irq_inv_def runnable_eq_active)
   done
 
-end
-
+end (* Syscall_IF *)
 
 lemma delete_caller_cap_reads_respects_f:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -871,7 +866,7 @@ lemma invoke_domain_globals_equiv[wp]:
   "\<lbrace>\<bottom>\<rbrace> invoke_domain di \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by wpsimp
 
-context Syscall_IF_1 begin
+context Syscall_IF begin
 
 lemma handle_interrupt_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_state) and invs\<rbrace>
@@ -1058,7 +1053,7 @@ lemma handle_event_globals_equiv:
       | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle
       | fastforce)+
 
-end
+end (* Syscall_IF *)
 
 lemma dmo_ev:
   "(\<And>s s'. equiv_valid (\<lambda>ms ms'. I (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>))

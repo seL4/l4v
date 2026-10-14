@@ -10,7 +10,7 @@ begin
 
 (* FIXME-NTFN: The 'NotificationControl' case of the following definition needs to be changed. *)
 
-definition authorised_tcb_inv :: "'a PAS \<Rightarrow> tcb_invocation \<Rightarrow>  bool" where
+definition authorised_tcb_inv :: "'a PAS \<Rightarrow> tcb_invocation \<Rightarrow> bool" where
  "authorised_tcb_inv aag ti \<equiv> case ti of
     Suspend t \<Rightarrow> is_subject aag t
   | Resume t \<Rightarrow> is_subject aag t
@@ -84,7 +84,7 @@ lemmas itr_wps =
 (*FIXME MOVE *)
 lemma aag_cap_auth_master_Reply:
   "\<lbrakk> pas_refined aag s ; AllowGrant \<in> R \<rbrakk>
-     \<Longrightarrow>  pas_cap_cur_auth aag (ReplyCap tcb True R) = is_subject aag tcb"
+   \<Longrightarrow> pas_cap_cur_auth aag (ReplyCap tcb True R) = is_subject aag tcb"
   unfolding aag_cap_auth_def
   by (fastforce intro: aag_wellformed_refl aag_wellformed_control_is_owns[THEN iffD1]
                  simp: pas_refined_def cli_no_irqs clas_no_asid cap_auth_conferred_def
@@ -93,7 +93,7 @@ lemma aag_cap_auth_master_Reply:
 (* FIXME MOVE *)
 lemma cdt_NullCap:
   "\<lbrakk> valid_mdb s; caps_of_state s src = Some NullCap \<rbrakk>
-     \<Longrightarrow> cdt s src = None"
+   \<Longrightarrow> cdt s src = None"
   by (rule ccontr) (force dest: mdb_cte_atD simp: valid_mdb_def2)
 
 lemma setup_reply_master_pas_refined:
@@ -121,7 +121,7 @@ lemma restart_pas_refined:
 
 lemma option_update_thread_set_safe_lift:
   "\<lbrakk> \<And>v. \<lbrace>P\<rbrace> thread_set (f v) t \<lbrace>\<lambda>rv. P\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>P\<rbrace> option_update_thread t f v \<lbrace>\<lambda>rv. P\<rbrace>"
+   \<Longrightarrow> \<lbrace>P\<rbrace> option_update_thread t f v \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: option_update_thread_def split: option.split)
 
 crunch thread_set_priority
@@ -140,7 +140,7 @@ lemma set_priority_pas_refined[wp]:
   by (wpsimp wp: thread_set_pas_refined)
 
 lemma gts_test[wp]:
-   "\<lbrace>\<top>\<rbrace> get_thread_state t \<lbrace>\<lambda>rv s. test rv = st_tcb_at test t s\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> get_thread_state t \<lbrace>\<lambda>rv s. test rv = st_tcb_at test t s\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def)
   apply wp
   apply (clarsimp simp add: st_tcb_def2)
@@ -280,24 +280,23 @@ lemma invoke_tcb_ntfn_control_respects[wp]:
    apply (wp invoke_tcb_bind_notification_respects invoke_tcb_unbind_notification_respects | simp)+
   done
 
-
-locale Tcb_AC_1 =
+locale Tcb_AC =
   fixes aag :: "'a PAS"
   assumes arch_post_modify_registers_invs[wp]:
     "arch_post_modify_registers cur t \<lbrace>pas_refined aag\<rbrace>"
-  and arch_post_modify_registers_respects:
+  assumes arch_post_modify_registers_respects:
     "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
      arch_post_modify_registers cur t
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
-  and arch_post_set_flags_respects[wp]:
+  assumes arch_post_set_flags_respects[wp]:
     "\<lbrace>integrity aag X st and valid_cur_fpu\<rbrace>
      arch_post_set_flags t flags
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   assumes arch_post_set_flags_pas_refined[wp]:
     "arch_post_set_flags t flags \<lbrace>pas_refined aag\<rbrace>"
-  and arch_get_sanitise_register_info_inv[wp]:
+  assumes arch_get_sanitise_register_info_inv[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
-  and invoke_tcb_tc_respects_aag:
+  assumes invoke_tcb_tc_respects_aag:
     "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
                          and tcb_inv_wf (ThreadControl t sl ep mcp priority croot vroot buf)
                          and K (authorised_tcb_inv aag (ThreadControl t sl ep mcp priority croot vroot buf))\<rbrace>
@@ -329,8 +328,7 @@ lemma invoke_tcb_respects:
        | wpc | clarsimp simp: authorised_tcb_inv_def if_apply_def2
        | rule conjI | subst (asm) idle_no_ex_cap)+)
 
-end
-
+end (* Tcb_AC *)
 
 subsubsection\<open>@{term "pas_refined"}\<close>
 
@@ -363,7 +361,7 @@ lemma invoke_tcb_ntfn_control_pas_refined[wp]:
    apply (wp | fastforce simp: authorised_tcb_inv_def)+
   done
 
-context Tcb_AC_1 begin
+context Tcb_AC begin
 
 crunch set_flags
   for pas_refined[wp]: "pas_refined aag"
@@ -398,8 +396,7 @@ lemma invoke_tcb_pas_refined:
                            simp: invs_valid_global_refs invs_valid_objs)+
   done
 
-end
-
+end (* Tcb_AC *)
 
 subsection\<open>TCB / decode\<close>
 
@@ -521,14 +518,14 @@ lemma decode_unbind_notification_authorised:
 
 lemma decode_bind_notification_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
-                        \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)) )\<rbrace>
+                        \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_bind_notification (ThreadCap t) excaps
    \<lbrace>\<lambda>rv _. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_bind_notification_def authorised_tcb_inv_def
   apply clarsimp
   apply (wp gbn_wp get_simple_ko_wp whenE_throwError_wp | wpc | simp add:)+
   apply (clarsimp dest!: hd_in_set)
-  apply (drule_tac x="hd excaps"  in bspec, simp)+
+  apply (drule_tac x="hd excaps" in bspec, simp)+
   apply (auto simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def AllowRecv_def)
   done
 

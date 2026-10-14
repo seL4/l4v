@@ -40,7 +40,7 @@ definition complete_AgentAuthGraph where
   "complete_AgentAuthGraph g \<equiv>
      g \<union> {(y,a,y) | a y. True}
        \<union> {(x,a,y) | x a y. (x,Control,y) \<in> g }
-       \<union> {(x,a,y)|x a y. \<exists>z. (x,Control,z) \<in> g \<and> (z, Control,y) \<in> g} "
+       \<union> {(x,a,y)|x a y. \<exists>z. (x,Control,z) \<in> g \<and> (z, Control,y) \<in> g}"
 declare complete_AgentAuthGraph_def [simp]
 
 abbreviation partition_label where
@@ -66,7 +66,7 @@ definition SACGraph where
   }"
 declare SACGraph_def [simp]
 
-definition SACAuthGraph  where
+definition SACAuthGraph where
   "SACAuthGraph = complete_AgentAuthGraph SACGraph"
 declare SACAuthGraph_def [simp]
 
@@ -77,23 +77,23 @@ definition RMControls where
   "RMControls = {partition_label RM, partition_label R, partition_label NicA, partition_label NicB, partition_label NicD}"
 declare RMControls_def [simp]
 
-lemma reads_all_rm_controlled_subjects : "\<lbrakk>partition_label RM \<in> subjectReads SACAuthGraph (partition_label x); l \<in> RMControls\<rbrakk> \<Longrightarrow> l \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma reads_all_rm_controlled_subjects: "\<lbrakk>partition_label RM \<in> subjectReads SACAuthGraph (partition_label x); l \<in> RMControls\<rbrakk> \<Longrightarrow> l \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (simp only:RMControls_def)
   apply (erule insertE, rule_tac t="partition_label RM" in reads_read_thread_read_pages, simp, simp)+
   apply simp
 done
 
-lemma reads_ntfn3_via_r : "partition_label R \<in> subjectReads SACAuthGraph (partition_label x) \<Longrightarrow> partition_label NTFN3 \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma reads_ntfn3_via_r: "partition_label R \<in> subjectReads SACAuthGraph (partition_label x) \<Longrightarrow> partition_label NTFN3 \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac ep="partition_label NTFN3" and t="partition_label R" and auth="Receive" and auth'="Notify" and a="partition_label T" in reads_read_queued_thread_read_ep)
   apply simp_all
 done
 
-lemma reads_ntfn2_via_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label x) \<Longrightarrow> partition_label NTFN2 \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma reads_ntfn2_via_rm: "partition_label RM \<in> subjectReads SACAuthGraph (partition_label x) \<Longrightarrow> partition_label NTFN2 \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac ep="partition_label NTFN2" and t="partition_label RM" and auth="Receive" and auth'="Notify" and a="partition_label T" in reads_read_queued_thread_read_ep)
   apply simp_all
 done
 
-lemma reads_ntfn1_via_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label x) \<Longrightarrow> partition_label NTFN1 \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma reads_ntfn1_via_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label x) \<Longrightarrow> partition_label NTFN1 \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac ep="partition_label NTFN1" and t="partition_label SC" and auth="Receive" and auth'="Notify" and a="partition_label T" in reads_read_queued_thread_read_ep)
   apply simp_all
 done
@@ -116,7 +116,7 @@ lemma reads_Control_rev:
   done
 
 
-lemma abdrm_reads_ep : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partition_label EP \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma abdrm_reads_ep: "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partition_label EP \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac t = "partition_label RM" and a = "partition_label SC" and auth' = "SyncSend" and auth = "Receive" in reads_read_queued_thread_read_ep)
       apply (simp+)[4]
   apply safe
@@ -125,32 +125,32 @@ lemma abdrm_reads_ep : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partiti
    apply(fastforce intro: reads_Control_rev simp del: complete_AgentAuthGraph_def)
   done
 
-lemma abdrm_reads_sc : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partition_label SC \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma abdrm_reads_sc: "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partition_label SC \<in> subjectReads SACAuthGraph (partition_label x)"
     apply (rule_tac b = "partition_label SC" and ep = "partition_label EP" in read_sync_ep_read_senders)
       apply (simp del: SACAuthGraph_def add: abdrm_reads_ep, simp)
 done
 
-lemma abd_reads_rm : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label RM \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma abd_reads_rm: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label RM \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule reads_Control_rev)
   apply auto
 done
 
-lemma abd_reads_c : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label NicC \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma abd_reads_c: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label NicC \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac t = "partition_label SC" in reads_read_thread_read_pages)
   apply (rule abdrm_reads_sc, simp, blast, simp)
 done
 
-lemma abd_reads_r : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label R \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma abd_reads_r: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label R \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac p="partition_label R" and t="partition_label RM" in reads_read_thread_read_pages)
   apply (rule abd_reads_rm, simp, simp)
 done
 
-lemma abd_reads_ntfn3 : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label NTFN3 \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma abd_reads_ntfn3: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label NTFN3 \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac ep="partition_label NTFN3" and t="partition_label R" and auth="Receive" and auth'="Notify" and a="partition_label T" in reads_read_queued_thread_read_ep)
   apply (simp_all add: abd_reads_r del:SACAuthGraph_def, simp_all)
 done
 
-lemma abd_reads_all_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3} \<subseteq> subjectReads SACAuthGraph (partition_label x)"
+lemma abd_reads_all_bw: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3} \<subseteq> subjectReads SACAuthGraph (partition_label x)"
   apply (rule subsetI)
   (* refl cases *)
   apply (case_tac "partition_label x = xa")
@@ -172,7 +172,7 @@ lemma abd_reads_all_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> {partitio
   apply simp
 done
 
-lemma abd_reads : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectReads SACAuthGraph (partition_label x) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
+lemma abd_reads: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectReads SACAuthGraph (partition_label x) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
    apply (rule subset_antisym)
    defer
    apply (rule abd_reads_all_bw)
@@ -188,7 +188,7 @@ definition abd_affects_set where
                      EP, NTFN2}" (* these two added for NTFN binding *)
 declare abd_affects_set_def[simp]
 
-lemma abd_affects_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label ` abd_affects_set \<subseteq> subjectAffects SACAuthGraph (partition_label x)"
+lemma abd_affects_bw: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label ` abd_affects_set \<subseteq> subjectAffects SACAuthGraph (partition_label x)"
   apply (simp only:abd_affects_set_def)
   apply (rule subsetI)
   (* refl cases *)
@@ -231,7 +231,7 @@ lemma abd_affects_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_l
     apply (simp,simp,simp,simp)
   done
 
-lemma abd_affects : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects SACAuthGraph (partition_label x) = partition_label ` abd_affects_set"
+lemma abd_affects: "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects SACAuthGraph (partition_label x) = partition_label ` abd_affects_set"
    apply (rule subset_antisym)
    defer
    apply (rule abd_affects_bw)
@@ -242,31 +242,31 @@ lemma abd_affects : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects
 
 subsection \<open>NicC reads/affects\<close>
 
-lemma c_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NicC)"
+lemma c_reads_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NicC)"
   apply (rule_tac b = "partition_label NicC" in reads_read_page_read_thread)
   apply (rule reads_lrefl)
   apply (simp)
 done
 
-lemma c_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NicC)"
+lemma c_reads_ep: "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NicC)"
   apply (rule_tac a = "partition_label EP" and ep = "partition_label EP" and t = "partition_label SC" and auth = "SyncSend" and auth' = "Reset" in reads_read_queued_thread_read_ep)
   apply (simp,simp,simp,simp)
   apply (rule c_reads_sc)
 done
 
-lemma c_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NicC)"
+lemma c_reads_rm: "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NicC)"
   apply (rule_tac ep = "partition_label EP" in read_sync_ep_read_receivers)
    apply (rule c_reads_ep)
    apply (simp)
 done
 
-lemma c_reads_any_controlled_by_rm : "x \<in> {partition_label R, partition_label NicA, partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectReads SACAuthGraph (partition_label NicC)"
+lemma c_reads_any_controlled_by_rm: "x \<in> {partition_label R, partition_label NicA, partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectReads SACAuthGraph (partition_label NicC)"
   apply (rule_tac t = "partition_label RM" in reads_read_thread_read_pages)
     apply (rule c_reads_rm)
     apply auto
 done
 
-lemma c_reads : "subjectReads SACAuthGraph (partition_label NicC) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
+lemma c_reads: "subjectReads SACAuthGraph (partition_label NicC) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
   apply (rule subset_antisym)
     defer
     (* backward *)
@@ -288,13 +288,13 @@ lemma c_reads : "subjectReads SACAuthGraph (partition_label NicC) = {partition_l
     apply (erule subjectReads.induct)
     by (simp, blast?)+
 
-lemma c_affects_self_only : "x \<in> {partition_label NicC} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label NicC)"
+lemma c_affects_self_only: "x \<in> {partition_label NicC} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label NicC)"
   apply (erule insertE)
     apply (simp only:, rule affects_lrefl)
     apply simp
 done
 
-lemma c_affects : "subjectAffects SACAuthGraph (partition_label NicC) = {partition_label NicC}"
+lemma c_affects: "subjectAffects SACAuthGraph (partition_label NicC) = {partition_label NicC}"
   apply (rule subset_antisym)
   defer
     (* backward *)
@@ -307,32 +307,32 @@ lemma c_affects : "subjectAffects SACAuthGraph (partition_label NicC) = {partiti
 
 subsection \<open>R reads/affects\<close>
 
-lemma r_reads_bd : "x \<in> {partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectReads SACAuthGraph (partition_label R)"
+lemma r_reads_bd: "x \<in> {partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectReads SACAuthGraph (partition_label R)"
   apply (rule reads_read)
   apply auto
 done
 
-lemma r_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partition_label R)"
+lemma r_reads_ep: "partition_label EP \<in> subjectReads SACAuthGraph (partition_label R)"
     apply (rule_tac a="partition_label SC" and auth'="SyncSend" and ep="partition_label EP" and t="partition_label RM" and auth="Receive" in reads_read_queued_thread_read_ep)
     apply (simp, simp, simp, simp, rule reads_Control_rev, simp)
 done
 
-lemma r_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label R)"
+lemma r_reads_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label R)"
     apply (rule_tac ep="partition_label EP" and b="partition_label SC" in read_sync_ep_read_senders)
     apply (rule r_reads_ep, simp)
 done
 
-lemma r_reads_a : "partition_label NicA \<in> subjectReads SACAuthGraph (partition_label R)"
+lemma r_reads_a: "partition_label NicA \<in> subjectReads SACAuthGraph (partition_label R)"
   apply (rule_tac a="partition_label NicA" and auth'="Reset" and ep="partition_label NicA" and t="partition_label RM" and auth="Receive" in reads_read_queued_thread_read_ep)
   apply (simp_all add:reads_Control_rev[simplified])
 done
 
-lemma r_reads_c : "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label R)"
+lemma r_reads_c: "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label R)"
   apply (rule_tac t="partition_label SC" in reads_read_thread_read_pages)
   apply (rule r_reads_sc, simp)
 done
 
-lemma r_reads : "subjectReads SACAuthGraph (partition_label R) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
+lemma r_reads: "subjectReads SACAuthGraph (partition_label R) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
   apply (rule subset_antisym)
     defer
     (* backward *)
@@ -354,35 +354,35 @@ lemma r_reads : "subjectReads SACAuthGraph (partition_label R) = {partition_labe
     apply (erule subjectReads.induct)
     by (simp, blast?)+
 
-lemma r_affects_bd : "x \<in> {partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label R)"
+lemma r_affects_bd: "x \<in> {partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label R)"
   apply (rule_tac auth="Write" in affects_write)
   apply auto
 done
 
-lemma r_affects_rm : "partition_label RM \<in> subjectAffects SACAuthGraph (partition_label R)"
+lemma r_affects_rm: "partition_label RM \<in> subjectAffects SACAuthGraph (partition_label R)"
   apply (rule_tac l="partition_label R" and ep="partition_label R" in affects_recv)
   apply simp_all
 done
 
-lemma r_affects_a : "partition_label NicA \<in> subjectAffects SACAuthGraph (partition_label R)"
+lemma r_affects_a: "partition_label NicA \<in> subjectAffects SACAuthGraph (partition_label R)"
   apply (rule_tac l="partition_label R" and ep="partition_label R" and l'="partition_label RM" and auth="Receive" in affects_reset)
   apply auto
 done
 
-lemma r_affects_ntfn3 : "partition_label NTFN3 \<in> subjectAffects SACAuthGraph (partition_label R)"
+lemma r_affects_ntfn3: "partition_label NTFN3 \<in> subjectAffects SACAuthGraph (partition_label R)"
   apply (rule_tac l="partition_label R" and auth="Receive" in affects_ep)
   apply simp_all
 done
 
-lemma r_affects_ntfn2 : "partition_label NTFN2 \<in> subjectAffects SACAuthGraph (partition_label R)"
+lemma r_affects_ntfn2: "partition_label NTFN2 \<in> subjectAffects SACAuthGraph (partition_label R)"
   apply (rule_tac l="partition_label R" in affects_ep_bound_trans)
   by auto
 
-lemma r_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label R)"
+lemma r_affects_ep: "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label R)"
   apply (rule_tac l="partition_label R" in affects_ep_bound_trans)
   by auto
 
-lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) =
+lemma r_affects: "subjectAffects SACAuthGraph (partition_label R) =
                    {partition_label NicB, partition_label NicD, partition_label R,
                     partition_label RM, partition_label NicA, partition_label NTFN3,
                     partition_label EP, partition_label NTFN2 \<comment> \<open>these 2 added for NTFN binding\<close> }"
@@ -406,17 +406,17 @@ lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) =
 
 subsection \<open>RM reads/affects\<close>
 
-lemma rm_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label RM)"
+lemma rm_reads_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label RM)"
   apply (rule_tac ep="partition_label EP" in read_sync_ep_read_senders)
   apply (simp_all add:reads_ep)
 done
 
-lemma rm_reads_c : "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label RM)"
+lemma rm_reads_c: "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label RM)"
   apply (rule_tac t="partition_label SC" in reads_read_thread_read_pages)
   apply (rule rm_reads_sc, simp)
 done
 
-lemma rm_reads : "subjectReads SACAuthGraph (partition_label RM) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
+lemma rm_reads: "subjectReads SACAuthGraph (partition_label RM) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -438,33 +438,33 @@ lemma rm_reads : "subjectReads SACAuthGraph (partition_label RM) = {partition_la
   apply (erule subjectReads.induct)
   by (simp, blast?)+
 
-lemma rm_affects_via_control : "x \<in> {partition_label R, partition_label NicA, partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label RM)"
+lemma rm_affects_via_control: "x \<in> {partition_label R, partition_label NicA, partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label RM)"
   apply (rule_tac l="partition_label RM" and auth="Control" in affects_write)
   apply (simp, simp)
 done
 
-lemma rm_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label RM)"
+lemma rm_affects_ep: "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label RM)"
   apply (rule_tac auth="Receive" in affects_ep)
   apply simp_all
 done
 
-lemma rm_affects_sc : "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label RM)"
+lemma rm_affects_sc: "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label RM)"
   apply (rule_tac l="partition_label RM" and ep="partition_label EP" in affects_recv)
   apply simp_all
 done
 
-lemma rm_affects_ntfn2 : "partition_label NTFN2 \<in> subjectAffects SACAuthGraph (partition_label RM)"
+lemma rm_affects_ntfn2: "partition_label NTFN2 \<in> subjectAffects SACAuthGraph (partition_label RM)"
   apply (rule_tac l="partition_label RM" and auth="Receive" in affects_ep)
   apply simp_all
 done
 
-lemma rm_affects_ntfn3 : "partition_label NTFN3 \<in> subjectAffects SACAuthGraph (partition_label RM)"
+lemma rm_affects_ntfn3: "partition_label NTFN3 \<in> subjectAffects SACAuthGraph (partition_label RM)"
   apply (rule_tac l="partition_label RM" in affects_ep_bound_trans)
   apply clarsimp
   by auto
 
 
-lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) =
+lemma rm_affects: "subjectAffects SACAuthGraph (partition_label RM) =
                     {partition_label NicA, partition_label NicB, partition_label NicD,
                      partition_label R, partition_label SC, partition_label EP,
                      partition_label RM, partition_label NTFN2,
@@ -490,12 +490,12 @@ lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) =
 
 subsection \<open>SC\<close>
 
-lemma sc_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label SC)"
+lemma sc_reads_rm: "partition_label RM \<in> subjectReads SACAuthGraph (partition_label SC)"
   apply (rule_tac ep="partition_label EP" and b="partition_label RM" in read_sync_ep_read_receivers)
   apply (simp_all add:reads_ep)
 done
 
-lemma sc_reads : "subjectReads SACAuthGraph (partition_label SC) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
+lemma sc_reads: "subjectReads SACAuthGraph (partition_label SC) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -518,13 +518,13 @@ apply (erule insertE, rule reads_all_rm_controlled_subjects, rule sc_reads_rm, s
   apply (simp, blast?)+
 done
 
-lemma sc_affects_all_rm_controls : "l \<in> RMControls \<Longrightarrow> l \<in> subjectAffects SACAuthGraph (partition_label SC)"
+lemma sc_affects_all_rm_controls: "l \<in> RMControls \<Longrightarrow> l \<in> subjectAffects SACAuthGraph (partition_label SC)"
   apply (simp only:RMControls_def)
   apply (erule insertE, rule_tac l="partition_label SC" and auth="SyncSend" and ep="partition_label EP" and l'="partition_label RM" in affects_send, simp, simp, simp, simp)+
   apply simp
 done
 
-lemma sc_affects : "subjectAffects SACAuthGraph (partition_label SC) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1}"
+lemma sc_affects: "subjectAffects SACAuthGraph (partition_label SC) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -547,22 +547,22 @@ done
 
 subsection \<open>EP\<close>
 
-lemma ep_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label EP)"
+lemma ep_reads_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label EP)"
   apply (rule_tac ep="partition_label EP" in read_sync_ep_read_senders)
   apply (rule reads_lrefl, simp_all)
 done
 
-lemma ep_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label EP)"
+lemma ep_reads_rm: "partition_label RM \<in> subjectReads SACAuthGraph (partition_label EP)"
   apply (rule_tac ep="partition_label EP" and b="partition_label RM" in read_sync_ep_read_receivers)
   apply (rule reads_lrefl, simp)
 done
 
-lemma ep_reads_c : "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label EP)"
+lemma ep_reads_c: "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label EP)"
   apply (rule_tac t="partition_label SC" and p="partition_label NicC" in reads_read_thread_read_pages)
   apply (rule ep_reads_sc, simp)
 done
 
-lemma ep_reads : "subjectReads SACAuthGraph (partition_label EP) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
+lemma ep_reads: "subjectReads SACAuthGraph (partition_label EP) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -585,21 +585,21 @@ lemma ep_reads : "subjectReads SACAuthGraph (partition_label EP) = {partition_la
   apply (simp, blast?)+
 done
 
-lemma ep_affects_sc : "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label EP)"
+lemma ep_affects_sc: "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label EP)"
   apply (rule_tac l="partition_label EP" and ep="partition_label EP" in affects_recv)
   apply simp_all
 done
 
-lemma ep_affects_c : "partition_label NicC \<in> subjectAffects SACAuthGraph (partition_label EP)"
+lemma ep_affects_c: "partition_label NicC \<in> subjectAffects SACAuthGraph (partition_label EP)"
   apply (rule_tac l="partition_label EP" and l'="partition_label SC" and auth="SyncSend" and ep="partition_label EP" in affects_reset)
   apply simp_all
 done
 
-lemma ep_affects_ntfn2 : "partition_label NTFN2 \<in> subjectAffects SACAuthGraph (partition_label EP)"
+lemma ep_affects_ntfn2: "partition_label NTFN2 \<in> subjectAffects SACAuthGraph (partition_label EP)"
   apply (rule_tac ep="partition_label NTFN2" in affects_ep_bound_trans)
   by auto
 
-lemma ep_affects_rm_controls : "x \<in> RMControls \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label EP)"
+lemma ep_affects_rm_controls: "x \<in> RMControls \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label EP)"
   apply (rule_tac l="partition_label EP" and ep="partition_label EP" and auth="SyncSend" and l'="partition_label RM" in affects_send)
   apply (simp_all)
 done
@@ -625,63 +625,63 @@ subsection \<open>NTFN1,2,3\<close>
 
 subsubsection \<open>NTFN1 reads SC, EP, RM, R\<close>
 
-lemma ntfn1_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
+lemma ntfn1_reads_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
   apply (rule_tac ep="partition_label NTFN1" in read_sync_ep_read_receivers)
   apply (rule reads_lrefl, simp)
 done
 
-lemma ntfn1_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
+lemma ntfn1_reads_ep: "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
   apply (rule_tac ep="partition_label EP" and auth="SyncSend" and t="partition_label SC" and auth'="Reset" and a="partition_label EP" in reads_read_queued_thread_read_ep)
   apply (simp, simp, simp, simp, rule ntfn1_reads_sc)
 done
 
-lemma ntfn1_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
+lemma ntfn1_reads_rm: "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
   apply (rule_tac b="partition_label RM" and ep="partition_label EP" in read_sync_ep_read_receivers)
   apply (rule ntfn1_reads_ep, simp)
 done
 
 subsubsection \<open>NTFN2 reads SC, EP, RM, R\<close>
 
-lemma ntfn2_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
+lemma ntfn2_reads_rm: "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
   apply (rule_tac ep="partition_label NTFN2" in read_sync_ep_read_receivers)
   apply (rule reads_lrefl, simp)
 done
 
-lemma ntfn2_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
+lemma ntfn2_reads_ep: "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
   apply (rule_tac ep="partition_label EP" and auth="Receive" and t="partition_label RM" and auth'="Reset" and a="partition_label EP" in reads_read_queued_thread_read_ep)
   apply (simp, simp, simp, simp, rule ntfn2_reads_rm)
 done
 
-lemma ntfn2_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
+lemma ntfn2_reads_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
   apply (rule_tac b="partition_label SC" and ep="partition_label EP" in read_sync_ep_read_senders)
   apply (rule ntfn2_reads_ep, simp)
 done
 
 subsubsection \<open>NTFN3 reads SC, EP, RM, R\<close>
 
-lemma ntfn3_reads_r : "partition_label R \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
+lemma ntfn3_reads_r: "partition_label R \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
   apply (rule_tac ep="partition_label NTFN3" in read_sync_ep_read_receivers)
   apply (rule reads_lrefl, simp)
 done
 
-lemma ntfn3_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
+lemma ntfn3_reads_rm: "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
   apply (rule_tac b="partition_label R" in reads_read_page_read_thread)
   apply (rule ntfn3_reads_r, simp)
 done
 
-lemma ntfn3_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
+lemma ntfn3_reads_ep: "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
   apply (rule_tac t="partition_label RM" and auth="Receive" and auth'="SyncSend" and a="partition_label SC" in reads_read_queued_thread_read_ep)
   apply (simp, simp, simp, simp, rule ntfn3_reads_rm)
 done
 
-lemma ntfn3_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
+lemma ntfn3_reads_sc: "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
   apply (rule_tac ep="partition_label EP" in read_sync_ep_read_senders)
   apply (rule ntfn3_reads_ep, simp)
 done
 
 subsubsection \<open>NTFN1,2,3 reads C\<close>
 
-lemma ntfn123_reads_c : "x \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label NicC \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma ntfn123_reads_c: "x \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label NicC \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac t="partition_label SC" in reads_read_thread_read_pages)
   apply (erule insertE, simp only:, rule ntfn1_reads_sc, erule insertE, simp only:, rule ntfn2_reads_sc, erule insertE, simp only:, rule ntfn3_reads_sc, simp)
   apply simp
@@ -689,19 +689,19 @@ done
 
 subsubsection \<open>NTFN1,2,3 reads each other\<close>
 
-lemma ntfn13_reads_ntfn2 : "l \<in> {NTFN1, NTFN3} \<Longrightarrow> partition_label NTFN2 \<in> subjectReads SACAuthGraph (partition_label l)"
+lemma ntfn13_reads_ntfn2: "l \<in> {NTFN1, NTFN3} \<Longrightarrow> partition_label NTFN2 \<in> subjectReads SACAuthGraph (partition_label l)"
   apply (rule_tac t="partition_label RM" and auth="Receive" and auth'="Reset" and a="partition_label NTFN2" in reads_read_queued_thread_read_ep)
   apply (simp, simp, simp, simp)
   apply (erule insertE, simp only:, rule ntfn1_reads_rm, erule insertE, simp only:, rule ntfn3_reads_rm, simp)
 done
 
-lemma ntfn12_reads_ntfn3 : "l \<in> {NTFN1, NTFN2} \<Longrightarrow> partition_label NTFN3 \<in> subjectReads SACAuthGraph (partition_label l)"
+lemma ntfn12_reads_ntfn3: "l \<in> {NTFN1, NTFN2} \<Longrightarrow> partition_label NTFN3 \<in> subjectReads SACAuthGraph (partition_label l)"
   apply (rule_tac t="partition_label R" and auth="Receive" and auth'="Reset" and a="partition_label NTFN3" in reads_read_queued_thread_read_ep)
   apply (simp, simp, simp, simp)
   apply (erule insertE, simp only:, rule reads_all_rm_controlled_subjects, rule ntfn1_reads_rm, simp, erule insertE, simp only:, rule reads_all_rm_controlled_subjects, rule ntfn2_reads_rm, simp_all)
 done
 
-lemma ntfn23_reads_ntfn1 : "l \<in> {NTFN2, NTFN3} \<Longrightarrow> partition_label NTFN1 \<in> subjectReads SACAuthGraph (partition_label l)"
+lemma ntfn23_reads_ntfn1: "l \<in> {NTFN2, NTFN3} \<Longrightarrow> partition_label NTFN1 \<in> subjectReads SACAuthGraph (partition_label l)"
   apply (rule_tac t="partition_label SC" and auth="Receive" and auth'="Reset" and a="partition_label NTFN1" in reads_read_queued_thread_read_ep)
   apply (simp, simp, simp, simp)
   apply (erule insertE, simp only:, rule ntfn2_reads_sc, erule insertE, simp only:, rule ntfn3_reads_sc, simp)
@@ -710,19 +710,19 @@ done
 subsubsection \<open>NTFN1,2,3 reads\<close>
 declare SACAuthGraph_def[simp del]
 
-lemma ntfn123_reads_rm : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label RM \<in> subjectReads SACAuthGraph (partition_label l)"
+lemma ntfn123_reads_rm: "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label RM \<in> subjectReads SACAuthGraph (partition_label l)"
 by (auto simp:ntfn1_reads_rm ntfn2_reads_rm ntfn3_reads_rm)
 
-lemma ntfn123_reads_sc : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label SC \<in> subjectReads SACAuthGraph (partition_label l)"
+lemma ntfn123_reads_sc: "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label SC \<in> subjectReads SACAuthGraph (partition_label l)"
 by (auto simp:ntfn1_reads_sc ntfn2_reads_sc ntfn3_reads_sc)
 
-lemma ntfn123_reads_ep : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label EP \<in> subjectReads SACAuthGraph (partition_label l)"
+lemma ntfn123_reads_ep: "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partition_label EP \<in> subjectReads SACAuthGraph (partition_label l)"
 by (auto simp:ntfn1_reads_ep ntfn2_reads_ep ntfn3_reads_ep)
 
-lemma ntfn123_reads_ntfn123 : "\<lbrakk>l \<in> {NTFN1, NTFN2, NTFN3}; x \<in> {NTFN1, NTFN2, NTFN3}\<rbrakk> \<Longrightarrow> partition_label l \<in> subjectReads SACAuthGraph (partition_label x)"
+lemma ntfn123_reads_ntfn123: "\<lbrakk>l \<in> {NTFN1, NTFN2, NTFN3}; x \<in> {NTFN1, NTFN2, NTFN3}\<rbrakk> \<Longrightarrow> partition_label l \<in> subjectReads SACAuthGraph (partition_label x)"
 by (auto simp:ntfn12_reads_ntfn3 ntfn13_reads_ntfn2 ntfn23_reads_ntfn1)
 
-lemma ntfn123_reads : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> subjectReads SACAuthGraph (partition_label l) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
+lemma ntfn123_reads: "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> subjectReads SACAuthGraph (partition_label l) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -743,17 +743,17 @@ lemma ntfn123_reads : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> subjectRe
 
 subsubsection \<open>NTFN1,2,3 affects\<close>
 
-lemma ntfn1_affects_sc : "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label NTFN1)"
+lemma ntfn1_affects_sc: "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label NTFN1)"
   apply (rule_tac l''="partition_label SC" and l'="partition_label SC" and ep="partition_label NTFN1" and auth="Notify" and l="partition_label NTFN1" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma ntfn1_affects_c : "partition_label NicC \<in> subjectAffects SACAuthGraph (partition_label NTFN1)"
+lemma ntfn1_affects_c: "partition_label NicC \<in> subjectAffects SACAuthGraph (partition_label NTFN1)"
   apply (rule_tac l'="partition_label SC" and ep="partition_label NTFN1" and l="partition_label NTFN1" and auth="Notify" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma ntfn1_affects : "subjectAffects SACAuthGraph (partition_label NTFN1) = {partition_label NTFN1, partition_label SC, partition_label NicC}"
+lemma ntfn1_affects: "subjectAffects SACAuthGraph (partition_label NTFN1) = {partition_label NTFN1, partition_label SC, partition_label NicC}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -768,21 +768,21 @@ lemma ntfn1_affects : "subjectAffects SACAuthGraph (partition_label NTFN1) = {pa
   apply (simp add:SACAuthGraph_def, blast?)+
 done
 
-lemma ntfn2_affects_rm : "partition_label RM \<in> subjectAffects SACAuthGraph (partition_label NTFN2)"
+lemma ntfn2_affects_rm: "partition_label RM \<in> subjectAffects SACAuthGraph (partition_label NTFN2)"
   apply (rule_tac l'="partition_label RM" and ep="partition_label NTFN2" and auth="Notify" and l="partition_label NTFN2" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma ntfn2_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label NTFN2)"
+lemma ntfn2_affects_ep: "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label NTFN2)"
   apply (rule affects_ep_bound_trans)
   by (auto simp: SACAuthGraph_def)
 
-lemma ntfn2_affects_rm_controls : "x \<in> RMControls \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label NTFN2)"
+lemma ntfn2_affects_rm_controls: "x \<in> RMControls \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label NTFN2)"
   apply (rule_tac l="partition_label NTFN2" and ep="partition_label NTFN2" and auth="SyncSend" and l'="partition_label RM" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma ntfn2_affects : "subjectAffects SACAuthGraph (partition_label NTFN2) = {partition_label NTFN2, partition_label RM, partition_label EP} \<union> RMControls"
+lemma ntfn2_affects: "subjectAffects SACAuthGraph (partition_label NTFN2) = {partition_label NTFN2, partition_label RM, partition_label EP} \<union> RMControls"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -798,17 +798,17 @@ lemma ntfn2_affects : "subjectAffects SACAuthGraph (partition_label NTFN2) = {pa
   apply (erule subjectAffects.induct)
   by (simp add:SACAuthGraph_def, blast?)+
 
-lemma ntfn3_affects_r : "partition_label R \<in> subjectAffects SACAuthGraph (partition_label NTFN3)"
+lemma ntfn3_affects_r: "partition_label R \<in> subjectAffects SACAuthGraph (partition_label NTFN3)"
   apply (rule_tac l'="partition_label R" and ep="partition_label NTFN3" and auth="Notify" and l="partition_label NTFN3" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma ntfn3_affects_bd : "l \<in> {NicB, NicD} \<Longrightarrow> partition_label l \<in> subjectAffects SACAuthGraph (partition_label NTFN3)"
+lemma ntfn3_affects_bd: "l \<in> {NicB, NicD} \<Longrightarrow> partition_label l \<in> subjectAffects SACAuthGraph (partition_label NTFN3)"
   apply (rule_tac l'="partition_label R" and ep="partition_label NTFN3" and l="partition_label NTFN3" and auth="Notify" in affects_send)
   apply (simp add:SACAuthGraph_def, blast?)+
 done
 
-lemma ntfn3_affects : "subjectAffects SACAuthGraph (partition_label NTFN3) = {partition_label NTFN3, partition_label R} \<union> {partition_label NicB, partition_label NicD}"
+lemma ntfn3_affects: "subjectAffects SACAuthGraph (partition_label NTFN3) = {partition_label NTFN3, partition_label R} \<union> {partition_label NicB, partition_label NicD}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -824,7 +824,7 @@ done
 
 subsection \<open>T\<close>
 
-lemma t_reads : "subjectReads SACAuthGraph (partition_label T) = {partition_label T}"
+lemma t_reads: "subjectReads SACAuthGraph (partition_label T) = {partition_label T}"
   apply (rule subset_antisym)
   defer
   apply (rule subsetI, erule insertE, simp only:, rule reads_lrefl, simp)
@@ -832,46 +832,46 @@ lemma t_reads : "subjectReads SACAuthGraph (partition_label T) = {partition_labe
   apply (simp add:SACAuthGraph_def, blast?)+
 done
 
-lemma t_affects_ntfn123 : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow>  partition_label l \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_ntfn123: "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow>  partition_label l \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac auth="Notify" in affects_ep)
   apply (simp_all add:SACAuthGraph_def, blast)
 done
 
-lemma t_affects_sc : "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_sc: "partition_label SC \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac l''="partition_label SC" and l'="partition_label SC" and ep="partition_label NTFN1" and auth="Notify" and l="partition_label T" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma t_affects_rm : "partition_label RM \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_rm: "partition_label RM \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac l''="partition_label RM" and l'="partition_label RM" and ep="partition_label NTFN2" and auth="Notify" and l="partition_label T" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma t_affects_r : "partition_label R \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_r: "partition_label R \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac l''="partition_label R" and l'="partition_label R" and ep="partition_label NTFN3" and auth="Notify" and l="partition_label T" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma t_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_ep: "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule affects_ep_bound_trans)
   by (auto simp: SACAuthGraph_def)
 
-lemma t_affects_c : "partition_label NicC \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_c: "partition_label NicC \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac l''="partition_label NicC" and l'="partition_label SC" and ep="partition_label NTFN1" and auth="Notify" and l="partition_label T" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma t_affects_a : "partition_label NicA \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_a: "partition_label NicA \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac l''="partition_label NicA" and l'="partition_label RM" and ep="partition_label NTFN2" and auth="Notify" and l="partition_label T" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma t_affects_bd : "l \<in> {NicB, NicD} \<Longrightarrow> partition_label l \<in> subjectAffects SACAuthGraph (partition_label T)"
+lemma t_affects_bd: "l \<in> {NicB, NicD} \<Longrightarrow> partition_label l \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac l'="partition_label R" and ep="partition_label NTFN3" and auth="Notify" and l="partition_label T" in affects_send)
   apply (simp_all add:SACAuthGraph_def, blast)
 done
 
-lemma t_affects : "subjectAffects SACAuthGraph (partition_label T) = {partition_label NTFN1, partition_label NTFN2, partition_label NTFN3} \<union> {partition_label T, partition_label SC, partition_label RM, partition_label R, partition_label NicA, partition_label NicB, partition_label NicD, partition_label NicC, partition_label EP}"
+lemma t_affects: "subjectAffects SACAuthGraph (partition_label T) = {partition_label NTFN1, partition_label NTFN2, partition_label NTFN3} \<union> {partition_label T, partition_label SC, partition_label RM, partition_label R, partition_label NicA, partition_label NicB, partition_label NicD, partition_label NicC, partition_label EP}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -906,7 +906,7 @@ definition SACPolicyFlows :: "(SACLabels partition \<times> SACLabels partition)
      {(PSched,d)| d. True}
    \<union> {(Partition l, Partition k)| l k. (k = T \<longrightarrow> l = T)}"
 
-lemma SAC_partsSubjectAffects_exceptT : "x \<noteq> T \<Longrightarrow> partsSubjectAffects SACAuthGraph x = SACFlowDoms"
+lemma SAC_partsSubjectAffects_exceptT: "x \<noteq> T \<Longrightarrow> partsSubjectAffects SACAuthGraph x = SACFlowDoms"
   apply (rule equalityI)
   defer
   apply (rule subsetI)
@@ -921,7 +921,7 @@ lemma SAC_partsSubjectAffects_exceptT : "x \<noteq> T \<Longrightarrow> partsSub
         apply (auto simp: SAC_affects SAC_reads)
 done
 
-lemma SAC_partsSubjectAffects_T : "(partsSubjectAffects SACAuthGraph T) = {Partition NTFN1, Partition NTFN2, Partition NTFN3} \<union> {Partition T, Partition SC, Partition RM, Partition R, Partition NicA, Partition NicB, Partition NicD, Partition NicC, Partition EP}"
+lemma SAC_partsSubjectAffects_T: "(partsSubjectAffects SACAuthGraph T) = {Partition NTFN1, Partition NTFN2, Partition NTFN3} \<union> {Partition T, Partition SC, Partition RM, Partition R, Partition NicA, Partition NicB, Partition NicD, Partition NicC, Partition EP}"
     apply (rule equalityI)
     apply (rule subsetI)
     apply (simp add: partsSubjectAffects_def image_def label_can_affect_partition_def SAC_affects SAC_reads)
@@ -933,7 +933,7 @@ lemma SAC_partsSubjectAffects_T : "(partsSubjectAffects SACAuthGraph T) = {Parti
     apply ((erule disjE)?, simp add: SAC_reads, blast)+
 done
 
-lemma SAC_policyFlows : "policyFlows SACAuthGraph = SACPolicyFlows"
+lemma SAC_policyFlows: "policyFlows SACAuthGraph = SACPolicyFlows"
   apply (rule subset_antisym)
   (* forward *)
   apply (rule subsetI)
