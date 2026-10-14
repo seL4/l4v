@@ -155,7 +155,6 @@ definition decode_fr_inv_flush :: "'z::state_ext arch_decoder" where
           page_size \<leftarrow> returnOk $ 1 << pageBitsForSize pgsz;
           whenE (start \<ge> page_size \<or> end > page_size) $ throwError $ InvalidArgument 0;
           pstart \<leftarrow> returnOk $ addrFromPPtr p + start;
-          \<comment> \<open>flush only inside the kernel window:\<close>
           whenE (pstart < paddrBase \<or> ((end - start) + pstart > paddrTop)) $
             throwError IllegalOperation;
           returnOk $ InvokePage $
@@ -260,6 +259,9 @@ definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
               whenE (base_start \<noteq> base_end) $
                 throwError $ RangeError start (base_start + mask bits_left);
               pstart \<leftarrow> returnOk $ paddr + (start && mask bits_left);
+              \<comment> \<open>flush only inside the kernel window:\<close>
+              whenE (pstart < paddrBase \<or> ((end - start) + pstart > paddrTop)) $
+                throwError IllegalOperation;
               returnOk $ InvokeVSpace $
                 VSpaceFlush (label_to_flush_type label) start (end - 1) pstart vspace asid
             odE
