@@ -341,7 +341,8 @@ locale Untyped_R = mdb_insert_again_all_common +
     "\<And>R.
      corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
                                             \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
-                           \<and> valid_objs s \<and> pspace_aligned s)
+                           \<and> valid_objs s \<and> pspace_aligned s
+                           \<and> valid_arch_state s \<and> cap_refs_in_kernel_window s)
                \<top>
                (return ()) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
   assumes createObject_nosch[wp]:
@@ -4927,7 +4928,7 @@ lemma (in Untyped_R_2) inv_untyped_corres:
          apply (clarsimp simp:conj_comms)
          apply (strengthen invs_mdb invs_valid_objs
                 invs_valid_pspace invs_arch_state invs_psp_aligned
-                invs_distinct)
+                invs_distinct invs_cap_refs_in_kernel_window)
          apply (clarsimp simp:conj_comms ball_conj_distrib ex_in_conv)
          apply ((rule validE_R_validE)?,
           rule_tac Q'="\<lambda>_ s. valid_list s \<and> invs s \<and> ct_active s

@@ -1856,12 +1856,16 @@ definition
          s \<turnstile> (cap.ArchObjectCap cap)
   | PageFlush typ start end pstart pd asid \<Rightarrow>
       vspace_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
+      \<comment> \<open>the flushed physical range is inside the kernel window\<close>
+      and K (paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart)
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
 definition
   "valid_pdi pdi \<equiv> case pdi of
     PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
       vspace_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
+      \<comment> \<open>the flushed physical range is inside the kernel window\<close>
+      and K (paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart)
   | PageDirectoryNothing \<Rightarrow> \<top>"
 
 

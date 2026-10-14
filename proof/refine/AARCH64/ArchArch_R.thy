@@ -944,7 +944,9 @@ lemma decodeARMVSpaceInvocation_corres[corres]:
           apply (corres corres: corres_returnOkTT
                         term_simp: archinv_relation_def vspace_invocation_map_def
                                    labelToFlushType_corres page_base_def pageBase_def
-                                   pageBitsForSize_pt_bits_left)
+                                   pageBitsForSize_pt_bits_left
+                                   AARCH64_H.fromPAddr_def AARCH64.paddrTop_def
+                                   AARCH64_H.paddrTop_def AARCH64.pptrTop_def AARCH64_H.pptrTop_def)
          apply wpsimp
         apply (wpsimp wp: hoare_drop_imp)
        apply wpsimp
@@ -1341,10 +1343,11 @@ lemma arch_performInvocation_corres[Arch_assms]:
          \<comment> \<open>InvokeVSpace\<close>
          apply (clarsimp simp: performARMMMUInvocation_def perform_vspace_invocation_def
                                performVSpaceInvocation_def)
-         apply ((corres simp: perform_flush_def do_flush_def doFlush_def
-                        corres: corres_machine_op_Id_dc
-                        term_simp: vspace_invocation_map_def
-                 | corres_cases_both simp: vspace_invocation_map_def)+)[1]
+         apply (rename_tac vsi vsi')
+         apply (case_tac vsi; clarsimp simp: vspace_invocation_map_def perform_flush_def)
+         apply (corres corres: dmo_doFlush_corres)
+          apply (clarsimp simp: valid_arch_inv_def valid_vsi_def)
+         apply (simp add: pred_conj_def)
 
         \<comment> \<open>InvokePageTable\<close>
         apply (clarsimp simp: performARMMMUInvocation_def)

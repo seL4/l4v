@@ -38,7 +38,9 @@ lemma objBits_InvalidPTE_pte_bits:
 lemma clearMemory_PT_setObject_PTE_ccorres:
   "ccorres dc xfdc
            (page_table_at' pt_t ptr and (\<lambda>s. 2 ^ ptBits pt_t \<le> gsMaxObjectSize s) and
-            (\<lambda>_. is_aligned ptr (ptBits pt_t) \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
+            (\<lambda>_. is_aligned ptr (ptBits pt_t) \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr \<and>
+                 paddrBase \<le> pstart \<and> pstart < AARCH64.paddrTop \<and>
+                 mask (ptBits pt_t) < AARCH64.paddrTop - pstart))
            (\<lbrace>\<acute>ptr___ptr_to_unsigned_long = Ptr ptr\<rbrace> \<inter> \<lbrace>\<acute>bits = of_nat (ptBits pt_t)\<rbrace>) []
        (do x \<leftarrow> mapM_x (\<lambda>p. setObject p InvalidPTE)
                        [ptr , ptr + 2 ^ objBits InvalidPTE .e. ptr + 2 ^ ptBits pt_t - 1];
@@ -97,6 +99,8 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
    apply (simp add: unat_mask_eq flip: mask_2pm1)
    apply (simp add: mask_eq_exp_minus_1)
   apply (simp add: bit_simps split: if_split)
+  apply (simp add: mask_2pm1 add_diff_eq)
+  apply (clarsimp split: if_split_asm)
   done
 
 lemma performPageTableInvocationUnmap_ccorres:
@@ -121,6 +125,7 @@ lemma performPageTableInvocationUnmap_ccorres:
        apply (rule ccorres_Cond_rhs)
         apply (simp add: to_bool_def)
         apply (rule ccorres_rhs_assoc)+
+        apply (rule ccorres_assert2)
         apply csymbr
         apply csymbr
         apply csymbr
@@ -195,7 +200,7 @@ lemma performPageTableInvocationUnmap_ccorres:
              simp flip: canonical_bit_def
                  elim!: ccap_relationE cong: if_cong)
   apply (drule spec[where x=0])
-  apply auto
+  apply (auto simp: paddrTop_H_eq AARCH64_H.fromPAddr_def)
   done
 
 lemma ap_eq_D:
@@ -1603,7 +1608,9 @@ lemma doFlush_ccorres:
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)"
-  apply (cases t; clarsimp simp: doFlush_def doMachineOp_bind)
+  apply (simp only: doFlush_def haskell_assert_def doMachineOp_assert_bind)
+  apply (rule ccorres_assert)
+  apply (cases t; clarsimp simp: doMachineOp_bind AARCH64_H.fromPAddr_def paddrTop_H_eq)
      apply (cinit' lift: pstart_')
       apply (rule ccorres_cond_true)
       apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
@@ -2651,6 +2658,16 @@ lemma decodeARMVSpaceRootInvocation_ccorres:
              apply csymbr
              apply (rule ccorres_move_const_guard)+
              apply csymbr
+             apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+                apply vcg
+               apply (clarsimp simp: hd_conv_nth paddrBase_def paddrTop_def pptrBaseOffset_def
+                                     pptrTop_def pptrBase_def fromPAddr_def mask_def)
+              apply (rule syscall_error_throwError_ccorres_n)
+              apply (simp add: syscall_error_to_H_cases)
+             apply (clarsimp simp: ccorres_invocationCatch_Inr performInvocation_def bindE_assoc
+                                   AARCH64_H.performInvocation_def performARMMMUInvocation_def
+                                   liftE_bindE
+                             simp del: Collect_const)
              apply (ctac (no_vcg) add: setThreadState_ccorres)
               apply (rule_tac A="\<lambda>s. unat (ptBitsLeft_C resolve_ret) < 0x40 \<and>
                                      unat (ptBitsLeft_C resolve_ret) \<le> pptrBaseOffset_alignment \<and>

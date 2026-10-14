@@ -453,7 +453,9 @@ definition
             cte_wp_at ((=) (ArchObjectCap acap)) cslot s \<and>
             valid_arch_cap acap s
   | PageGetAddr ptr \<Rightarrow> \<top>
-  | PageFlush _ _ _ _ _ _ \<Rightarrow> \<top>"
+  | PageFlush _ start end pstart _ _ \<Rightarrow>
+      \<comment> \<open>the flushed physical range is inside the kernel window\<close>
+      K (paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart)"
 
 definition
   "valid_pti pti \<equiv> case pti of
