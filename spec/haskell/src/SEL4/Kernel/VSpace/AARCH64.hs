@@ -251,8 +251,11 @@ invalidateTLBByASIDVA asid vaddr = do
         doMachineOp $ invalidateTranslationSingle vpn
 
 doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
-doFlush flushType vstart vend pstart =
+doFlush flushType vstart vend pstart = do
     -- the address calculations that happen here on ARM_HYP are at the caller side in AARCH64
+    assert (paddrBase <= pstart && pstart < paddrTop &&
+            fromVPtr (vend - vstart) < fromPAddr (paddrTop - pstart))
+        "doFlush: flush range must be inside the kernel window"
     case flushType of
         Clean           -> cleanCacheRange_RAM vstart vend pstart
         Invalidate      -> invalidateCacheRange_RAM vstart vend pstart
@@ -686,6 +689,8 @@ decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTType = VSRootPT_T 
                         throw $ RangeError start $ fromVPtr $ baseStart + mask bitsLeft
                     let offset = start .&. mask bitsLeft
                     let pStart = pAddr + toPAddr offset
+                    when (pStart < paddrBase || ((end - start) + fromPAddr pStart > fromPAddr paddrTop)) $
+                        throw IllegalOperation
                     return $ InvokeVSpace $ VSpaceFlush {
                          vsFlushType = labelToFlushType label,
                          vsFlushStart = VPtr start,
@@ -797,6 +802,9 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
     case capPTMappedAddress cap of
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
+            assert (paddrBase <= addrFromPPtr ptr && addrFromPPtr ptr < paddrTop &&
+                    mask (ptBits (capPTType cap)) < fromPAddr (paddrTop - addrFromPPtr ptr))
+                "performPageTableInvocation: page table must be inside the kernel window"
             unmapPageTable asid vaddr ptr
             let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTType cap)) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
