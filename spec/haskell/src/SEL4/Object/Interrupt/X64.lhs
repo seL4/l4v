@@ -35,10 +35,6 @@ This module defines the machine-specific interrupt handling routines for x64.
 
 \end{impdetails}
 
-%FIXME: argument order, IRQ shouldn't be last. Fix in C.
-
-%FIXME: remove duplication with decodeIRQControl, move code to generic case. Do this on C first.
-
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
 >         KernelF SyscallError ArchInv.IRQControlInvocation
 > decodeIRQControlInvocation label args srcSlot extraCaps =
@@ -131,14 +127,12 @@ updateIRQState sets the arch-specific IRQ state for an IRQ
 > maskIrqSignal :: IRQ -> Kernel ()
 > maskIrqSignal irq = doMachineOp $ maskInterrupt True irq
 
-%FIXME: separate ranges for ISA interrupts and user interrupts
-
 checkIRQ is only used for the legacy PIC interrupt so always fails with the IOAPIC of x86-64
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = throw IllegalOperation
 
-%FIXME: handle VTD faults
+%FIXME x64-vtd: handle VTD faults
 
 > handleSpuriousIRQ :: Kernel ()
 > handleSpuriousIRQ = return ()

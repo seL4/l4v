@@ -26,7 +26,7 @@ This module contains the architecture-specific thread switch code for X86-64bit.
 >     lazyFpuRestore tcb
 
 > configureIdleThread :: PPtr TCB -> KernelInit ()
-> configureIdleThread _ = error "Unimplemented. init code"
+> configureIdleThread _ = error "Unimplemented init code"
 
 > switchToIdleThread :: Kernel ()
 > switchToIdleThread = do

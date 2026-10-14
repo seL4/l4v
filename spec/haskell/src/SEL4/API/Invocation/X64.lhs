@@ -158,11 +158,6 @@ point to the invoked IO page table.
 
 \subsection{Interrupt Control}
 
-%FIXME x86 64bit has two interrupt control invocations, one each for IOAPIC and MSI interrupt sources.
-%FIXME TODO arguments to this plus decode
-%FIXME Word may be too generic for some of these
-%FIXME C still evolving
-
 There are two invocation labels corresponding to these, but no separate arch invocations. The ArchIRQControlInvocation is a special case of IRQControlInvocation.
 
 > data IRQControlInvocation

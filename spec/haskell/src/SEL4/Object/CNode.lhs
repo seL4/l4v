@@ -239,7 +239,7 @@ The following functions define the operations that can be performed by a CNode i
 Arch assertions for the refinement proof. Content is defined in Isabelle.
 
 > archMDBAssertions :: KernelState -> Bool
-> archMDBAssertions _ = error "defined in Isabelle"
+> archMDBAssertions _ = isabelleOp
 
 \end{impdetails}
 

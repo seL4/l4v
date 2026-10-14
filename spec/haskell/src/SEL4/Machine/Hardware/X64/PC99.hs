@@ -46,9 +46,6 @@ kernelELFPAddrBase = PAddr 0x00100000
 kernelELFBase :: VPtr
 kernelELFBase = VPtr $ fromVPtr pptrTop + (fromPAddr kernelELFPAddrBase)
 
-pageColourBits :: Int
-pageColourBits = 0 -- qemu has no cache
-
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
 getMemoryRegions _ = return [(0, 0x8 `shiftL` 24)]
 
@@ -101,13 +98,6 @@ getActiveIRQ env = do
     runDevicesCallback
     interruptCallback env
 
--- 1kHz tick; qemu's SP804s always run at 1MHz
-timerFreq :: Word
-timerFreq = 100
-
-timerLimit :: Word
-timerLimit = 1000000 `div` timerFreq
-
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
     -- enabled, periodic, interrupts enabled
@@ -132,24 +122,18 @@ foreign import ccall unsafe "qemu_store_word_phys"
 
 -- PC99 stubs
 
-writeCR3 = error "Unimplemented"
+writeCR3 = isabelleOp
 
-invalidateTLB = error "Unimplemented"
-mfence = error "Unimplemented"
-invalidateASID = error "Unimplemented"
-invalidateTranslationSingleASID = error "Unimplemented"
+invalidateTLB = isabelleOp
+mfence = isabelleOp
+invalidateASID = isabelleOp
+invalidateTranslationSingleASID = isabelleOp
 
 invalidateLocalPageStructureCacheASID :: PAddr -> Word64 -> IO ()
-invalidateLocalPageStructureCacheASID = error "Unimplemented"
-
-nativeThreadUsingFPU :: Word -> IO Bool
-nativeThreadUsingFPU = error "Unimplemented"
-
-switchFpuOwner :: Word -> Word -> IO ()
-switchFpuOwner = error "Unimplemented"
+invalidateLocalPageStructureCacheASID = isabelleOp
 
 getFaultAddress :: Ptr CallbackData -> IO VPtr
-getFaultAddress _ = error "Unimplemented" -- FIXME: should read CR2
+getFaultAddress _ = isabelleOp
 
 firstValidIODomain :: Word16
 firstValidIODomain = error "Unimplemented"
@@ -180,5 +164,5 @@ ioapicIRQLines = 24 -- IOAPIC_IRQ_LINES
 
 -- error checks this performs moved out to x64 decodeIRQControl
 ioapicMapPinToVector :: Ptr CallbackData -> Word -> Word -> Word -> Word -> Word -> IO ()
-ioapicMapPinToVector = error "Unimplemented"
+ioapicMapPinToVector = isabelleOp
 

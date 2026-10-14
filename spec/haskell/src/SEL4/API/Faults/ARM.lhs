@@ -21,17 +21,10 @@ This module defines the encoding of arch-specific faults.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser)
-> import Data.Bits
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> import SEL4.Machine.Hardware.ARM(addressTranslateS1)
-#endif
 
 \end{impdetails}
 
 > import SEL4.API.Failures.ARM
-
-FIXME ARMHYP why is this code (from setMRs\_fault) duplicating the translation
-in handleVMFault?
 
 > makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 > makeArchFaultMessage (VMFault vptr archData) thread = do
