@@ -902,6 +902,11 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 > hcrNative = (0xFE8103B :: Word) -- HCR_NATIVE
 > vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
+
+> -- trap VCPU access to group 0 registers on GICv3, do nothing on GICv2
+> vgicHCRTALL0 :: Word -- VGIC_HCR_TALL0
+> vgicHCRTALL0 = if config_ARM_GIC_V3 then bit 11 else 0
+
 > sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
 > actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
 > gicVCPUMaxNumLR = (64 :: Int)

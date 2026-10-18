@@ -217,7 +217,7 @@ makeObject specialised to VCPUs.
 >     VCPUObj {
 >           vcpuTCBPtr = Nothing
 >         , vcpuVGIC = VGICInterface {
->                           vgicHCR = vgicHCREN
+>                           vgicHCR = vgicHCREN .|. vgicHCRTALL0
 >                         , vgicVMCR = 0
 >                         , vgicAPR = 0
 >                         , vgicLR = vgicLR
