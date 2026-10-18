@@ -470,6 +470,11 @@ hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
 vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
+
+-- trap VCPU access to group 0 registers on GICv3, do nothing on GICv2
+vgicHCRTALL0 :: Word32 -- VGIC_HCR_TALL0
+vgicHCRTALL0 = if config_ARM_GIC_V3 then bit 11 else 0
+
 gicVCPUMaxNumLR = (64 :: Int)
 
 

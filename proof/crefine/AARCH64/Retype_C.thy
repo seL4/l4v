@@ -5419,13 +5419,15 @@ abbreviation (input) fromzeroVCPU :: vcpu where
 
 lemma monadic_rewrite_setObject_vcpu_as_init:
   defines "vcpu0 \<equiv> fromzeroVCPU"
-  defines "vcpu1 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu0)(VCPURegSCTLR := sctlrEL1VM)) vcpu0)"
-  defines "vcpu2 \<equiv> (vcpuVGIC_update (\<lambda>_. vgicHCR_update (\<lambda>_. vgicHCREN) (vcpuVGIC vcpu1)) vcpu1)"
+  defines "vcpu1 \<equiv> vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu0)(VCPURegSCTLR := sctlrEL1VM)) vcpu0"
+  defines "vcpu2 \<equiv> vcpuVGIC_update (\<lambda>_. vgicHCR_update (\<lambda>_. vgicHCREN || vgicHCRTALL0)
+                                                       (vcpuVGIC vcpu1))
+                                   vcpu1"
   shows
   "monadic_rewrite True False (K (v \<noteq> 0) and ko_at' fromzeroVCPU v)
      (setObject v makeVCPUObject)
      (do vcpuWriteReg v VCPURegSCTLR sctlrEL1VM;
-         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN))
+         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN || vgicHCRTALL0))
       od)"
   supply fun_upd_apply[simp del]
   apply simp
@@ -5774,7 +5776,7 @@ proof -
      apply (rule monadic_rewrite_ccorres_assemble[OF _ monadic_rewrite_setObject_vcpu_as_init])
      apply (rule ccorres_split_nothrow_novcg_dc)
         apply (rule ccorres_call[OF armv_vcpu_init_ccorres]; solves simp)
-       apply (clarsimp simp: vgicHCREN_def)
+       apply (clarsimp simp: vgicHCR_init_val)
        apply (ctac (no_vcg) pre: ccorres_move_c_guard_vcpu add: vgicUpdate_HCR_ccorres)
       apply (wpsimp simp: guard_is_UNIV_def)+
     apply (fastforce simp: const_def ko_at_vcpu_at'D)

@@ -25,7 +25,7 @@ context Arch begin arch_global_naming (H)
   setIRQTrigger \
   config_ARM_PA_SIZE_BITS_40 numSGIs gicNumTargets \
   readFpuState writeFpuState enableFpu disableFpu isFpuEnable \
-  hcrVCPU hcrNative sctlrDefault vgicHCREN gicVCPUMaxNumLR sctlrEL1VM \
+  hcrVCPU hcrNative sctlrDefault vgicHCREN vgicHCRTALL0 gicVCPUMaxNumLR sctlrEL1VM \
   get_gic_vcpu_ctrl_hcr set_gic_vcpu_ctrl_hcr get_gic_vcpu_ctrl_vmcr \
   set_gic_vcpu_ctrl_vmcr get_gic_vcpu_ctrl_apr set_gic_vcpu_ctrl_apr \
   get_gic_vcpu_ctrl_vtr get_gic_vcpu_ctrl_eisr0 get_gic_vcpu_ctrl_eisr1 \
