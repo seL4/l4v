@@ -158,6 +158,10 @@ lemma empty_fail_fail[empty_fail_term]:
   "empty_fail fail"
   by (simp add: fail_def empty_fail_def)
 
+lemma empty_fail_chaos[empty_fail_term]:
+  "empty_fail chaos"
+  by (simp add: chaos_def empty_fail_def)
+
 lemma empty_fail_assert[empty_fail_term]:
   "empty_fail (assert P)"
   unfolding assert_def by (simp add: empty_fail_term)
