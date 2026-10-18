@@ -1193,6 +1193,16 @@ lemmas validE_validIE_lifts[wp] =
   no_trace_assertE[THEN validE_validIE_wp] no_trace_throwError[THEN validE_validIE_wp]
   no_trace_throw_opt[THEN validE_validIE_wp]
 
+lemma chaos_twp[wp]:
+  "\<lbrace>\<lambda>_ _. (\<forall>s0 s. G s0 s) \<and> (\<forall>rv s0 s. Q rv s0 s)\<rbrace>,\<lbrace>R\<rbrace> chaos \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  by (simp add: validI_def prefix_closed_chaos guar_cond_def)
+
+lemma chaosE_twp[wp]:
+  "\<lbrace>\<lambda>_ _. (\<forall>s0 s. G s0 s) \<and> (\<forall>rv s0 s. Q rv s0 s) \<and> (\<forall>e s0 s. E e s0 s)\<rbrace>,\<lbrace>R\<rbrace>
+   chaos
+   \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  by (simp add: validIE_def validI_def prefix_closed_chaos guar_cond_def split: sum.split)
+
 lemma liftE_twp:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> liftE f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by simp

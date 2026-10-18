@@ -173,6 +173,12 @@ text \<open>
 definition fail :: "('s, 'a) tmonad" where
   "fail \<equiv> \<lambda>s. {([], Failed)}"
 
+text \<open>
+  The monad function that may do anything: it produces every trace with every result, including
+  failure.\<close>
+definition chaos :: "('s, 'a) tmonad" where
+  "chaos \<equiv> \<lambda>s. UNIV"
+
 text \<open>Assertions: fail if the property @{text P} is not true\<close>
 definition assert :: "bool \<Rightarrow> ('a, unit) tmonad" where
   "assert P \<equiv> if P then return () else fail"
