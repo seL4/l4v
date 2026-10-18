@@ -213,7 +213,7 @@ in the global namespace: **requalify_types**, **requalify_consts**,
 new name is based on the context in which the requalification command is
 executed. As with `global_naming`, we provide `L4V_ARCH`-aware versions of
 these commands: **arch_requalify_types**, **arch_requalify_consts** and
-**arch_requalify_types**.
+**arch_requalify_facts**.
 
 To understand how these commands function, see `lib/test/Requalify_Test.thy`.
 
