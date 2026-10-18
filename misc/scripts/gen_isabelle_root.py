@@ -13,6 +13,7 @@
 import os
 import optparse
 import glob
+import tempfile
 
 # Parse arguments
 parser = optparse.OptionParser()
@@ -52,8 +53,9 @@ if options.base_session == None and not options.theory_file:
     parser.error("Require a base session.")
 output_dir = os.path.dirname(options.output)
 
-# Generate ROOT file.
-with open(options.output, "w") as output:
+# Generate ROOT file. Use a temp file so concurrent reads cannot see partial content.
+fd, tmp_output = tempfile.mkstemp(dir=output_dir or ".", prefix=".gen_isabelle_root.")
+with os.fdopen(fd, "w") as output:
     # Fetch list of files to test.
     theories = []
     for d in options.input_dir:
@@ -93,3 +95,5 @@ with open(options.output, "w") as output:
             thy = os.path.relpath(i, output_dir)
             thy = os.path.splitext(thy)[0]
             output.write("    \"%s\"\n" % thy)
+
+os.replace(tmp_output, options.output)
