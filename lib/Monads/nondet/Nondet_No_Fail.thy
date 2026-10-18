@@ -103,6 +103,10 @@ lemma no_fail_fail[simp, wp]:
   "no_fail \<bottom> fail"
   by (simp add: fail_def no_fail_def)
 
+lemma no_fail_chaos[simp, wp]:
+  "no_fail \<bottom> chaos"
+  by (simp add: no_fail_def)
+
 lemma no_fail_assert[simp, wp]:
   "no_fail (\<lambda>_. P) (assert P)"
   by (simp add: assert_def)
