@@ -9,6 +9,7 @@ by inserting parsed Haskell."""
 import sys
 import os
 import os.path
+import tempfile
 
 import lhs_pars
 from msgs import error, warning, status
@@ -52,9 +53,13 @@ for line in instructions:
         continue
 
     [input, output] = [bit.strip() for bit in instruct.split('-->')]
-    output_tmp = os.path.join(os.path.dirname(output), 'pars_skel.tmp')
+    # use unique temp file name, so that concurrent runs for different L4V_ARCH
+    # do not overwrite each other.
+    fd, output_tmp = tempfile.mkstemp(dir=os.path.dirname(output),
+                                      prefix=f'.{os.path.basename(output)}.',
+                                      suffix='.tmp')
 
-    output_f = open(output_tmp, 'w')
+    output_f = os.fdopen(fd, 'w')
     output_f.write('(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)\n')
     output_f.write('(* instead, see the skeleton file %s *)\n' %
                    os.path.basename(input))
@@ -132,13 +137,10 @@ for line in instructions:
     if changed:
         if not quiet:
             status(instruct)
+        # atomic replace: concurrent readers see either the old or the new file
         try:
-            os.unlink(output)
-        except:
-            pass
-        try:
-            os.rename(output_tmp, output)
-        except IOError as e:
+            os.replace(output_tmp, output)
+        except OSError as e:
             error("IOError moving {} -> {}:\n{}".format(output_tmp, output, e))
             sys.exit(1)
     else:

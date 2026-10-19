@@ -96,9 +96,11 @@ NAMES=`cd $SKEL; ls *.thy`
 
 SPECNONARCH="/tmp/make_spec_temp_nonarch_$$"
 TMPFILE="/tmp/make_spec_temp_$$"
+# version stamp is written to a temp file first and then moved into place atomically
+VERSIONTMP="$SPEC/.version.$$.tmp"
 
 # Delete on exit
-trap "rm -fr $SPECNONARCH $TMPFILE" EXIT
+trap "rm -fr $SPECNONARCH $TMPFILE $VERSIONTMP" EXIT
 
 function send_filenames () {
     local arch=${1}
@@ -147,14 +149,16 @@ done
 
 for thy in $SPECNONARCH/${ARCHES[0]}/*.thy; do rsync -c "$thy" "$SPEC/"; done
 
-echo Built from git repo at $L4CAP by $USER > $SPEC/version
-echo >> $SPEC/version
-echo Generated from changeset: >> $SPEC/version
-(cd $L4CAP && git show --oneline | head -1) >> $SPEC/version
-echo >> $SPEC/version
+echo Built from git repo at $L4CAP by $USER > $VERSIONTMP
+echo >> $VERSIONTMP
+echo Generated from changeset: >> $VERSIONTMP
+(cd $L4CAP && git show --oneline | head -1) >> $VERSIONTMP
+echo >> $VERSIONTMP
 if [ "$(cd $L4CAP && git status --short)" != "" ]
 then
-    echo >> $SPEC/version
-    echo Warning - uncomitted changes used: >> $SPEC/version
-    (cd $L4CAP && git status --short) >> $SPEC/version
+    echo >> $VERSIONTMP
+    echo Warning - uncomitted changes used: >> $VERSIONTMP
+    (cd $L4CAP && git status --short) >> $VERSIONTMP
 fi
+
+mv -f "$VERSIONTMP" "$SPEC/version"
