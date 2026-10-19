@@ -4,7 +4,6 @@
 %
 % SPDX-License-Identifier: GPL-2.0-only
 %
-FIXME ARMHYP LICENSE UPDATE?
 
 This module defines the contents of a VCPU object used for management of
 hypervisor extensions on ARM.
@@ -51,8 +50,6 @@ hypervisor extensions on ARM.
 \end{impdetails}
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-
-FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will tell what is actually needed for verification. The one thing we definitely need is the thread the VCPU is associated with
 
 \subsection{VCPU: Set TCB}
 

@@ -345,6 +345,14 @@ lemma sep_conj_exists2:
 
 lemmas sep_conj_exists = sep_conj_exists1 sep_conj_exists2
 
+lemma sep_conj_existL:
+  "(P \<and>* Q) s \<Longrightarrow> \<exists>s. P s"
+  by (auto simp: sep_conj_def)
+
+lemma sep_conj_existR:
+  "(P \<and>* Q) s \<Longrightarrow> \<exists>s. Q s"
+  by (auto simp: sep_conj_def)
+
 lemma sep_conj_spec1:
   "((ALLS x. P x) ** Q) h \<Longrightarrow> (P x ** Q) h"
   by (force intro: sep_conjI elim: sep_conjE)
@@ -1018,6 +1026,16 @@ lemma sep_map_set_conj_set_disjoint:
    apply blast
   apply simp
   by (metis Collect_disj_eq)
+
+lemma sep_map_set_conj_set_append:
+  "distinct (xs@ys) \<Longrightarrow>
+   sep_map_set_conj P (set (xs @ ys)) = (sep_map_set_conj P (set xs) \<and>* sep_map_set_conj P (set ys))"
+  by (simp add: sep.prod.union_disjoint)
+
+lemma sep_map_set_conj_set_take_drop:
+  "\<lbrakk> sep_map_set_conj P (set xs) s; distinct xs \<rbrakk> \<Longrightarrow>
+   (sep_map_set_conj P (set (take n xs)) \<and>*  sep_map_set_conj P (set (drop n xs))) s"
+  by (clarsimp simp flip: sep_map_set_conj_set_append append_take_drop_id[where n=n])
 
 
 text \<open>

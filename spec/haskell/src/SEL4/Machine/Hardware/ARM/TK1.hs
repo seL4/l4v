@@ -7,7 +7,6 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
 
 -- this is mostly a copy of KZM with extra info for virtualisation thrown in
--- FIXME ARMHYP TODO review other constants against C!
 module SEL4.Machine.Hardware.ARM.TK1 where
 
 import Prelude hiding (Word)
@@ -31,9 +30,6 @@ physBase = PAddr 0x80000000
 
 pptrBase :: VPtr
 pptrBase = VPtr 0xe0000000
-
-pageColourBits :: Int
-pageColourBits = 0 -- qemu has no cache
 
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
 getMemoryRegions _ = return [(0x80000000, 0x80000000 + (0x8 `shiftL` 24))]
@@ -90,13 +86,6 @@ getActiveIRQ :: Ptr CallbackData -> IO (Maybe IRQ)
 getActiveIRQ env = do
     runDevicesCallback env
     interruptCallback env
-
--- 1kHz tick; qemu's SP804s always run at 1MHz
-timerFreq :: Word
-timerFreq = 100
-
-timerLimit :: Word
-timerLimit = 1000000 `div` timerFreq
 
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
@@ -168,7 +157,7 @@ cacheCleanL2RangeCallback :: Ptr CallbackData -> PAddr -> PAddr -> IO ()
 cacheCleanL2RangeCallback _ _ _ = return ()
 
 cacheLine :: Int
-cacheLine = error "see Kernel_Config.thy"
+cacheLine = isabelleOp
 
 cacheLineBits :: Int
-cacheLineBits = error "see Kernel_Config.thy"
+cacheLineBits = isabelleOp
