@@ -532,6 +532,9 @@ implementation assumes the monitor is not modelled in our simulator.
 > setSCTLR :: Word -> MachineMonad ()
 > setSCTLR _sctlr = isabelleOp
 
+> setCPACR :: Word -> MachineMonad ()
+> setCPACR _cpacr = isabelleOp
+
 \subsection{Hypervisor banked registers}
 
 Rather than a line-for-line copy of every hypervisor register storage and
@@ -899,6 +902,11 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > hcrVCPU = if config_DISABLE_WFI_WFE_TRAPS
 >           then hcrCommon
 >           else hcrCommon .|. hcrTWE .|. hcrTWI
+
+> -- TRCDIS bit: make PL0 and PL1 accesses to CP14 trace registers undefined.
+> -- All other bits are unset, switching off the FPU globally, trapping access into PL2.
+> cpacrDefault :: Word -- CPACR_DEFAULT
+> cpacrDefault = bit 28
 
 > hcrNative = (0xFE8103B :: Word) -- HCR_NATIVE
 > vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN

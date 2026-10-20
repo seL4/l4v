@@ -223,7 +223,8 @@ makeObject specialised to VCPUs.
 >                         , vgicLR = vgicLR
 >                         }
 >         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrDefault)
->                                            ,(VCPURegACTLR, actlrDefault)]
+>                                            ,(VCPURegACTLR, actlrDefault)
+>                                            ,(VCPURegCPACR, cpacrDefault)]
 >         , vcpuVPPIMasked = funArray (const False)
 >         }
 

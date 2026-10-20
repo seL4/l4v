@@ -161,7 +161,8 @@ definition
       vcpu_tcb    = None,
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault
-                             , VCPURegACTLR := actlrDefault),
+                             , VCPURegACTLR := actlrDefault
+                             , VCPURegCPACR := cpacrDefault),
       vcpu_vppi_masked = (\<lambda>_. False)
       \<rparr>"
 

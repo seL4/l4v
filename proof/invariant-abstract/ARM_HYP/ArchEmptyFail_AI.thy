@@ -153,7 +153,7 @@ crunch maskInterrupt, empty_slot,
            writeVCPUHardwareReg_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
            writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
-           set_gic_vcpu_ctrl_lr_impl)
+           setCPACR_impl set_gic_vcpu_ctrl_lr_impl)
 
 crunch setRegister, setNextPC
   for (empty_fail) empty_fail[wp, Arch_assms]

@@ -584,6 +584,13 @@ definition
 where
   "setSCTLR w \<equiv> machine_op_lift (setSCTLR_impl w)"
 
+consts'
+  setCPACR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  setCPACR :: "machine_word \<Rightarrow> unit machine_monad"
+where
+  "setCPACR w \<equiv> machine_op_lift (setCPACR_impl w)"
+
 definition
   vgic_irq_active :: "machine_word"
 where

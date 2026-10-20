@@ -1975,10 +1975,16 @@ lemma armv_vcpu_save_ccorres:
      (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>active = from_bool act \<rbrace>) hs
      (armvVCPUSave vcpuptr act) (Call armv_vcpu_save_'proc)"
   apply (cinit lift: vcpu_' active_')
-   apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
-    apply (ctac (no_vcg) add: isb_ccorres)
-   apply wpsimp
-  apply (clarsimp split: if_splits simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
+   apply (rule ccorres_split_nothrow_novcg[of _ _ dc xfdc])
+       apply (rule ccorres_when[where R=\<top>])
+        apply (clarsimp split: if_splits)
+       apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+      apply ceqv
+     apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
+      apply (ctac (no_vcg) add: isb_ccorres)
+     apply wpsimp
+    apply wpsimp
+   apply (auto simp: guard_is_UNIV_def seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
   done
 
 lemma vcpu_disable_ccorres:
@@ -2006,26 +2012,27 @@ lemma vcpu_disable_ccorres:
              apply (ctac (no_vcg) add: vgicUpdate_HCR_ccorres)
             apply ceqv
            apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
-            apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc] add: isb_ccorres)
-              apply (wpsimp simp: guard_is_UNIV_def)+
+            apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+             apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc] add: isb_ccorres)
+               apply (wpsimp simp: guard_is_UNIV_def)+
        apply ceqv
       apply (clarsimp simp: doMachineOp_bind bind_assoc empty_fail_isb)
       apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_hcr_ccorres)
        apply (ctac (no_vcg) add: isb_ccorres)
         apply (ctac (no_vcg) add: setSCTLR_ccorres)
          apply (ctac (no_vcg) add: setHCR_ccorres)
-          apply (ctac (no_vcg) add: isb_ccorres)
-           apply (wpc; ccorres_rewrite)
-            apply (rule ccorres_return_Skip)
-           apply (rename_tac vcpu_ptr)
-           apply (rule_tac P="the v \<noteq> 0" in ccorres_gen_asm)
-           apply ccorres_rewrite
-           apply (ctac (no_vcg) add: save_virt_timer_ccorres)
-            apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-           apply (wpsimp wp: hoare_vcg_all_lift)+
-    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def
-                          irqVTimerEvent_def IRQ_def)
-    apply (rule refl (* stray ?sctlr *))
+          apply (ctac (no_vcg) add: setCPACR_ccorres)
+           apply (ctac (no_vcg) add: isb_ccorres)
+            apply (wpc; ccorres_rewrite)
+             apply (rule ccorres_return_Skip)
+            apply (rename_tac vcpu_ptr)
+            apply (rule_tac P="the v \<noteq> 0" in ccorres_gen_asm)
+            apply ccorres_rewrite
+            apply (ctac (no_vcg) add: save_virt_timer_ccorres)
+             apply (ctac (no_vcg) add: maskInterrupt_ccorres)
+            apply (wpsimp wp: hoare_vcg_all_lift)+
+    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def cpacrDefault_val
+                          irqVTimerEvent_def IRQ_def sctlrDefault_def)
    apply (wpsimp wp: hoare_vcg_all_lift)+
   apply (clarsimp simp: Collect_const_mem ko_at'_not_NULL dest!: vcpu_at_ko split: option.splits)
   done
@@ -2046,7 +2053,9 @@ lemma vcpu_enable_ccorres:
       apply (rule_tac P="ko_at' vcpu v" in ccorres_cross_over_guard)
       apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres)
         apply wpsimp+
-        apply (ctac (no_vcg) add: restore_virt_timer_ccorres)
+        apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
+         apply (ctac (no_vcg) add: restore_virt_timer_ccorres)
+        apply wpsimp
        apply simp
        apply wpsimp
       apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
