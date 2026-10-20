@@ -12,30 +12,30 @@ section\<open>Arch-specific CNode AC.\<close>
 
 context Arch begin arch_global_naming
 
+clear_named_theorems Arch_assms (* accumulate assumptions for CNode_AC locale *)
+
 declare arch_post_modify_registers_def[simp]
 declare arch_post_cap_deletion_def[simp]
 declare arch_cap_cleanup_opt_def[simp]
 declare arch_mask_irq_signal_def[simp]
 
-named_theorems CNode_AC_assms
-
-lemma sata_cdt_update[CNode_AC_assms, simp]:
+lemma sata_cdt_update[Arch_assms, simp]:
   "state_asids_to_policy aag (cdt_update f s) = state_asids_to_policy aag s"
   by simp
 
-lemma sata_is_original_cap_update[CNode_AC_assms, simp]:
+lemma sata_is_original_cap_update[Arch_assms, simp]:
   "state_asids_to_policy aag (is_original_cap_update f s) = state_asids_to_policy aag s"
   by simp
 
-lemma sata_interrupt_states_update[CNode_AC_assms, simp]:
+lemma sata_interrupt_states_update[Arch_assms, simp]:
   "state_asids_to_policy aag (interrupt_states_update f s) = state_asids_to_policy aag s"
   by simp
 
-lemma sata_machine_state_update[CNode_AC_assms, simp]:
+lemma sata_machine_state_update[Arch_assms, simp]:
   "state_asids_to_policy aag (machine_state_update f s) = state_asids_to_policy aag s"
   by simp
 
-lemma sata_update[CNode_AC_assms]:
+lemma sata_update[Arch_assms]:
   "\<lbrakk> pas_wellformed aag;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
@@ -45,7 +45,7 @@ lemma sata_update[CNode_AC_assms]:
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
                 split: if_split_asm)
 
-lemma sata_update2[CNode_AC_assms]:
+lemma sata_update2[Arch_assms]:
   "\<lbrakk> pas_wellformed aag;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr')) cap';
@@ -56,7 +56,7 @@ lemma sata_update2[CNode_AC_assms]:
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
                 split: if_split_asm)
 
-lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
+lemma set_cap_state_vrefs[Arch_assms, wp]:
   "set_cap cap ptr \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
   apply (wpsimp wp: get_object_wp simp: set_cap_def split_def set_object_def)
   apply (auto simp: obj_at_def state_vrefs_def
@@ -65,21 +65,21 @@ lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
   done
 
 crunch maskInterrupt
-  for underlying_memory[CNode_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
-  and device_state[CNode_AC_assms, wp]: "\<lambda>s. P (device_state s)"
+  for underlying_memory[Arch_assms, wp]: "\<lambda>s. P (underlying_memory s)"
+  and device_state[Arch_assms, wp]: "\<lambda>s. P (device_state s)"
   (simp: maskInterrupt_def)
 
 crunch set_cdt
-  for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
-  and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
+  for state_vrefs[Arch_assms, wp]: "\<lambda>s. P (state_vrefs s)"
+  and state_asids_to_policy[Arch_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
 
-lemma state_vrefs_tcb_upd[CNode_AC_assms]:
+lemma state_vrefs_tcb_upd[Arch_assms]:
   "tcb_at t s \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   apply (rule ext)
   apply (auto simp: state_vrefs_def vs_refs_no_global_pts_def tcb_at_def dest!: get_tcb_SomeD)
   done
 
-lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
+lemma state_vrefs_simple_type_upd[Arch_assms]:
   "\<lbrakk> ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
    \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (rule ext)
@@ -88,85 +88,76 @@ lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
   done
 
 (* FIXME: move *)
-lemma a_type_arch_object_not_tcb[CNode_AC_assms, simp]:
+lemma a_type_arch_object_not_tcb[Arch_assms, simp]:
   "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   by auto
 
-lemma arch_post_cap_deletion_integrity[CNode_AC_assms]:
+lemma arch_post_cap_deletion_integrity[Arch_assms]:
   "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
   by wpsimp
 
-end (* Arch *)
-
-context is_extended begin interpretation Arch .
-
-lemma list_integ_lift[CNode_AC_assms]:
-  assumes li:
-    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-     f
-     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (rule hoare_pre)
-   apply (unfold integrity_def[abs_def] integrity_asids_def)
-   apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (simp add: tcb_states_of_state_def get_tcb_def)
-   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
-  apply (simp only: integrity_cdt_list_as_list_integ)
-  apply (simp add: tcb_states_of_state_def get_tcb_def)
-  done
-
-lemma set_irq_state_respects[CNode_AC_assms,wp]:
+lemma set_irq_state_respects[Arch_assms,wp]:
   "\<lbrace>integrity aag X st and K (is_subject_irq aag irq)\<rbrace>
    set_irq_state irqst irq
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding set_irq_state_def maskInterrupt_def
   by (wpsimp wp: dmo_no_mem_respects simp: integrity_subjects_def integrity_interrupts_def)
 
-end (* is_extended *)
+lemmas CNode_AC_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 global_interpretation CNode_AC?: CNode_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms | solves \<open>wp only: CNode_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.CNode_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for CNode_AC_2 locale *)
+
+lemma integrity_asids_set_cap_Nullcap[Arch_assms]:
   "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
   unfolding integrity_asids_def by wpsimp
 
 crunch set_original
-  for state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
-  and state_objs_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_objs_to_policy s)"
+  for state_asids_to_policy[Arch_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
+  and state_objs_to_policy[Arch_assms, wp]: "\<lambda>s. P (state_objs_to_policy s)"
   (simp: state_objs_to_policy_def)
 
 crunch set_cdt_list, update_cdt_list
-  for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
-  and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
+  for state_vrefs[Arch_assms, wp]: "\<lambda>s. P (state_vrefs s)"
+  and state_asids_to_policy[Arch_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
+
+lemmas [Arch_assms] =
+  integrity_hyp_post_taut
+  integrity_fpu_post_taut
+
+lemmas CNode_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
+    by (unfold_locales; (fact ARM.CNode_AC_2_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma arch_post_cap_deletion_pas_refined[CNode_AC_assms, wp]:
+clear_named_theorems Arch_assms (* accumulate assumptions for CNode_AC_3 locale *)
+
+lemma arch_post_cap_deletion_pas_refined[Arch_assms, wp]:
   "arch_post_cap_deletion irqopt \<lbrace>pas_refined aag\<rbrace>"
   by (wpsimp simp: post_cap_deletion_def)
 
-lemma aobj_ref'_same_aobject[CNode_AC_assms]:
+lemma aobj_ref'_same_aobject[Arch_assms]:
   "same_aobject_as ao' ao \<Longrightarrow> aobj_ref' ao = aobj_ref' ao'"
   by (cases ao; clarsimp split: arch_cap.splits)
 
-lemma thread_set_arch_trivT[CNode_AC_assms]:
+lemma thread_set_arch_trivT[Arch_assms]:
   assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
   shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   apply (wpsimp simp: thread_set_def wp: set_object_wp)
@@ -175,31 +166,21 @@ lemma thread_set_arch_trivT[CNode_AC_assms]:
   apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
   done
 
+lemmas CNode_AC_3_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
-
-context is_extended begin interpretation Arch .
-
-lemma pas_refined_tcb_domain_map_wellformed[CNode_AC_assms, wp]:
-  assumes tdmw: "f \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
-  shows "f \<lbrace>pas_refined aag\<rbrace>"
-  apply (simp add: pas_refined_def)
-  apply (wp tdmw)
-   apply (wp lift_inv)
-   apply simp+
-  done
-
-end (* is_extended *)
 
 global_interpretation CNode_AC_3?: CNode_AC_3
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms)?)
+    by (unfold_locales; (fact ARM.CNode_AC_3_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma arch_derive_cap_auth_derived[CNode_AC_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for CNode_AC_4 locale *)
+
+lemma arch_derive_cap_auth_derived[Arch_assms]:
   "\<lbrace>\<lambda>s. cte_wp_at (auth_derived (ArchObjectCap cap)) src_slot s\<rbrace>
    arch_derive_cap cap
    \<lbrace>\<lambda>rv s. cte_wp_at (auth_derived rv) src_slot s\<rbrace>, -"
@@ -210,31 +191,31 @@ lemma arch_derive_cap_auth_derived[CNode_AC_assms]:
   apply (clarsimp simp: auth_derived_def arch_cap_auth_conferred_def cap_auth_conferred_def)
   done
 
-lemma cap_asid'_cap_rights_update[CNode_AC_assms, simp]:
+lemma cap_asid'_cap_rights_update[Arch_assms, simp]:
   "acap_asid' (acap_rights_update rights ao) = acap_asid' ao"
   by (cases ao; clarsimp simp: cap_rights_update_def acap_rights_update_def)
 
-lemma untyped_range_cap_rights_update[CNode_AC_assms, simp]:
+lemma untyped_range_cap_rights_update[Arch_assms, simp]:
   "untyped_range (cap_rights_update rights (ArchObjectCap ao)) = untyped_range (ArchObjectCap ao)"
   by (cases ao; clarsimp simp: cap_rights_update_def)
 
-lemma obj_refs_cap_rights_update[CNode_AC_assms, simp]:
+lemma obj_refs_cap_rights_update[Arch_assms, simp]:
   "aobj_ref' (acap_rights_update rights ao) = aobj_ref' ao"
   by (cases ao; clarsimp simp: cap_rights_update_def acap_rights_update_def)
 
-lemma auth_derived_arch_update_cap_data[CNode_AC_assms]:
+lemma auth_derived_arch_update_cap_data[Arch_assms]:
   "auth_derived (ArchObjectCap ao) cap' \<Longrightarrow> auth_derived (arch_update_cap_data pres w ao) cap'"
   by (simp add: update_cap_data_def is_cap_simps arch_update_cap_data_def
                   split del: if_split cong: if_cong)
 
-lemma acap_auth_conferred_acap_rights_update[CNode_AC_assms]:
+lemma acap_auth_conferred_acap_rights_update[Arch_assms]:
   "arch_cap_auth_conferred (acap_rights_update (acap_rights acap \<inter> R) acap)
    \<subseteq> arch_cap_auth_conferred acap"
   by (auto simp: arch_cap_auth_conferred_def vspace_cap_rights_to_auth_def acap_rights_update_def
                  validate_vm_rights_def vm_kernel_only_def vm_read_only_def
           split: arch_cap.splits)
 
-lemma arch_derive_cap_clas[CNode_AC_assms]:
+lemma arch_derive_cap_clas[Arch_assms]:
   "\<lbrace>\<lambda>s. cap_links_asid_slot aag p (ArchObjectCap acap)\<rbrace>
    arch_derive_cap acap
    \<lbrace>\<lambda>rv s. cap_links_asid_slot aag p rv\<rbrace>, -"
@@ -244,7 +225,7 @@ lemma arch_derive_cap_clas[CNode_AC_assms]:
   apply (auto simp: is_cap_simps cap_links_asid_slot_def)
   done
 
-lemma arch_derive_cap_obj_refs_auth[CNode_AC_assms]:
+lemma arch_derive_cap_obj_refs_auth[Arch_assms]:
   "\<lbrace>K (\<forall>r\<in>obj_refs_ac (ArchObjectCap cap).
        \<forall>auth\<in>cap_auth_conferred (ArchObjectCap cap). aag_has_auth_to aag auth r)\<rbrace>
    arch_derive_cap cap
@@ -256,51 +237,52 @@ lemma arch_derive_cap_obj_refs_auth[CNode_AC_assms]:
   done
 
 (* FIXME: move *)
-lemma arch_derive_cap_obj_refs_subset[CNode_AC_assms]:
+lemma arch_derive_cap_obj_refs_subset[Arch_assms]:
   "\<lbrace>\<lambda>s. (\<forall>x \<in> aobj_ref' acap. P x s)\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac rv. P x s\<rbrace>, -"
   by (wpsimp simp: arch_derive_cap_def) fastforce
 
-lemma arch_derive_cap_clip[CNode_AC_assms]:
+lemma arch_derive_cap_clip[Arch_assms]:
   "\<lbrace>K (cap_links_irq aag l (ArchObjectCap ac))\<rbrace>
    arch_derive_cap ac
    \<lbrace>\<lambda>x s. cap_links_irq aag l x\<rbrace>, -"
   by (wpsimp simp: arch_derive_cap_def comp_def cli_no_irqs)
 
 (* FIXME: move *)
-lemma arch_derive_cap_untyped_range_subset[CNode_AC_assms]:
+lemma arch_derive_cap_untyped_range_subset[Arch_assms]:
   "\<lbrace>\<lambda>s. \<forall>x \<in> untyped_range (ArchObjectCap acap). P x s\<rbrace>
    arch_derive_cap acap
    \<lbrace>\<lambda>rv s. \<forall>x \<in> untyped_range rv. P x s\<rbrace>, -"
   by (wpsimp simp: arch_derive_cap_def)
 
-lemma arch_update_cap_obj_refs_subset[CNode_AC_assms]:
+lemma arch_update_cap_obj_refs_subset[Arch_assms]:
   "\<lbrakk> x \<in> obj_refs_ac (arch_update_cap_data pres data cap) \<rbrakk> \<Longrightarrow> x \<in> aobj_ref' cap"
   by (simp add: arch_update_cap_data_def)
 
-lemma arch_update_cap_untyped_range_empty[CNode_AC_assms, simp]:
+lemma arch_update_cap_untyped_range_empty[Arch_assms, simp]:
   "untyped_range (arch_update_cap_data pres data cap) = {}"
   by (simp add: arch_update_cap_data_def)
 
-lemma arch_update_cap_irqs_controlled_empty[CNode_AC_assms, simp]:
+lemma arch_update_cap_irqs_controlled_empty[Arch_assms, simp]:
   "cap_irqs_controlled (arch_update_cap_data pres data cap) = {}"
   by (simp add: arch_update_cap_data_def)
 
-lemma arch_update_cap_links_asid_slot[CNode_AC_assms]:
+lemma arch_update_cap_links_asid_slot[Arch_assms]:
   "cap_links_asid_slot aag p (arch_update_cap_data pres w acap) =
    cap_links_asid_slot aag p (ArchObjectCap acap)"
   by (simp add: arch_update_cap_data_def)
 
-lemma arch_update_cap_cap_auth_conferred_subset[CNode_AC_assms]:
+lemma arch_update_cap_cap_auth_conferred_subset[Arch_assms]:
   "y \<in> cap_auth_conferred (arch_update_cap_data b w acap) \<Longrightarrow> y \<in> arch_cap_auth_conferred acap"
   by (simp add: arch_update_cap_data_def cap_auth_conferred_def)
+
+lemmas CNode_AC_4_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation CNode_AC_4?: CNode_AC_4
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms)?)
+    by (unfold_locales; (fact ARM.CNode_AC_4_assms)?)
 qed
 
 context Arch begin arch_global_naming

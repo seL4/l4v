@@ -84,21 +84,33 @@ definition do_user_op_if ::
    od"
 
 
-named_theorems UserOp_IF_assms
-
-lemma arch_globals_equiv_underlying_memory_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_underlying_memory_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (underlying_memory_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (underlying_memory_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_device_state_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (device_state_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (device_state_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
+
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows no_hyp_modify[wp,simp]:
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"
+  and no_fpu_modify[wp,simp]:
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"
+  by auto
+
+lemmas UserOp_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -106,9 +118,8 @@ requalify_types RISCV64.user_transition_if
 
 global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact UserOp_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact RISCV64.UserOp_IF_assms)?)
 qed
 
 context Arch begin global_naming RISCV64
@@ -779,12 +790,18 @@ definition context_matches_state where
           {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x}"
 
 
+definition valid_vspace_objs_if where
+  "valid_vspace_objs_if \<equiv> \<top>"
+
+declare valid_vspace_objs_if_def[simp]
+
 lemma do_user_op_reads_respects_g:
   notes split_paired_All[simp del]
   shows
     "(\<forall>pl pr pxn tc ms s. P tc s \<and> context_matches_state pl pr pxn ms s
                           \<longrightarrow> (\<exists>x. uop (cur_thread s) pl pr pxn (tc, ms) = {x}))
-     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and is_subject aag \<circ> cur_thread
+     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and valid_vspace_objs_if
+                                                 and is_subject aag \<circ> cur_thread
                                                  and (\<lambda>s. cur_thread s \<noteq> idle_thread s) and P tc)
                           (do_user_op_if uop tc)"
   apply (simp add: do_user_op_if_def)
@@ -838,19 +855,6 @@ lemma do_user_op_reads_respects_g:
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 
-definition valid_vspace_objs_if where
-  "valid_vspace_objs_if \<equiv> \<top>"
-
-declare valid_vspace_objs_if_def[simp]
-
 end (* Arch *)
-
-requalify_consts
-  RISCV64.do_user_op_if
-  RISCV64.valid_vspace_objs_if
-  RISCV64.context_matches_state
-
-requalify_facts
-  RISCV64.do_user_op_reads_respects_g
 
 end

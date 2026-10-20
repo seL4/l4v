@@ -124,11 +124,4 @@ declare arch_globals_equiv_def[simp]
 
 end (* Arch *)
 
-(* FIXME AARCH64 IF: requalify elsewhere *)
-arch_requalify_consts
-  equiv_asid
-  equiv_asid'
-  arch_globals_equiv
-  non_asid_pool_kheap_update
-
 end

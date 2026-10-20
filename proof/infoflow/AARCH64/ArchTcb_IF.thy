@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Tcb_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_IF locale *)
 
 crunch set_irq_state, suspend
   for arm_us_global_vspace[wp]: "\<lambda>s. P (arm_us_global_vspace (arch_state s))"
@@ -34,11 +34,11 @@ lemma cap_ne_global_pt:
   apply blast
   done
 
-lemma valid_arch_caps_vs_lookup[Tcb_IF_assms]:
+lemma valid_arch_caps_vs_lookup[Arch_assms]:
   "valid_arch_caps s \<Longrightarrow> valid_vs_lookup s"
   by (simp add: valid_arch_caps_def)
 
-lemma no_cap_to_idle_thread'[Tcb_IF_assms]:
+lemma no_cap_to_idle_thread'[Arch_assms]:
   "valid_global_refs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
   apply (clarsimp simp add: ex_nonz_cap_to_def valid_global_refs_def valid_refs_def)
   apply (drule_tac x=a in spec)
@@ -47,7 +47,7 @@ lemma no_cap_to_idle_thread'[Tcb_IF_assms]:
   apply (case_tac cap,simp_all)
   done
 
-lemma no_cap_to_idle_thread''[Tcb_IF_assms]:
+lemma no_cap_to_idle_thread''[Arch_assms]:
   "valid_global_refs s \<Longrightarrow> caps_of_state s ref \<noteq> Some (ThreadCap (idle_thread s))"
   apply (clarsimp simp add: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
   apply (drule_tac x="fst ref" in spec)
@@ -56,10 +56,10 @@ lemma no_cap_to_idle_thread''[Tcb_IF_assms]:
   done
 
 crunch arch_post_modify_registers
-  for globals_equiv[Tcb_IF_assms, wp]: "globals_equiv st"
-  and valid_arch_state[Tcb_IF_assms, wp]: valid_arch_state
+  for globals_equiv[Arch_assms, wp]: "globals_equiv st"
+  and valid_arch_state[Arch_assms, wp]: valid_arch_state
 
-lemma arch_post_modify_registers_reads_respects_f[Tcb_IF_assms, wp]:
+lemma arch_post_modify_registers_reads_respects_f[Arch_assms, wp]:
   "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
   by wpsimp
 
@@ -76,21 +76,24 @@ lemma reads_equiv_valid_inv_f:
   apply (drule state_unchanged[OF b])+
   by simp
 
-lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
+lemma arch_get_sanitise_register_info_reads_respects_f[Arch_assms, wp]:
   "reads_respects_f aag l (K (aag_can_read_or_affect aag l rv)) (arch_get_sanitise_register_info rv)"
   unfolding arch_get_sanitise_register_info_def
   by (wpsimp wp: reads_equiv_valid_inv_f)
+
+lemmas Tcb_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Tcb_IF?: Tcb_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Tcb_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.Tcb_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming
+
+clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_IF_2 locale *)
 
 lemma valid_ipc_buffer_cap_is_nondevice_page_cap:
   "\<lbrakk>valid_ipc_buffer_cap cap ptr; cap \<noteq> NullCap\<rbrakk> \<Longrightarrow> is_nondevice_page_cap cap"
@@ -101,7 +104,7 @@ lemma is_valid_vtable_root_def2:
   by (auto simp: is_valid_vtable_root_def split: cap.splits arch_cap.splits option.splits pt_type.splits)
 
 (* FIXME: Pretty general. Probably belongs somewhere else *)
-lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
+lemma invoke_tcb_thread_preservation[Arch_assms]:
   notes is_nondevice_page_cap_simps[simp del]
   assumes cap_delete_P: "\<And>slot. \<lbrace>invs and P and emptyable slot\<rbrace> cap_delete slot \<lbrace>\<lambda>_. P\<rbrace>"
   assumes cap_insert_P: "\<And>new_cap src dest. \<lbrace>invs and P\<rbrace> cap_insert new_cap src dest \<lbrace>\<lambda>_. P\<rbrace>"
@@ -162,7 +165,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
                      valid_ipc_buffer_cap_is_nondevice_page_cap
               split: option.split_asm)
 
-lemma tc_reads_respects_f[Tcb_IF_assms]:
+lemma tc_reads_respects_f[Arch_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   assumes tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
   notes validE_valid[wp del] hoare_weak_lift_imp [wp]
@@ -337,7 +340,7 @@ lemma lazy_fpu_restore_reads_respects:
   apply clarsimp
   done
 
-lemma arch_post_set_flags_reads_respects_f[Tcb_IF_assms]:
+lemma arch_post_set_flags_reads_respects_f[Arch_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_f aag l (silc_inv aag st and valid_cur_fpu and K (is_subject aag t)) (arch_post_set_flags t flags)"
   unfolding arch_post_set_flags_def
@@ -433,16 +436,17 @@ lemma lazy_fpu_restore_globals_equiv:
   by (wpsimp wp: switch_local_fpu_owner_globals_equiv hoare_drop_imps)
 
 crunch arch_post_set_flags
-  for globals_equiv[Tcb_IF_assms]: "globals_equiv st"
+  for globals_equiv[Arch_assms]: "globals_equiv st"
   (simp: crunch_simps)
+
+lemmas Tcb_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Tcb_IF_2?: Tcb_IF_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Tcb_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.Tcb_IF_2_assms)?)
 qed
 
 end

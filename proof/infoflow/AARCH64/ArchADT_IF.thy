@@ -17,16 +17,16 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems ADT_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_IF locale *)
 
-lemmas [ADT_IF_assms] =
+lemmas [Arch_assms] =
   thread_set_no_etcb_change_cur_fpu_in_cur_domain
   thread_set_no_etcb_change_cur_vcpu_in_cur_domain
   handle_event_valid_cur_vcpu
   cur_vcpu_in_cur_domain_updates
   cur_fpu_in_cur_domain_updates
 
-lemma dmo_getActiveIRQ_wp'[ADT_IF_assms]:
+lemma dmo_getActiveIRQ_wp'[Arch_assms]:
   "\<lbrace>(\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
            (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))
     and domain_sep_inv False st and valid_irq_states\<rbrace>
@@ -41,7 +41,7 @@ lemma dmo_getActiveIRQ_wp'[ADT_IF_assms]:
                          valid_irq_states_def valid_irq_masks_def irq_at_def)
   done
 
-lemma dmo_getActiveIRQ_wp[ADT_IF_assms]:
+lemma dmo_getActiveIRQ_wp[Arch_assms]:
   "\<lbrace>(\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
            (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))\<rbrace>
    do_machine_op (getActiveIRQ False)
@@ -65,30 +65,30 @@ lemma thread_set_valid_cur_vcpu_unchanged_strong:
   apply (wp_pre, wps, wpsimp wp: thread_set_no_change_etcb_at, clarsimp)
   done
 
-lemma thread_set_tcb_context_valid_cur_vcpu[ADT_IF_assms,wp]:
+lemma thread_set_tcb_context_valid_cur_vcpu[Arch_assms,wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set tc)) tcb \<lbrace>valid_cur_vcpu\<rbrace>"
   by (wpsimp wp: thread_set_valid_cur_vcpu_unchanged_strong simp: arch_tcb_context_set_def)
 
 crunch do_user_op_if
-  for cur_vcpu_in_cur_domain[ADT_IF_assms,wp]: "cur_vcpu_in_cur_domain"
-  and cur_fpu_in_cur_domain[ADT_IF_assms,wp]: "cur_fpu_in_cur_domain"
-  and valid_cur_vcpu[ADT_IF_assms,wp]: "valid_cur_vcpu"
+  for cur_vcpu_in_cur_domain[Arch_assms,wp]: "cur_vcpu_in_cur_domain"
+  and cur_fpu_in_cur_domain[Arch_assms,wp]: "cur_fpu_in_cur_domain"
+  and valid_cur_vcpu[Arch_assms,wp]: "valid_cur_vcpu"
   (simp: do_user_op_if_def)
 
-lemma deleted_irq_handler_valid_irq_states[ADT_IF_assms,wp]:
+lemma deleted_irq_handler_valid_irq_states[Arch_assms,wp]:
   "deleted_irq_handler irq \<lbrace>valid_irq_states\<rbrace>"
   unfolding deleted_irq_handler_def set_irq_state_def valid_irq_states_def valid_irq_masks_def maskInterrupt_def
   by (wpsimp wp: dmo_wp)
 
-lemma dmo_getActiveIRQ_valid_irq_states[ADT_IF_assms,wp]:
+lemma dmo_getActiveIRQ_valid_irq_states[Arch_assms,wp]:
   "do_machine_op (getActiveIRQ in_kernel) \<lbrace>valid_irq_states\<rbrace>"
   unfolding getActiveIRQ_def by wpsimp
 
 crunch prepare_thread_delete, arch_finalise_cap, arch_post_cap_deletion
-  for valid_irq_states[ADT_IF_assms,wp]: "\<lambda>s :: det_state. valid_irq_states s"
+  for valid_irq_states[Arch_assms,wp]: "\<lambda>s :: det_state. valid_irq_states s"
   (wp: crunch_wps mapM_x_wp hoare_drop_imps simp: crunch_simps)
 
-lemmas [ADT_IF_assms] =
+lemmas [Arch_assms] =
   maybe_handle_interrupt_cur_vcpu_in_cur_domain
   maybe_handle_interrupt_cur_fpu_in_cur_domain
   maybe_handle_interrupt_valid_cur_vcpu
@@ -101,19 +101,22 @@ lemmas [ADT_IF_assms] =
   activate_thread_cur_fpu_in_cur_domain
   activate_thread_valid_cur_vcpu
 
+lemmas ADT_IF_assms = Arch_assms[folded valid_cur_hyp_def cur_hyp_in_cur_domain_def] (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact ADT_IF_assms[folded valid_cur_hyp_def cur_hyp_in_cur_domain_def])?)
+    by (unfold_locales; (fact AARCH64.ADT_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_IF_2 locale *)
+
 (* FIXME: clagged from AInvs.do_user_op_invs *)
-lemma do_user_op_if_invs[ADT_IF_assms]:
+lemma do_user_op_if_invs[Arch_assms]:
   "\<lbrace>invs and ct_running\<rbrace>
    do_user_op_if f tc
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
@@ -128,78 +131,78 @@ lemma do_user_op_if_invs[ADT_IF_assms]:
   done
 
 crunch do_user_op_if
-  for domain_sep_inv[ADT_IF_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
   (ignore: user_memory_update)
 
 crunch do_user_op_if
-  for valid_sched[ADT_IF_assms, wp]: "valid_sched"
+  for valid_sched[Arch_assms, wp]: "valid_sched"
   (ignore: user_memory_update)
 
 crunch do_user_op_if
-  for irq_masks[ADT_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: user_memory_update wp: dmo_wp no_irq)
 
 crunch do_user_op_if
-  for valid_list[ADT_IF_assms, wp]: "valid_list"
+  for valid_list[Arch_assms, wp]: "valid_list"
   (ignore: user_memory_update)
 
-lemma do_user_op_if_scheduler_action[ADT_IF_assms, wp]:
+lemma do_user_op_if_scheduler_action[Arch_assms, wp]:
   "do_user_op_if f tc \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
   by (simp add: do_user_op_if_def | wp | wpc)+
 
-lemma do_user_op_silc_inv[ADT_IF_assms, wp]:
+lemma do_user_op_silc_inv[Arch_assms, wp]:
   "do_user_op_if f tc \<lbrace>silc_inv aag st\<rbrace>"
   apply (simp add: do_user_op_if_def)
   apply (wp | wpc | simp)+
   done
 
-lemma do_user_op_pas_refined[ADT_IF_assms, wp]:
+lemma do_user_op_pas_refined[Arch_assms, wp]:
   "do_user_op_if f tc \<lbrace>pas_refined aag\<rbrace>"
   apply (simp add: do_user_op_if_def)
   apply (wp | wpc | simp)+
   done
 
 crunch do_user_op_if
-  for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
-  and cur_domain[ADT_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
-  and idle_thread[ADT_IF_assms, wp]: "\<lambda>s. P (idle_thread s)"
-  and domain_fields[ADT_IF_assms, wp]: "domain_fields P"
+  for cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
+  and cur_domain[Arch_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  and idle_thread[Arch_assms, wp]: "\<lambda>s. P (idle_thread s)"
+  and domain_fields[Arch_assms, wp]: "domain_fields P"
   (ignore: user_memory_update)
 
-lemma do_use_op_guarded_pas_domain[ADT_IF_assms, wp]:
+lemma do_use_op_guarded_pas_domain[Arch_assms, wp]:
   "do_user_op_if f tc \<lbrace>guarded_pas_domain aag\<rbrace>"
   by (rule guarded_pas_domain_lift; wp)
 
-lemma tcb_arch_ref_tcb_context_set[ADT_IF_assms, simp]:
+lemma tcb_arch_ref_tcb_context_set[Arch_assms, simp]:
   "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set tc) tcb) = tcb_arch_ref tcb"
   by (simp add: tcb_arch_ref_def arch_tcb_context_set_def)
 
 crunch arch_activate_idle_thread, arch_switch_to_thread
-  for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
+  for cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
 
-lemma arch_activate_idle_thread_scheduler_action[ADT_IF_assms, wp]:
+lemma arch_activate_idle_thread_scheduler_action[Arch_assms, wp]:
   "arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_activate_idle_thread_def)
 
 crunch handle_vm_fault, handle_hypervisor_fault
-  for domain_fields[ADT_IF_assms, wp]: "domain_fields P"
+  for domain_fields[Arch_assms, wp]: "domain_fields P"
 
-lemma arch_perform_invocation_noErr[ADT_IF_assms, wp]:
+lemma arch_perform_invocation_noErr[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> arch_perform_invocation a -, \<lbrace>Q\<rbrace>"
   by (wpsimp simp: arch_perform_invocation_def)
 
-lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
+lemma arch_invoke_irq_control_noErr[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> arch_invoke_irq_control a -, \<lbrace>Q\<rbrace>"
   by (cases a; wpsimp)
 
-lemma getActiveIRQ_None[ADT_IF_assms]:
+lemma getActiveIRQ_None[Arch_assms]:
   "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s) \<Longrightarrow>
    irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
   apply (erule use_valid)
    apply (wp dmo_getActiveIRQ_wp)
   by simp
 
-lemma getActiveIRQ_Some[ADT_IF_assms]:
+lemma getActiveIRQ_Some[Arch_assms]:
   "(Some i, s') \<in> fst (do_machine_op (getActiveIRQ False) s)
    \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = Some i"
   apply (erule use_valid)
@@ -258,7 +261,7 @@ lemma invs_pt_not_idle_thread[intro]:
   by (fastforce dest: valid_global_arch_objs_pt_at
                 simp: obj_at_def valid_idle_def pred_tcb_at_def)
 
-lemma kernel_entry_if_idle_equiv[ADT_IF_assms]:
+lemma kernel_entry_if_idle_equiv[Arch_assms]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv irqs st and idle_equiv st
          and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
    kernel_entry_if e tc
@@ -270,54 +273,54 @@ lemma kernel_entry_if_idle_equiv[ADT_IF_assms]:
    apply (fastforce intro!: invs_pt_not_idle_thread)+
   done
 
-lemmas handle_preemption_idle_equiv[ADT_IF_assms, wp] =
+lemmas handle_preemption_idle_equiv[Arch_assms, wp] =
   idle_globals_lift[OF handle_preemption_globals_equiv invs_pt_not_idle_thread, simplified]
 
-lemmas schedule_if_idle_equiv[ADT_IF_assms, wp] =
+lemmas schedule_if_idle_equiv[Arch_assms, wp] =
   idle_globals_lift_scheduler[OF schedule_if_globals_equiv_scheduler invs_pt_not_idle_thread, simplified]
 
-lemma do_user_op_if_idle_equiv[ADT_IF_assms, wp]:
+lemma do_user_op_if_idle_equiv[Arch_assms, wp]:
   "\<lbrace>idle_equiv st and invs\<rbrace>
    do_user_op_if uop tc
    \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
   unfolding do_user_op_if_def
   by (wpsimp wp: dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv)
 
-lemma kernel_entry_if_valid_vspace_objs_if[ADT_IF_assms, wp]:
+lemma kernel_entry_if_valid_vspace_objs_if[Arch_assms, wp]:
   "\<lbrace>valid_vspace_objs_if and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. valid_vspace_objs_if\<rbrace>"
   by wpsimp
 
-lemma handle_preemption_if_valid_pdpt_objs[ADT_IF_assms, wp]:
+lemma handle_preemption_if_valid_pdpt_objs[Arch_assms, wp]:
   "\<lbrace>valid_vspace_objs_if\<rbrace> handle_preemption_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
   by wpsimp
 
-lemma schedule_if_valid_pdpt_objs[ADT_IF_assms, wp]:
+lemma schedule_if_valid_pdpt_objs[Arch_assms, wp]:
   "\<lbrace>valid_vspace_objs_if\<rbrace> schedule_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
   by wpsimp
 
-lemma do_user_op_if_valid_pdpt_objs[ADT_IF_assms, wp]:
+lemma do_user_op_if_valid_pdpt_objs[Arch_assms, wp]:
   "\<lbrace>valid_vspace_objs_if\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
   by wpsimp
 
-lemma valid_vspace_objs_if_ms_update[ADT_IF_assms, simp]:
+lemma valid_vspace_objs_if_ms_update[Arch_assms, simp]:
   "valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
   by simp
 
-lemma do_user_op_if_irq_state_of_state[ADT_IF_assms]:
+lemma do_user_op_if_irq_state_of_state[Arch_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp | wpc)+
   done
 
-lemma do_user_op_if_irq_masks_of_state[ADT_IF_assms]:
+lemma do_user_op_if_irq_masks_of_state[Arch_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp | wpc)+
   done
 
-lemma do_user_op_if_irq_measure_if[ADT_IF_assms]:
+lemma do_user_op_if_irq_measure_if[Arch_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_measure_if s)\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add: do_user_op_if_def user_memory_update_def irq_measure_if_def
@@ -334,7 +337,7 @@ lemma checked_cap_insert_valid_irq_states[wp]:
 crunch set_mcpriority
   for valid_irq_states[wp]: valid_irq_states
 
-lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
+lemma invoke_tcb_irq_state_inv[Arch_assms]:
   "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False (sta :: det_state) and valid_irq_states
                              and tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
    invoke_tcb tinv
@@ -378,7 +381,7 @@ lemma arch_post_reset_untyped_irq_state_of_state[wp]:
   unfolding arch_post_reset_untyped_def
   by (wpsimp wp: dmo_wp simp: dsb_def invalidate_I_PoU_def isb_def)
 
-lemma reset_untyped_cap_irq_state_inv[ADT_IF_assms]:
+lemma reset_untyped_cap_irq_state_inv[Arch_assms]:
   "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
    reset_untyped_cap slot
    \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
@@ -394,29 +397,29 @@ lemma reset_untyped_cap_irq_state_inv[ADT_IF_assms]:
       | wp (once) dmo_wp
       | fastforce)+
 
-lemma handle_vm_fault_irq_state_of_state[ADT_IF_assms]:
+lemma handle_vm_fault_irq_state_of_state[Arch_assms]:
   "handle_vm_fault thread fault \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   unfolding handle_vm_fault_def addressTranslateS1_def
   by (wpsimp wp: dmo_wp)
 
-lemma handle_hypervisor_fault_irq_state_of_state[ADT_IF_assms]:
+lemma handle_hypervisor_fault_irq_state_of_state[Arch_assms]:
   "handle_hypervisor_fault thread fault \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   by (cases fault, wpsimp wp: dmo_wp split_del: if_split)
 
 
 text \<open>Not true of invoke_untyped any more.\<close>
 crunch create_cap
-  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (ignore: freeMemory
       wp: dmo_wp modify_wp crunch_wps
     simp: freeMemory_def storeWord_def clearMemory_def
           machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
 
 crunch arch_invoke_irq_control
-  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp crunch_wps simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def)
 
-lemma handle_reserved_irq_non_kernel_IRQs[ADT_IF_assms]:
+lemma handle_reserved_irq_non_kernel_IRQs[Arch_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handle_reserved_irq_def
   apply (rule hoare_gen_asm)
@@ -432,7 +435,7 @@ lemma thread_set_context_state_hyp_refs_of:
             split: option.splits kernel_object.splits)
   done
 
-lemma thread_set_context_pas_refined[ADT_IF_assms]:
+lemma thread_set_context_pas_refined[Arch_assms]:
   "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
   unfolding pas_refined_def state_objs_to_policy_def
   apply (rule hoare_weaken_pre)
@@ -449,16 +452,23 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
   done
 
 crunch init_arch_objects
-  for irq_states_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  for irq_states_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp)
+
+lemmas [Arch_assms] =
+  init_arch_objects_irq_masks
+  retype_region_irq_masks
+  retype_region_irq_state_of_state
+  arch_perform_invocation_irq_state_of_state
+
+lemmas ADT_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation ADT_IF_2?: ADT_IF_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact ADT_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.ADT_IF_2_assms)?)
 qed
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?: ADT_valid_initial_state ..

@@ -10,9 +10,9 @@ begin
 
 context kernel_m begin
 
-named_theorems ADT_IF_Refine_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_IF_Refine_C locale *)
 
-lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:
+lemma handleInvocation_ccorres'[Arch_assms]:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and arch_extras and ct_active' and sch_act_simple)
        (UNIV \<inter> {s. isCall_' s = from_bool isCall}
@@ -44,7 +44,7 @@ lemma dmo_getActiveIRQ_inKernel_sch_act_not:
   apply clarsimp
   done
 
-lemma checkInterrupt_ccorres'[ADT_IF_Refine_assms]:
+lemma checkInterrupt_ccorres'[Arch_assms]:
   "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
            (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
   unfolding maybeHandleInterrupt_def
@@ -129,7 +129,7 @@ lemma corres_underlying_split4:
                                           (case x of (a,b,c,d) \<Rightarrow> f' a b c d)"
   by (cases x; simp)
 
-lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
+lemma do_user_op_if_C_corres[Arch_assms]:
   "corres_underlying rf_sr False False (=)
      (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f)) \<top>
      (doUserOp_if f tc) (doUserOp_C_if f tc)"
@@ -201,7 +201,7 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
   apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def ex_abs_def)
   done
 
-lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
+lemma check_active_irq_corres_C[Arch_assms]:
   "corres_underlying rf_sr False False (=) \<top> \<top>
                      (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
   apply (simp add: checkActiveIRQ_if_def checkActiveIRQ_C_if_def)
@@ -223,7 +223,7 @@ lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
   apply fastforce
   done
 
-lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:
+lemma obs_cpspace_user_data_relation[Arch_assms]:
   "\<lbrakk>pspace_aligned' bd;pspace_distinct' bd;
     cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs\<rbrakk>
    \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd) (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
@@ -257,7 +257,7 @@ lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:
   apply simp
   done
 
-lemma hvmf_invs_lift[ADT_IF_Refine_assms]:
+lemma hvmf_invs_lift[Arch_assms]:
   "\<lbrakk> \<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s \<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace> handleVMFault t hf \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   by (rule hv_inv_ex')
@@ -270,7 +270,7 @@ definition handleHypervisorFault_C_body_if :: "64 word \<Rightarrow> (globals my
 definition hyp_fault_type_from_H :: "hyp_fault_type \<Rightarrow> machine_word" where
   "hyp_fault_type_from_H fault \<equiv> undefined"
 
-lemma handleHypervisorFault_C_body_ccorres[ADT_IF_Refine_assms]:
+lemma handleHypervisorFault_C_body_ccorres[Arch_assms]:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
             (invs' and arch_extras and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) UNIV []
             (liftE (do thread <- getCurThread;
@@ -286,13 +286,12 @@ lemma handleHypervisorFault_C_body_ccorres[ADT_IF_Refine_assms]:
     apply (auto simp: return_def)
   done
 
-end (* kernel_m *)
-
-sublocale kernel_m \<subseteq> ADT_IF_Refine?: ADT_IF_Refine _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
+sublocale ADT_IF_Refine_C?: ADT_IF_Refine_C _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact ADT_IF_Refine_assms)?)
+    by (unfold_locales; (fact Arch_assms)?)
 qed
+
+end (* kernel_m *)
 
 end
