@@ -1063,7 +1063,10 @@ round-robin.
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
-> doFlush flushType vstart vend pstart =
+> doFlush flushType vstart vend pstart = do
+>     assert (paddrBase <= pstart && pstart < paddrTop &&
+>             fromVPtr (vend - vstart) < fromPAddr (paddrTop - pstart))
+>         "doFlush: flush range must be inside the kernel window"
 >     case flushType of
 >         Clean           -> cleanCacheRange_RAM vstart' vend' pstart
 >         Invalidate      -> invalidateCacheRange_RAM vstart' vend' pstart
@@ -1229,6 +1232,11 @@ Capabilities for page directories --- the top level of the hardware-defined page
 >                                   mask (pageBitsForSize (fst frameInfo))
 >                     let offset = start .&. mask (pageBitsForSize (fst frameInfo))
 >                     let pStart = snd frameInfo + toPAddr offset
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                     when (pStart < paddrBase || pStart > paddrTop ||
+>                           end - start > fromPAddr (paddrTop - pStart)) $
+>                         throw IllegalOperation
+#endif
 >                     return $ InvokePageDirectory $ PageDirectoryFlush {
 >                          pdFlushType = labelToFlushType label,
 >                          pdFlushStart = VPtr start,
@@ -1434,7 +1442,8 @@ so the operation is already safe.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         let start' = start + fromPPtr vaddr'
 >         let end' = end + fromPPtr vaddr'
->         when (pstart < paddrBase || ((end' - start') + fromPAddr pstart > fromPAddr paddrTop)) $
+>         when (pstart < paddrBase || pstart > paddrTop ||
+>               end' - start' > fromPAddr (paddrTop - pstart)) $
 >             throw IllegalOperation
 #else
 >         let start' = start + fromVPtr vaddr

@@ -33,6 +33,13 @@ definition
      | VCPUWriteRegister vcpu_ptr reg val \<Rightarrow> vcpu_at vcpu_ptr
      | VCPUAckVPPI vcpu_ptr vppi \<Rightarrow> vcpu_at vcpu_ptr"
 
+definition valid_vsi :: "vspace_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "valid_vsi vi \<equiv> case vi of
+     VSpaceNothing \<Rightarrow> \<top>
+   | VSpaceFlush _ start end pstart _ _ \<Rightarrow>
+       \<comment> \<open>the flushed physical range is inside the kernel window\<close>
+       K (paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart)"
+
 lemma safe_parent_strg:
   "cte_wp_at (\<lambda>cap. cap = UntypedCap False frame pageBits idx) p s \<and>
    descendants_of p (cdt s) = {} \<and>
@@ -59,7 +66,7 @@ definition valid_arch_inv :: "arch_invocation \<Rightarrow> 'z::state_ext state 
    | InvokeASIDControl aci \<Rightarrow> valid_aci aci
    | InvokeASIDPool api \<Rightarrow> valid_apinv api
    | InvokeVCPU vi \<Rightarrow> valid_vcpu_invocation vi
-   | InvokeVSpace vi \<Rightarrow> \<top>
+   | InvokeVSpace vi \<Rightarrow> valid_vsi vi
    | InvokeSGISignal vi \<Rightarrow> \<top>
    | InvokeSMCCall vi \<Rightarrow> \<top>"
 
@@ -1269,7 +1276,13 @@ lemma sts_valid_vspace_table_inv[wp]:
 
 lemma sts_valid_vcpu_invocation_inv:
   "\<lbrace>valid_vcpu_invocation vcpu_invocation\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_vcpu_invocation vcpu_invocation\<rbrace>"
-  unfolding valid_vcpu_invocation_def by (cases vcpu_invocation; wpsimp)
+  unfolding valid_vcpu_invocation_def
+  by (cases vcpu_invocation; wpsimp)
+
+lemma sts_valid_vsi[wp]:
+  "set_thread_state t st \<lbrace>valid_vsi vi\<rbrace>"
+  unfolding valid_vsi_def
+  by (cases vi; wpsimp)
 
 lemma sts_valid_arch_inv:
   "\<lbrace>valid_arch_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_arch_inv ai\<rbrace>"
@@ -1495,12 +1508,36 @@ proof -
     done
 qed
 
+lemma flush_window_check_no_overflow:
+  "\<lbrakk> start < end; pstart \<le> pstart + (end - start); \<not> ptop < end - start + pstart \<rbrakk> \<Longrightarrow>
+   pstart < ptop \<and> end - 1 - start < ptop - pstart"
+   for pstart :: "'a::len word"
+  apply (prop_tac "pstart \<le> ptop")
+   apply (erule order_trans, simp add: not_less add.commute)
+  apply (subst diff_right_commute)
+  apply (drule unat_plus_simple[THEN iffD1])
+  apply (simp add: not_less word_le_nat_alt word_less_nat_alt unat_sub order_less_imp_le add.commute)
+  apply arith
+  done
+
 lemma decode_fr_inv_flush_wf[wp]:
-  "\<lbrace>\<top>\<rbrace>
+  "\<lbrace>invs and valid_cap (ArchObjectCap (FrameCap word rights vmpage_size dev option))\<rbrace>
    decode_fr_inv_flush label args slot (FrameCap word rights vmpage_size dev option) excaps
    \<lbrace>valid_arch_inv\<rbrace>, -"
   unfolding decode_fr_inv_flush_def valid_arch_inv_def Let_def
-  by (wpsimp simp: valid_page_inv_def)
+  apply (wpsimp simp: valid_page_inv_def)
+  apply (clarsimp simp: valid_cap_def obj_at_def paddrBase_def)
+  apply (prop_tac "word \<in> kernel_window_range")
+   apply (fastforce intro: pspace_in_kw_bounded simp: obj_at_def split: if_split_asm)
+  apply (drule kernel_window_range_addrFromPPtr)
+  apply (prop_tac "addrFromPPtr word + args ! 0 \<le> addrFromPPtr word + args ! 0 + (args ! 1 - args ! 0)")
+   apply (simp add: not_le not_less)
+   apply (rule word_plus_mono_right, simp)
+   apply (simp add: no_olen_add_nat)
+   apply (cases vmpage_size; simp add: bit_simps pptrTop_def word_le_nat_alt word_less_nat_alt)
+  apply (drule flush_window_check_no_overflow[where ptop=paddrTop, rotated]; simp add: not_le)
+  apply (simp add: algebra_simps)
+  done
 
 lemma decode_frame_invocation_wf[wp]:
   "arch_cap = FrameCap word rights vmpage_size dev option \<Longrightarrow>
@@ -1675,12 +1712,46 @@ lemma arch_decode_vcpu_invocation_wf[wp]:
   apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
   done
 
+lemma flush_no_overflow:
+  "\<lbrakk> off \<le> start; start < end; b < btop; end \<le> etop; unat btop + unat etop < 2 ^ LENGTH('a) \<rbrakk>
+   \<Longrightarrow> b + off \<le> b + off + (end - start)" for b :: "'a::len word"
+  apply (simp add: no_olen_add_nat unat_sub order_less_imp_le)
+  apply (insert unat_plus_gt[of b off])
+  apply (simp add: word_le_nat_alt word_less_nat_alt)
+  done
+
+lemma lookup_frame_kernel_window:
+  "\<lbrakk> lookup_frame pt vref (ptes_of s) = Some (sz, paddr); vspace_for_asid asid s = Some pt;
+     vref \<in> user_region; invs s \<rbrakk> \<Longrightarrow>
+   ptrFromPAddr paddr \<in> kernel_window_range"
+  apply (clarsimp simp: lookup_frame_def in_omonad)
+  apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
+  apply (drule valid_vspace_objs_strong_slotD; clarsimp)
+  apply (clarsimp simp: is_PagePTE_def pte_base_addr_def data_at_def obj_at_def split: if_split_asm)
+  apply (fastforce intro: pspace_in_kw_bounded)
+  done
+
 lemma arch_decode_vspace_invocation_wf[wp]:
   "\<lbrace>invs\<rbrace>
    decode_vspace_invocation label args slot (PageTableCap pt VSRootPT_T m) excaps
    \<lbrace>valid_arch_inv\<rbrace>, -"
   unfolding decode_vspace_invocation_def decode_vs_inv_flush_def
-  by (wpsimp simp: Let_def valid_arch_inv_def)
+  apply (wpsimp simp: Let_def valid_arch_inv_def valid_vsi_def)
+  apply (rename_tac s asid vref sz pa)
+  apply (prop_tac "args ! 0 \<in> user_region")
+   apply (simp add: user_region_def not_le not_less)
+   apply (rule user_vtop_canonical_user)
+   apply (simp add: user_vtop_def)
+  apply (frule (3) lookup_frame_kernel_window)
+  apply (drule kernel_window_range_addrFromPPtr, simp)
+  apply (prop_tac "unat pptrTop + unat pptrUserTop < 2 ^ LENGTH(machine_word_len)")
+   apply (simp add: pptrTop_def pptrUserTop_def mask_def split: if_split)
+  apply (prop_tac "pa + (args ! 0 && mask (pt_bits_left (level_of_vmsize sz)))
+                   \<le> pa + (args ! 0 && mask (pt_bits_left (level_of_vmsize sz))) + (args ! 1 - args ! 0)")
+   apply (rule flush_no_overflow[where btop=pptrTop and etop=pptrUserTop, OF word_and_le2];
+          simp add: not_le not_less)
+  apply (drule flush_window_check_no_overflow[where ptop=paddrTop, rotated 2]; simp add: not_le)
+  done
 
 lemma decode_sgi_signal_invocation_wf[wp]:
   "\<lbrace>invs\<rbrace>

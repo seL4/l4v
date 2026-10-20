@@ -2267,9 +2267,11 @@ definition
    | ARM_HYP_A.flush_type.Unify \<Rightarrow> ARM_HYP_H.flush_type.Unify"
 
 lemma doFlush_corres:
-  "corres_underlying Id nf nf' dc \<top> \<top>
-             (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
-  apply (simp add: do_flush_def doFlush_def)
+  "corres_underlying Id nf nf' dc
+     (\<lambda>_. paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart) \<top>
+     (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
+  apply (rule corres_gen_asm[where P=\<top>, simplified])
+  apply (clarsimp simp: do_flush_def doFlush_def fromPAddr_def)
   apply (cases "typ", simp_all add: flush_type_map_def Let_def)
      apply (rule corres_Id [where r=dc], rule refl, simp)
      apply (wp no_fail_cleanCacheRange_RAM)
@@ -2282,6 +2284,13 @@ lemma doFlush_corres:
                               no_fail_dsb no_fail_isb del: no_irq)
   apply clarsimp
   done
+
+lemma dmo_doFlush_corres:
+  "corres dc (\<lambda>_. paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart) \<top>
+             (do_machine_op (do_flush typ start end pstart))
+             (doMachineOp (doFlush (flush_type_map typ) start end pstart))"
+  using corres_machine_op'[OF doFlush_corres]
+  by (simp add: comp_def)
 
 definition
   "page_directory_invocation_map pdi pdi' \<equiv> case pdi of
@@ -2301,8 +2310,7 @@ lemma performPageDirectoryInvocation_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_when, simp)
      apply (rule corres_split[OF setVMRootForFlush_corres])
-       apply (rule corres_split[OF corres_machine_op])
-          apply (rule doFlush_corres)
+       apply (rule corres_split[OF dmo_doFlush_corres])
          apply (rule corres_when, simp)
          apply (rule corres_split[OF getCurThread_corres])
            apply clarsimp
@@ -2929,8 +2937,7 @@ proof -
      apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
        apply (rule corres_when, simp)
        apply (rule corres_split[OF setVMRootForFlush_corres])
-         apply (rule corres_split[OF corres_machine_op])
-            apply (rule doFlush_corres)
+         apply (rule corres_split[OF dmo_doFlush_corres])
            apply (rule corres_when, simp)
            apply (rule corres_split[OF getCurThread_corres])
              apply simp

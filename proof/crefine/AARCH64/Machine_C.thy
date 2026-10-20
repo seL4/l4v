@@ -170,10 +170,13 @@ assumes cleanByVA_PoU_ccorres:
            (doMachineOp (cleanByVA_PoU w1 w2))
            (Call cleanByVA_PoU_'proc)"
 
+(* Addresses for flush operations on hyp must be in the kernel window. Written
+   in three conjuncts to avoid overflow, see also lemma paddr_window_unat *)
 assumes cleanCacheRange_RAM_ccorres:
   "ccorres dc xfdc (\<lambda>s. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
                         \<and> w1 && mask cacheLineBits  = w3 && mask cacheLineBits
-                        \<and> unat (w2 - w1) \<le> gsMaxObjectSize s)
+                        \<and> unat (w2 - w1) \<le> gsMaxObjectSize s
+                        \<and> paddrBase \<le> w3 \<and> w3 < AARCH64.paddrTop \<and> w2 - w1 < AARCH64.paddrTop - w3)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
            (Call cleanCacheRange_RAM_'proc)"
@@ -181,7 +184,8 @@ assumes cleanCacheRange_RAM_ccorres:
 assumes cleanCacheRange_PoU_ccorres:
   "ccorres dc xfdc (\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s
                         \<and> w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                        \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits)
+                        \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits
+                        \<and> paddrBase \<le> w3 \<and> w3 < AARCH64.paddrTop \<and> w2 - w1 < AARCH64.paddrTop - w3)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanCacheRange_PoU w1 w2 w3))
            (Call cleanCacheRange_PoU_'proc)"
@@ -189,7 +193,8 @@ assumes cleanCacheRange_PoU_ccorres:
 assumes cleanInvalidateCacheRange_RAM_ccorres:
   "ccorres dc xfdc (\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s
                         \<and> w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                        \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits)
+                        \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits
+                        \<and> paddrBase \<le> w3 \<and> w3 < AARCH64.paddrTop \<and> w2 - w1 < AARCH64.paddrTop - w3)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanInvalidateCacheRange_RAM w1 w2 w3))
            (Call cleanInvalidateCacheRange_RAM_'proc)"
@@ -197,14 +202,16 @@ assumes cleanInvalidateCacheRange_RAM_ccorres:
 assumes invalidateCacheRange_RAM_ccorres:
   "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
                     and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits))
+                      \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits
+                      \<and> paddrBase \<le> w3 \<and> w3 < AARCH64.paddrTop \<and> w2 - w1 < AARCH64.paddrTop - w3))
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (invalidateCacheRange_RAM w1 w2 w3))
            (Call invalidateCacheRange_RAM_'proc)"
 
 assumes invalidateCacheRange_I_ccorres:
   "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                        \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits)
+                        \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits
+                        \<and> paddrBase \<le> w3 \<and> w3 < AARCH64.paddrTop \<and> w2 - w1 < AARCH64.paddrTop - w3)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (invalidateCacheRange_I w1 w2 w3))
            (Call invalidateCacheRange_I_'proc)"

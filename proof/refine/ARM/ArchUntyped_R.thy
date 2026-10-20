@@ -281,7 +281,8 @@ lemma archNoOverlap[Arch_assms]:
   shows
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
                                           \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
-                         \<and> valid_objs s \<and> pspace_aligned s)
+                         \<and> valid_objs s \<and> pspace_aligned s
+                         \<and> valid_arch_state s \<and> cap_refs_in_kernel_window s)
              \<top>
              (return ()) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
   by (simp add: archOverlap_def)

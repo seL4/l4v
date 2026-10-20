@@ -2802,6 +2802,8 @@ lemma doFlush_ccorres:
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)"
   apply (cinit' lift: pstart_')
    apply (unfold doMachineOp_bind doFlush_def)
+   apply (simp only: Let_def haskell_assert_def doMachineOp_assert_bind)
+   apply (rule ccorres_assert)
    apply (simp add: Let_def)
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop2, simp)

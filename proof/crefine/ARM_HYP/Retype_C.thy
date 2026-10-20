@@ -5282,7 +5282,7 @@ lemma monadic_rewrite_setObject_vcpu_as_init:
      (setObject v makeVCPUObject)
      (do vcpuWriteReg v VCPURegSCTLR sctlrDefault;
          vcpuWriteReg v VCPURegACTLR actlrDefault;
-         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN))
+         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN || vgicHCRTALL0))
       od)
      "
   supply fun_upd_apply[simp del]
@@ -5635,7 +5635,7 @@ proof -
      apply (subst bind_assoc_rev) (* group vcpuWriteReg together *)
      apply (rule ccorres_split_nothrow_novcg_dc)
         apply (rule ccorres_call[OF armv_vcpu_init_ccorres]; solves simp)
-       apply (clarsimp simp: vgicHCREN_def)
+       apply (clarsimp simp: vgicHCR_init_val)
        apply (ctac (no_vcg) pre: ccorres_move_c_guard_vcpu add: vgicUpdate_HCR_ccorres)
       apply (wpsimp simp: guard_is_UNIV_def)+
     apply (fastforce simp: const_def ko_at_vcpu_at'D)

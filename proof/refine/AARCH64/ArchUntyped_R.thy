@@ -270,25 +270,40 @@ lemma deleteObjects_caps_no_overlap'':
   apply (simp add:valid_cap'_def capAligned_def)
   done
 
+(* In addition to the page table overlap check, archOverlap also checks kernel
+   window containment for cache operations. Used negated in the assertion below. *)
 defs archOverlap_def:
   "archOverlap \<equiv> \<lambda>s inRange.
-    \<exists>p pt_t. gsPTTypes (ksArchState s) p = Some pt_t \<and>
-             (\<not>is_aligned p (pt_bits pt_t) \<or>
-              ({p .. p + 2 ^ pt_bits pt_t - 1} \<inter> {p. inRange p} \<noteq> {}))"
+    (\<exists>p pt_t. gsPTTypes (ksArchState s) p = Some pt_t \<and>
+              (\<not>is_aligned p (pt_bits pt_t) \<or>
+               ({p .. p + 2 ^ pt_bits pt_t - 1} \<inter> {p. inRange p} \<noteq> {}))) \<or>
+    \<not> in_kernel_window {p. inRange p}"
 
 lemma archNoOverlap[Arch_assms]:
   notes Int_atLeastAtMost[simp del]
   shows
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
                                           \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
-                         \<and> valid_objs s \<and> pspace_aligned s)
+                         \<and> valid_objs s \<and> pspace_aligned s
+                         \<and> valid_arch_state s \<and> cap_refs_in_kernel_window s)
              \<top>
              (return ()) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
   apply (simp add: stateAssert_def assert_def)
   apply (rule corres_symb_exec_r[OF _ get_sp])
     apply (rule corres_req[rotated], subst if_P, assumption)
      apply simp
-    apply (clarsimp simp: archOverlap_def cte_wp_at_caps_of_state)
+    (* extract positive kernel window check without changing the rest of the goal *)
+    apply (simp only: archOverlap_def de_Morgan_disj not_not)
+    apply (rule conjI)
+     prefer 2
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (frule(1) caps_of_state_valid_cap)
+     apply (frule usable_range_subseteq[rotated], simp add: valid_cap_def)
+     apply (drule (1) cap_refs_in_kernel_windowD)
+     apply (rule kernel_window_in_kernel_window)
+      apply (fastforce simp: is_cap_simps)
+     apply (simp add: valid_arch_state_def)
+    apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (frule state_rel_ghost)
     apply (drule (1) ghost_PTTypes)
     apply (frule(1) caps_of_state_valid_cap)

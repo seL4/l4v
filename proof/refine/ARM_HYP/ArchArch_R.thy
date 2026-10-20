@@ -492,7 +492,8 @@ lemma decodeARMPageFlush_corres:
                         page_size \<leftarrow> returnOk $ 1 << pageBitsForSize vmpage_size;
                         whenE (page_size \<le> start \<or> page_size < end) $
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
-                        whenE (pstart < physBase \<or> ARM_HYP.paddrTop < end - start + pstart) $
+                        whenE (pstart < physBase \<or> ARM_HYP.paddrTop < pstart \<or>
+                               ARM_HYP.paddrTop - pstart < end - start) $
                         throwError ExceptionTypes_A.syscall_error.IllegalOperation;
                         returnOk $
                         arch_invocation.InvokePage $
@@ -1133,6 +1134,8 @@ shows
           apply (rule corres_guard_imp)
             apply (rule whenE_throwError_corres, simp)
              apply clarsimp
+            apply (rule whenE_throwError_corres, simp)
+             apply (clarsimp simp: fromPAddr_def)
             apply (rule corres_trivial)
             apply (rule corres_returnOk)
             apply (clarsimp simp: archinv_relation_def page_directory_invocation_map_def flush_type_map)+

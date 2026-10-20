@@ -3646,6 +3646,10 @@ lemma doMachineOp_bind_dist:
                       modify_def put_def return_def bind_def
                split: prod.splits)
 
+lemma doMachineOp_assert_bind:
+  "doMachineOp (assert P >>= f) = (assert P >>= (\<lambda>_. doMachineOp (f ())))"
+  by (cases P; simp add: doMachineOp_def select_f_def bind_def gets_def get_def fail_def return_def)
+
 lemma zipWithM_x_corres:
   assumes x: "\<And>x x' y y'. ((x, y), (x', y')) \<in> S \<Longrightarrow> corres dc P P' (f x y) (f' x' y')"
   assumes y: "\<And>x x' y y'. ((x, y), (x', y')) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x y \<lbrace>\<lambda>rv. P\<rbrace>"

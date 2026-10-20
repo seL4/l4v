@@ -2092,6 +2092,66 @@ lemma vs_lookup_slot_vspace_for_asidD:
                 simp flip: word_neq_0_conv
                 split: if_split_asm)
 
+lemma paddrTop_H_eq:
+  "AARCH64_H.paddrTop = AARCH64.paddrTop"
+  by (simp add: AARCH64_H.paddrTop_def AARCH64.paddrTop_def AARCH64_H.pptrTop_def AARCH64.pptrTop_def)
+
+definition in_kernel_window :: "machine_word set \<Rightarrow> bool" where
+  "in_kernel_window S \<equiv> S \<subseteq> {pptrBase ..< AARCH64.pptrTop}"
+
+lemma in_kernel_window_subset:
+  "\<lbrakk> in_kernel_window T; S \<subseteq> T \<rbrakk> \<Longrightarrow> in_kernel_window S"
+  by (auto simp: in_kernel_window_def)
+
+lemma kernel_window_in_kernel_window:
+  "\<lbrakk> S \<subseteq> kernel_window s; valid_uses s \<rbrakk> \<Longrightarrow> in_kernel_window S"
+  unfolding in_kernel_window_def
+  by (fastforce dest: kernel_window_bounded simp: kernel_window_range_def pptr_base_def)
+
+(* Sanity check: the machine word window condition of the cache maintenance machine ops
+   is equivalent to [p, p + n] being inside [paddrBase, paddrTop) when computed on nat
+   without overflow. *)
+lemma paddr_window_unat:
+  "(paddrBase \<le> p \<and> p < AARCH64.paddrTop \<and> n < AARCH64.paddrTop - p) =
+   ({unat p .. unat p + unat n} \<subseteq> {unat paddrBase ..< unat AARCH64.paddrTop})"
+  by (auto simp: atLeastAtMost_subseteq_atLeastLessThan_iff word_le_nat_alt word_less_nat_alt
+                 unat_sub)
+
+lemma addrFromPPtr_kernel_window:
+  "\<lbrakk> in_kernel_window {p .. p + n}; p \<le> p + n \<rbrakk> \<Longrightarrow>
+   paddrBase \<le> addrFromPPtr p \<and> addrFromPPtr p < AARCH64.paddrTop \<and>
+   n < AARCH64.paddrTop - addrFromPPtr p"
+  apply (clarsimp simp: in_kernel_window_def atLeastAtMost_subseteq_atLeastLessThan_iff
+                        paddrBase_def addrFromPPtr_def AARCH64.paddrTop_def pptrBaseOffset_def)
+  apply (simp add: word_l_diffs(2) add.commute word_less_minus_mono_left dual_order.strict_trans2)
+  done
+
+lemma pspace_in_kernel_window_obj:
+  "\<lbrakk> kheap s p = Some ko; pspace_in_kernel_window s; valid_uses s \<rbrakk> \<Longrightarrow>
+   in_kernel_window (obj_addrs ko p)"
+  by (fastforce simp: pspace_in_kernel_window_def intro: kernel_window_in_kernel_window)
+
+lemma doFlush_corres:
+  "corres_underlying Id nf nf' dc
+     (\<lambda>_. paddrBase \<le> pstart \<and> pstart < AARCH64.paddrTop \<and> vend - vstart < AARCH64.paddrTop - pstart)
+     \<top>
+     (do_flush type vstart vend pstart) (doFlush type vstart vend pstart)"
+  apply (rule corres_gen_asm[where P=\<top>, simplified])
+  apply (rule corres_Id)
+    apply (clarsimp simp: do_flush_def doFlush_def AARCH64_H.fromPAddr_def paddrTop_H_eq)
+   apply simp
+  apply (cases type; wpsimp simp: doFlush_def AARCH64_H.fromPAddr_def paddrTop_H_eq)
+  done
+
+lemma dmo_doFlush_corres:
+  "corres dc
+     (\<lambda>_. paddrBase \<le> pstart \<and> pstart < AARCH64.paddrTop \<and> vend - vstart < AARCH64.paddrTop - pstart)
+     \<top>
+     (do_machine_op (do_flush type vstart vend pstart))
+     (doMachineOp (doFlush type vstart vend pstart))"
+  using corres_machine_op'[OF doFlush_corres]
+  by (simp add: comp_def)
+
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   shows "corres (=) (invs and valid_page_inv pgi) (no_0_obj' and valid_page_inv' pgi')
@@ -2142,10 +2202,7 @@ lemma performPageInvocation_corres:
     apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
    apply (clarsimp simp: perform_pg_inv_get_addr_def fromPAddr_def)
   apply (clarsimp simp: perform_flush_def)
-  apply (rename_tac type vstart vend pstart vs asid)
-  apply (case_tac type;
-         simp add: do_flush_def doFlush_def;
-         corres simp: doMachineOp_bind do_machine_op_bind empty_fail_bind)
+  apply (corres corres: dmo_doFlush_corres)
   done
 
 definition
@@ -2209,6 +2266,17 @@ lemma clear_page_table_corres:
   apply simp
   done
 
+lemma pt_kernel_window_paddr:
+  "\<lbrakk> kheap s p = Some (ArchObj (PageTable pt)); invs s \<rbrakk> \<Longrightarrow>
+   paddrBase \<le> addrFromPPtr p \<and> addrFromPPtr p < AARCH64.paddrTop \<and>
+   mask (pt_bits (pt_type pt)) < AARCH64.paddrTop - addrFromPPtr p"
+  apply (frule pspace_in_kernel_window_obj; clarsimp)
+  apply (rule addrFromPPtr_kernel_window)
+   apply (simp add: pt_bits_def mask_2pm1 add_diff_eq)
+  apply (drule (1) pspace_alignedD[OF _ invs_psp_aligned])
+  apply (simp add: is_aligned_no_overflow_mask pt_bits_def)
+  done
+
 lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
    corres dc
@@ -2245,17 +2313,24 @@ lemma performPageTableInvocation_corres:
    apply (clarsimp simp: valid_pti_def)
   apply (clarsimp simp: AARCH64_A.is_PageTableCap_def split_def cong: option.case_cong)
   apply (simp add: case_option_If2 split del: if_split)
+  apply (rename_tac p pt_t m)
+  apply (rule_tac F="paddrBase \<le> addrFromPPtr p \<and> addrFromPPtr p < AARCH64.paddrTop \<and>
+                     mask (pt_bits pt_t) < AARCH64.paddrTop - addrFromPPtr p" in corres_req)
+   apply (clarsimp simp: valid_pti_def valid_cap_def valid_arch_cap_def obj_at_def)
+   apply (drule_tac p=p in pt_kernel_window_paddr, assumption, simp)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
        apply (rule corres_if3)
          apply (fastforce simp: acap_map_data_def mdata_map_def is_PageTableCap_def)
-        apply (rule corres_split[OF unmapPageTable_corres])
+        apply (rule corres_assert_assume)
+         apply (rule corres_split[OF unmapPageTable_corres])
+              apply (clarsimp simp: mdata_map_def)
              apply (clarsimp simp: mdata_map_def)
-            apply (clarsimp simp: mdata_map_def)
-           apply (rule refl)
-          apply (simp (no_asm) add: p_assoc_help flip: mask_2pm1)
-          apply (corres corres: clear_page_table_corres)
-         apply wp+
+            apply (rule refl)
+           apply (simp (no_asm) add: p_assoc_help flip: mask_2pm1)
+           apply (corres corres: clear_page_table_corres)
+          apply wp+
+        apply (simp add: AARCH64_H.fromPAddr_def paddrTop_H_eq)
        apply (rule corres_trivial, simp)
       apply (simp add: liftM_def)
       apply (rule corres_split[OF getSlotCap_corres[OF refl]])
@@ -2899,7 +2974,8 @@ lemma unmapPage_invs' [wp]:
 
 lemma dmo_doFlush_invs'[wp]:
   "doMachineOp (doFlush flushOp vstart vend pstart) \<lbrace>invs'\<rbrace>"
-  unfolding doFlush_def cleanCacheRange_RAM_def invalidateCacheRange_RAM_def branchFlushRange_def
+  unfolding doFlush_def haskell_assert_def doMachineOp_assert_bind
+            cleanCacheRange_RAM_def invalidateCacheRange_RAM_def branchFlushRange_def
             cleanInvalidateCacheRange_RAM_def cleanCacheRange_PoU_def invalidateCacheRange_I_def
   by (cases flushOp; wpsimp wp: dmo_machine_op_lift_invs' simp: doMachineOp_bind empty_fail_bind)
 
