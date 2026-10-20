@@ -97,6 +97,7 @@ This module defines the ARM register set.
 >     | VCPURegCNTVOFFhigh
 >     | VCPURegCNTVOFFlow
 >     | VCPURegCNTKCTL
+>     | VCPURegCPACR
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > vcpuRegNum :: Int
@@ -110,6 +111,7 @@ This module defines the ARM register set.
 > vcpuRegSavedWhenDisabled VCPURegCNTVOFFhigh = True
 > vcpuRegSavedWhenDisabled VCPURegCNTVOFFlow = True
 > vcpuRegSavedWhenDisabled VCPURegCNTKCTL = True
+> vcpuRegSavedWhenDisabled VCPURegCPACR = True
 > vcpuRegSavedWhenDisabled _ = False
 
 #endif

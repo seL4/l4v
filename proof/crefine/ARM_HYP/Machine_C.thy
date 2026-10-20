@@ -76,9 +76,14 @@ assumes getSCTLR_ccorres:
            (Call getSCTLR_'proc)"
 
 assumes setSCTLR_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
-           (doMachineOp (setSCTLR scltr))
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>sctlr = sctlr\<rbrace> []
+           (doMachineOp (setSCTLR sctlr))
            (Call setSCTLR_'proc)"
+
+assumes setCPACR_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>cpacr = cpacr\<rbrace> []
+           (doMachineOp (setCPACR cpacr))
+           (Call setCPACR_'proc)"
 
 assumes readTPIDRURO_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []

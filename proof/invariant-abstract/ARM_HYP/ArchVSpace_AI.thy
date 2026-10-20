@@ -105,7 +105,7 @@ definition
   "glob_vs_refs \<equiv> arch_obj_fun_lift glob_vs_refs_arch {}"
 
 crunch_ignore (add: writeContextIDAndPD_impl addressTranslateS1_impl
-           setSCTLR_impl setHCR_impl
+           setSCTLR_impl setHCR_impl setCPACR_impl
            check_export_arch_timer_impl
            set_gic_vcpu_ctrl_vmcr_impl
            set_gic_vcpu_ctrl_apr_impl
@@ -2179,7 +2179,7 @@ crunch getSCTLR,get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 crunch writeVCPUHardwareReg, readVCPUHardwareReg
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-crunch setSCTLR,setHCR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr
+crunch setSCTLR,setHCR,setCPACR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 crunch
   get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
@@ -2187,190 +2187,50 @@ crunch
 crunch check_export_arch_timer
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
-crunch setSCTLR,getSCTLR,setHCR
-  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
 crunch dsb,isb,writeContextIDAndPD,addressTranslateS1
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
-crunch get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr
-  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
-crunch get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr
-  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
-crunch get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
-  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
-crunch get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr
-  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
-crunch writeVCPUHardwareReg, readVCPUHardwareReg
-  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
-crunch check_export_arch_timer
+crunch writeVCPUHardwareReg, check_export_arch_timer
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
 
-crunch writeVCPUHardwareReg, readVCPUHardwareReg, check_export_arch_timer
-  for underlying_memory_pred: "\<lambda>m'. P (underlying_memory m')"
-
-lemmas isb_irq_masks = no_irq[OF no_irq_isb]
-lemmas dsb_irq_masks = no_irq[OF no_irq_dsb]
-lemmas setHCR_irq_masks = no_irq[OF no_irq_setHCR]
-lemmas setSCTLR_irq_masks = no_irq[OF no_irq_setSCTLR]
-lemmas getSCTLR_irq_masks = no_irq[OF no_irq_getSCTLR]
-lemmas get_gic_vcpu_ctrl_vmcr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_vmcr]
-lemmas set_gic_vcpu_ctrl_vmcr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_vmcr]
-lemmas get_gic_vcpu_ctrl_apr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_apr]
-lemmas set_gic_vcpu_ctrl_apr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_apr]
-lemmas get_gic_vcpu_ctrl_lr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_lr]
-lemmas set_gic_vcpu_ctrl_lr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_lr]
-lemmas get_gic_vcpu_ctrl_hcr_irq_masks = no_irq[OF no_irq_get_gic_vcpu_ctrl_hcr]
-lemmas set_gic_vcpu_ctrl_hcr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_hcr]
+crunch isb, dsb, setSCTLR, getSCTLR, setHCR, setCPACR,
+       get_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_apr,
+       get_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_hcr,
+       writeVCPUHardwareReg, readVCPUHardwareReg, check_export_arch_timer
+  for underlying_memory_pred[wp]: "\<lambda>m'. P (underlying_memory m')"
+  and irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+  (ignore_del: isb dsb)
 (* end of move to Machine_AI *)
 
-(* FIXME this whole next chunk of do_machine_op and invs lemmas looks like a candidate for a
-   lifting rule *)
-lemma dmo_isb_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op isb \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule isb_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ isb_irq_masks])
-  done
+lemma dmo_invs_lift:
+  assumes dev: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  assumes mem: "\<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
+  assumes irq: "\<And>P. f \<lbrace>\<lambda>ms. P (irq_masks ms)\<rbrace>"
+  shows "do_machine_op f \<lbrace>invs\<rbrace>"
+  unfolding invs_def valid_state_def valid_pspace_def valid_irq_states_def valid_machine_state_def
+  by (wpsimp wp: dev hoare_vcg_all_lift hoare_vcg_disj_lift
+                 dmo_inv_prop_lift[where g=underlying_memory, OF mem]
+                 pspace_respects_device_region_dmo
+                 cap_refs_respects_device_region_dmo
+     | wps dmo_inv_prop_lift[where g=irq_masks, OF irq])+
 
-lemma dmo_dsb_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op dsb \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule dsb_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ dsb_irq_masks])
-  done
-
-lemma dmo_setHCR_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (setHCR w) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule setHCR_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ setHCR_irq_masks])
-  done
-
-lemma dmo_setSCTLR_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (setSCTLR x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule setSCTLR_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ setSCTLR_irq_masks])
-  done
-
-lemma dmo_getSCTLR_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (getSCTLR) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule getSCTLR_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ getSCTLR_irq_masks])
-  done
-
-lemma dmo_get_gic_vcpu_ctrl_vmcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_vmcr) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_vmcr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_vmcr_irq_masks])
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_vmcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_vmcr x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_vmcr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_vmcr_irq_masks])
-  done
-
-lemma dmo_get_gic_vcpu_ctrl_apr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_apr) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_apr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_apr_irq_masks])
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_apr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_apr x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_apr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_apr_irq_masks])
-  done
-
-lemma dmo_get_gic_vcpu_ctrl_lr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_lr n) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_lr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_lr_irq_masks])
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_lr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_lr n x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_lr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_lr_irq_masks])
-  done
-
-lemma dmo_get_gic_vcpu_ctrl_hcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_hcr) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_hcr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_hcr_irq_masks])
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_hcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_hcr x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_hcr_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_hcr_irq_masks])
-  done
-
-lemma dmo_writeVCPUHardwareReg_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (writeVCPUHardwareReg r v) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (fastforce intro: writeVCPUHardwareReg_underlying_memory)+
-  apply (erule (1) use_valid[OF _ no_irq[OF no_irq_writeVCPUHardwareReg]])
-  done
-
-lemma dmo_readVCPUHardwareReg_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (readVCPUHardwareReg r) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (fastforce intro: readVCPUHardwareReg_underlying_memory)+
-  apply (erule (1) use_valid[OF _ no_irq[OF no_irq_readVCPUHardwareReg]])
-  done
+lemma
+  shows dmo_isb_invs[wp]: "do_machine_op isb \<lbrace>invs\<rbrace>"
+  and dmo_dsb_invs[wp]: "do_machine_op dsb \<lbrace>invs\<rbrace>"
+  and dmo_setHCR_invs[wp]: "do_machine_op (setHCR w) \<lbrace>invs\<rbrace>"
+  and dmo_setSCTLR_invs[wp]: "do_machine_op (setSCTLR x) \<lbrace>invs\<rbrace>"
+  and dmo_setCPACR_invs[wp]: "do_machine_op (setCPACR x) \<lbrace>invs\<rbrace>"
+  and dmo_getSCTLR_invs[wp]: "do_machine_op getSCTLR \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_vmcr_invs[wp]: "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_vmcr_invs[wp]: "do_machine_op (set_gic_vcpu_ctrl_vmcr x) \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_apr_invs[wp]: "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_apr_invs[wp]: "do_machine_op (set_gic_vcpu_ctrl_apr x) \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_lr_invs[wp]: "do_machine_op (get_gic_vcpu_ctrl_lr n) \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_lr_invs[wp]: "do_machine_op (set_gic_vcpu_ctrl_lr n x) \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_hcr_invs[wp]: "do_machine_op get_gic_vcpu_ctrl_hcr \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_hcr_invs[wp]: "do_machine_op (set_gic_vcpu_ctrl_hcr x) \<lbrace>invs\<rbrace>"
+  and dmo_writeVCPUHardwareReg_invs[wp]: "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>invs\<rbrace>"
+  and dmo_readVCPUHardwareReg_invs[wp]: "do_machine_op (readVCPUHardwareReg r) \<lbrace>invs\<rbrace>"
+  by (all \<open>wp dmo_invs_lift\<close>)
 
 (* set_vcpu invariants *)
 lemma set_vcpu_cur_tcb[wp]: "\<lbrace>cur_tcb\<rbrace> set_vcpu p v \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
@@ -4695,18 +4555,6 @@ crunch perform_page_invocation
 crunch do_machine_op
   for cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
   (simp: valid_kernel_mappings_def)
-
-lemma dmo_invs_lift:
-  assumes dev: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
-  assumes mem: "\<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
-  assumes irq: "\<And>P. f \<lbrace>\<lambda>ms. P (irq_masks ms)\<rbrace>"
-  shows "do_machine_op f \<lbrace>invs\<rbrace>"
-  unfolding invs_def valid_state_def valid_pspace_def valid_irq_states_def valid_machine_state_def
-  by (wpsimp wp: dev hoare_vcg_all_lift hoare_vcg_disj_lift
-                 dmo_inv_prop_lift[where g=underlying_memory, OF mem]
-                 pspace_respects_device_region_dmo
-                 cap_refs_respects_device_region_dmo
-     | wps dmo_inv_prop_lift[where g=irq_masks, OF irq])+
 
 crunch do_flush
   for underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"

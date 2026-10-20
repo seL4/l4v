@@ -480,6 +480,9 @@ lemma no_irq_setHCR: "no_irq (setHCR w)"
 lemma no_irq_setSCTLR: "no_irq (setSCTLR w)"
   by (simp add: setSCTLR_def)
 
+lemma no_irq_setCPACR: "no_irq (setCPACR w)"
+  by (simp add: setCPACR_def)
+
 lemma no_irq_getSCTLR: "no_irq getSCTLR"
     by (simp add: getSCTLR_def)
 
@@ -780,6 +783,10 @@ lemma empty_fail_writeContextIDAndPD[simp, intro!]:
 lemma empty_fail_setSCTLR[simp, intro!]:
   "empty_fail (setSCTLR w)"
   by (simp add: setSCTLR_def)
+
+lemma empty_fail_setCPACR[simp, intro!]:
+  "empty_fail (setCPACR w)"
+  by (simp add: setCPACR_def)
 
 lemma empty_fail_getSCTLR[simp, intro!]:
   "empty_fail getSCTLR"

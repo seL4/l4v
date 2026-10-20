@@ -945,9 +945,11 @@ lemma vcpuSave_corres:
                           apply (clarsimp, fold dc_def)
                           apply (rule vgicUpdateLR_corres)
                          apply wpsimp+
-                    apply (rule corres_split[OF vcpuSaveRegRange_corres])
-                      apply (rule corres_machine_op)
-                      apply (rule corres_Id; wpsimp)
+                    apply (rule corres_split[OF corres_when[OF refl vcpuSaveReg_corres]])
+                      apply (rule corres_split[OF vcpuSaveRegRange_corres])
+                        apply (rule corres_machine_op)
+                        apply (rule corres_Id; wpsimp)
+                       apply wpsimp+
                      apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
                                  simp: if_apply_def2)+
   done
@@ -978,7 +980,7 @@ lemma vcpuDisable_corres:
           apply (rule corres_Id; wpsimp)
          apply (rule corres_split_dc[OF vgicUpdate_corres])
             apply (clarsimp simp: vgic_map_def)
-           apply (rule corres_split_dc[OF vcpuSaveReg_corres])
+           apply (rule corres_split_dc[OF vcpuSaveReg_corres])+
              apply (rule corres_split_dc[OF corres_machine_op]
                          corres_split_dc[OF saveVirtTimer_corres]
                     | rule corres_machine_op corres_Id
@@ -995,7 +997,7 @@ lemma vcpuEnable_corres:
     apply (rule corres_split_dc[OF vcpuRestoreReg_corres])+
       apply (rule corres_split[OF getObject_vcpu_corres], rename_tac vcpu')
         apply (case_tac vcpu')
-        apply (rule corres_split_dc[OF corres_machine_op]
+        apply (rule corres_split_dc[OF corres_machine_op] corres_split_dc[OF vcpuRestoreReg_corres]
                | rule corres_machine_op corres_Id restoreVirtTimer_corres
                | wpsimp simp: vcpu_relation_def vgic_map_def)+
   done
@@ -3471,99 +3473,38 @@ lemma setVCPU_valid_arch':
      apply (wp hoare_vcg_all_lift hoare_drop_imp)+
 done
 
-lemma isb_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp isb \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq no_irq_isb)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)+
-  done
-
-lemma dsb_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp dsb \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq no_irq_dsb)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)+
-  done
-
-lemma setSCTLR_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setSCTLR w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_setSCTLR no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def setSCTLR_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_hcr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_hcr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_lr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_lr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_apr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_apr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_vmcr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma setHCR_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setHCR w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_setHCR no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def setHCR_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma get_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_hcr no_irq
-           simp: get_gic_vcpu_ctrl_hcr_def gets_def in_monad)
-
-lemma get_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (get_gic_vcpu_ctrl_lr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_lr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def get_gic_vcpu_ctrl_lr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma get_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_apr no_irq
-           simp: get_gic_vcpu_ctrl_apr_def gets_def in_monad)
-
-lemma get_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_vmcr no_irq
-           simp: get_gic_vcpu_ctrl_vmcr_def gets_def in_monad)
+lemma
+  shows isb_invs_no_cicd'[wp]:
+    "doMachineOp isb \<lbrace>invs_no_cicd'\<rbrace>"
+  and dsb_invs_no_cicd'[wp]:
+    "doMachineOp dsb \<lbrace>invs_no_cicd'\<rbrace>"
+  and setSCTLR_invs_no_cicd'[wp]:
+    "doMachineOp (setSCTLR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and setCPACR_invs_no_cicd'[wp]:
+    "doMachineOp (setCPACR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and setHCR_invs_no_cicd'[wp]:
+    "doMachineOp (setHCR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
+    "doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
+    "doMachineOp (get_gic_vcpu_ctrl_lr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
+    "doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
+    "doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>invs_no_cicd'\<rbrace>"
+  and readVCPUHardwareReg_invs_no_cicd'[wp]:
+    "doMachineOp (readVCPUHardwareReg r) \<lbrace>invs_no_cicd'\<rbrace>"
+  and writeVCPUHardwareReg_invs_no_cicd'[wp]:
+    "doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs_no_cicd'\<rbrace>"
+  by (all \<open>wp dmo_invs_no_cicd_lift'\<close>)
 
 lemma setVCPU_tcbs_of'[wp]:
   "setObject v (vcpu :: vcpu) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
@@ -3633,20 +3574,6 @@ lemma setVCPU_VPPIMasked_invs_cicd':
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
   apply (fastforce simp: ko_wp_at'_def)
-  done
-
-lemma readVCPUHardwareReg_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_readVCPUHardwareReg no_irq
-             simp: readVCPUHardwareReg_def gets_def in_monad)
-
-lemma writeVCPUHardwareReg_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (writeVCPUHardwareReg r v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_writeVCPUHardwareReg no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def writeVCPUHardwareReg_def
-                        machine_rest_lift_def split_def)+
   done
 
 lemma vgicUpdate_invs_no_cicd'[wp]:
@@ -3916,18 +3843,21 @@ lemma setVCPU_VPPIMasked_invs':
   apply (fastforce simp: ko_wp_at'_def)
   done
 
-lemma read_writeVCPUHardwareReg_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (writeVCPUHardwareReg r v) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  "\<lbrace>invs'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by ((wpsimp wp: dmo_invs' no_irq no_irq_writeVCPUHardwareReg)
-       , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
-       , (wpsimp simp: writeVCPUHardwareReg_def readVCPUHardwareReg_def)+)+
-
-lemma check_export_arch_timer_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp check_export_arch_timer \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (wpsimp wp: dmo_invs' no_irq no_irq_check_export_arch_timer
-      , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
-      , (wpsimp simp: check_export_arch_timer_def)+)
+lemma
+  shows dmo_writeVCPUHardwareReg_invs'[wp]: "doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs'\<rbrace>"
+  and dmo_readVCPUHardwareReg_invs'[wp]: "doMachineOp (readVCPUHardwareReg r) \<lbrace>invs'\<rbrace>"
+  and check_export_arch_timer_invs'[wp]: "doMachineOp check_export_arch_timer \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_hcr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_apr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_vmcr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_lr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_lr n w) \<lbrace>invs'\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_lr_invs'[wp]: "doMachineOp (get_gic_vcpu_ctrl_lr n) \<lbrace>invs'\<rbrace>"
+  and dmo_setSCTLR_invs'[wp]: "doMachineOp (setSCTLR w) \<lbrace>invs'\<rbrace>"
+  and dmo_setCPACR_invs'[wp]: "doMachineOp (setCPACR w) \<lbrace>invs'\<rbrace>"
+  and dmo_setHCR_invs'[wp]: "doMachineOp (setHCR w) \<lbrace>invs'\<rbrace>"
+  and dmo_isb_invs'[wp]: "doMachineOp isb \<lbrace>invs'\<rbrace>"
+  and dmo_dsb_invs'[wp]: "doMachineOp dsb \<lbrace>invs'\<rbrace>"
+  by (all \<open>wp dmo_invs_lift'\<close>)
 
 lemma vcpuWriteReg_invs'[wp]:
   "vcpuWriteReg vcpu_ptr r v \<lbrace>invs'\<rbrace>"
@@ -3945,7 +3875,7 @@ lemma saveVirtTimer_invs'[wp]:
 
 lemma vcpuDisable_invs'[wp]:
   "vcpuDisable v \<lbrace>invs'\<rbrace>"
-  unfolding vcpuDisable_def isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def
+  unfolding vcpuDisable_def isb_def setHCR_def setSCTLR_def setCPACR_def set_gic_vcpu_ctrl_hcr_def
              getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def vgicUpdate_def vcpuUpdate_def
              vcpuSaveReg_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
@@ -3955,87 +3885,6 @@ lemma vcpuDisable_invs'[wp]:
 lemma vcpuInvalidateActive_invs'[wp]:
   "vcpuInvalidateActive \<lbrace>invs'\<rbrace>"
     unfolding vcpuInvalidateActive_def by wpsimp
-
-lemma dmo_set_gic_vcpu_ctrl_hcr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_hcr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_hcr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_hcr_def)+
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_apr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_apr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_apr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_apr_def)+
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_vmcr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_vmcr_def)+
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_lr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_lr addr w) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_lr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_lr_def)+
-  done
-
-lemma dmo_get_gic_vcpu_ctrl_lr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (get_gic_vcpu_ctrl_lr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_get_gic_vcpu_ctrl_lr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: get_gic_vcpu_ctrl_lr_def)+
-  done
-
-lemma dmo_setSCTLR_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (setSCTLR addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setSCTLR no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: setSCTLR_def)+
-  done
-
-lemma dmo_setHCR_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (setHCR addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setHCR no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: setHCR_def)+
-  done
-
-lemma dmo_isb_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp isb \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_isb no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply wpsimp+
-  done
-
-lemma dmo_dsb_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp dsb \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_dsb no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply wpsimp+
-  done
 
 crunch
   vcpuRestoreReg, vcpuRestoreRegRange, vcpuSaveReg, vcpuSaveRegRange, vgicUpdateLR, vcpuReadReg

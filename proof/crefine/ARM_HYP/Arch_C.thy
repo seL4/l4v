@@ -4350,7 +4350,8 @@ lemma vcpu_reg_saved_when_disabled_spec:
                                                           scast seL4_VCPUReg_CNTV_CVALlow,
                                                           scast seL4_VCPUReg_CNTVOFFhigh,
                                                           scast seL4_VCPUReg_CNTVOFFlow,
-                                                          scast seL4_VCPUReg_CNTKCTL }) \<rbrace>"
+                                                          scast seL4_VCPUReg_CNTKCTL,
+                                                          scast seL4_VCPUReg_CPACR }) \<rbrace>"
   by vcg clarsimp
 
 
@@ -4358,7 +4359,7 @@ lemma vcpuRegSavedWhenDisabled_spec[simp]:
   "vcpuRegSavedWhenDisabled reg = (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CTL \<or>
                                    reg = VCPURegCNTV_CVALhigh \<or> reg = VCPURegCNTV_CVALlow \<or>
                                    reg = VCPURegCNTVOFFhigh \<or> reg = VCPURegCNTVOFFlow \<or>
-                                   reg = VCPURegCNTKCTL)"
+                                   reg = VCPURegCNTKCTL \<or> reg = VCPURegCPACR)"
   by (simp add: vcpuRegSavedWhenDisabled_def split: vcpureg.splits)
 
 lemma writeVCPUReg_ccorres:
@@ -4387,7 +4388,8 @@ lemma writeVCPUReg_ccorres:
       apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CTL \<or>
                                reg = VCPURegCNTV_CVALhigh \<or> reg = VCPURegCNTV_CVALlow \<or>
                                reg = VCPURegCNTVOFFhigh \<or> reg = VCPURegCNTVOFFlow \<or>
-                               reg = VCPURegCNTKCTL) \<and> \<not>curvcpuactive }"
+                               reg = VCPURegCNTKCTL \<or> reg = VCPURegCPACR) \<and>
+                              \<not>curvcpuactive }"
                               and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                               and Q'=UNIV in ccorres_rewrite_cond_sr)
     subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
@@ -4434,7 +4436,8 @@ lemma readVCPUReg_ccorres:
     apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CTL \<or>
                              reg = VCPURegCNTV_CVALhigh \<or> reg = VCPURegCNTV_CVALlow \<or>
                              reg = VCPURegCNTVOFFhigh \<or> reg = VCPURegCNTVOFFlow \<or>
-                             reg = VCPURegCNTKCTL) \<and> \<not>curvcpuactive }"
+                             reg = VCPURegCNTKCTL \<or> reg = VCPURegCPACR) \<and>
+                            \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
      subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
