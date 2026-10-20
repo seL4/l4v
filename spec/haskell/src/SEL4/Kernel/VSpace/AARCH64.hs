@@ -68,24 +68,28 @@ lookupIPCBuffer isReceiver thread = do
 
 {- ASID Lookups -}
 
--- FIXME: make this a Reader Monad when we move to MCS
-getPoolPtr :: ASID -> Kernel (Maybe (PPtr ASIDPool))
-getPoolPtr asid = do
+readPoolPtr :: ASID -> KernelR (Maybe (PPtr ASIDPool))
+readPoolPtr asid = do
     assert (asid > 0) "ASID 0 is used for objects that are not mapped"
     assert (asid <= snd asidRange) "ASID out of range"
-    asidTable <- gets (armKSASIDTable . ksArchState)
+    asidTable <- asks (armKSASIDTable . ksArchState)
     return $ asidTable!(asidHighBitsOf asid)
 
--- FIXME: make this a Reader Monad when we move to MCS
-getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
-getASIDPoolEntry asid = do
-    poolPtr <- getPoolPtr asid
+getPoolPtr :: ASID -> Kernel (Maybe (PPtr ASIDPool))
+getPoolPtr asid = getsJust (readPoolPtr asid)
+
+readASIDPoolEntry :: ASID -> KernelR (Maybe ASIDPoolEntry)
+readASIDPoolEntry asid = do
+    poolPtr <- readPoolPtr asid
     maybePool <- case poolPtr of
-        Just ptr -> liftM Just $ getObject ptr
+        Just ptr -> liftM Just $ readObject ptr
         Nothing -> return Nothing
     case maybePool of
         Just (ASIDPool pool) -> return $ pool!(asid .&. mask asidLowBits)
         Nothing -> return Nothing
+
+getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
+getASIDPoolEntry asid = getsJust (readASIDPoolEntry asid)
 
 updateASIDPoolEntry :: (ASIDPoolEntry -> Maybe ASIDPoolEntry) -> ASID -> Kernel ()
 updateASIDPoolEntry f asid = do
