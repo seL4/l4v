@@ -750,7 +750,7 @@ lemma irq_node_offs_distinct[simp]:
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> idle_tcb_ptr"
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> riscv_global_pt_ptr"
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> shared_page_ptr_virt"
-  by (simp add:not_inD[symmetric, OF _ irq_node_offs_in_range])+
+  by (simp add: not_inD[symmetric, OF _ irq_node_offs_in_range])+
 
 lemma kh0_dom:
   "dom kh0 = {shared_page_ptr_virt, riscv_global_pt_ptr, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
@@ -1218,7 +1218,7 @@ lemma silc_inv_s0:
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state)
-  by (auto simp:is_transferable.simps dest:s0_caps_of_state)
+  by (auto simp: is_transferable.simps dest: s0_caps_of_state)
 
 lemma only_timer_irq_s0:
   "only_timer_irq timer_irq s0_internal"

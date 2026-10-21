@@ -754,7 +754,7 @@ lemma setup_caller_cap_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
    setup_caller_cap a b c
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply (simp add: setup_caller_cap_def split del:if_split)
+  apply (simp add: setup_caller_cap_def split del: if_split)
   apply (wp cap_insert_domain_sep_inv' | simp)+
   done
 
@@ -803,7 +803,7 @@ lemma send_ipc_domain_sep_inv:
    send_ipc block call badge can_grant can_grant_reply thread epptr
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)\<rbrace>"
   unfolding send_ipc_def
-  apply (wp setup_caller_cap_domain_sep_inv hoare_vcg_if_lift | wpc | simp split del:if_split)+
+  apply (wp setup_caller_cap_domain_sep_inv hoare_vcg_if_lift | wpc | simp split del: if_split)+
         apply (rule_tac Q'="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
          apply (wp do_ipc_transfer_domain_sep_inv dxo_wp_weak | wpc | simp)+
      apply (wp (once) hoare_drop_imps)

@@ -428,7 +428,7 @@ end (* CNode_AC *)
 lemma reply_masters_mdbD1:
  "\<lbrakk> reply_masters_mdb m cs ; cs slot = Some (ReplyCap t True R) \<rbrakk>
   \<Longrightarrow> m slot = None"
-  by (fastforce simp:reply_masters_mdb_def simp del:split_paired_All)
+  by (fastforce simp: reply_masters_mdb_def simp del: split_paired_All)
 
 lemma reply_cap_no_grand_parent:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* slot ; reply_mdb m cs ; cs slot = Some (ReplyCap t False R) \<rbrakk>
@@ -542,7 +542,7 @@ lemma set_cap_integrity_deletion_aux:
      apply (rename_tac s obj tcb)
      apply (rule tro_orefl)
      apply (fastforce simp: caps_of_state_tcb valid_obj_def valid_tcb_def ran_tcb_cap_cases
-                      elim:pspace_valid_objsE[OF _ invs_valid_objs] elim!:is_transferable.cases)
+                      elim: pspace_valid_objsE[OF _ invs_valid_objs] elim!:is_transferable.cases)
     (* tcb_reply *)
     apply (rename_tac s obj tcb)
     apply (rule tro_orefl)
@@ -559,7 +559,7 @@ lemma set_cap_integrity_deletion_aux:
      apply clarsimp
      apply (rule reply_cap_deletion_integrityI2[OF refl refl])
      apply (elim cdt_change_allowedE cdt_direct_change_allowed.cases)
-      apply (force simp:aag_cap_auth_def cap_auth_conferred_def reply_cap_rights_to_auth_def
+      apply (force simp: aag_cap_auth_def cap_auth_conferred_def reply_cap_rights_to_auth_def
                    dest: reply_cap_no_grand_parent cap_auth_caps_of_state pas_refined_Control)
      apply (fastforce simp: direct_call_def
                       dest: tcb_caller_slot_empty_on_recieve parent_of_rtrancl_no_descendant
@@ -1072,7 +1072,7 @@ lemma cap_swap_pas_refined[wp]:
   apply (simp add: cap_swap_def)
   apply (rule hoare_pre)
    apply (wp add: tcb_domain_map_wellformed_lift | simp split del: if_split)+
-        apply (simp only:pas_refined_def state_objs_to_policy_def)
+        apply (simp only: pas_refined_def state_objs_to_policy_def)
         apply (wps | wp set_cap_state_vrefs set_cdt_cdt_ct_ms_rvk set_cap_caps_of_state)+
   apply (clarsimp simp: pas_refined_def aag_cap_auth_def state_objs_to_policy_def
                         cte_wp_at_caps_of_state

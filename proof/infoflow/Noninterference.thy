@@ -948,7 +948,7 @@ proof -
                            pred_tcb_atI sym_helper)
     moreover have "tcb_caller tcb \<noteq> cap' \<Longrightarrow> ?case"
       using tro_alt_tcb_generic(2,3,4,5,8) hyps
-      apply (clarsimp simp:reply_cap_deletion_integrity_def)
+      apply (clarsimp simp: reply_cap_deletion_integrity_def)
       apply (rule affects_delete_derived)
       apply (rule aag_wellformed_delete_derived[rotated -1, OF pas_refined_wellformed],
              assumption)
@@ -992,12 +992,12 @@ proof -
       apply (erule exE, rename_tac l)
       apply (drule_tac x=l in spec)
       apply (clarsimp dest!:not_sym[where t=None])
-      apply (clarsimp simp:reply_cap_deletion_integrity_def)
+      apply (clarsimp simp: reply_cap_deletion_integrity_def)
       apply (rule affects_delete_derived)
       apply (rule aag_wellformed_delete_derived[rotated -1, OF pas_refined_wellformed],
              assumption)
       apply (frule_tac p="(x,l)" in cap_auth_caps_of_state[rotated])
-       apply (force simp: caps_of_state_def' intro:well_formed_cnode_invsI)
+       apply (force simp: caps_of_state_def' intro: well_formed_cnode_invsI)
       by (fastforce simp: aag_cap_auth_def cap_auth_conferred_def
                           reply_cap_rights_to_auth_def
                    split: if_splits)
@@ -1040,7 +1040,7 @@ lemma partitionIntegrity_subjectAffects_mem:
   next
     case (trm_ipc p) note trm_ipc_hyps = this
     then obtain tcbst where "tcb_states_of_state s p = Some tcbst" "can_receive_ipc tcbst"
-      by (force split:option.splits)
+      by (force split: option.splits)
     note hyps = this trm_ipc_hyps(2-)[simplified] pas_ref invs um_diff
     from par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
                   THEN spec[where x=p], THEN tro_tro_alt]

@@ -124,18 +124,18 @@ lemmas all_childrenD = all_children_def[THEN meta_eq_to_obj_eq, THEN iffD1, rule
 (* FIXME MOVE *)
 lemma valid_mdb_descendants_inc[elim!]:
   "valid_mdb s \<Longrightarrow> descendants_inc (cdt s) (caps_of_state s)"
-  by (simp add:valid_mdb_def)
+  by (simp add: valid_mdb_def)
 
 (* FIXME MOVE *)
 lemma valid_mdb_mdb_cte_at [elim!]:
   "valid_mdb s \<Longrightarrow> mdb_cte_at (swp (cte_wp_at ((\<noteq>) NullCap)) s) (cdt s)"
-  by (simp add:valid_mdb_def)
+  by (simp add: valid_mdb_def)
 
 (* FIXME MOVE *)
 lemma descendants_inc_cap_classD:
   "\<lbrakk> descendants_inc m caps; p \<in> descendants_of p' m; caps p = Some cap ; caps p' = Some cap' \<rbrakk>
    \<Longrightarrow> cap_class cap = cap_class cap'"
-  by (fastforce dest:descendants_incD)
+  by (fastforce dest: descendants_incD)
 
 locale Access_AC =
   fixes aag :: "'a PAS"
@@ -371,7 +371,7 @@ lemma tro_tcb_unbind':
      tcb' = tcb\<lparr>tcb_bound_notification := ntfn'\<rparr>;
      tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag \<rbrakk>
    \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
-  apply (clarsimp simp:tcb_bound_notification_reset_integrity_def)
+  apply (clarsimp simp: tcb_bound_notification_reset_integrity_def)
   apply (elim disjE)
    apply (rule tro_orefl;fastforce)
   apply (rule tro_tcb_unbind;fastforce)
@@ -409,9 +409,9 @@ lemma tro_tcb_reply':
      new_st = Running \<or> (tcb_fault tcb \<noteq> None \<and> (new_st = Restart \<or> new_st = Inactive));
      direct_reply subjects aag l' tcb \<rbrakk>
    \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
-  apply (clarsimp simp:direct_reply_def simp del:not_None_eq)
+  apply (clarsimp simp: direct_reply_def simp del: not_None_eq)
   apply (erule disjE, (rule tro_tcb_reply[OF refl refl], force; force)) (* Warning: schematics *)
-  apply (clarsimp simp del:not_None_eq)
+  apply (clarsimp simp del: not_None_eq)
   apply (rule tro_trans_spec)
    apply (frule allowed_call_blocked_def[THEN meta_eq_to_obj_eq,THEN iffD1],clarsimp)
    apply (rule tro_tcb_receive[OF refl refl refl, where new_st=BlockedOnReply];force)
@@ -582,7 +582,7 @@ lemma tro_alt_trans_spec: (* this takes a long time to process *)
   subgoal by simp
 
   (* Now re-tag the first step with tro_tag' *)
-  apply (all \<open>simp only:tro_tag_to_prime\<close>)
+  apply (all \<open>simp only: tro_tag_to_prime\<close>)
   (* Expand the second integrity step, which will be tagged with tro_tag *)
   apply (all \<open>erule integrity_obj_alt.cases\<close>)
 
@@ -710,14 +710,14 @@ lemma tcb_caller_slot_empty_on_recieve:
   "\<lbrakk> valid_mdb s; valid_objs s; kheap s tcb_ptr = Some (TCB tcb); ep_recv_blocked ep (tcb_state tcb) \<rbrakk>
    \<Longrightarrow> tcb_caller tcb = NullCap \<and> cdt s (tcb_ptr,(tcb_cnode_index 3)) = None \<and>
          descendants_of (tcb_ptr,(tcb_cnode_index 3)) (cdt s) = {}"
-  apply (simp only:valid_objs_def)
+  apply (simp only: valid_objs_def)
   apply (drule bspec,fastforce)
-  apply (simp add:valid_obj_def)
-  apply (simp only:valid_tcb_def)
+  apply (simp add: valid_obj_def)
+  apply (simp only: valid_tcb_def)
   apply (drule conjunct1)
   apply (drule_tac x="the (tcb_cap_cases (tcb_cnode_index 3))" in bspec)
-   apply (fastforce simp:tcb_cap_cases_def)
-  apply (simp add:tcb_cap_cases_def split: thread_state.splits)
+   apply (fastforce simp: tcb_cap_cases_def)
+  apply (simp add: tcb_cap_cases_def split: thread_state.splits)
   apply (subgoal_tac "caps_of_state s (tcb_ptr, tcb_cnode_index 3) = Some NullCap")
    apply (simp only: valid_mdb_def2, drule conjunct1)
    apply (intro conjI)
@@ -732,7 +732,7 @@ lemma tcb_caller_slot_empty_on_recieve:
 lemma tcb_states_of_state_kheap:
   "\<lbrakk> kheap s slot = Some (TCB tcb)\<rbrakk>
    \<Longrightarrow> tcb_states_of_state s slot = Some (tcb_state tcb)"
-  by (simp add:tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
+  by (simp add: tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
 
 lemma tcb_states_of_state_kheapI:
   "\<lbrakk> kheap s slot = Some (TCB tcb); tcb_state tcb = tcbst \<rbrakk>
@@ -742,7 +742,7 @@ lemma tcb_states_of_state_kheapI:
 lemma tcb_states_of_state_kheapD:
   "tcb_states_of_state s slot = Some tcbst \<Longrightarrow>
    \<exists>tcb. kheap s slot = Some (TCB tcb) \<and> tcb_state tcb = tcbst"
-  by (simp add:tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
+  by (simp add: tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
 
 lemma tcb_states_of_state_kheapE:
   assumes "tcb_states_of_state s slot = Some tcbst"
@@ -793,7 +793,7 @@ lemma cdt_direct_change_allowed_backward:
       (thin_tac "_ \<longrightarrow> _")?;
       simp;
       rule cdca_reply[rotated], assumption, assumption,
-      fastforce elim:tcb_states_of_state_kheapI simp:direct_call_def)
+      fastforce elim: tcb_states_of_state_kheapI simp: direct_call_def)
 
 lemma cdt_change_allowed_backward:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
@@ -1122,11 +1122,11 @@ lemma caps_of_state_def':
 lemma caps_of_state_cnode:
   "\<lbrakk> kheap s pos = Some (CNode sz content); well_formed_cnode_n sz content\<rbrakk>
    \<Longrightarrow> caps_of_state s (pos,addr) = content addr"
-  by (simp add:caps_of_state_def')
+  by (simp add: caps_of_state_def')
 
 lemma caps_of_state_tcb:
   "kheap s pos = Some (TCB tcb) \<Longrightarrow> caps_of_state s (pos,addr) = tcb_cnode_map tcb addr"
-  by (simp add:caps_of_state_def')
+  by (simp add: caps_of_state_def')
 
 end (* Access_AC_2 *)
 
@@ -1142,21 +1142,21 @@ lemma tcb_cnode_map_simps[simp]:
 (* FIXME MOVE *)
 lemma valid_mdb_reply_mdb[elim!]:
   "valid_mdb s \<Longrightarrow> reply_mdb (cdt s) (caps_of_state s)"
-  by (simp add:valid_mdb_def)
+  by (simp add: valid_mdb_def)
 
 (* FIXME MOVE *)
 lemma invs_reply_mdb[elim!]:
   "invs s \<Longrightarrow> reply_mdb (cdt s) (caps_of_state s)"
-  by (simp add:invs_def valid_state_def valid_mdb_def)
+  by (simp add: invs_def valid_state_def valid_mdb_def)
 
 lemma parent_of_rtrancl_no_descendant:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* ptr; descendants_of pptr m = {} \<rbrakk> \<Longrightarrow> pptr = ptr"
-  by (fastforce simp add:rtrancl_eq_or_trancl descendants_of_def)
+  by (fastforce simp add: rtrancl_eq_or_trancl descendants_of_def)
 
 (* FIXME MOVE *)
 lemma tcb_atD:
   "tcb_at ptr s \<Longrightarrow> \<exists>tcb. kheap s ptr = Some (TCB tcb)"
-  by (cases "the (kheap s ptr)";fastforce simp:obj_at_def is_tcb_def)
+  by (cases "the (kheap s ptr)";fastforce simp: obj_at_def is_tcb_def)
 
 (* FIXME MOVE *)
 lemma tcb_atE:
@@ -1167,18 +1167,18 @@ lemma tcb_atE:
 (*FIXME MOVE *)
 lemma tcb_atI:
   "kheap s ptr = Some (TCB tcb) \<Longrightarrow> tcb_at ptr s"
-  by (simp add:obj_at_def is_tcb_def)
+  by (simp add: obj_at_def is_tcb_def)
 
 context Access_AC_2 begin
 
 lemma descendant_of_caller_slot:
   "\<lbrakk> valid_mdb s; valid_objs s; tcb_at t s \<rbrakk> \<Longrightarrow> descendants_of (t, tcb_cnode_index 3) (cdt s) = {}"
   apply (frule(1) tcb_caller_cap)
-  apply (clarsimp simp add:cte_wp_at_caps_of_state is_cap_simps; elim disjE ;clarsimp)
+  apply (clarsimp simp add: cte_wp_at_caps_of_state is_cap_simps; elim disjE ;clarsimp)
   subgoal by (intro allI no_children_empty_desc[THEN iffD1] reply_cap_no_children)
   apply (drule valid_mdb_mdb_cte_at)
   apply (erule mdb_cte_at_no_descendants)
-  apply (simp add:cte_wp_at_caps_of_state)
+  apply (simp add: cte_wp_at_caps_of_state)
   done
 
 lemma cca_to_transferable_or_subject:
@@ -1186,15 +1186,15 @@ lemma cca_to_transferable_or_subject:
    \<Longrightarrow> is_subject aag (fst ptr) \<or> is_transferable (caps_of_state s ptr)"
   apply (elim cdt_change_allowedE cdt_direct_change_allowed.cases)
    apply (rule all_children_parent_of_rtrancl[OF pas_refined_all_children]; blast)
-  apply (simp add:rtrancl_eq_or_trancl,elim disjE conjE)
-   apply (simp add:direct_call_def, elim conjE)
+  apply (simp add: rtrancl_eq_or_trancl,elim disjE conjE)
+   apply (simp add: direct_call_def, elim conjE)
    apply (drule tcb_states_of_state_kheapD, elim exE conjE)
    apply (frule(2) tcb_caller_slot_empty_on_recieve ,simp)
    apply (cases ptr,simp)
-   apply (simp add:caps_of_state_tcb)
+   apply (simp add: caps_of_state_tcb)
   apply (elim tcb_states_of_state_kheapE)
   apply (drule(2) descendant_of_caller_slot[OF _ _ tcb_atI])
-  by (force simp add: descendants_of_def simp del:split_paired_All)
+  by (force simp add: descendants_of_def simp del: split_paired_All)
 
 lemma is_transferable_weak_derived:
   "weak_derived cap cap' \<Longrightarrow> is_transferable_cap cap = is_transferable_cap cap'"
@@ -1217,7 +1217,7 @@ lemma tcb_states_of_state_to_auth:
    apply clarsimp
    apply (erule pas_refined_mem[rotated])
    apply (rule sta_ts)
-   apply (simp add:thread_st_auth_def)
+   apply (simp add: thread_st_auth_def)
    done
 
 lemma tcb_states_of_state_to_auth':

@@ -1098,7 +1098,7 @@ lemma perform_page_table_invocation_respects:
    apply (wpsimp wp: set_cap_integrity_autarch store_pte_respects
                simp: authorised_page_table_inv_def cleanByVA_PoU_def)
   apply (rename_tac cap fst_cslot_ptr snd_cslot_ptr)
-  apply (wpsimp wp: set_cap_integrity_autarch simp:cleanCacheRange_PoU_def)
+  apply (wpsimp wp: set_cap_integrity_autarch simp: cleanCacheRange_PoU_def)
      apply (rule_tac I="\<lambda>s. integrity aag X st s \<and> is_subject aag fst_cslot_ptr \<and> is_PageTableCap cap"
                   in mapM_x_inv_wp; clarsimp)
       apply (rule_tac P="\<lambda>s. integrity aag X st s \<and> is_PageTableCap cap" in hoare_vcg_conj_lift)
