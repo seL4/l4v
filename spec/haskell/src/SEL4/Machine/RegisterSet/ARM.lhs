@@ -89,6 +89,8 @@ This module defines the ARM register set.
 >     | VCPURegSPSRfiq
 >     | VCPURegPARhigh
 >     | VCPURegPARlow
+>     | VCPURegTTBR0high
+>     | VCPURegTTBR1high
 >     | VCPURegCNTV_CTL
 >     | VCPURegCNTV_CVALhigh
 >     | VCPURegCNTV_CVALlow

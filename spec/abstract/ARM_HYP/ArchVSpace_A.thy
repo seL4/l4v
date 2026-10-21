@@ -522,7 +522,7 @@ where
                   od)
             gicIndices;
 
-          vcpu_save_reg_range vr VCPURegACTLR VCPURegPARlow;
+          vcpu_save_reg_range vr VCPURegACTLR VCPURegTTBR1high;
           do_machine_op isb
        od
      | _ \<Rightarrow> fail"
@@ -545,7 +545,7 @@ where
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
     \<comment> \<open>restore banked VCPU registers except SCTLR (that's in VCPUEnable)\<close>
-     vcpu_restore_reg_range vr VCPURegACTLR VCPURegPARlow;
+     vcpu_restore_reg_range vr VCPURegACTLR VCPURegTTBR1high;
      vcpu_enable vr
   od"
 
