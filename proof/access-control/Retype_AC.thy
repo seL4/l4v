@@ -710,9 +710,6 @@ lemma usable_range_disjoint:
                 "\<forall>slot\<in>set slots. cte_wp_at ((=) NullCap) slot s"
                 "\<forall>x\<in>set slots. ex_cte_cap_wp_to (\<lambda>_. True) x s"
   assumes cover: "range_cover ptr sz (obj_bits_api tp us) (length slots)"
-  notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                         atLeastatMost_subset_iff atLeastLessThan_iff
-                         Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
     "usable_untyped_range (UntypedCap dev (ptr && ~~ mask sz) sz
                                       (unat ((ptr && mask sz) +
@@ -737,7 +734,7 @@ proof -
     apply simp
     done
   show ?thesis
-    apply (clarsimp simp:mask_out_sub_mask blah)
+    apply (clarsimp simp:mask_out_sub_mask)
     apply (drule idx_compare'')
     apply (simp add:not_le[symmetric])
     done

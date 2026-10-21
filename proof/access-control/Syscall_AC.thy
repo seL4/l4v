@@ -1186,7 +1186,7 @@ lemma handle_event_guarded_pas_domain[wp]:
   by (wpsimp wp: guarded_pas_domain_lift)
 
 lemma handle_interrupt_guarded_pas_domain[wp]:
-  "handle_interrupt blah \<lbrace>guarded_pas_domain aag :: det_state \<Rightarrow> _\<rbrace>"
+  "handle_interrupt irq \<lbrace>guarded_pas_domain aag :: det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp wp: guarded_pas_domain_lift)
 
 lemma integrity_irq_state_independent[simp]:

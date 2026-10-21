@@ -611,12 +611,9 @@ lemma init_arch_objects_globals_equiv[wp]:
   by (wpsimp wp: mapM_x_wp_inv)
 
 lemma invoke_untyped_globals_equiv:
-  notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                         atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost
-                         atLeastatMost_empty_iff split_paired_Ex
-  shows "\<lbrace>globals_equiv st and invs and valid_untyped_inv ui and ct_active\<rbrace>
-         invoke_untyped ui
-         \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st and invs and valid_untyped_inv ui and ct_active\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre, rule invoke_untyped_Q)
        apply (wp create_cap_globals_equiv)

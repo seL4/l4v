@@ -21,7 +21,7 @@ crunch cap_insert
 
 lemma invoke_irq_handler_irq_masks:
   "\<lbrace>domain_sep_inv False st and (\<lambda>s. (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap irq)) ptr' s))\<rbrace>
-   invoke_irq_handler blah
+   invoke_irq_handler ihi
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (clarsimp simp: valid_def domain_sep_inv_def)
 
@@ -154,7 +154,7 @@ lemma rec_del_irq_masks:
 
 lemma cap_delete_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
-   cap_delete blah
+   cap_delete slot
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>,\<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (simp add: cap_delete_def) (wpsimp wp: rec_del_irq_masks)
 
@@ -260,7 +260,7 @@ fun irq_of_handler_inv where
 
 lemma decode_invocation_IRQHandlerCap:
   "\<lbrace>cte_wp_at ((=) cap) slot\<rbrace>
-   decode_invocation label args cap_index slot cap blah
+   decode_invocation label args cap_index slot cap excaps
    \<lbrace>\<lambda>rv s. \<forall>x. rv = InvokeIRQHandler x
                \<longrightarrow> (\<exists>a b. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv x))) (a, b) s)\<rbrace>, -"
   unfolding decode_invocation_def
@@ -308,8 +308,8 @@ crunch invoke_domain
 
 lemma perform_invocation_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and
-    (\<lambda>s. (\<forall>blah. oper = InvokeIRQHandler blah
-                 \<longrightarrow> (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv blah))) ptr' s))) and
+    (\<lambda>s. (\<forall>ihi. oper = InvokeIRQHandler ihi
+                 \<longrightarrow> (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv ihi))) ptr' s))) and
     domain_sep_inv False (st :: 's state) and valid_invocation oper\<rbrace>
    perform_invocation blocking calling oper
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"

@@ -643,7 +643,7 @@ lemma set_cap_well_formed_cnode_helper:
 lemma set_cap_slots_holding_overlapping_caps_helper:
   "\<lbrakk> x \<in> slots_holding_overlapping_caps cap s; fst x \<noteq> fst slot;
      obj_refs cap = {} \<longrightarrow> cap_irqs cap \<noteq> {};
-     ko_at (TCB tcb) (fst slot) s; tcb_cap_cases (snd slot) = Some (getF, setF, blah) \<rbrakk>
+     ko_at (TCB tcb) (fst slot) s; tcb_cap_cases (snd slot) = Some (getF, setF, restr) \<rbrakk>
    \<Longrightarrow> x \<in> slots_holding_overlapping_caps cap
              (s\<lparr>kheap := (kheap s)(fst slot \<mapsto> TCB (setF (\<lambda>x. capa) tcb))\<rparr>)"
   apply (clarsimp simp: slots_holding_overlapping_caps_def)
@@ -1158,7 +1158,7 @@ lemma thread_set_silc_inv:
 
 lemma thread_set_tcb_fault_update_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
-   thread_set (tcb_fault_update blah) t
+   thread_set (tcb_fault_update f) t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
@@ -1301,21 +1301,21 @@ lemma validE_validE_R':
 
 lemma finalise_cap_ret_subset_cap_irqs:
   "\<lbrace>\<lambda>s. (cap_irqs cap) = X\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rv s :: det_state. (cap_irqs (fst rv)) \<subseteq> X\<rbrace>"
   apply (cases cap)
   by (wp arch_finalise_cap_rv | simp add: o_def split del: if_split | simp split: if_split)+
 
 lemma finalise_cap_ret_subset_obj_refs:
   "\<lbrace>\<lambda>s. obj_refs cap = X\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rv s :: det_state. (obj_refs (fst rv)) \<subseteq> X\<rbrace>"
   apply (cases cap)
   by (wp arch_finalise_cap_rv | simp add: o_def split del: if_split | simp split: if_split)+
 
 lemma finalise_cap_ret_intra_label_cap:
   "\<lbrace>\<lambda>s. cap_points_to_label aag cap l\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rv s :: det_state. cap_points_to_label aag (fst rv) l\<rbrace>"
   apply (clarsimp simp: cap_points_to_label_def valid_def)
   apply (rule conjI)
@@ -1362,7 +1362,7 @@ lemma finalise_cap_silc_inv:
 lemma finalise_cap_ret_is_silc:
   "\<lbrace>silc_inv aag st and valid_mdb
                     and cte_wp_at ((=) cap) slot and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rvb s. \<not> cap_points_to_label aag (fst rvb) (pasObjectAbs aag (fst slot))
             \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps (fst rvb) s \<and>
                          pasObjectAbs aag (fst lslot) = SilcLabel)\<rbrace>"
@@ -1793,7 +1793,7 @@ lemma cap_revoke_silc_inv:
 lemma finalise_slot_silc_inv:
   "\<lbrace>silc_inv aag st and einvs and pas_refined aag and simple_sched_action
                     and emptyable slot and K (is_subject aag (fst slot))\<rbrace>
-   finalise_slot slot blah
+   finalise_slot slot e
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding finalise_slot_def
   apply (rule validE_valid)
@@ -2456,12 +2456,12 @@ locale FinalCaps_2 = FinalCaps +
 begin
 
 lemma invoke_irq_control_silc_inv:
-  "\<lbrace>silc_inv aag st and pas_refined aag and irq_control_inv_valid blah and
-         K (authorised_irq_ctl_inv aag blah)\<rbrace>
-      invoke_irq_control blah
+  "\<lbrace>silc_inv aag st and pas_refined aag and irq_control_inv_valid ici and
+         K (authorised_irq_ctl_inv aag ici)\<rbrace>
+      invoke_irq_control ici
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding authorised_irq_ctl_inv_def
-  apply (case_tac blah)
+  apply (case_tac ici)
    apply (rule hoare_gen_asm)
    apply (wp cap_insert_silc_inv'' hoare_vcg_ex_lift slots_holding_overlapping_caps_lift
          | simp add: authorised_irq_ctl_inv_def)+

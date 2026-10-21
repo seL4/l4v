@@ -1496,11 +1496,9 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
   done
 
 lemma perform_asid_control_invocation_globals_equiv:
-  notes delete_objects_invs[wp del]
-  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-  shows "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
-         perform_asid_control_invocation aci
-         \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding perform_asid_control_invocation_def
   apply (rule hoare_pre)
    apply wpc

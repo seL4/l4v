@@ -703,12 +703,9 @@ lemma reset_untyped_cap_globals_equiv:
   done
 
 lemma invoke_untyped_globals_equiv:
-  notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                         atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost
-                         atLeastatMost_empty_iff split_paired_Ex
-  shows "\<lbrace>globals_equiv st and invs and valid_untyped_inv ui and ct_active\<rbrace>
-         invoke_untyped ui
-         \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st and invs and valid_untyped_inv ui and ct_active\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre, rule invoke_untyped_Q)
        apply (wp create_cap_globals_equiv)
@@ -720,7 +717,7 @@ lemma invoke_untyped_globals_equiv:
        apply (clarsimp simp: post_retype_invs_def split: if_split_asm)
       apply (drule disjoint_subset2[rotated])
        apply (rule order_trans, erule retype_addrs_subset_ptr_bits)
-       apply (simp add: untyped_range_def blah word_and_le2 field_simps)
+       apply (simp add: untyped_range_def word_and_le2 field_simps)
       apply (auto simp: global_refs_def post_retype_invs_def split: if_split_asm)[1]
      apply (rule hoare_pre, wp retype_region_globals_equiv[where slot="slot_of_untyped_inv ui"])
      apply (clarsimp simp: cte_wp_at_caps_of_state)
