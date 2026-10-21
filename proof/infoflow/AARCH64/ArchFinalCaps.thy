@@ -153,8 +153,8 @@ lemma is_arch_eq_pg_is_pt_or_pg_cap:
   by (clarsimp simp: is_frame_cap_def is_pt_cap_def)
 
 lemma perform_page_table_invocation_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_pti blah and K (authorised_page_table_inv aag blah)\<rbrace>
-   perform_page_table_invocation blah
+  "\<lbrace>silc_inv aag st and valid_pti iv and K (authorised_page_table_inv aag iv)\<rbrace>
+   perform_page_table_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_page_table_invocation_def perform_pt_inv_map_def perform_pt_inv_unmap_def
   apply (rule hoare_pre)
@@ -179,8 +179,8 @@ crunch invalidate_tlb_by_asid_va, perform_flush
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
 
 lemma perform_page_invocation_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_page_inv blah and authorised_page_inv aag blah\<rbrace>
-   perform_page_invocation blah
+  "\<lbrace>silc_inv aag st and valid_page_inv iv and authorised_page_inv aag iv\<rbrace>
+   perform_page_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_page_invocation_def perform_pg_inv_map_def perform_pg_inv_unmap_def perform_pg_inv_get_addr_def
   apply (rule hoare_pre)
@@ -208,10 +208,8 @@ lemma perform_page_invocation_silc_inv:
   done
 
 lemma perform_asid_control_invocation_silc_inv:
-  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-  shows
-  "\<lbrace>silc_inv aag st and valid_aci blah and invs and K (authorised_asid_control_inv aag blah)\<rbrace>
-   perform_asid_control_invocation blah
+  "\<lbrace>silc_inv aag st and valid_aci iv and invs and K (authorised_asid_control_inv aag iv)\<rbrace>
+   perform_asid_control_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)
   unfolding perform_asid_control_invocation_def
@@ -232,15 +230,15 @@ lemma perform_asid_control_invocation_silc_inv:
   apply (simp add: p_assoc_help)
   apply (clarsimp simp: cap_points_to_label_def)
   apply (erule bspec)
-  apply (fastforce intro: is_aligned_no_wrap' simp: blah)
+  apply (fastforce intro: is_aligned_no_wrap')
   done
 
 crunch store_asid_pool_entry, handle_spurious_irq
   for silc_inv[wp]: "silc_inv aag st"
 
 lemma perform_asid_pool_invocation_silc_inv:
-  "\<lbrace>silc_inv aag st and K (authorised_asid_pool_inv aag blah)\<rbrace>
-   perform_asid_pool_invocation blah
+  "\<lbrace>silc_inv aag st and K (authorised_asid_pool_inv aag iv)\<rbrace>
+   perform_asid_pool_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_asid_pool_invocation_def
   apply (wpsimp wp: set_cap_silc_inv get_cap_wp)+

@@ -103,7 +103,7 @@ lemma arch_globals_equiv_strengthener_thread_independent[Noninterference_assms]:
 
 lemma integrity_asids_update_reference_state[Noninterference_assms]:
   "is_subject aag t
-   \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+   \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>)"
   by (clarsimp simp: integrity_asids_def opt_map_def)
 
 lemma partitionIntegrity_cur_vcpu_None:
@@ -721,12 +721,12 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
 
 lemma integrity_hyp_update_reference_state[Noninterference_assms]:
   "is_subject aag t
-    \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+    \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>)"
   by (auto simp: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def)
 
 lemma integrity_fpu_update_reference_state[Noninterference_assms]:
   "is_subject aag t
-   \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+   \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>)"
   by (auto simp: integrity_fpu_def fpu_of_state_def)
 
 definition irq_at' :: "bool \<Rightarrow> nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option" where

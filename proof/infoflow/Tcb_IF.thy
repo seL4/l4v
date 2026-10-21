@@ -445,7 +445,7 @@ lemma set_mcpriority_only_timer_irq_inv:
   done
 
 lemma thread_set_tcb_fault_handler_update_only_timer_irq_inv:
-  "thread_set (tcb_fault_handler_update blah) t \<lbrace>only_timer_irq_inv irq (st :: det_state)\<rbrace>"
+  "thread_set (tcb_fault_handler_update f) t \<lbrace>only_timer_irq_inv irq (st :: det_state)\<rbrace>"
   apply (simp add: only_timer_irq_inv_def)
   apply (wp only_timer_irq_pres | force)+
   done

@@ -686,7 +686,7 @@ lemma invoke_cnode_domain_sep_inv:
 end (* DomainSepInv *)
 
 lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
-  "\<lbrace>\<top>\<rbrace> get_cap blah \<lbrace>\<lambda>rv s. domain_sep_inv_cap irqs (ArchObjectCap (F rv))\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> get_cap cslot_ptr \<lbrace>\<lambda>rv s. domain_sep_inv_cap irqs (ArchObjectCap (F rv))\<rbrace>"
   apply (simp add: domain_sep_inv_cap_def)
   apply (rule wp_post_taut)
   done

@@ -629,13 +629,13 @@ locale Noninterference =
     "reads_respects_g aag l \<top> (do_machine_op (storeWord ptr w))"
   assumes integrity_asids_update_reference_state:
    "is_subject aag t
-    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>)"
   assumes integrity_hyp_update_reference_state:
    "is_subject aag t
-    \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+    \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>)"
   assumes integrity_fpu_update_reference_state:
    "is_subject aag t
-    \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+    \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>)"
   assumes partitionIntegrity_subjectAffects_asid:
     "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s; valid_objs s; valid_arch_state s;
        valid_arch_state s'; pas_wellformed_noninterference aag; silc_inv aag st s'; invs s';
@@ -726,7 +726,7 @@ locale Noninterference =
 begin
 
 lemma integrity_update_reference_state:
-  "\<lbrakk> is_subject aag t; integrity aag X st s; st = st'\<lparr>kheap := (kheap st')(t \<mapsto> blah)\<rparr> \<rbrakk>
+  "\<lbrakk> is_subject aag t; integrity aag X st s; st = st'\<lparr>kheap := (kheap st')(t \<mapsto> v)\<rparr> \<rbrakk>
    \<Longrightarrow> integrity (aag :: 'a subject_label PAS) X st' s"
   apply (erule integrity_trans[rotated])
   by (auto simp: integrity_def opt_map_def
@@ -759,7 +759,7 @@ lemma kernel_entry_if_integrity:
     apply (wp thread_set_tcb_context_update_wp)+
   apply (clarsimp simp: schact_is_rct_def)
   apply (rule conjI)
-   apply (erule integrity_update_reference_state[where blah="the (kheap st (cur_thread st))",
+   apply (erule integrity_update_reference_state[where v="the (kheap st (cur_thread st))",
                                                  OF _ integrity_refl])
    apply simp
    apply (subgoal_tac "kheap st (cur_thread st) \<noteq> None")
@@ -1861,10 +1861,10 @@ lemma sub_big_steps_reachable:
   done
 
 lemma sub_big_steps_not_PSched:
-  "\<lbrakk> (s', blah) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; big_step_R\<^sup>*\<^sup>* s0 s; part s \<noteq> PSched \<rbrakk>
+  "\<lbrakk> (s', evlist) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; big_step_R\<^sup>*\<^sup>* s0 s; part s \<noteq> PSched \<rbrakk>
    \<Longrightarrow> part s' \<noteq> PSched"
   apply (drule tranclp_s0)
-  apply (induct s' blah rule: sub_big_steps.induct)
+  apply (induct s' evlist rule: sub_big_steps.induct)
    apply simp
   apply simp
   apply (simp add: part_def split: if_splits)
