@@ -322,7 +322,7 @@ lemma reply_cancel_ipc_pas_refined[wp]:
    apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs and tcb_at t and pas_refined aag"])
     apply (wpsimp wp: hoare_wp_combs thread_set_tcb_fault_reset_invs thread_set_pas_refined)+
    apply (frule(1) reply_cap_descends_from_master0)
-   apply (fastforce simp: cte_wp_at_caps_of_state intro:it_Reply)
+   apply (fastforce simp: cte_wp_at_caps_of_state intro: it_Reply)
   apply fastforce
   done
 
@@ -487,7 +487,7 @@ lemma reply_cancel_ipc_respects[wp]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply (rule hoare_pre)
-   apply (wp add: wp_transferable del:wp_not_transferable)
+   apply (wp add: wp_transferable del: wp_not_transferable)
    apply simp
    apply (rule hoare_lift_Pf2[where f="cdt"])
     apply (wpsimp wp: hoare_vcg_const_Ball_lift thread_set_integrity_autarch
@@ -496,7 +496,7 @@ lemma reply_cancel_ipc_respects[wp]:
                       thread_set_pas_refined
                 simp: ran_tcb_cap_cases)+
   apply (rule conjI)
-   apply (fastforce simp: cte_wp_at_caps_of_state intro:is_transferable.intros
+   apply (fastforce simp: cte_wp_at_caps_of_state intro: is_transferable.intros
                    dest!: reply_cap_descends_from_master0)
   apply (rule cdt_change_allowed_all_children[where aag=aag, THEN all_children_descendants_of])
   by fastforce+
@@ -722,7 +722,7 @@ lemma owns_slot_owns_irq:
 
 lemma replaceable_zombie_not_transferable:
   "replaceable s slot (Zombie ref sz n) cap \<Longrightarrow> \<not> is_transferable (Some cap)"
-  by (intro notI) (erule is_transferable.cases; simp add:replaceable_def)
+  by (intro notI) (erule is_transferable.cases; simp add: replaceable_def)
 
 declare finalise_cap_valid_list[wp]
 
@@ -889,7 +889,7 @@ lemma rec_del_Finalise_transferable:
      apply (rule hoare_post_imp[of "\<lambda>rv s. rv = (NullCap,NullCap) \<and> P s" for P])
       apply (clarsimp; assumption)
      apply (wp finalise_cap_transferable without_preemption_wp get_cap_wp)+
-  by (fastforce simp:cte_wp_at_caps_of_state)
+  by (fastforce simp: cte_wp_at_caps_of_state)
 
 context Finalise_AC begin
 
@@ -1181,8 +1181,8 @@ lemma invoke_cnode_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp add:cap_insert_pas_refined cap_delete_pas_refined cap_revoke_pas_refined
-             get_cap_wp cap_move_empty_src_slot
+   apply (wp add: cap_insert_pas_refined cap_delete_pas_refined cap_revoke_pas_refined
+                  get_cap_wp cap_move_empty_src_slot
              | wpc
              | simp split del: if_split
              | wp (once) cap_move_cte_wp_at_separation)+

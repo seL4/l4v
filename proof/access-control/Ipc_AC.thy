@@ -197,7 +197,7 @@ lemma send_upd_ctxintegrity:
            (* eliminate all TCB unrelated cases and simplifies the other *)
            clarsimp;
            (* deal with the orefl case *)
-           (solves \<open>simp add:direct_send_def indirect_send_def\<close>
+           (solves \<open>simp add: direct_send_def indirect_send_def\<close>
            (* deal with the other case by applying either the reply,
               call or send rules and then the generic rule *)
            | rule tro_trans_spec,
@@ -365,7 +365,7 @@ lemma integrity_receive_blocked_chain_bound:
   apply (clarsimp simp: integrity_def)
   apply (drule bound_tcb_at_thread_bound_ntfns)
   apply (drule tsos_tro' [where p = p], simp+)
-  apply (clarsimp simp:tba_Some)
+  apply (clarsimp simp: tba_Some)
   done
 
 context Ipc_AC begin
@@ -552,12 +552,12 @@ next
   apply (intro conjI)
    apply clarsimp
    apply (case_tac "cap = a",clarsimp simp: remove_rights_def)
-   apply (clarsimp simp:masked_as_full_def is_cap_simps)
-   apply (clarsimp simp: cap_master_cap_simps remove_rights_def split:if_splits)
+   apply (clarsimp simp: masked_as_full_def is_cap_simps)
+   apply (clarsimp simp: cap_master_cap_simps remove_rights_def split: if_splits)
   apply clarsimp
   apply (intro conjI)
-    apply (clarsimp split:if_splits elim!: image_eqI[rotated])
-   apply (clarsimp split:if_splits simp: remove_rights_def)
+    apply (clarsimp split: if_splits elim!: image_eqI[rotated])
+   apply (clarsimp split: if_splits simp: remove_rights_def)
   apply (rule ballI)
   apply (drule(1) bspec)
   apply clarsimp
@@ -779,7 +779,7 @@ lemma transfer_caps_loop_presM_extended:
   apply (rule conjI)
    apply clarsimp
    apply (case_tac "cap = a",clarsimp)
-   apply (clarsimp simp:masked_as_full_def is_cap_simps)
+   apply (clarsimp simp: masked_as_full_def is_cap_simps)
    apply (fastforce simp: cap_master_cap_simps split: if_splits)
   apply (clarsimp split del: if_split)
   apply (intro conjI)
@@ -883,11 +883,11 @@ lemma lec_valid_cap':
 (* FIXME: MOVE *)
 lemma hoare_conjDR1:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> R rv s\<rbrace>, - \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -"
-  by (simp add:validE_def validE_R_def valid_def) blast
+  by (simp add: validE_def validE_R_def valid_def) blast
 
 lemma hoare_conjDR2:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> R rv s\<rbrace>, - \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -"
-  by (simp add:validE_def validE_R_def valid_def) blast
+  by (simp add: validE_def validE_R_def valid_def) blast
 
 context Ipc_AC begin
 
@@ -979,9 +979,9 @@ lemma sym_ref_endpoint_recvD:
   shows "\<exists>pl. st_tcb_at ((=) (BlockedOnReceive epptr pl)) t s"
 proof -
   have "(t, EPRecv) \<in> state_refs_of s epptr"
-    using ep inl by (force simp: state_refs_of_def dest:ko_atD)
+    using ep inl by (force simp: state_refs_of_def dest: ko_atD)
   hence "(epptr, TCBBlockedRecv) \<in> state_refs_of s t"
-    using sym by (force dest:sym_refsD[rotated])
+    using sym by (force dest: sym_refsD[rotated])
   thus ?thesis
     by (force simp: st_tcb_at_tcb_states_of_state_eq tcb_states_of_state_def get_tcb_def
                     state_refs_of_def tcb_st_refs_of_def tcb_bound_refs_def ep_q_refs_of_def
@@ -998,10 +998,10 @@ lemma pas_refined_ep_recv:
   shows "abs_has_auth_to aag Receive t epptr"
   apply (insert sym_ref_endpoint_recvD[OF invs_sym_refs[OF invs] ep inl])
   apply clarsimp
-  apply (clarsimp simp:st_tcb_at_tcb_states_of_state_eq)
+  apply (clarsimp simp: st_tcb_at_tcb_states_of_state_eq)
   apply (rule pas_refined_mem[OF _ policy])
   apply (rule sta_ts[of epptr Receive])
-  apply (simp add:thread_st_auth_def)
+  apply (simp add: thread_st_auth_def)
   done
 
 lemma send_ipc_valid_ep_helper:
@@ -1029,7 +1029,7 @@ lemma send_ipc_pas_refined:
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wpc | wp set_thread_state_pas_refined)+
-         apply (simp add: hoare_if_r_and split del:if_split)
+         apply (simp add: hoare_if_r_and split del: if_split)
          apply (wp setup_caller_cap_pas_refined set_thread_state_pas_refined)+
        apply (simp split del: if_split)
        apply (rule_tac Q'="\<lambda>rv. pas_refined aag and valid_mdb and
@@ -1049,14 +1049,14 @@ lemma send_ipc_pas_refined:
     subgoal (* can_grant *)
       apply (frule(2) aag_wellformed_grant_Control_to_recv[OF _ _ pas_refined_wellformed])
       apply (frule(2) aag_wellformed_reply[OF _ _ pas_refined_wellformed])
-      apply (force elim: send_ipc_valid_ep_helper simp:aag_has_Control_iff_owns)
+      apply (force elim: send_ipc_valid_ep_helper simp: aag_has_Control_iff_owns)
       done
     subgoal (* can_grant_reply and not can_grant*)
       apply (frule(2) aag_wellformed_reply[OF _ _ pas_refined_wellformed])
       apply (frule(1) tcb_states_of_state_to_auth)
       (* Make the blockedOnReceive state point to epptr *)
       apply (frule(1) sym_ref_endpoint_recvD[OF invs_sym_refs _ head_in_set],
-             clarsimp simp:st_tcb_at_tcb_states_of_state_eq)
+             clarsimp simp: st_tcb_at_tcb_states_of_state_eq)
       apply (fastforce elim: send_ipc_valid_ep_helper
                        simp: aag_has_Control_iff_owns
                        dest: aag_wellformed_grant_Control_to_recv_by_reply
@@ -1108,9 +1108,9 @@ lemma sym_ref_endpoint_sendD:
   shows "\<exists>pl. st_tcb_at ((=) (BlockedOnSend epptr pl)) t s"
 proof -
   have "(t, EPSend) \<in> state_refs_of s epptr"
-    using ep inl by (force simp: state_refs_of_def dest:ko_atD)
+    using ep inl by (force simp: state_refs_of_def dest: ko_atD)
   hence "(epptr, TCBBlockedSend) \<in> state_refs_of s t"
-    using sym by (force dest:sym_refsD[rotated])
+    using sym by (force dest: sym_refsD[rotated])
   thus ?thesis
     by (force simp: st_tcb_at_tcb_states_of_state_eq tcb_states_of_state_def get_tcb_def
                     state_refs_of_def tcb_st_refs_of_def tcb_bound_refs_def ep_q_refs_of_def
@@ -1126,7 +1126,7 @@ lemma receive_ipc_valid_ep_helper:
   apply (drule ko_atD)
   apply (erule(1) valid_objsE)
   apply (cases list, solves \<open>simp add: valid_obj_def valid_ep_def\<close>)
-  by (cases "tl list"; clarsimp simp:valid_obj_def valid_ep_def)
+  by (cases "tl list"; clarsimp simp: valid_obj_def valid_ep_def)
 
 lemma receive_ipc_sender_helper:
   "\<lbrakk> pas_refined aag s; kheap s thread = Some (TCB tcb); tcb_state tcb = BlockedOnSend ep pl \<rbrakk>
@@ -1142,9 +1142,9 @@ lemma receive_ipc_sender_can_grant_helper:
    \<Longrightarrow> is_subject aag thread"
   apply (frule pas_refined_mem[rotated,where x = "thread" and auth=Grant])
    apply (rule sta_ts)
-   apply (simp add:thread_st_auth_def tcb_states_of_state_def get_tcb_def)
+   apply (simp add: thread_st_auth_def tcb_states_of_state_def get_tcb_def)
   apply (frule(2) aag_wellformed_grant_Control_to_send[OF _ _ pas_refined_wellformed])
-  apply (simp add:aag_has_Control_iff_owns)
+  apply (simp add: aag_has_Control_iff_owns)
   done
 
 lemma complete_signal_pas_refined:
@@ -1199,35 +1199,35 @@ lemma receive_ipc_base_pas_refined:
       proof -
         have "sender_can_grant pl \<Longrightarrow> is_subject aag (hd list)"
           using prems
-          apply (clarsimp elim!: tcb_atE simp:tcb_at_st_tcb_at[symmetric] get_tcb_def)
+          apply (clarsimp elim!: tcb_atE simp: tcb_at_st_tcb_at[symmetric] get_tcb_def)
           apply (frule(1) sym_ref_endpoint_sendD[OF invs_sym_refs,where t= "hd list"],force)
-          apply (clarsimp simp:st_tcb_at_def elim!:obj_atE)
+          apply (clarsimp simp: st_tcb_at_def elim!:obj_atE)
           by (rule receive_ipc_sender_can_grant_helper)
         moreover have
           "sender_can_grant_reply pl \<Longrightarrow> aag_has_auth_to aag Reply (hd list)"
           using prems
-          apply (clarsimp elim!: tcb_atE simp:tcb_at_st_tcb_at[symmetric] get_tcb_def)
+          apply (clarsimp elim!: tcb_atE simp: tcb_at_st_tcb_at[symmetric] get_tcb_def)
           apply (frule(1) sym_ref_endpoint_sendD[OF invs_sym_refs,where t= "hd list"],force)
-          apply (clarsimp simp:st_tcb_at_def elim!:obj_atE)
+          apply (clarsimp simp: st_tcb_at_def elim!:obj_atE)
           apply (frule pas_refined_mem[rotated,where x = "(hd list)" and auth=Call])
            apply (rule sta_ts)
-           apply (simp add:thread_st_auth_def tcb_states_of_state_def get_tcb_def)
+           apply (simp add: thread_st_auth_def tcb_states_of_state_def get_tcb_def)
           by (erule(2) aag_wellformed_reply[OF _ _ pas_refined_wellformed])
         ultimately show ?thesis
-          using prems by (force dest:receive_ipc_valid_ep_helper)
+          using prems by (force dest: receive_ipc_valid_ep_helper)
       qed
       apply clarsimp
       using prems
-      apply (intro conjI;clarsimp simp add:cap_rights_to_auth_def)
-      apply (clarsimp elim!: tcb_atE simp:tcb_at_st_tcb_at[symmetric] get_tcb_def
-                             cap_rights_to_auth_def)
+      apply (intro conjI;clarsimp simp add: cap_rights_to_auth_def)
+      apply (clarsimp elim!: tcb_atE
+                       simp: tcb_at_st_tcb_at[symmetric] get_tcb_def cap_rights_to_auth_def)
       apply (frule_tac t="hd x" in sym_ref_endpoint_sendD[OF invs_sym_refs],assumption,force)
-      apply (clarsimp simp:st_tcb_at_def elim!:obj_atE)
+      apply (clarsimp simp: st_tcb_at_def elim!:obj_atE)
       apply (frule_tac x="hd x" in pas_refined_mem[rotated,where auth=Call])
        apply (rule sta_ts)
-       apply (simp add:thread_st_auth_def tcb_states_of_state_def get_tcb_def)
+       apply (simp add: thread_st_auth_def tcb_states_of_state_def get_tcb_def)
       apply (frule aag_wellformed_grant_Control_to_send_by_reply[OF _ _ _ pas_refined_wellformed])
-      by (force simp:aag_has_Control_iff_owns)+
+      by (force simp: aag_has_Control_iff_owns)+
   qed
   done
 
@@ -1459,7 +1459,7 @@ lemma setup_caller_cap_integrity_recv:
 lemma pred_tcb_atI:
   "\<lbrakk> kheap s t = Some (TCB tcb); pred (proj (tcb_to_itcb tcb)) \<rbrakk>
    \<Longrightarrow> pred_tcb_at proj pred t s"
-  by (fastforce simp:pred_tcb_at_def obj_at_def)
+  by (fastforce simp: pred_tcb_at_def obj_at_def)
 
 (* FIXME MOVE *)
 abbreviation sender_can_call :: "sender_payload \<Rightarrow> bool" where
@@ -2193,12 +2193,12 @@ lemma set_cap_respects_in_ipc_reply:
   apply (wp set_object_wp)
   apply (rule use_spec')
   apply (rule spec_valid_direct)
-  apply (clarsimp simp:tcb_at_def get_tcb_def dest!:ko_atD split:kernel_object.splits)
+  apply (clarsimp simp: tcb_at_def get_tcb_def dest!:ko_atD split: kernel_object.splits)
   apply (simp add: spec_valid_def valid_def return_def)
   unfolding integrity_tcb_in_ipc_def
-  apply (clarsimp simp:st_tcb_at_tcb_states_of_state)
-  apply (clarsimp simp:tcb_states_of_state_def direct_call_def dest!:get_tcb_SomeD)
-  by (erule tcb_in_ipc.cases; (force intro:tii_call))
+  apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
+  apply (clarsimp simp: tcb_states_of_state_def direct_call_def dest!:get_tcb_SomeD)
+  by (erule tcb_in_ipc.cases; (force intro: tii_call))
 
 context Ipc_AC_2 begin
 
@@ -2305,7 +2305,7 @@ lemma send_ipc_integrity_autarch:
           | wpc
           | strengthen integrity_tcb_in_ipc_no_call
           | wp hoare_drop_imps
-          | simp add:get_thread_state_def)+
+          | simp add: get_thread_state_def)+
   apply (clarsimp intro: integrity_tcb_in_ipc_refl)
   apply (frule_tac t=x in sym_ref_endpoint_recvD[OF invs_sym_refs],assumption,simp)
   apply (clarsimp simp: st_tcb_at_tcb_states_of_state_eq st_tcb_at_tcb_states_of_state direct_call_def)
@@ -2485,7 +2485,7 @@ abbreviation "fault_tcb_at \<equiv> pred_tcb_at itcb_fault"
 
 lemma fault_tcb_atI:
   "\<lbrakk>kheap s ptr = Some (TCB tcb); P (tcb_fault tcb) \<rbrakk> \<Longrightarrow> fault_tcb_at P ptr s"
-  by (fastforce simp:pred_tcb_at_def obj_at_def)
+  by (fastforce simp: pred_tcb_at_def obj_at_def)
 
 lemma fault_tcb_atE:
   assumes hyp: "fault_tcb_at P ptr s"
@@ -2582,7 +2582,7 @@ lemma cte_delete_one_respects_in_ipc_autharch:
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   unfolding cap_delete_one_def
   apply (wp empty_slot_respects_in_ipc_autarch fast_finalise_reply_respects_in_ipc_autarch get_cap_wp)
-  by (fastforce simp:cte_wp_at_caps_of_state is_cap_simps)
+  by (fastforce simp: cte_wp_at_caps_of_state is_cap_simps)
 
 lemma integrity_tcb_in_fault_reply_final:
   "integrity_tcb_in_fault_reply aag X thread TRFFinal st s \<Longrightarrow> integrity aag X st s"
@@ -2676,7 +2676,7 @@ lemma emptyable_not_master:
    \<Longrightarrow> emptyable slot s"
   apply (rule emptyable_cte_wp_atD[rotated 2])
     apply (intro allI impI, assumption)
-   by (fastforce simp:is_cap_simps cte_wp_at_caps_of_state)+
+   by (fastforce simp: is_cap_simps cte_wp_at_caps_of_state)+
 
 context Ipc_AC_2 begin
 
