@@ -2415,6 +2415,10 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_SPSRund_def
     seL4_VCPUReg_SPSRirq_def
     seL4_VCPUReg_SPSRfiq_def
+    seL4_VCPUReg_PARhigh_def
+    seL4_VCPUReg_PARlow_def
+    seL4_VCPUReg_TTBR0high_def
+    seL4_VCPUReg_TTBR1high_def
     seL4_VCPURegSaveRange_end_def
     seL4_VCPUReg_CNTV_CTL_def
     seL4_VCPUReg_CNTV_CVALhigh_def
