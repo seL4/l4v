@@ -744,7 +744,7 @@ lemma handle_recv_reads_respects_f:
                                  is_subject aag (cur_thread s) \<and> is_subject aag (fst (fst r))"
                      and E'=E and E=E for E in hoare_strengthen_postE)
           apply (wp lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault)
-         apply ((fastforce simp add:valid_fault_def)+)[3]
+         apply ((fastforce simp add: valid_fault_def)+)[3]
       apply (wp reads_respects_f[OF as_user_reads_respects,where st=st and Q=\<top>])
       apply simp
      apply (wp as_user_silc_inv[where st=st] | simp)+

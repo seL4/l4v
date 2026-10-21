@@ -1464,7 +1464,7 @@ lemma set_mrs_globals_equiv:
        apply (simp)
       apply (wp set_object_globals_equiv hoare_weak_lift_imp)
      apply (wp hoare_vcg_all_lift set_object_globals_equiv hoare_weak_lift_imp)+
-   apply (clarsimp simp:arm_global_pd_not_tcb)+
+   apply (clarsimp simp: arm_global_pd_not_tcb)+
   done
 
 lemma perform_page_invocation_globals_equiv:
@@ -1699,7 +1699,7 @@ lemma cte_wp_at_pt_exists_cap:
   apply (rule_tac x=b in exI)
   apply (subgoal_tac "is_aligned word pt_bits")
    apply (frule (1) word_aligned_pt_slots)
-   apply (simp add:pageBits_def cte_wp_at_caps_of_state is_pt_cap_def)
+   apply (simp add: pageBits_def cte_wp_at_caps_of_state is_pt_cap_def)
   apply (frule (1) cte_wp_valid_cap)
   apply (simp add: valid_cap_def cap_aligned_def pt_bits_def pageBits_def)
   done

@@ -20,11 +20,11 @@ definition authorised_irq_hdl_inv :: "'a PAS \<Rightarrow> Invocations_A.irq_han
 
 lemma emptyable_irq_node:
   "emptyable (interrupt_irq_node s x21, []) s"
-  by (simp add:emptyable_def tcb_cnode_index_def)
+  by (simp add: emptyable_def tcb_cnode_index_def)
 
 lemma pas_refined_is_subject_irqD:
   "\<lbrakk> is_subject_irq aag irq; pas_refined aag s \<rbrakk> \<Longrightarrow> is_subject aag (interrupt_irq_node s irq)"
-  by (simp add:pas_refined_def irq_map_wellformed_aux_def)
+  by (simp add: pas_refined_def irq_map_wellformed_aux_def)
 
 locale Interrupt_AC =
   fixes arch_authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> arch_irq_control_invocation \<Rightarrow> bool"

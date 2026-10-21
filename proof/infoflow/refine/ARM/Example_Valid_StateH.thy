@@ -1002,7 +1002,7 @@ lemma kh0H_simps[simp]:
   supply option.case_cong[cong]
       apply (clarsimp simp: kh0H_def option_update_range_def)
       apply fastforce
-     apply (simp add:kh0H_def)
+     apply (simp add: kh0H_def)
      apply (clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None)+
      by ((clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_None offs_in_range | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+,
             rule conjI,
@@ -2924,7 +2924,7 @@ lemma s0H_invs:
            apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
            apply (rule_tac x="Silc_cnode_ptr + 0x13E0" in exI)
            apply (clarsimp simp: kh0H_all_obj_def')
-          apply (clarsimp split: if_split_asm simp:live'_def hyp_live'_def)+
+          apply (clarsimp split: if_split_asm simp: live'_def hyp_live'_def)+
   apply (rule conjI)
    apply (clarsimp simp: if_unsafe_then_cap'_def ex_cte_cap_wp_to'_def cte_wp_at_ctes_of)
    apply (frule map_to_ctes_kh0H_SomeD)

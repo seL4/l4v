@@ -145,7 +145,7 @@ lemma ipcframe_subset_page:
    apply (erule set_mp[rotated])
    apply (rule ptr_range_subset)
      apply (simp add: valid_cap_def cap_aligned_def)
-    apply (simp add: valid_tcb_def valid_ipc_buffer_cap_def is_aligned_andI1 split:bool.splits)
+    apply (simp add: valid_tcb_def valid_ipc_buffer_cap_def is_aligned_andI1 split: bool.splits)
    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
    apply (simp add: msg_align_bits pageBits_def)
   apply (rule and_mask_less')

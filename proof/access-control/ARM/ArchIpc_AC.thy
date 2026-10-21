@@ -223,7 +223,7 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
          f
          \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def] integrity_asids_def)
-  apply (simp del:split_paired_All)
+  apply (simp del: split_paired_All)
   apply (rule hoare_pre)
    apply (simp only: integrity_cdt_list_as_list_integ)
    apply (simp add: tcb_states_of_state_def get_tcb_def)

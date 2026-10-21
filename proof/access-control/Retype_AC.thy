@@ -718,9 +718,9 @@ lemma usable_range_disjoint:
 proof -
   have not_0_ptr[simp]: "ptr\<noteq> 0"
     using misc cte_wp_at
-    apply (clarsimp simp:cte_wp_at_caps_of_state)
+    apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (drule(1) caps_of_state_valid)
-    apply (clarsimp simp:valid_cap_def)
+    apply (clarsimp simp: valid_cap_def)
     done
   have idx_compare''[simp]:
     "unat ((ptr && mask sz) + (of_nat (length slots) * 2 ^ obj_bits_api tp us)) < 2 ^ sz
@@ -734,9 +734,9 @@ proof -
     apply simp
     done
   show ?thesis
-    apply (clarsimp simp:mask_out_sub_mask)
+    apply (clarsimp simp: mask_out_sub_mask)
     apply (drule idx_compare'')
-    apply (simp add:not_le[symmetric])
+    apply (simp add: not_le[symmetric])
     done
 qed
 

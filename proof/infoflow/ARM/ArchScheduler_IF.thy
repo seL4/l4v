@@ -413,7 +413,7 @@ lemma ackInterrupt_reads_respects_scheduler[Scheduler_IF_assms]:
         apply (simp add: globals_equiv_scheduler_def[abs_def] idle_equiv_def)
         apply (rule hoare_pre)
          apply wps
-         apply (wp dmo_wp ackInterrupt_irq_masks | simp add:no_irq_def)+
+         apply (wp dmo_wp ackInterrupt_irq_masks | simp add: no_irq_def)+
         apply clarsimp
        apply ((wp silc_dom_lift dmo_wp | simp)+)[5]
   apply (rule scheduler_affects_equiv_unobservable)

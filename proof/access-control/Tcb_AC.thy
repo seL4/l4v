@@ -193,7 +193,7 @@ lemma map_le_to_rtrancl:
   "m \<subseteq>\<^sub>m m' \<Longrightarrow> m \<Turnstile> pptr \<rightarrow>* ptr \<Longrightarrow> m' \<Turnstile> pptr \<rightarrow>* ptr"
   apply (erule subsetD[rotated])
   apply (rule rtrancl_mono)
-  apply (fastforce simp:cdt_parent_of_def map_le_def dom_def)
+  apply (fastforce simp: cdt_parent_of_def map_le_def dom_def)
   done
 
 lemma map_le_to_cca:
@@ -210,14 +210,14 @@ lemma cap_insert_cdt_change_allowed[wp]:
    apply (wp add: dxo_wp_weak update_cdt_wp | simp)+
         apply (rule hoare_post_imp[of
         "\<lambda>_. cdt_change_allowed' aag slot and (\<lambda>s. cdt s dest_slot = None)"])
-         apply (fastforce elim: map_le_to_cca[rotated] simp:map_le_def dom_def)
+         apply (fastforce elim: map_le_to_cca[rotated] simp: map_le_def dom_def)
         apply (wps | wp get_cap_wp)+
   apply (clarsimp)
   apply (drule valid_mdb_mdb_cte_at)
   apply (subst not_Some_eq[symmetric])
   apply (intro allI notI)
   apply (drule(1) mdb_cte_atD[rotated])
-  apply (simp add:cte_wp_at_caps_of_state)
+  apply (simp add: cte_wp_at_caps_of_state)
   done
 
 lemma invoke_tcb_unbind_notification_respects:

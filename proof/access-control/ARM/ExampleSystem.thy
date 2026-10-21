@@ -1127,11 +1127,11 @@ lemma "pas_refined Sys2PAS s2"
         apply (elim disjE, simp_all)[1]
        apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def
                        split: if_splits)
-       apply (clarsimp split:if_splits option.splits
-                       simp: thread_st_auth_def tcb_states_of_state_def
-                             Sys2AgentMap_simps Sys2AuthGraph_def
-                             complete_AuthGraph_def Sys2AuthGraph_aux_def
-                      dest!: get_tcb_SomeD)
+       apply (clarsimp split: if_splits option.splits
+                        simp: thread_st_auth_def tcb_states_of_state_def
+                              Sys2AgentMap_simps Sys2AuthGraph_def
+                              complete_AuthGraph_def Sys2AuthGraph_aux_def
+                       dest!: get_tcb_SomeD)
       apply (simp add: s2_def) (* this is OK because cdt is empty..*)
      apply (simp add: s2_def) (* this is OK because cdt is empty..*)
 

@@ -446,7 +446,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
                            \<and> (pasObjectAbs aag t, Receive, pasObjectAbs aag x) \<in> pasPolicy aag))
      (blocked_cancel_ipc_nosts t)"
   unfolding blocked_cancel_ipc_nosts_def
-  apply (simp only:bind_assoc[symmetric])
+  apply (simp only: bind_assoc[symmetric])
   apply (rule bind_ev[where P''=\<top>,simplified])
     apply (wp set_thread_state_runnable_reads_respects,simp)
     subgoal proof (cases "aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x")
@@ -459,7 +459,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
                          gts_reads_respects set_simple_ko_reads_respects gts_wp
                    simp: get_blocking_object_def get_thread_state_rev)+
       apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-      by (fastforce dest:read_sync_ep_read_receivers)
+      by (fastforce dest: read_sync_ep_read_receivers)
 
     next
       case False thus ?thesis apply -  \<comment> \<open>can't read or affect ep\<close>
@@ -560,9 +560,9 @@ lemma send_signal_reads_respects:
      apply (frule (1) bound_tcb_at_implies_receive)
      apply (elim disjE)
       apply (rule disjI1)
-      apply (fastforce dest:read_sync_ep_read_receivers)
+      apply (fastforce dest: read_sync_ep_read_receivers)
      apply (rule disjI2)
-     apply (fastforce dest:read_sync_ep_read_receivers)
+     apply (fastforce dest: read_sync_ep_read_receivers)
     apply (clarsimp)
     apply (frule (1) ntfn_bound_tcb_at[where P="(=) (Some ntfnptr)",OF _ _ _ _ refl])
       apply (fastforce simp: obj_at_def)
@@ -578,7 +578,7 @@ lemma send_signal_reads_respects:
      apply (frule_tac t=x and tcb=tcb and ep = "case (tcb_state tcb) of BlockedOnReceive a pl \<Rightarrow> a"
                    in get_tcb_recv_blocked_implies_receive)
        apply (fastforce simp: pred_tcb_at_def get_tcb_def obj_at_def)
-      apply (fastforce simp: receive_blocked_def split:thread_state.splits)
+      apply (fastforce simp: receive_blocked_def split: thread_state.splits)
      apply (fastforce simp: receive_blocked_def intro!: BlockedOnReceive_inj)
     by (fastforce simp: pred_tcb_at_def get_tcb_def obj_at_def receive_blocked_def ct_in_state_def)
   next
@@ -1236,7 +1236,7 @@ lemma ptr_in_obj_range:
 
 lemma ko_at_eq:
   "ko_at obj pos s \<longleftrightarrow> kheap s pos = Some obj"
-  by (force simp:obj_at_def)
+  by (force simp: obj_at_def)
 
 locale Ipc_IF_2 = Ipc_IF +
   assumes copy_mrs_reads_respects:
@@ -1342,17 +1342,17 @@ lemma receive_ipc_base_reads_respects:
             set_thread_state_reads_respects get_simple_ko_reads_respects
             get_simple_ko_wp do_ipc_transfer_pas_refined
         | wpc | simp add: get_thread_state_def thread_get_def)+
-  apply (clarsimp simp:neq_Nil_conv)
+  apply (clarsimp simp: neq_Nil_conv)
   subgoal for s sender queue
     apply (frule(1) receive_ipc_valid_ep_helper)
     apply (frule(1) sym_ref_endpoint_sendD[OF invs_sym_refs,where t= "sender"], force)
-    apply (clarsimp simp:st_tcb_at_def elim!:obj_atE dest!:sym[where t = "tcb_state _"])
+    apply (clarsimp simp: st_tcb_at_def elim!:obj_atE dest!:sym[where t = "tcb_state _"])
     apply (subgoal_tac "aag_can_read aag sender")
      apply (fastforce simp: get_tcb_def
                       elim: receive_ipc_sender_can_grant_helper
                      intro: requiv_get_tcb_eq')
     apply (frule(2) receive_ipc_sender_helper)
-    apply (solves \<open>auto intro:reads_ep read_sync_ep_read_senders\<close>)
+    apply (solves \<open>auto intro: reads_ep read_sync_ep_read_senders\<close>)
     done
   done
 

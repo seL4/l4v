@@ -104,7 +104,7 @@ context strengthen_implementation begin
 
 lemma strengthen_cte_wp_at[strg]:
   "(\<And>x. st F (\<longrightarrow>) (P x) (Q x)) \<Longrightarrow> st F (\<longrightarrow>) (cte_wp_at P slot s) (cte_wp_at Q slot s)"
-  by (cases F, auto elim:cte_wp_at_weakenE)
+  by (cases F, auto elim: cte_wp_at_weakenE)
 
 end (* strengthen_implementation *)
 
@@ -161,7 +161,7 @@ lemma silc_inv_no_transferable':
    cte_wp_at (\<lambda>cap. cap \<noteq> NullCap \<and> is_transferable_cap cap) slot s \<Longrightarrow> False"
   apply (frule (1) silc_inv_no_transferable)
    apply (drule silc_inv_silc_dom_equiv)
-   apply (simp add:silc_dom_equiv_def)
+   apply (simp add: silc_dom_equiv_def)
    apply (drule (1) equiv_forD)
    apply (elim cte_wp_at_pspace_specI)
   by simp+
@@ -443,7 +443,7 @@ lemma is_final_cap'_read_equiv_imp:
         apply (drule gen_obj_refs_distinct_or_equal)+
         apply simp
         apply (erule(1) not_is_final_cap[where slot' = lslot, THEN notE,rotated])
-          apply (blast dest:is_final_then_nonempty_refs)
+          apply (blast dest: is_final_then_nonempty_refs)
          apply assumption
         apply force
         done
@@ -751,7 +751,7 @@ lemma slots_holding_overlapping_caps_hold_caps:
 
 crunch set_original
   for silc_inv[wp]: "silc_inv aag st"
-  (wp: silc_inv_triv wp_del:set_original_wp)
+  (wp: silc_inv_triv wp_del: set_original_wp)
 
 lemma nonempty_refs:
   "\<not> cap_points_to_label aag cap l \<Longrightarrow> obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}"
@@ -1120,7 +1120,7 @@ lemma slots_holding_overlapping_caps_lift:
 
 crunch set_original
   for cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at P slot s)"
-  (wp_del:set_original_wp)
+  (wp_del: set_original_wp)
 
 lemma slots_holding_overlapping_caps_exst_update[simp]:
   "slots_holding_overlapping_caps cap (trans_state f s) =
@@ -1216,14 +1216,14 @@ lemma reply_cancel_ipc_silc_inv:
   apply clarsimp
   apply (rename_tac b a)
   apply (frule(1) descendants_of_owned_or_transferable, force, force, elim disjE)
-   apply (clarsimp simp add:silc_inv_def)
+   apply (clarsimp simp add: silc_inv_def)
   apply (case_tac "cdt s (a,b)")
    apply (fastforce dest: descendants_of_NoneD)
   apply (elim is_transferable.cases)
     apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp: cte_wp_at_caps_of_state)
    apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp: cte_wp_at_caps_of_state)
   apply (erule(1) silc_inv_no_transferableD')
-  apply (force simp add:cte_wp_at_caps_of_state)
+  apply (force simp add: cte_wp_at_caps_of_state)
   done
 
 lemma cancel_ipc_silc_inv:
@@ -1592,7 +1592,7 @@ lemma rec_del_silc_inv':
                      in hoare_vcg_conj_lift[OF _ finalise_cap_cases[where slot=slot]])
         prefer 2
         subgoal for cap s'' isfinal s' fin s0
-          apply (clarsimp simp: cte_wp_at_caps_of_state simp del:split_paired_Ex split_paired_All)
+          apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_Ex split_paired_All)
           apply (elim disjE; clarsimp simp: cte_wp_at_caps_of_state)
           apply (clarsimp simp: is_cap_simps gen_obj_refs_eq replaceable_zombie_not_transferable
                                 cap_auth_conferred_def clas_no_asid aag_cap_auth_def
@@ -1616,7 +1616,7 @@ lemma rec_del_silc_inv':
     apply (rule conjI, clarsimp simp: silc_inv_def)
     apply (case_tac cap;
            simp add: is_zombie_def aag_cap_auth_CNode aag_cap_auth_Thread aag_cap_auth_Zombie;
-           fastforce dest:caps_of_state_valid silc_inv_not_subject)
+           fastforce dest: caps_of_state_valid silc_inv_not_subject)
     done
   next
   case (3 ptr bits n slot s) show ?case
@@ -1673,7 +1673,7 @@ lemma cdt_change_allowed_not_silc:
   apply (intro notI)
   apply (rule silc_inv_no_transferable', assumption, assumption)
   apply (elim cdt_change_allowedE cdt_direct_change_allowed.cases)
-   apply (clarsimp simp:rtrancl_eq_or_trancl, elim disjE, solves\<open>clarsimp\<close>)
+   apply (clarsimp simp: rtrancl_eq_or_trancl, elim disjE, solves\<open>clarsimp\<close>)
    apply (clarsimp dest!: tranclD2 parent_ofD)
    apply (drule valid_mdb_mdb_cte_at)
    apply (drule(1) mdb_cte_atD[rotated],clarsimp simp: cte_wp_at_caps_of_state)
@@ -1682,7 +1682,7 @@ lemma cdt_change_allowed_not_silc:
   apply (frule(2) descendant_of_caller_slot[OF _ _ tcb_atI])
   apply clarsimp
   apply (frule(1) parent_of_rtrancl_no_descendant)
-  apply (force simp add:is_cap_table obj_at_def)
+  apply (force simp add: is_cap_table obj_at_def)
   done
 
 crunch_ignore (valid) (add: getActiveIRQ)
@@ -2491,11 +2491,11 @@ lemma send_ipc_silc_inv:
   unfolding send_ipc_def
   apply (wp setup_caller_cap_silc_inv hoare_weak_lift_imp do_ipc_transfer_silc_inv gts_wp
         | wpc
-        | simp add:st_tcb_at_tcb_states_of_state_eq
+        | simp add: st_tcb_at_tcb_states_of_state_eq
         | rule conjI impI
         | blast)+
      apply (wp hoare_vcg_all_lift hoare_imp_lift_something get_simple_ko_wp
-           | simp add:st_tcb_at_tcb_states_of_state_eq)+
+           | simp add: st_tcb_at_tcb_states_of_state_eq)+
   apply clarsimp
   subgoal for s receiver t
     apply (frule silc_inv_not_subject)
@@ -2553,7 +2553,7 @@ lemma receive_ipc_base_silc_inv:
    apply (simp add: tcb_states_of_state_def,blast)
   apply (clarsimp simp: get_tcb_Some)
   apply (frule(2) sym_ref_endpoint_sendD[OF invs_sym_refs _ hd_in_set])
-  apply (clarsimp simp:st_tcb_at_tcb_states_of_state dest!:tcb_states_of_state_kheapD)
+  apply (clarsimp simp: st_tcb_at_tcb_states_of_state dest!:tcb_states_of_state_kheapD)
   apply (frule silc_inv_not_subject)
   by (safe;
        (clarsimp simp: cap_rights_to_auth_def)?;
@@ -2723,7 +2723,7 @@ lemma cap_delete_tcb[wp]:
 
 lemma st_tcb_at_triv:
   "st_tcb_at (\<lambda>_. P) t s \<longleftrightarrow> P \<and> tcb_at t s"
-  by (simp add:tcb_at_st_tcb_at st_tcb_at_tcb_states_of_state) blast
+  by (simp add: tcb_at_st_tcb_at st_tcb_at_tcb_states_of_state) blast
 
 lemma cap_insert_no_tcb_at[wp]:
  "cap_insert cap src dest \<lbrace>\<lambda>s. \<not> tcb_at t s\<rbrace>"
@@ -2776,7 +2776,7 @@ lemma perform_invocation_silc_inv:
       | simp add: authorised_invocation_def invs_valid_objs
                   invs_mdb invs_sym_refs
                   split_def
-      | fastforce dest:silc_inv_not_subject)+
+      | fastforce dest: silc_inv_not_subject)+
 
 lemma handle_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag
@@ -2887,7 +2887,7 @@ lemma irq_inactive_or_timer:
   "\<lbrace>domain_sep_inv False st and Q IRQTimer and Q IRQInactive\<rbrace>
    get_irq_state irq
    \<lbrace>Q\<rbrace>"
-  apply (simp add:get_irq_state_def)
+  apply (simp add: get_irq_state_def)
   apply wp
   apply (clarsimp simp add: domain_sep_inv_def)
   apply (drule_tac x=irq in spec)
