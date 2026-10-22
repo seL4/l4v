@@ -424,13 +424,11 @@ where
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
-        vcpu_save_reg vr VCPURegCPACR;
-        do_machine_op isb
+        vcpu_save_reg vr VCPURegCPACR
       od
     | _ \<Rightarrow> return ());
     do_machine_op $ do
         set_gic_vcpu_ctrl_hcr 0; \<comment> \<open>turn VGIC off\<close>
-        isb;
         setSCTLR sctlrDefault; \<comment> \<open>turn SI MMU off\<close>
         setHCR hcrNative;
         setCPACR cpacrDefault;
@@ -527,8 +525,7 @@ where
 
           \<comment> \<open>disabled VCPUs already have CPACR stored\<close>
           when active $ vcpu_save_reg vr VCPURegCPACR;
-          vcpu_save_reg_range vr VCPURegACTLR VCPURegTTBR1high;
-          do_machine_op isb
+          vcpu_save_reg_range vr VCPURegACTLR VCPURegTTBR1high
        od
      | _ \<Rightarrow> fail"
 

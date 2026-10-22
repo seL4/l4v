@@ -65,7 +65,6 @@ This module defines the ARM register set.
 >     | VCPURegNMRR
 >     | VCPURegCIDR
 >     | VCPURegTPIDRPRW
->     | VCPURegFPEXC
 >     | VCPURegLRsvc
 >     | VCPURegSPsvc
 >     | VCPURegLRabt
@@ -98,6 +97,7 @@ This module defines the ARM register set.
 >     | VCPURegCNTVOFFlow
 >     | VCPURegCNTKCTL
 >     | VCPURegCPACR
+>     | VCPURegFPEXC
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > vcpuRegNum :: Int
@@ -112,6 +112,7 @@ This module defines the ARM register set.
 > vcpuRegSavedWhenDisabled VCPURegCNTVOFFlow = True
 > vcpuRegSavedWhenDisabled VCPURegCNTKCTL = True
 > vcpuRegSavedWhenDisabled VCPURegCPACR = True
+> vcpuRegSavedWhenDisabled VCPURegFPEXC = True
 > vcpuRegSavedWhenDisabled _ = False
 
 #endif

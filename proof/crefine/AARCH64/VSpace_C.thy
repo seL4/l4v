@@ -2676,28 +2676,27 @@ lemma vcpu_disable_ccorres:
              apply (ctac (no_vcg) add: vgicUpdate_HCR_ccorres)
             apply ceqv
            apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
-            apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
-             apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc] add: isb_ccorres)
-               apply (wpsimp simp: guard_is_UNIV_def)+
+            apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc]
+                                 add: vcpu_save_reg_ccorres)
+             apply (wpsimp simp: guard_is_UNIV_def)+
          apply (clarsimp split: if_splits simp: seL4_VCPUReg_CPACR_def fromEnum_def enum_vcpureg)
         apply wpsimp
        apply ceqv
       apply (clarsimp simp: doMachineOp_bind bind_assoc)
       apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_hcr_ccorres)
-       apply (ctac (no_vcg) add: isb_ccorres)
+       apply (ctac (no_vcg) add: dsb_ccorres)
         apply (ctac (no_vcg) add: setSCTLR_ccorres)
-         apply (ctac (no_vcg) add: isb_ccorres)
-          apply (ctac (no_vcg) add: setHCR_ccorres)
-           apply (ctac (no_vcg) add: isb_ccorres)
-            apply (ctac (no_vcg) add: enableFpuEL01_ccorres)
-             apply (wpc; ccorres_rewrite)
-              apply (rule ccorres_return_Skip)
-             apply (rename_tac vcpu_ptr)
-             apply (rule_tac P="the v \<noteq> 0" in ccorres_gen_asm)
-             apply ccorres_rewrite
-             apply (ctac (no_vcg) add: save_virt_timer_ccorres)
-              apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-             apply (wpsimp wp: hoare_vcg_all_lift)+
+         apply (ctac (no_vcg) add: setHCR_ccorres)
+          apply (ctac (no_vcg) add: isb_ccorres)
+           apply (ctac (no_vcg) add: enableFpuEL01_ccorres)
+            apply (wpc; ccorres_rewrite)
+             apply (rule ccorres_return_Skip)
+            apply (rename_tac vcpu_ptr)
+            apply (rule_tac P="the v \<noteq> 0" in ccorres_gen_asm)
+            apply ccorres_rewrite
+            apply (ctac (no_vcg) add: save_virt_timer_ccorres)
+             apply (ctac (no_vcg) add: maskInterrupt_ccorres)
+            apply (wpsimp wp: hoare_vcg_all_lift)+
     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def sctlrDefault_def
                           irqVTimerEvent_def IRQ_def)
    apply (wpsimp wp: hoare_vcg_all_lift)+
