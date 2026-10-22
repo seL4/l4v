@@ -166,7 +166,7 @@ crunch
   arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
-  and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
+  and cur_domain[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps)
 
 \<comment> \<open>These aren't proved in the previous crunch, and hence need to be declared\<close>
@@ -227,10 +227,9 @@ lemma arch_perform_invocation_in_cur_domainE[Syscall_AC_assms, wp]:
    -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
   by (wpsimp simp: arch_perform_invocation_def)
 
-end
+end (* Arch *)
 
-
-global_interpretation Syscall_AC_1?: Syscall_AC_1
+global_interpretation Syscall_AC?: Syscall_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

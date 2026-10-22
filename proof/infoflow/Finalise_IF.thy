@@ -8,56 +8,56 @@ theory Finalise_IF
 imports ArchArch_IF ArchIRQMasks_IF
 begin
 
-locale Finalise_IF_1 =
+locale Finalise_IF =
   fixes aag :: "'a subject_label PAS"
   assumes dmo_maskInterrupt_reads_respects:
     "reads_respects aag l \<top> (do_machine_op (maskInterrupt m irq))"
-  and arch_post_cap_deletion_read_respects[wp]:
+  assumes arch_post_cap_deletion_read_respects[wp]:
     "reads_respects aag l \<top> (arch_post_cap_deletion acap)"
-  and equiv_asid_sa_update[simp]:
+  assumes equiv_asid_sa_update[simp]:
     "\<And>f. equiv_asid asid (scheduler_action_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (scheduler_action_update f s') = equiv_asid asid s s'"
-  and equiv_asid_ready_queues_update[simp]:
+  assumes equiv_asid_ready_queues_update[simp]:
     "\<And>f. equiv_asid asid (ready_queues_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (ready_queues_update f s') = equiv_asid asid s s'"
-  and set_thread_state_reads_respects:
+  assumes set_thread_state_reads_respects:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state ref ts)"
-  and set_bound_notification_globals_equiv:
+  assumes set_bound_notification_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace> set_bound_notification ref nopt \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and set_thread_state_runnable_reads_respects:
+  assumes set_thread_state_runnable_reads_respects:
     "\<lbrakk> pas_domains_distinct aag; runnable ts \<rbrakk> \<Longrightarrow> reads_respects aag l \<top> (set_thread_state ref ts)"
-  and set_bound_notification_none_reads_respects:
+  assumes set_bound_notification_none_reads_respects:
     "pas_domains_distinct aag \<Longrightarrow> reads_respects aag l \<top> (set_bound_notification ref None)"
-  and thread_set_reads_respects:
+  assumes thread_set_reads_respects:
     "reads_respects aag l \<top> (thread_set f thread)"
-  and set_tcb_queue_reads_respects[wp]:
+  assumes set_tcb_queue_reads_respects[wp]:
     "reads_respects aag l \<top> (set_tcb_queue d prio queue)"
-  and set_notification_equiv_but_for_labels:
+  assumes set_notification_equiv_but_for_labels:
     "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag ntfnptr \<in> L)\<rbrace>
      set_notification ntfnptr ntfn
      \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  and prepare_thread_delete_reads_respects_f:
+  assumes prepare_thread_delete_reads_respects_f:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and pas_refined aag and valid_arch_state
                                                  and valid_cur_fpu and K (is_subject aag thread))
                                 (prepare_thread_delete thread)"
-  and arch_finalise_cap_reads_respects:
+  assumes arch_finalise_cap_reads_respects:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
                                            and K (pas_cap_cur_auth aag (ArchObjectCap cap)))
                           (arch_finalise_cap cap is_final)"
-  and arch_finalise_cap_makes_halted:
+  assumes arch_finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap (ArchObjectCap acap)
            and (\<lambda>s. ex = is_final_cap' (ArchObjectCap acap) s)
            and cte_wp_at ((=) (ArchObjectCap acap)) slot\<rbrace>
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
-  and set_notification_globals_equiv:
+  assumes set_notification_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
      set_notification ntfnptr ntfn
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_post_cap_deletion_globals_equiv[wp]:
+  assumes arch_post_cap_deletion_globals_equiv[wp]:
     "arch_post_cap_deletion acap \<lbrace>globals_equiv st\<rbrace>"
   (* FIXME IF: precludes X64 *)
   and arch_post_cap_deletion_valid_arch_state[wp]:
@@ -112,12 +112,11 @@ lemma scheduler_action_states_equiv[simp]:
 crunch set_thread_state_act
   for states_equiv[wp]: "states_equiv_for P Q R S st"
 
-end
-
+end (* Finalise_IF *)
 
 lemma requiv_get_tcb_eq':
   "\<lbrakk> reads_equiv aag s t; aag_can_read aag thread \<rbrakk>
-     \<Longrightarrow> get_tcb thread s = get_tcb thread t"
+   \<Longrightarrow> get_tcb thread s = get_tcb thread t"
   by (auto simp: reads_equiv_def2 get_tcb_def
            elim: states_equiv_forE_kheap
           dest!: aag_can_read_self)
@@ -168,7 +167,7 @@ lemma set_bound_notification_owned_reads_respects:
   done
 
 lemma get_thread_state_runnable[wp]:
-   "\<lbrace>st_tcb_at runnable ref\<rbrace> get_thread_state ref \<lbrace>\<lambda>rv _. runnable rv\<rbrace>"
+  "\<lbrace>st_tcb_at runnable ref\<rbrace> get_thread_state ref \<lbrace>\<lambda>rv _. runnable rv\<rbrace>"
   by (wpsimp wp: gts_st_tcb_at)
 
 lemma set_thread_state_act_runnable_reads_respects:
@@ -246,7 +245,7 @@ fun ep_queue_invisible where
 
 lemma obj_eq_st_tcb_at:
   "\<lbrakk> kheap s x = kheap s' x; st_tcb_at P x s' \<rbrakk>
-    \<Longrightarrow> st_tcb_at P x s"
+   \<Longrightarrow> st_tcb_at P x s"
   by (clarsimp simp: st_tcb_at_def obj_at_def)
 
 lemma send_blocked_on_tcb_st_to_auth:
@@ -259,7 +258,7 @@ lemma receive_blocked_on_tcb_st_to_auth:
 
 lemma not_ep_queue_invisible:
   "\<lbrakk> \<not> ep_queue_invisible aag l eplist; eplist = SendEP list \<or> eplist = RecvEP list \<rbrakk>
-     \<Longrightarrow> \<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t"
+   \<Longrightarrow> \<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t"
   by (auto simp: labels_are_invisible_def)
 
 lemma ep_queued_st_tcb_at'':
@@ -267,7 +266,7 @@ lemma ep_queued_st_tcb_at'':
           valid_objs s; sym_refs (state_refs_of s);
           \<And>pl pl'. (rt = EPSend \<and> P (BlockedOnSend ptr pl)) \<or>
                     (rt = EPRecv \<and> P (BlockedOnReceive ptr pl')) \<rbrakk>
-          \<Longrightarrow> st_tcb_at P t s"
+        \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac ep, simp_all)
   apply (frule (1) sym_refs_ko_atD, fastforce simp: st_tcb_at_def obj_at_def refs_of_rev)+
   done
@@ -278,7 +277,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal':
      reads_equiv aag s s'; affects_equiv aag l s s';
      valid_objs s; sym_refs (state_refs_of s); valid_objs s';
      sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> (\<not> ep_queue_invisible aag l ep) \<longrightarrow> ep = ep'"
+   \<Longrightarrow> (\<not> ep_queue_invisible aag l ep) \<longrightarrow> ep = ep'"
   apply (rule impI)
   apply (case_tac "\<exists>list. ep = SendEP list \<or> ep = RecvEP list")
    apply (erule exE)
@@ -342,7 +341,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal:
      reads_equiv aag s s'; affects_equiv aag l s s';
      valid_objs s; sym_refs (state_refs_of s); valid_objs s';
      sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> (\<not> ep_queue_invisible aag l ep \<or> \<not> ep_queue_invisible aag l ep') \<longrightarrow> ep = ep'"
+   \<Longrightarrow> (\<not> ep_queue_invisible aag l ep \<or> \<not> ep_queue_invisible aag l ep') \<longrightarrow> ep = ep'"
   apply (rule impI)
   apply (erule disjE)
    apply (blast intro!: ep_queues_are_invisible_or_eps_are_equal'[rule_format])
@@ -446,7 +445,7 @@ lemma mapM_x_ev2_r_invisible:
     "\<And>P. g \<lbrace>P\<rbrace>"
   shows
     "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (=) \<top>
-                   (K (\<forall>x. x \<in> set list \<longrightarrow>  labels_are_invisible aag l (L x))) g (mapM_x f list)"
+                   (K (\<forall>x. x \<in> set list \<longrightarrow> labels_are_invisible aag l (L x))) g (mapM_x f list)"
   apply (induct list)
    apply (simp add: mapM_x_Nil)
    apply (rule ev2_inv[OF inv])
@@ -540,8 +539,7 @@ lemma thread_get_reads_respects:
   apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
-
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma set_tcb_queue_modifies_at_most:
   "modifies_at_most aag L (\<lambda>s. pasDomainAbs aag d \<inter> L \<noteq> {}) (set_tcb_queue d prio queue)"
@@ -644,8 +642,7 @@ lemma cancel_all_ipc_reads_respects:
       | assumption
       | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag", OF mapM_x_wp])+
 
-end
-
+end (* Finalise_IF *)
 
 fun ntfn_queue_invisible where
   "ntfn_queue_invisible aag l (WaitingNtfn list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))"
@@ -654,7 +651,7 @@ fun ntfn_queue_invisible where
 
 lemma not_ntfn_queue_invisible:
   "\<lbrakk> \<not> ntfn_queue_invisible aag l eplist; eplist = WaitingNtfn list \<rbrakk>
-     \<Longrightarrow> (\<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t)"
+   \<Longrightarrow> (\<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t)"
   by (auto simp: labels_are_invisible_def)
 
 lemma ntfn_queues_are_invisible_or_ntfns_are_equal':
@@ -663,7 +660,7 @@ lemma ntfn_queues_are_invisible_or_ntfns_are_equal':
      reads_equiv aag s s'; affects_equiv aag l s s';
      valid_objs s; sym_refs (state_refs_of s); valid_objs s';
      sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> \<not> ntfn_queue_invisible aag l (ntfn_obj ntfn) \<longrightarrow> ntfn_obj ntfn = ntfn_obj ntfn'"
+   \<Longrightarrow> \<not> ntfn_queue_invisible aag l (ntfn_obj ntfn) \<longrightarrow> ntfn_obj ntfn = ntfn_obj ntfn'"
   apply (rule impI)
   apply (case_tac "\<exists>list. ntfn_obj ntfn = WaitingNtfn list")
    apply (erule exE)
@@ -715,7 +712,7 @@ lemma get_bound_notification_reads_respects:
 
 lemma bound_tcb_at_implies_read:
   "\<lbrakk> pas_refined aag s; is_subject aag t; bound_tcb_at ((=) (Some x)) t s \<rbrakk>
-     \<Longrightarrow> aag_can_read_label aag (pasObjectAbs aag x)"
+   \<Longrightarrow> aag_can_read_label aag (pasObjectAbs aag x)"
   apply (frule bound_tcb_at_implies_receive, simp)
   apply clarsimp
   apply (frule_tac l="pasSubject aag" and auth=Receive in reads_ep, simp)
@@ -725,7 +722,7 @@ lemma bound_tcb_at_implies_read:
 lemma bound_tcb_at_eq:
   "\<lbrakk> sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
      ntfn_bound_tcb ntfn = Some tcbptr; bound_tcb_at ((=) (Some ntfnptr')) tcbptr s \<rbrakk>
-     \<Longrightarrow> ntfnptr = ntfnptr'"
+   \<Longrightarrow> ntfnptr = ntfnptr'"
   apply (drule_tac x=ntfnptr in sym_refsD[rotated])
    apply (fastforce simp: state_refs_of_def)
   apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def
@@ -746,8 +743,7 @@ lemma unbind_notification_is_subj_reads_respects:
   apply (rule bound_tcb_at_implies_read, auto)
   done
 
-
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma cancel_all_signals_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -860,8 +856,7 @@ lemma cap_delete_one_reads_respects_f_transferable:
      apply (wp reads_respects_f[OF get_cap_rev] get_cap_wp | simp | elim conjE)+
   by (fastforce simp: cte_wp_at_caps_of_state silc_inv_def)
 
-end
-
+end (* Finalise_IF *)
 
 lemma get_blocking_object_reads_respects:
   "reads_respects aag l \<top> (get_blocking_object state)"
@@ -880,7 +875,7 @@ fun tcb_st_to_auth' where
 lemma owns_thread_blocked_reads_endpoint:
   "\<lbrakk> pas_refined aag s; invs s; st_tcb_at (\<lambda> y. y = state) tptr s; is_subject aag tptr;
      state = BlockedOnReceive x pl \<or> state = BlockedOnSend x xb \<or> state = BlockedOnNotification x \<rbrakk>
-     \<Longrightarrow> aag_can_read aag x"
+   \<Longrightarrow> aag_can_read aag x"
   apply (rule_tac auth="tcb_st_to_auth' state" in reads_ep)
    apply (drule sym, simp, rule pas_refined_mem)
     apply (rule_tac s=s in sta_ts)
@@ -969,8 +964,7 @@ lemma update_restart_pc_reads_respects[wp]:
   apply (wpsimp wp: as_user_set_register_reads_respects' as_user_get_register_reads_respects)
   done
 
-
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma reply_cancel_ipc_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1082,8 +1076,7 @@ lemma finalise_cap_reads_respects:
   by (wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv
       | simp | elim conjE)+
 
-end
-
+end (* Finalise_IF *)
 
 lemma cap_swap_for_delete_reads_respects:
   "reads_respects aag l (K (is_subject aag (fst slot1) \<and> is_subject aag (fst slot2)))
@@ -1100,7 +1093,7 @@ lemma cap_swap_for_delete_reads_respects:
 lemma owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies:
   "\<lbrakk> pas_refined aag s; is_subject aag (fst slot); cte_wp_at ((=) cap) slot s;
      is_cnode_cap cap \<or> is_thread_cap cap \<or> is_zombie cap \<rbrakk>
-     \<Longrightarrow> is_subject aag (obj_ref_of cap)"
+   \<Longrightarrow> is_subject aag (obj_ref_of cap)"
   apply (frule (1) cap_cur_auth_caps_of_state[rotated])
    apply (simp add: cte_wp_at_caps_of_state)
   apply (clarsimp simp: aag_cap_auth_def)
@@ -1155,8 +1148,7 @@ lemma finalise_cap_only_timer_irq_inv:
   apply (wp only_timer_irq_pres | force)+
   done
 
-
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma rec_del_spec_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1202,7 +1194,7 @@ next
             apply (wp drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f[where st=st]
                       set_cap_silc_inv[where st=st] | simp)+
            apply (wp replace_cap_invs set_cap_cte_wp_at set_cap_sets final_cap_same_objrefs
-                     set_cap_cte_cap_wp_to  hoare_vcg_const_Ball_lift hoare_weak_lift_imp
+                     set_cap_cte_cap_wp_to hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                      drop_spec_ev[OF liftE_ev] finalise_cap_reads_respects set_cap_silc_inv
                      set_cap_only_timer_irq_inv set_cap_pas_refined_not_transferable
                   | simp add: cte_wp_at_eq_simp
@@ -1226,7 +1218,7 @@ next
                                                        | _ \<Rightarrow> True)
                          \<and> (is_zombie (fst fin) \<or> fst fin = NullCap)
                          \<and> (is_zombie (fst fin) \<or> fst fin = NullCap)" in hoare_vcg_conj_lift)
-           apply (wp finalise_cap_replaceable Finalise_AC_1.finalise_cap_makes_halted
+           apply (wp finalise_cap_replaceable Finalise_AC.finalise_cap_makes_halted
                      finalise_cap_invs finalise_cap_auth' finalise_cap_ret_is_subject finalise_cap_ret'
                      finalise_cap_silc_inv finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
           apply (rule finalise_cap_cases[where slot=slot])
@@ -1325,8 +1317,7 @@ qed
 
 lemmas rec_del_reads_respects_f = use_spec_ev[OF rec_del_spec_reads_respects_f]
 
-end
-
+end (* Finalise_IF *)
 
 (* FIXME MOVE in lib *)
 lemma ev_pre_cont:
@@ -1361,8 +1352,7 @@ lemma rec_del_Finalise_transferableE_R:
      apply (rule rec_del_Finalise_transferable)
   by force+
 
-
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma rec_del_CTEDeleteCall_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1398,8 +1388,7 @@ lemma cap_delete_reads_respects:
   unfolding cap_delete_def
   by (wp rec_del_spec_reads_respects_f | rule use_spec_ev | simp | elim conjE | force)+
 
-end
-
+end (* Finalise_IF *)
 
 lemma globals_equiv_interrupt_states_update:
   "globals_equiv st (s\<lparr>interrupt_states := x\<rparr>) = globals_equiv st s"
@@ -1435,8 +1424,7 @@ lemma cancel_all_signals_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (fastforce intro: hoare_strengthen_post[OF cancel_all_signals_globals_equiv'])
 
-
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma unbind_notification_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
@@ -1518,6 +1506,6 @@ lemma finalise_cap_globals_equiv:
          unbind_notification_invs unbind_notification_globals_equiv liftM_wp when_def
       | clarsimp simp: valid_cap_def | intro impI conjI)+
 
-end
+end (* Finalise_IF *)
 
 end

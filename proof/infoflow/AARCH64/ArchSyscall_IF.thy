@@ -91,7 +91,7 @@ lemma vgic_update_valid_arch_state[wp]:
 
 crunch vcpu_update
   for valid_global_objs[wp]: valid_global_objs
-  (wp: crunch_wps  simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma vppi_event_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and invs\<rbrace> vppi_event irq \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -135,7 +135,7 @@ lemmas is_subject_cur_vcpu_def = is_subject_cur_vcpu_2_def
 lemma active_vcpu_is_subject:
   "\<lbrakk> pas_refined aag s; is_subject aag (cur_thread s);
      valid_cur_vcpu s; schact_is_rct s; ct_in_cur_domain s \<rbrakk>
-     \<Longrightarrow> is_subject_cur_vcpu aag s"
+   \<Longrightarrow> is_subject_cur_vcpu aag s"
   apply (prop_tac "arch_tcb_at (\<lambda>itcb. itcb_vcpu itcb = active_cur_vcpu_of s) (cur_thread s) s")
    apply (clarsimp simp: valid_cur_vcpu_def schact_is_rct_def)
    apply (case_tac "cur_thread s = idle_thread s")
@@ -365,10 +365,9 @@ crunch arch_prepare_set_domain
   for valid_arch_state[Syscall_IF_assms,wp]: valid_arch_state
   (wp: hoare_drop_imps)
 
-end
+end (* Arch *)
 
-
-global_interpretation Syscall_IF_1?: Syscall_IF_1
+global_interpretation Syscall_IF?: Syscall_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

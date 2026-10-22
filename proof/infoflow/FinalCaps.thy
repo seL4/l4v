@@ -83,7 +83,7 @@ text\<open>This is an invariant that ensures that the info leak due to is_final_
 definition silc_inv :: "'a subject_label PAS \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool" where
   "silc_inv aag st s \<equiv>
      (SilcLabel \<noteq> pasSubject aag) \<and>
-     (\<forall>x. pasObjectAbs aag x = SilcLabel \<longrightarrow>  (\<exists>sz. cap_table_at sz x s)) \<and>
+     (\<forall>x. pasObjectAbs aag x = SilcLabel \<longrightarrow> (\<exists>sz. cap_table_at sz x s)) \<and>
      (\<forall>y auth. (y, auth, SilcLabel) \<in> pasPolicy aag \<longrightarrow> y = SilcLabel) \<and>
      (\<forall>slot cap. cte_wp_at ((=) cap) slot s \<and>
                  \<not> intra_label_cap aag slot s
@@ -104,10 +104,9 @@ context strengthen_implementation begin
 
 lemma strengthen_cte_wp_at[strg]:
   "(\<And>x. st F (\<longrightarrow>) (P x) (Q x)) \<Longrightarrow> st F (\<longrightarrow>) (cte_wp_at P slot s) (cte_wp_at Q slot s)"
-  by (cases F, auto elim:cte_wp_at_weakenE)
+  by (cases F, auto elim: cte_wp_at_weakenE)
 
-end
-
+end (* strengthen_implementation *)
 
 lemma slots_holding_overlapping_caps_def':
   "slots_holding_overlapping_caps cap s =
@@ -135,7 +134,7 @@ lemma silc_inv_silc_dom_equiv:
 
 lemma silc_inv_cnode_only:
   "\<lbrakk> silc_inv aag st s; pasObjectAbs aag x = SilcLabel \<rbrakk>
-     \<Longrightarrow> \<exists>sz. cap_table_at sz x s"
+   \<Longrightarrow> \<exists>sz. cap_table_at sz x s"
   unfolding silc_inv_def by force
 
 lemma silc_inv_cnode_onlyE:
@@ -145,16 +144,16 @@ lemma silc_inv_cnode_onlyE:
   using si posl silc_inv_cnode_only by blast
 
 lemma silc_inv_no_transferable:
-  "\<lbrakk> silc_inv aag st s;  pasObjectAbs aag (fst slot) = SilcLabel;
+  "\<lbrakk> silc_inv aag st s; pasObjectAbs aag (fst slot) = SilcLabel;
      cte_wp_at (\<lambda>cap. cap \<noteq> NullCap \<and> is_transferable_cap cap) slot st \<rbrakk>
-     \<Longrightarrow> False"
+   \<Longrightarrow> False"
   unfolding silc_inv_def by (force simp del: split_paired_All)
 
 lemmas silc_inv_no_transferableD = silc_inv_no_transferable[where slot="(a,b)" for a b,simplified]
 
 lemma cte_wp_at_pspace_specI:
   "\<lbrakk> cte_wp_at P slot s; kheap s (fst slot) = kheap s' (fst slot) \<rbrakk>
-     \<Longrightarrow> cte_wp_at P slot s'"
+   \<Longrightarrow> cte_wp_at P slot s'"
   by (simp add: cte_wp_at_cases)
 
 lemma silc_inv_no_transferable':
@@ -162,7 +161,7 @@ lemma silc_inv_no_transferable':
    cte_wp_at (\<lambda>cap. cap \<noteq> NullCap \<and> is_transferable_cap cap) slot s \<Longrightarrow> False"
   apply (frule (1) silc_inv_no_transferable)
    apply (drule silc_inv_silc_dom_equiv)
-   apply (simp add:silc_dom_equiv_def)
+   apply (simp add: silc_dom_equiv_def)
    apply (drule (1) equiv_forD)
    apply (elim cte_wp_at_pspace_specI)
   by simp+
@@ -178,8 +177,8 @@ lemma get_cap_cte_wp_at':
 
 lemma silc_invD:
   "\<lbrakk> silc_inv aag st s; cte_wp_at ((=) cap) slot s; \<not> intra_label_cap aag slot s \<rbrakk>
-     \<Longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps cap s \<and>
-                 pasObjectAbs aag (fst lslot) = SilcLabel)"
+   \<Longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps cap s \<and>
+                pasObjectAbs aag (fst lslot) = SilcLabel)"
   apply (clarsimp simp: silc_inv_def)
   apply (drule_tac x="fst slot" in spec, drule_tac x="snd slot" in spec, fastforce)
   done
@@ -208,7 +207,7 @@ lemma silc_inv:
 
 lemma silc_inv_finalD:
   "\<lbrakk> silc_inv aag st s; cte_wp_at ((=) cap) slot s; is_final_cap' cap s \<rbrakk>
-     \<Longrightarrow> intra_label_cap aag slot s \<or> (pasObjectAbs aag (fst slot) = SilcLabel)"
+   \<Longrightarrow> intra_label_cap aag slot s \<or> (pasObjectAbs aag (fst slot) = SilcLabel)"
   apply clarsimp
   apply (erule contrapos_np)
   apply (drule (2) silc_invD)
@@ -240,7 +239,7 @@ lemma caps_of_state_pspace':
 
 lemma caps_of_state_intra_label_cap:
   "\<lbrakk> caps_of_state s slot = Some cap; caps_of_state t slot = Some cap; intra_label_cap aag slot s\<rbrakk>
-     \<Longrightarrow> intra_label_cap aag slot t"
+   \<Longrightarrow> intra_label_cap aag slot t"
   by (fastforce simp: intra_label_cap_def cte_wp_at_caps_of_state)
 
 lemma not_is_final_cap_caps_of_stateE:
@@ -270,7 +269,7 @@ lemma caps_ref_single_irqs:
 lemma not_is_final_cap[rotated -1]:
   "\<lbrakk> caps_of_state s slot = Some cap; caps_of_state s slot' = Some cap';
      gen_obj_refs cap \<inter> gen_obj_refs cap' \<noteq> {}; slot' \<noteq> slot \<rbrakk>
-     \<Longrightarrow> \<not> is_final_cap' cap s"
+   \<Longrightarrow> \<not> is_final_cap' cap s"
   apply (rule ccontr)
   apply (clarsimp simp: is_final_cap'_def get_cap_cte_wp_at' cte_wp_at_caps_of_state)
   apply (erule_tac B="{(a,b)}" in equalityE)
@@ -289,17 +288,17 @@ where
 
 lemma intra_label_capD:
   "\<lbrakk> intra_label_cap aag slot s; cte_wp_at ((=) cap) slot s \<rbrakk>
-     \<Longrightarrow> cap_points_to_label aag cap (pasObjectAbs aag (fst slot))"
+   \<Longrightarrow> cap_points_to_label aag cap (pasObjectAbs aag (fst slot))"
   by (auto simp: intra_label_cap_def)
 
 lemma intra_label_capD':
   "\<lbrakk> intra_label_cap aag slot s; caps_of_state s slot = Some cap \<rbrakk>
-     \<Longrightarrow> cap_points_to_label aag cap (pasObjectAbs aag (fst slot))"
+   \<Longrightarrow> cap_points_to_label aag cap (pasObjectAbs aag (fst slot))"
   by (auto simp: intra_label_cap_def cte_wp_at_caps_of_state)
 
 lemma is_subject_kheap_eq:
   "\<lbrakk> reads_equiv aag s t; is_subject aag ptr \<rbrakk>
-     \<Longrightarrow> kheap s ptr = kheap t ptr"
+   \<Longrightarrow> kheap s ptr = kheap t ptr"
   apply (clarsimp simp: reads_equiv_def2)
   apply (erule states_equiv_forE_kheap)
   apply (blast intro: aag_can_read_self)
@@ -307,57 +306,56 @@ lemma is_subject_kheap_eq:
 
 lemma aag_can_read_kheap_eq:
   "\<lbrakk> reads_equiv aag s t; aag_can_read aag ptr \<rbrakk>
-     \<Longrightarrow> kheap s ptr = kheap t ptr"
+   \<Longrightarrow> kheap s ptr = kheap t ptr"
   apply (clarsimp simp: reads_equiv_def2)
   apply (erule states_equiv_forE_kheap)
   apply blast
   done
 
 lemma caps_ref_either_an_object_or_irq':
-   "ref \<in> cap_irqs cap' \<Longrightarrow>
-    (obj_refs cap' = {} \<and> arch_gen_refs cap' = {})"
+  "ref \<in> cap_irqs cap'
+   \<Longrightarrow> (obj_refs cap' = {} \<and> arch_gen_refs cap' = {})"
   apply (case_tac cap', simp_all)
   done
 
-
-locale FinalCaps_1 =
+locale FinalCaps =
   fixes aag :: "'a subject_label PAS"
   (* FIXME IF: precludes X64 *)
   assumes FIXME_arch_gen_refs:
     "arch_gen_refs cap = {}"
-  and aobj_ref_same_aobject:
+  assumes aobj_ref_same_aobject:
     "same_aobject_as cp cp' \<Longrightarrow> aobj_ref cp = aobj_ref cp'"
-  and arch_invoke_irq_handler_silc_inv[wp]:
+  assumes arch_invoke_irq_handler_silc_inv[wp]:
     "arch_invoke_irq_handler hi \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_post_cap_deletion_silc_inv[wp]:
+  assumes arch_post_cap_deletion_silc_inv[wp]:
     "arch_post_cap_deletion acap \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_finalise_cap_silc_inv[wp]:
+  assumes arch_finalise_cap_silc_inv[wp]:
     "arch_finalise_cap c x \<lbrace>silc_inv aag st\<rbrace>"
-  and prepare_thread_delete_silc_inv[wp]:
+  assumes prepare_thread_delete_silc_inv[wp]:
     "prepare_thread_delete p \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_vm_fault_silc_inv[wp]:
+  assumes handle_vm_fault_silc_inv[wp]:
     "handle_vm_fault t vmft \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_mask_irq_signal_silc_inv[wp]:
+  assumes arch_mask_irq_signal_silc_inv[wp]:
     "arch_mask_irq_signal irq \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_vm_fault_cur_thread[wp]:
+  assumes handle_vm_fault_cur_thread[wp]:
     "\<And>P. handle_vm_fault t vmft \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and arch_activate_idle_threadt_silc_inv[wp]:
+  assumes arch_activate_idle_threadt_silc_inv[wp]:
     "arch_activate_idle_thread t \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_switch_to_idle_thread_silc_inv[wp]:
+  assumes arch_switch_to_idle_thread_silc_inv[wp]:
     "arch_switch_to_idle_thread \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_switch_to_thread_silc_inv[wp]:
+  assumes arch_switch_to_thread_silc_inv[wp]:
     "arch_switch_to_thread t \<lbrace>silc_inv aag st\<rbrace>"
-  and init_arch_objects_silc_inv[wp]:
+  assumes init_arch_objects_silc_inv[wp]:
     "init_arch_objects typ dev ptr num sz refs \<lbrace>silc_inv aag st\<rbrace>"
-  and init_arch_objects_cte_wp_at[wp]:
+  assumes init_arch_objects_cte_wp_at[wp]:
     "\<And>P. init_arch_objects typ dev ptr num sz refs \<lbrace>\<lambda>s :: det_state. P (cte_wp_at P' slot s)\<rbrace>"
-  and finalise_cap_makes_halted:
+  assumes finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s) and cte_wp_at ((=) cap) slot\<rbrace>
      finalise_cap cap ex
      \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
-  and arch_post_modify_registers_silc_inv[wp]:
+  assumes arch_post_modify_registers_silc_inv[wp]:
     "arch_post_modify_registers cur t \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_derive_cap_silc:
+  assumes arch_derive_cap_silc:
     "\<lbrace>\<lambda>s :: det_state. cap = ArchObjectCap acap \<and>
                        (\<not> cap_points_to_label aag cap l \<longrightarrow> R (slots_holding_overlapping_caps cap s))\<rbrace>
      arch_derive_cap acap
@@ -370,15 +368,15 @@ lemma cap_points_to_label_def':
   by (simp add: gen_obj_refs_def ball_Un FIXME_arch_gen_refs)
 
 lemma caps_ref_either_an_object_or_irq:
-   "ref \<in> obj_refs cap'
-    \<Longrightarrow> cap_irqs cap' = {} \<and> arch_gen_refs cap' = {}"
+  "ref \<in> obj_refs cap'
+   \<Longrightarrow> cap_irqs cap' = {} \<and> arch_gen_refs cap' = {}"
   apply (clarsimp simp: FIXME_arch_gen_refs)
   apply (case_tac cap'; clarsimp)
   done
 
 lemma caps_ref_either_an_object_or_irq'':
-   "ref \<in> arch_gen_refs cap'
-    \<Longrightarrow> obj_refs cap' = {} \<and> cap_irqs cap' = {}"
+  "ref \<in> arch_gen_refs cap'
+   \<Longrightarrow> obj_refs cap' = {} \<and> cap_irqs cap' = {}"
   apply (clarsimp simp: FIXME_arch_gen_refs)
   done
 
@@ -389,12 +387,12 @@ lemma arch_gen_refs_no_intersection[simp]:
 lemma is_final_cap'_read_equiv_imp:
   "\<lbrakk> silc_inv aag st s; cte_wp_at ((=) cap) slot s; silc_inv aag st t; cte_wp_at ((=) cap) slot t;
      aag_can_read_not_silc aag (fst slot); reads_equiv aag s t; is_final_cap' cap s \<rbrakk>
-     \<Longrightarrow> is_final_cap' cap t"
+   \<Longrightarrow> is_final_cap' cap t"
   unfolding F[symmetric]
   subgoal premises prems
   proof (rule ccontr)
     assume not_final: "\<not> is_final_cap' cap t"
-    from prems have ilcs : "intra_label_cap aag slot s"
+    from prems have ilcs: "intra_label_cap aag slot s"
       by (fastforce elim: silc_inv_finalE[OF _ caps_of_state_cteD, where s = s])
     hence ilct: "intra_label_cap aag slot t"
       using prems caps_of_state_intra_label_cap by blast
@@ -423,7 +421,7 @@ lemma is_final_cap'_read_equiv_imp:
     next
       case False note cant_read = this
       (* slot is in subjectRead, slot' isn't. However they hold overlaping caps. Thus: *)
-      hence not_intra : "\<not> intra_label_cap aag slot' t"
+      hence not_intra: "\<not> intra_label_cap aag slot' t"
         using prems ilct by (fastforce simp: cap_points_to_label_def' dest!: intra_label_capD')
       (* Then, accroding to silc_inv, there is a third cap in SilcLabel overlapping cap and cap'*)
       then obtain lslot where "lslot \<in> slots_holding_overlapping_caps cap' t"
@@ -445,7 +443,7 @@ lemma is_final_cap'_read_equiv_imp:
         apply (drule gen_obj_refs_distinct_or_equal)+
         apply simp
         apply (erule(1) not_is_final_cap[where slot' = lslot, THEN notE,rotated])
-          apply (blast dest:is_final_then_nonempty_refs)
+          apply (blast dest: is_final_then_nonempty_refs)
          apply assumption
         apply force
         done
@@ -456,7 +454,7 @@ lemma is_final_cap'_read_equiv_imp:
 lemma is_final_cap'_read_equiv_eq:
   "\<lbrakk> silc_inv aag st s; cte_wp_at ((=) cap) slot s; silc_inv aag st t;
      cte_wp_at ((=) cap) slot t; aag_can_read_not_silc aag (fst slot); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> is_final_cap' cap s = is_final_cap' cap t"
+   \<Longrightarrow> is_final_cap' cap s = is_final_cap' cap t"
   apply (rule iffI)
   subgoal by (rule is_final_cap'_read_equiv_imp)
   apply (drule reads_equiv_sym)
@@ -471,8 +469,7 @@ lemma is_final_cap_reads_respects:
   by (clarsimp simp: equiv_valid_def2 equiv_valid_2_def in_monad
                      reads_equiv_f_def is_final_cap'_read_equiv_eq)
 
-end
-
+end (* FinalCaps *)
 
 definition ctes_wp_at
 where
@@ -634,7 +631,7 @@ lemma silc_inv_triv:
 
 lemma set_cap_well_formed_cnode_helper:
   "\<lbrakk> well_formed_cnode_n x xa; xa (snd slot) = Some y \<rbrakk>
-     \<Longrightarrow> well_formed_cnode_n x (\<lambda>a. if a = snd slot then Some cap else xa a)"
+   \<Longrightarrow> well_formed_cnode_n x (\<lambda>a. if a = snd slot then Some cap else xa a)"
   apply (simp add: well_formed_cnode_n_def)
   apply (rule equalityI)
    apply (drule equalityD1)
@@ -646,9 +643,9 @@ lemma set_cap_well_formed_cnode_helper:
 lemma set_cap_slots_holding_overlapping_caps_helper:
   "\<lbrakk> x \<in> slots_holding_overlapping_caps cap s; fst x \<noteq> fst slot;
      obj_refs cap = {} \<longrightarrow> cap_irqs cap \<noteq> {};
-     ko_at (TCB tcb) (fst slot) s; tcb_cap_cases (snd slot) = Some (getF, setF, blah) \<rbrakk>
-     \<Longrightarrow> x \<in> slots_holding_overlapping_caps cap
-               (s\<lparr>kheap := (kheap s)(fst slot \<mapsto> TCB (setF (\<lambda>x. capa) tcb))\<rparr>)"
+     ko_at (TCB tcb) (fst slot) s; tcb_cap_cases (snd slot) = Some (getF, setF, restr) \<rbrakk>
+   \<Longrightarrow> x \<in> slots_holding_overlapping_caps cap
+             (s\<lparr>kheap := (kheap s)(fst slot \<mapsto> TCB (setF (\<lambda>x. capa) tcb))\<rparr>)"
   apply (clarsimp simp: slots_holding_overlapping_caps_def)
   apply (rule_tac x=cap' in exI)
   apply (clarsimp simp: get_cap_cte_wp_at')
@@ -754,7 +751,7 @@ lemma slots_holding_overlapping_caps_hold_caps:
 
 crunch set_original
   for silc_inv[wp]: "silc_inv aag st"
-  (wp: silc_inv_triv wp_del:set_original_wp)
+  (wp: silc_inv_triv wp_del: set_original_wp)
 
 lemma nonempty_refs:
   "\<not> cap_points_to_label aag cap l \<Longrightarrow> obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}"
@@ -788,7 +785,7 @@ lemma cap_irqs_max_free_index_update[simp]:
   done
 
 lemma cap_points_to_label_max_free_index_update[simp]:
-  "cap_points_to_label aag (max_free_index_update cap) l =  cap_points_to_label aag cap l"
+  "cap_points_to_label aag (max_free_index_update cap) l = cap_points_to_label aag cap l"
   apply (simp add: cap_points_to_label_def)
   done
 
@@ -813,8 +810,8 @@ lemma is_derived_overlaps':
   "\<lbrakk> is_derived (cdt s) slot cap cap';
      (obj_refs cap' \<noteq> {} \<or> cap_irqs cap' \<noteq> {}) \<or>
      (obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}) \<rbrakk>
-     \<Longrightarrow> obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<or>
-         cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}"
+   \<Longrightarrow> obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<or>
+       cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}"
   apply (simp add: is_derived_def)
   apply (case_tac cap', simp_all add: cap_master_cap_def split: cap.splits)
   apply (fastforce dest: master_arch_cap_obj_refs)
@@ -823,7 +820,7 @@ lemma is_derived_overlaps':
 lemma is_derived_overlaps:
   "\<lbrakk> cte_wp_at (is_derived (cdt s) slot cap) slot s;
      obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
-     \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
+   \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (drule cte_wp_at_norm)
   apply (erule exE, rename_tac cap')
@@ -835,7 +832,7 @@ lemma is_derived_overlaps2:
   "\<lbrakk> cte_wp_at ((=) cap') slot s;
      is_derived (cdt s) slot cap cap';
      obj_refs cap' \<noteq> {} \<or> cap_irqs cap' \<noteq> {} \<rbrakk>
-     \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap' s"
+   \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap' s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (blast dest: cte_wp_at_norm is_derived_overlaps')
   done
@@ -843,13 +840,12 @@ lemma is_derived_overlaps2:
 lemma disj_dup: "A \<and> B \<and> C \<and> C'\<Longrightarrow> A \<and> B \<and> C \<and> A \<and> B \<and> C'"
   by simp
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma weak_derived_overlaps':
   "\<lbrakk> weak_derived cap cap'; obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
-     \<Longrightarrow> obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<or>
-         cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}"
+   \<Longrightarrow> obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<or>
+       cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}"
   apply (simp add: weak_derived_def)
   apply (erule disjE)
    prefer 2
@@ -862,7 +858,7 @@ lemma weak_derived_overlaps':
 lemma weak_derived_overlaps:
   "\<lbrakk> cte_wp_at (weak_derived cap) slot s;
      obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
-     \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
+   \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (drule cte_wp_at_norm)
   apply (erule exE, rename_tac cap')
@@ -873,7 +869,7 @@ lemma weak_derived_overlaps:
 lemma not_cap_points_to_label_transfers_across_overlapping_caps:
   "\<lbrakk> \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst slot));
      slot \<in> slots_holding_overlapping_caps cap s \<rbrakk>
-     \<Longrightarrow> \<not> intra_label_cap aag slot s"
+   \<Longrightarrow> \<not> intra_label_cap aag slot s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (elim exE conjE, rename_tac cap')
   apply (simp add: intra_label_cap_def)
@@ -886,7 +882,7 @@ lemma overlapping_transfers_across_overlapping_caps:
   "\<lbrakk> slot \<in> slots_holding_overlapping_caps cap s;
      cte_wp_at ((=) cap') slot s;
      lslot \<in> slots_holding_overlapping_caps cap' s \<rbrakk>
-     \<Longrightarrow> lslot \<in> slots_holding_overlapping_caps cap s"
+   \<Longrightarrow> lslot \<in> slots_holding_overlapping_caps cap s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (elim exE conjE)
   apply (drule (1) cte_wp_at_eqD2)+
@@ -899,8 +895,8 @@ lemma overlapping_transfers_across_overlapping_caps:
 lemma overlapping_slots_have_labelled_overlapping_caps:
   "\<lbrakk> slot \<in> slots_holding_overlapping_caps cap s; silc_inv aag st s;
      \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst slot)) \<rbrakk>
-     \<Longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps cap s \<and>
-                  pasObjectAbs aag (fst lslot) = SilcLabel)"
+   \<Longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps cap s \<and>
+                pasObjectAbs aag (fst lslot) = SilcLabel)"
   apply (drule not_cap_points_to_label_transfers_across_overlapping_caps)
    apply assumption
   apply (frule slots_holding_overlapping_caps_hold_caps)
@@ -923,7 +919,7 @@ lemma cap_swap_silc_inv:
   apply (rule hoare_pre)
   apply (wp set_cap_silc_inv hoare_vcg_ex_lift hoare_weak_lift_imp
             set_cap_slots_holding_overlapping_caps_other[where aag=aag] set_cdt_silc_inv
-        | simp  split del: if_split)+
+        | simp split del: if_split)+
   apply (rule conjI)
    apply (rule impI, elim conjE)
    apply (drule weak_derived_overlaps)
@@ -1018,8 +1014,7 @@ lemma cap_insert_silc_inv:
   apply (fastforce simp: all_children_def simp del: split_paired_All)+
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma cte_wp_at_eq:
   assumes a: "\<And>cap. \<lbrace>cte_wp_at ((=) cap) slot\<rbrace> f \<lbrace>\<lambda>_. cte_wp_at ((=) cap) slot\<rbrace>"
@@ -1125,7 +1120,7 @@ lemma slots_holding_overlapping_caps_lift:
 
 crunch set_original
   for cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at P slot s)"
-  (wp_del:set_original_wp)
+  (wp_del: set_original_wp)
 
 lemma slots_holding_overlapping_caps_exst_update[simp]:
   "slots_holding_overlapping_caps cap (trans_state f s) =
@@ -1163,7 +1158,7 @@ lemma thread_set_silc_inv:
 
 lemma thread_set_tcb_fault_update_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
-   thread_set (tcb_fault_update blah) t
+   thread_set (tcb_fault_update f) t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
@@ -1178,8 +1173,7 @@ lemma reply_masters_mdbE:
 crunch cancel_signal
   for silc_inv[wp]: "silc_inv aag st"
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma empty_slot_silc_inv:
   "\<lbrace>silc_inv aag st and K (pasObjectAbs aag (fst slot) \<noteq> SilcLabel)\<rbrace>
@@ -1222,14 +1216,14 @@ lemma reply_cancel_ipc_silc_inv:
   apply clarsimp
   apply (rename_tac b a)
   apply (frule(1) descendants_of_owned_or_transferable, force, force, elim disjE)
-   apply (clarsimp simp add:silc_inv_def)
+   apply (clarsimp simp add: silc_inv_def)
   apply (case_tac "cdt s (a,b)")
    apply (fastforce dest: descendants_of_NoneD)
   apply (elim is_transferable.cases)
-    apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp:  cte_wp_at_caps_of_state)
-   apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp:  cte_wp_at_caps_of_state)
+    apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp: cte_wp_at_caps_of_state)
+   apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp: cte_wp_at_caps_of_state)
   apply (erule(1) silc_inv_no_transferableD')
-  apply (force simp add:cte_wp_at_caps_of_state)
+  apply (force simp add: cte_wp_at_caps_of_state)
   done
 
 lemma cancel_ipc_silc_inv:
@@ -1244,8 +1238,7 @@ lemma cancel_ipc_silc_inv:
   apply auto
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma cancel_ipc_indirect_silc_inv:
   "\<lbrace>silc_inv aag st and st_tcb_at receive_blocked t\<rbrace>
@@ -1308,21 +1301,21 @@ lemma validE_validE_R':
 
 lemma finalise_cap_ret_subset_cap_irqs:
   "\<lbrace>\<lambda>s. (cap_irqs cap) = X\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rv s :: det_state. (cap_irqs (fst rv)) \<subseteq> X\<rbrace>"
   apply (cases cap)
   by (wp arch_finalise_cap_rv | simp add: o_def split del: if_split | simp split: if_split)+
 
 lemma finalise_cap_ret_subset_obj_refs:
   "\<lbrace>\<lambda>s. obj_refs cap = X\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rv s :: det_state. (obj_refs (fst rv)) \<subseteq> X\<rbrace>"
   apply (cases cap)
   by (wp arch_finalise_cap_rv | simp add: o_def split del: if_split | simp split: if_split)+
 
 lemma finalise_cap_ret_intra_label_cap:
   "\<lbrace>\<lambda>s. cap_points_to_label aag cap l\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rv s :: det_state. cap_points_to_label aag (fst rv) l\<rbrace>"
   apply (clarsimp simp: cap_points_to_label_def valid_def)
   apply (rule conjI)
@@ -1339,7 +1332,7 @@ lemma silc_inv_preserves_silc_dom_caps:
   "\<lbrakk> silc_inv aag st s; silc_inv aag st s';
      pasObjectAbs aag (fst lslot) = SilcLabel;
      lslot \<in> FinalCaps.slots_holding_overlapping_caps cap s \<rbrakk>
-     \<Longrightarrow> lslot \<in> FinalCaps.slots_holding_overlapping_caps cap s'"
+   \<Longrightarrow> lslot \<in> FinalCaps.slots_holding_overlapping_caps cap s'"
   apply (clarsimp simp: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (rule_tac x=cap' in exI)
   apply simp
@@ -1348,8 +1341,7 @@ lemma silc_inv_preserves_silc_dom_caps:
   apply assumption
   done
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma finalise_cap_silc_inv:
   "\<lbrace>silc_inv aag st and valid_mdb and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
@@ -1370,7 +1362,7 @@ lemma finalise_cap_silc_inv:
 lemma finalise_cap_ret_is_silc:
   "\<lbrace>silc_inv aag st and valid_mdb
                     and cte_wp_at ((=) cap) slot and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
-   finalise_cap cap blah
+   finalise_cap cap final
    \<lbrace>\<lambda>rvb s. \<not> cap_points_to_label aag (fst rvb) (pasObjectAbs aag (fst slot))
             \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps (fst rvb) s \<and>
                          pasObjectAbs aag (fst lslot) = SilcLabel)\<rbrace>"
@@ -1426,8 +1418,7 @@ lemma finalise_cap_ret_is_silc:
                          use_valid[OF _ finalise_cap_ret_subset_obj_refs])
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma arch_finalise_cap_ret:
   "(rv, s') \<in> fst (arch_finalise_cap arch_cap final (s :: det_state)) \<Longrightarrow> rv = (NullCap, NullCap)"
@@ -1530,8 +1521,7 @@ lemma silc_inv_irq_state_independent_A[simp, intro!]:
   "irq_state_independent_A (silc_inv aag st)"
   by (simp add: silc_inv_def irq_state_independent_A_def silc_dom_equiv_def equiv_for_def)
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 crunch cap_swap_for_delete
   for silc_inv: "silc_inv aag st"
@@ -1576,7 +1566,7 @@ lemma rec_del_silc_inv':
           apply (wp rec_del_ReduceZombie_emptyable preemption_point_inv' rec_del_invs
                     valid_validE_R[OF rec_del_respects(2)[simplified]] "2.hyps"
                     drop_spec_validE[OF liftE_wp] set_cap_silc_inv
-                    set_cap_pas_refined replace_cap_invs  final_cap_same_objrefs set_cap_cte_cap_wp_to
+                    set_cap_pas_refined replace_cap_invs final_cap_same_objrefs set_cap_cte_cap_wp_to
                     set_cap_cte_wp_at hoare_weak_lift_imp hoare_vcg_ball_lift
                  | simp add: finalise_cap_not_reply_master_unlifted split del: if_split)+
        (* where the action is *)
@@ -1602,7 +1592,7 @@ lemma rec_del_silc_inv':
                      in hoare_vcg_conj_lift[OF _ finalise_cap_cases[where slot=slot]])
         prefer 2
         subgoal for cap s'' isfinal s' fin s0
-          apply (clarsimp simp: cte_wp_at_caps_of_state simp del:split_paired_Ex split_paired_All)
+          apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_Ex split_paired_All)
           apply (elim disjE; clarsimp simp: cte_wp_at_caps_of_state)
           apply (clarsimp simp: is_cap_simps gen_obj_refs_eq replaceable_zombie_not_transferable
                                 cap_auth_conferred_def clas_no_asid aag_cap_auth_def
@@ -1626,7 +1616,7 @@ lemma rec_del_silc_inv':
     apply (rule conjI, clarsimp simp: silc_inv_def)
     apply (case_tac cap;
            simp add: is_zombie_def aag_cap_auth_CNode aag_cap_auth_Thread aag_cap_auth_Zombie;
-           fastforce dest:caps_of_state_valid silc_inv_not_subject)
+           fastforce dest: caps_of_state_valid silc_inv_not_subject)
     done
   next
   case (3 ptr bits n slot s) show ?case
@@ -1671,12 +1661,11 @@ schematic_goal rec_del_silc_inv_not_transferable:
   apply (rule rec_del_silc_inv')
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma cdt_change_allowed_not_silc:
   "\<lbrakk> valid_objs s; valid_mdb s; pas_refined aag s; silc_inv aag st s; cdt_change_allowed' aag ptr s \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag (fst ptr) \<noteq> SilcLabel"
+   \<Longrightarrow> pasObjectAbs aag (fst ptr) \<noteq> SilcLabel"
   (* very manual *)
   apply (frule(3) cca_to_transferable_or_subject)
   apply (frule silc_inv_not_subject)
@@ -1684,7 +1673,7 @@ lemma cdt_change_allowed_not_silc:
   apply (intro notI)
   apply (rule silc_inv_no_transferable', assumption, assumption)
   apply (elim cdt_change_allowedE cdt_direct_change_allowed.cases)
-   apply (clarsimp simp:rtrancl_eq_or_trancl, elim disjE, solves\<open>clarsimp\<close>)
+   apply (clarsimp simp: rtrancl_eq_or_trancl, elim disjE, solves\<open>clarsimp\<close>)
    apply (clarsimp dest!: tranclD2 parent_ofD)
    apply (drule valid_mdb_mdb_cte_at)
    apply (drule(1) mdb_cte_atD[rotated],clarsimp simp: cte_wp_at_caps_of_state)
@@ -1693,7 +1682,7 @@ lemma cdt_change_allowed_not_silc:
   apply (frule(2) descendant_of_caller_slot[OF _ _ tcb_atI])
   apply clarsimp
   apply (frule(1) parent_of_rtrancl_no_descendant)
-  apply (force simp add:is_cap_table obj_at_def)
+  apply (force simp add: is_cap_table obj_at_def)
   done
 
 crunch_ignore (valid) (add: getActiveIRQ)
@@ -1715,8 +1704,7 @@ crunch cancel_badged_sends
   (  wp: crunch_wps unless_wp simp: crunch_simps ignore: filterM set_object thread_set
    simp: filterM_mapM)
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma rec_del_silc_inv_CTEDelete_transferable':
   "\<lbrace>silc_inv aag st and pas_refined aag and einvs and simple_sched_action and emptyable slot
@@ -1805,7 +1793,7 @@ lemma cap_revoke_silc_inv:
 lemma finalise_slot_silc_inv:
   "\<lbrace>silc_inv aag st and einvs and pas_refined aag and simple_sched_action
                     and emptyable slot and K (is_subject aag (fst slot))\<rbrace>
-   finalise_slot slot blah
+   finalise_slot slot e
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding finalise_slot_def
   apply (rule validE_valid)
@@ -1839,8 +1827,7 @@ lemma invoke_cnode_silc_inv:
   apply (wp cancel_badged_sends_silc_inv | simp | wpc | rule hoare_pre)+
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma set_cap_default_cap_silc_inv:
   "\<lbrace>silc_inv aag st and K (is_subject aag (fst slot) \<and> is_subject aag oref)\<rbrace>
@@ -1968,7 +1955,7 @@ lemma delete_objects_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)
   unfolding delete_objects_def
-  apply (wp detype_silc_inv |  simp add: ptr_range_def)+
+  apply (wp detype_silc_inv | simp add: ptr_range_def)+
   done
 
 lemma reset_untyped_cap_untyped_cap:
@@ -1997,7 +1984,7 @@ lemma reset_untyped_cap_untyped_cap:
 
 lemma is_arch_update_overlaps:
   "\<lbrakk> cte_wp_at (\<lambda>c. is_arch_update cap c) slot s; \<not> cap_points_to_label aag cap l \<rbrakk>
-     \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
+   \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
   apply (clarsimp simp: slots_holding_overlapping_caps_def2 ctes_wp_at_def)
   apply (erule cte_wp_at_weakenE)
   apply (clarsimp simp: is_arch_update_def)
@@ -2067,8 +2054,7 @@ lemma send_signal_silc_inv[wp]:
   apply (clarsimp simp: receive_blocked_def pred_tcb_at_def obj_at_def)
   done
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma slots_holding_overlapping_caps_eq:
   assumes "obj_refs cap = obj_refs cap'"
@@ -2180,8 +2166,7 @@ lemma cap_insert_silc_inv':
   apply (fastforce dest!: silc_inv_all_children simp: all_children_def simp del: split_paired_All)
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma intra_label_cap_pres':
   assumes cte: "\<And>P. \<lbrace>\<lambda>s. cte_wp_at P slot s \<and> R s\<rbrace> f \<lbrace>\<lambda> _. cte_wp_at P slot\<rbrace>"
@@ -2279,8 +2264,7 @@ lemma cap_delete_one_cte_wp_at_other:
   apply (wp unless_wp empty_slot_cte_wp_elsewhere get_cap_wp | simp)+
   done
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma cap_insert_silc_inv''':
   "\<lbrace>silc_inv aag st and (\<lambda> s. \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst dest))
@@ -2347,12 +2331,11 @@ lemma invoke_irq_handler_silc_inv:
          | simp add: pas_refined_def irq_map_wellformed_aux_def authorised_irq_hdl_inv_def)+
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma new_irq_handler_caps_are_intra_label:
   "\<lbrakk> cte_wp_at ((=) (IRQControlCap)) slot s; pas_refined aag s; is_subject aag (fst slot) \<rbrakk>
-     \<Longrightarrow> cap_points_to_label aag (IRQHandlerCap irq) (pasSubject aag)"
+   \<Longrightarrow> cap_points_to_label aag (IRQHandlerCap irq) (pasSubject aag)"
   apply (clarsimp simp: cap_points_to_label_def)
   apply (frule cap_cur_auth_caps_of_state[rotated])
     apply assumption
@@ -2381,7 +2364,7 @@ crunch do_fault_transfer, complete_signal
 (* doesn't need sym_refs *)
 lemma valid_ep_recv_dequeue':
   "\<lbrakk> ko_at (Endpoint (Structures_A.endpoint.RecvEP (t # ts))) epptr s; valid_objs s \<rbrakk>
-     \<Longrightarrow> valid_ep (case ts of [] \<Rightarrow> IdleEP | b # bs \<Rightarrow> RecvEP ts) s"
+   \<Longrightarrow> valid_ep (case ts of [] \<Rightarrow> IdleEP | b # bs \<Rightarrow> RecvEP ts) s"
   unfolding valid_objs_def valid_obj_def valid_ep_def obj_at_def
   apply (drule bspec)
   apply (auto split: list.splits)
@@ -2392,8 +2375,7 @@ lemma get_tcb_Some:
   "get_tcb t s = Some v \<longleftrightarrow> kheap s t = Some (TCB v)"
   by (simp add: get_tcb_def split: kernel_object.splits option.splits)
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma derive_cap_silc:
   "\<lbrace>\<lambda>s :: det_state. \<not> cap_points_to_label aag cap l \<longrightarrow> R (slots_holding_overlapping_caps cap s)\<rbrace>
@@ -2446,41 +2428,40 @@ lemma do_ipc_transfer_silc_inv:
   apply clarsimp
   done
 
-end
+end (* FinalCaps *)
 
-
-locale FinalCaps_2 = FinalCaps_1 +
+locale FinalCaps_2 = FinalCaps +
   assumes arch_perform_invocation_silc_inv:
     "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
      arch_perform_invocation ai
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and handle_arch_fault_reply_silc_inv[wp]:
+  assumes handle_arch_fault_reply_silc_inv[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_invoke_irq_control_silc_inv:
+  assumes arch_invoke_irq_control_silc_inv:
     "\<lbrace>silc_inv aag st and pas_refined aag and arch_irq_control_inv_valid arch_irq_cinv
                       and K (arch_authorised_irq_ctl_inv aag arch_irq_cinv)\<rbrace>
      arch_invoke_irq_control arch_irq_cinv
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and invoke_tcb_silc_inv:
+  assumes invoke_tcb_silc_inv:
     "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag and tcb_inv_wf tinv
                       and K (authorised_tcb_inv aag tinv)\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and arch_prepare_set_domain_silc_inv[wp]:
+  assumes arch_prepare_set_domain_silc_inv[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_prepare_next_domain_silc_inv[wp]:
+  assumes arch_prepare_next_domain_silc_inv[wp]:
     "arch_prepare_next_domain \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_spurious_irq_silc_inv[wp]:
+  assumes handle_spurious_irq_silc_inv[wp]:
     "handle_spurious_irq \<lbrace>silc_inv aag st\<rbrace>"
 begin
 
 lemma invoke_irq_control_silc_inv:
-  "\<lbrace>silc_inv aag st and pas_refined aag and irq_control_inv_valid blah and
-         K (authorised_irq_ctl_inv aag blah)\<rbrace>
-      invoke_irq_control blah
+  "\<lbrace>silc_inv aag st and pas_refined aag and irq_control_inv_valid ici and
+         K (authorised_irq_ctl_inv aag ici)\<rbrace>
+      invoke_irq_control ici
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding authorised_irq_ctl_inv_def
-  apply (case_tac blah)
+  apply (case_tac ici)
    apply (rule hoare_gen_asm)
    apply (wp cap_insert_silc_inv'' hoare_vcg_ex_lift slots_holding_overlapping_caps_lift
          | simp add: authorised_irq_ctl_inv_def)+
@@ -2510,11 +2491,11 @@ lemma send_ipc_silc_inv:
   unfolding send_ipc_def
   apply (wp setup_caller_cap_silc_inv hoare_weak_lift_imp do_ipc_transfer_silc_inv gts_wp
         | wpc
-        | simp add:st_tcb_at_tcb_states_of_state_eq
+        | simp add: st_tcb_at_tcb_states_of_state_eq
         | rule conjI impI
         | blast)+
      apply (wp hoare_vcg_all_lift hoare_imp_lift_something get_simple_ko_wp
-           | simp add:st_tcb_at_tcb_states_of_state_eq)+
+           | simp add: st_tcb_at_tcb_states_of_state_eq)+
   apply clarsimp
   subgoal for s receiver t
     apply (frule silc_inv_not_subject)
@@ -2565,14 +2546,14 @@ lemma receive_ipc_base_silc_inv:
   apply (rule hoare_pre)
    apply (wp setup_caller_cap_silc_inv hoare_weak_lift_imp do_ipc_transfer_silc_inv
          | wpc | simp split del: if_split)+
-     apply (wp  hoare_vcg_all_lift hoare_vcg_imp_lift  set_simple_ko_get_tcb
+     apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_simple_ko_get_tcb
            | wpc | simp split del: if_split)+
   apply (clarsimp)
   apply (frule tcb_states_of_state_to_auth[rotated])
    apply (simp add: tcb_states_of_state_def,blast)
   apply (clarsimp simp: get_tcb_Some)
   apply (frule(2) sym_ref_endpoint_sendD[OF invs_sym_refs _ hd_in_set])
-  apply (clarsimp simp:st_tcb_at_tcb_states_of_state dest!:tcb_states_of_state_kheapD)
+  apply (clarsimp simp: st_tcb_at_tcb_states_of_state dest!:tcb_states_of_state_kheapD)
   apply (frule silc_inv_not_subject)
   by (safe;
        (clarsimp simp: cap_rights_to_auth_def)?;
@@ -2615,7 +2596,7 @@ lemma send_fault_ipc_silc_inv:
    \<lbrace>\<lambda>rv. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)+
   unfolding send_fault_ipc_def
-  apply (wp send_ipc_silc_inv  thread_set_tcb_fault_set_invs
+  apply (wp send_ipc_silc_inv thread_set_tcb_fault_set_invs
             thread_set_fault_pas_refined thread_set_refs_trivial thread_set_obj_at_impossible
             hoare_vcg_ex_lift get_cap_wp hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_all_lift
          | wpc
@@ -2638,10 +2619,9 @@ crunch handle_fault
 
 crunch do_reply_transfer
   for silc_inv[wp]: "silc_inv aag st"
-  (wp: thread_set_tcb_fault_update_silc_inv crunch_wps  ignore: set_object thread_set)
+  (wp: thread_set_tcb_fault_update_silc_inv crunch_wps ignore: set_object thread_set)
 
-end
-
+end (* FinalCaps_2 *)
 
 crunch reply_from_kernel
   for silc_inv[wp]: "silc_inv aag st"
@@ -2659,8 +2639,7 @@ lemma setup_reply_master_silc_inv:
   apply (clarsimp simp: cap_points_to_label_def silc_inv_def)
   done
 
-
-context FinalCaps_1 begin
+context FinalCaps begin
 
 crunch restart
   for silc_inv: "silc_inv aag st"
@@ -2671,7 +2650,7 @@ crunch suspend
 
 lemma same_object_as_cap_points_to_label:
   "\<lbrakk> same_object_as a cap; \<not> cap_points_to_label aag a (pasSubject aag) \<rbrakk>
-     \<Longrightarrow> \<not> cap_points_to_label aag cap (pasSubject aag)"
+   \<Longrightarrow> \<not> cap_points_to_label aag cap (pasSubject aag)"
   apply (simp add: same_object_as_def cap_points_to_label_def split: cap.splits)
       apply (case_tac cap, simp_all)
      apply (case_tac cap, simp_all)
@@ -2682,7 +2661,7 @@ lemma same_object_as_cap_points_to_label:
 
 lemma same_object_as_slots_holding_overlapping_caps:
   "\<lbrakk> same_object_as a cap; \<not> cap_points_to_label aag a (pasSubject aag) \<rbrakk>
-     \<Longrightarrow> slots_holding_overlapping_caps cap s = slots_holding_overlapping_caps a s"
+   \<Longrightarrow> slots_holding_overlapping_caps cap s = slots_holding_overlapping_caps a s"
   apply (simp add: same_object_as_def slots_holding_overlapping_caps_def2 ctes_wp_at_def
            split: cap.splits)
        apply (case_tac cap, simp_all)
@@ -2706,8 +2685,7 @@ lemma checked_cap_insert_silc_inv:
   apply (fastforce dest: same_object_as_slots_holding_overlapping_caps)
   done
 
-end
-
+end (* FinalCaps *)
 
 lemma thread_set_tcb_ipc_buffer_update_silc_inv[wp]:
   "thread_set (tcb_ipc_buffer_update f) t \<lbrace>silc_inv aag st\<rbrace>"
@@ -2745,7 +2723,7 @@ lemma cap_delete_tcb[wp]:
 
 lemma st_tcb_at_triv:
   "st_tcb_at (\<lambda>_. P) t s \<longleftrightarrow> P \<and> tcb_at t s"
-  by (simp add:tcb_at_st_tcb_at st_tcb_at_tcb_states_of_state) blast
+  by (simp add: tcb_at_st_tcb_at st_tcb_at_tcb_states_of_state) blast
 
 lemma cap_insert_no_tcb_at[wp]:
  "cap_insert cap src dest \<lbrace>\<lambda>s. \<not> tcb_at t s\<rbrace>"
@@ -2798,7 +2776,7 @@ lemma perform_invocation_silc_inv:
       | simp add: authorised_invocation_def invs_valid_objs
                   invs_mdb invs_sym_refs
                   split_def
-      | fastforce dest:silc_inv_not_subject)+
+      | fastforce dest: silc_inv_not_subject)+
 
 lemma handle_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag
@@ -2881,19 +2859,18 @@ crunch timer_tick, handle_yield
   for silc_inv[wp]: "silc_inv aag st"
   (simp: tcb_cap_cases_def)
 
-end
-
+end (* FinalCaps_2 *)
 
 locale FinalCaps_3 = FinalCaps_2 +
   assumes handle_reserved_irq_silc_inv[wp]:
     "\<lbrace>silc_inv aag st and invs and pas_refined aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and handle_hypervisor_fault_silc_inv[wp]:
+  assumes handle_hypervisor_fault_silc_inv[wp]:
     "\<lbrace>silc_inv aag st and invs and pas_refined aag and is_subject aag o cur_thread and K (is_subject aag t)\<rbrace>
      handle_hypervisor_fault t hvft
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and handle_reserved_irq_in_kernel_inv:
+  assumes handle_reserved_irq_in_kernel_inv:
     "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_. P :: det_state \<Rightarrow> bool\<rbrace>"
@@ -2910,7 +2887,7 @@ lemma irq_inactive_or_timer:
   "\<lbrace>domain_sep_inv False st and Q IRQTimer and Q IRQInactive\<rbrace>
    get_irq_state irq
    \<lbrace>Q\<rbrace>"
-  apply (simp add:get_irq_state_def)
+  apply (simp add: get_irq_state_def)
   apply wp
   apply (clarsimp simp add: domain_sep_inv_def)
   apply (drule_tac x=irq in spec)
@@ -2969,13 +2946,13 @@ lemma call_kernel_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding call_kernel_def maybe_handle_interrupt_def
   apply (wpsimp wp: handle_interrupt_in_kernel_silc_inv handle_event_silc_inv[where st'=st'])
-  apply (rule_tac Q'="\<lambda>rv s.  rv \<notin> Some ` non_kernel_IRQs \<and> silc_inv aag st s" in hoare_strengthen_post[rotated])
+  apply (rule_tac Q'="\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<and> silc_inv aag st s" in hoare_strengthen_post[rotated])
    apply clarsimp
   apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
   apply (wpsimp wp: handle_event_silc_inv[where st'=st'])
   apply clarsimp
   done
 
-end
+end (* FinalCaps_3 *)
 
 end

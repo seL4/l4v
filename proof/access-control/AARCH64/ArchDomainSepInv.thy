@@ -61,10 +61,9 @@ crunch handle_vm_fault, handle_vm_fault, perform_pg_inv_unmap,
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps)
 
-end
+end (* Arch *)
 
-
-global_interpretation DomainSepInv_1?: DomainSepInv_1
+global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
   interpret Arch .
   case 1 show ?case
@@ -104,7 +103,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_domain_sep_inv' set_cap_domain_sep_inv
             get_cap_domain_sep_inv_cap[where st=st] hoare_vcg_imp_lift
-         | wpc | simp )+
+         | wpc | simp)+
   done
 
 crunch perform_sgi_invocation, perform_asid_pool_invocation, perform_smc_invocation
@@ -164,8 +163,7 @@ crunch handle_reserved_irq, handle_hypervisor_fault
 declare handle_reserved_irq_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
 declare handle_hypervisor_fault_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
 
-end
-
+end (* Arch *)
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases
