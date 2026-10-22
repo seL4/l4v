@@ -402,7 +402,7 @@ lemma set_registers_corres:
   "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y)
   (corrupt_tcb_intent y)
   (mapM (%r. do v \<leftarrow> as_user thread (getRegister r);
-                as_user y (setRegister r v)
+                as_user y (setRegister r (f r v))
              od) (x)
   )"
   apply (induct_tac "x")

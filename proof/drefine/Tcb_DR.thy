@@ -679,7 +679,7 @@ lemma invoke_tcb_corres_copy_regs_loop:
      (corrupt_tcb_intent target_id)
      (mapM_x
         (\<lambda>r. do v \<leftarrow> as_user obj_id' (getRegister r);
-                     as_user target_id (setRegister r v)
+                     as_user target_id (setRegister r (f r v))
              od) x)"
    apply (clarsimp simp: mapM_x_mapM)
    apply (rule corres_guard_imp)
@@ -727,7 +727,8 @@ lemma invoke_tcb_corres_copy_regs:
    dcorres (dc \<oplus> dc) \<top>
    (invs and tcb_at obj_id' and tcb_at target_id' and Tcb_AI.tcb_inv_wf t' and not_idle_thread target_id' and not_idle_thread obj_id')
      (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
-  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_post_modify_registers_def)
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_post_modify_registers_def
+                        arch_get_sanitise_register_info_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'=dc])
        apply (rule corres_cases [where R="a"])

@@ -190,10 +190,11 @@ where
   (liftE $ do
     when suspend_source $ suspend src;
     when resume_target $ restart dest;
+    sanitise_info \<leftarrow> arch_get_sanitise_register_info dest;
     when transfer_frame $ do
         mapM_x (\<lambda>r. do
                 v \<leftarrow> as_user src $ getRegister r;
-                as_user dest $ setRegister r v
+                as_user dest $ setRegister r (sanitise_register sanitise_info r v)
         od) frame_registers;
         pc \<leftarrow> as_user dest getRestartPC;
         as_user dest $ setNextPC pc
@@ -201,7 +202,7 @@ where
     when transfer_integer $
         mapM_x (\<lambda>r. do
                 v \<leftarrow> as_user src $ getRegister r;
-                as_user dest $ setRegister r v
+                as_user dest $ setRegister r (sanitise_register sanitise_info r v)
         od) gpRegisters;
     cur \<leftarrow> gets cur_thread;
     arch_post_modify_registers cur dest;
