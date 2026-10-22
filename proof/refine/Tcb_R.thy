@@ -465,28 +465,28 @@ lemma invokeTCB_CopyRegisters_corres:
         (invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch))
         (invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch'))"
 proof -
-  have Q: "\<And>src src' des des' r r'. \<lbrakk> src = src'; des = des' \<rbrakk> \<Longrightarrow>
+  have Q: "\<And>src src' des des' r r' i. \<lbrakk> src = src'; des = des' \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
                      (tcb_at' src' and tcb_at' des' and invs')
            (do v \<leftarrow> as_user src (getRegister r);
-               as_user des (setRegister r' v)
+               as_user des (setRegister r' (sanitise_register i r' v))
             od)
            (do v \<leftarrow> asUser src' (getRegister r);
-               asUser des' (setRegister r' v)
+               asUser des' (setRegister r' (sanitiseRegister i r' v))
             od)"
     apply clarsimp
     apply (corres corres: asUser_getRegister_corres asUser_corres)
-          apply (rule corres_Id; simp)
+          apply (rule corres_Id; simp add: sanitiseRegister_sanitise_register)
           apply (wpsimp simp: invs_distinct invs_psp_aligned)+
     done
-  have R: "\<And>src src' des des' xs ys. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>
+  have R: "\<And>src src' des des' xs ys i. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
                      (tcb_at' src' and tcb_at' des' and invs')
            (mapM_x (\<lambda>r. do v \<leftarrow> as_user src (getRegister r);
-               as_user des (setRegister r v)
+               as_user des (setRegister r (sanitise_register i r v))
             od) xs)
            (mapM_x (\<lambda>r'. do v \<leftarrow> asUser src' (getRegister r');
-               asUser des' (setRegister r' v)
+               asUser des' (setRegister r' (sanitiseRegister i r' v))
             od) ys)"
     apply (rule corres_mapM_x [where S=Id])
         apply simp
@@ -494,35 +494,38 @@ proof -
           apply (clarsimp simp: set_zip_same | wp)+
     done
   show ?thesis
-  apply (simp add: invokeTCB_def performTransfer_def)
+    apply (simp add: invokeTCB_def performTransfer_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF corres_when [OF refl suspend_corres]], simp)
         apply (rule corres_split[OF corres_when [OF refl restart_corres]], simp)
-          apply (rule corres_split_nor)
-             apply (rule corres_when[OF refl])
-             apply (rule corres_split_nor)
-                apply (rule R[OF refl refl])
-                apply (simp add: frame_registers_def frameRegisters_def')
-               apply (simp add: dc_def[symmetric])
-      apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
-        apply (rule asUser_setNextPC_corres)
-              apply (wp mapM_x_wp' | simp)+
+          apply (rule corres_split_eqr[OF arch_getSanitiseRegisterInfo_corres])
             apply (rule corres_split_nor)
                apply (rule corres_when[OF refl])
-               apply (rule R[OF refl refl])
-               apply (simp add: gpRegisters_def')
-              apply (rule corres_split_eqr[OF getCurThread_corres])
-                apply (rule corres_split_nor[OF asUser_postModifyRegisters_corres[simplified]])
-                  apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
-                    apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-                    apply simp
-                   apply (solves \<open>wp hoare_weak_lift_imp\<close>)+
-             apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest" in hoare_post_imp)
-              apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_sched_weak_strg valid_sched_def)
-             prefer 2
-             apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' dest" in hoare_post_imp)
-              apply (fastforce simp: invs'_def valid_state'_def invs_weak_sch_act_wf cur_tcb'_def)
-             apply ((wp mapM_x_wp' hoare_weak_lift_imp | (simp add: cur_tcb'_def[symmetric])+)+)[8]
+               apply (rule corres_split_nor)
+                  apply (rule R[OF refl refl])
+                  apply (simp add: frame_registers_def frameRegisters_def')
+                 apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
+                   apply (rule asUser_setNextPC_corres)
+                  apply (wp mapM_x_wp' | simp)+
+              apply (rule corres_split_nor)
+                 apply (rule corres_when[OF refl])
+                 apply (rule R[OF refl refl])
+                 apply (simp add: gpRegisters_def')
+                apply (rule corres_split_eqr[OF getCurThread_corres])
+                  apply (rule corres_split_nor[OF asUser_postModifyRegisters_corres[simplified]])
+                    apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
+                      apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+                      apply simp
+                     apply (solves \<open>wp hoare_weak_lift_imp\<close>)+
+                   apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest" in hoare_post_imp)
+                    apply (fastforce simp: invs_def valid_state_def valid_pspace_def
+                                           valid_sched_weak_strg valid_sched_def)
+                   prefer 2
+                   apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' dest" in hoare_post_imp)
+                    apply (fastforce simp: invs'_def valid_state'_def invs_weak_sch_act_wf
+                                           cur_tcb'_def)
+                   apply ((wp mapM_x_wp' hoare_weak_lift_imp
+                           | (simp add: cur_tcb'_def[symmetric])+)+)[10]
          apply ((wp hoare_weak_lift_imp restart_invs' | wpc | clarsimp simp: if_apply_def2)+)[2]
        apply (wpsimp wp: suspend_nonz_cap_to_tcb hoare_weak_lift_imp simp: if_apply_def2
               | strengthen invs_psp_aligned invs_distinct)+

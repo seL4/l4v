@@ -320,9 +320,9 @@ lemma invoke_tcb_globals_equiv:
                                 | intro conjI impI
                                 | clarsimp simp: no_cap_to_idle_thread)+\<close>)?)
    apply wpsimp
-       apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arch_copy_register_sets)
+       apply (rename_tac dest src susp resume frames ints arch sanitise_info)
        apply (rule_tac Q'="\<lambda>_. valid_arch_state and globals_equiv st and
-                              (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)"
+                              (\<lambda>s. dest \<noteq> idle_thread s) and (\<lambda>s. src \<noteq> idle_thread s)"
                     in hoare_strengthen_post)
         apply (wpsimp wp: mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
                           weak_if_wp')+

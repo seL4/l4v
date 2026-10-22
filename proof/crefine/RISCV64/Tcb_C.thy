@@ -1174,83 +1174,110 @@ lemma invokeTCB_CopyRegisters_ccorres:
         apply (rule ccorres_when[where R=\<top>])
          apply (simp add: to_bool_def del: Collect_const)
         apply (ctac add: restart_ccorres)
-       apply (rule ccorres_split_nothrow_novcg_dc)
-          apply (rule ccorres_when[where R=\<top>])
-           apply (simp add: to_bool_def Collect_const_mem)
-          apply (rule ccorres_rhs_assoc)+
-          apply (csymbr, csymbr, csymbr)
-          apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg_dc)
-             apply (rule ccorres_rel_imp)
-              apply (rule ccorres_mapM_x_while[where F="\<lambda>x. tcb_at' destn and tcb_at' source"])
-                  apply clarsimp
-                  apply (rule ccorres_guard_imp2)
-                   apply (ctac(no_vcg) add: getRegister_ccorres)
-                    apply (ctac add: setRegister_ccorres)
-                   apply wp
-                  apply (clarsimp simp: frame_gp_registers_convs
-                                        n_frameRegisters_def unat_of_nat64
-                                        word_bits_def word_of_nat_less)
-                 apply (simp add: frame_gp_registers_convs n_frameRegisters_def)
-                apply (rule allI, rule conseqPre, vcg)
-                apply clarsimp
-               apply (wp | simp)+
-              apply (simp add: frame_gp_registers_convs n_frameRegisters_def
-                               word_bits_def)
-             apply simp
-            apply (ctac(no_vcg) add: getRestartPC_ccorres)
-             apply (ctac add: setNextPC_ccorres)
-            apply wp+
-          apply (clarsimp simp: guard_is_UNIV_def)
+       apply (ctac add: Arch_getSanitiseRegisterInfo_ccorres)
+         apply (rename_tac archInfo' archInfo)
+         apply (simp only: o_def)
+         apply (drule_tac t=archInfo in sym, simp only:)
          apply (rule ccorres_split_nothrow_novcg_dc)
             apply (rule ccorres_when[where R=\<top>])
              apply (simp add: to_bool_def Collect_const_mem)
             apply (rule ccorres_rhs_assoc)+
-            apply (csymbr, csymbr)
-            apply (rule ccorres_rel_imp)
-             apply (rule ccorres_mapM_x_while[where F="\<lambda>x. tcb_at' destn and tcb_at' source"])
-                 apply clarsimp
-                 apply (rule ccorres_guard_imp2)
-                  apply ((wp | ctac(no_vcg) add: getRegister_ccorres setRegister_ccorres)+)[1]
-                 apply (clarsimp simp: frame_gp_registers_convs n_gpRegisters_def
-                                       unat_of_nat64 word_bits_def word_of_nat_less)
-                apply (simp add: frame_gp_registers_convs n_gpRegisters_def)
-               apply (rule allI, rule conseqPre, vcg)
-               apply clarsimp
-              apply (wp | simp)+
-             apply (simp add: word_bits_def frame_gp_registers_convs n_gpRegisters_def)
-            apply simp
-           apply (rule ccorres_pre_getCurThread)
-           apply (ctac add: postModifyRegisters_ccorres)
-             apply (rule ccorres_split_nothrow_novcg_dc)
-                apply (rule_tac R="\<lambda>s. rvc = ksCurThread s"
-                           in ccorres_when)
-                 apply (clarsimp simp: rf_sr_ksCurThread)
-                apply clarsimp
-                apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
-               apply (simp only: liftE_bindE[symmetric] return_returnOk)
-               apply (ctac(no_vcg) add: Arch_performTransfer_ccorres)
-                 apply (rule ccorres_return_CE, simp+)[1]
-                apply (rule ccorres_return_C_errorE, simp+)[1]
+            apply (csymbr, csymbr, csymbr)
+            apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg_dc)
+               apply (rule ccorres_rel_imp)
+                apply (rule ccorres_mapM_x_while[where F="\<lambda>x. tcb_at' destn and tcb_at' source"])
+                    apply clarsimp
+                    apply (rule ccorres_guard_imp2)
+                     apply (rule ccorres_rhs_assoc)+
+                     apply (rule ccorres_Guard_Seq)
+                     apply (rule ccorres_symb_exec_r)
+                       apply (ctac add: getRegister_ccorres)
+                         apply (rule ccorres_symb_exec_r)
+                           apply (ctac add: setRegister_ccorres)
+                          apply vcg
+                         apply clarsimp
+                         apply (rule conseqPre, vcg, clarsimp)
+                        apply wp
+                       apply vcg
+                      apply vcg
+                     apply clarsimp
+                     apply (rule conseqPre, vcg, clarsimp)
+                    apply (clarsimp simp: frame_gp_registers_convs
+                                          n_frameRegisters_def unat_of_nat64
+                                          word_bits_def word_of_nat_less)
+                   apply (simp add: frame_gp_registers_convs n_frameRegisters_def)
+                  apply (rule allI, rule conseqPre, vcg exspec=sanitiseRegister_modifies)
+                  apply clarsimp
+                 apply (wp | simp)+
+                apply (simp add: frame_gp_registers_convs n_frameRegisters_def
+                                 word_bits_def)
                apply simp
-               apply wp+
-             apply (clarsimp simp: guard_is_UNIV_def)
-            apply simp
-            apply (wpsimp simp: postModifyRegisters_def pred_conj_def
-                          cong: if_cong
-                            wp: hoare_drop_imp)
-           apply vcg
-          apply (simp add: pred_conj_def guard_is_UNIV_def cong: if_cong
-                  | wp mapM_x_wp_inv hoare_drop_imp)+
+              apply (ctac(no_vcg) add: getRestartPC_ccorres)
+               apply (ctac add: setNextPC_ccorres)
+              apply wp+
+            apply (clarsimp simp: guard_is_UNIV_def)
+           apply (rule ccorres_split_nothrow_novcg_dc)
+              apply (rule ccorres_when[where R=\<top>])
+               apply (simp add: to_bool_def Collect_const_mem)
+              apply (rule ccorres_rhs_assoc)+
+              apply (csymbr, csymbr)
+              apply (rule ccorres_rel_imp)
+               apply (rule ccorres_mapM_x_while[where F="\<lambda>x. tcb_at' destn and tcb_at' source"])
+                   apply clarsimp
+                   apply (rule ccorres_guard_imp2)
+                    apply (rule ccorres_rhs_assoc)+
+                    apply (rule ccorres_Guard_Seq)
+                    apply (rule ccorres_symb_exec_r)
+                      apply (ctac add: getRegister_ccorres)
+                        apply (rule ccorres_symb_exec_r)
+                          apply (ctac add: setRegister_ccorres)
+                         apply vcg
+                        apply clarsimp
+                        apply (rule conseqPre, vcg, clarsimp)
+                       apply wp
+                      apply vcg
+                     apply vcg
+                    apply clarsimp
+                    apply (rule conseqPre, vcg, clarsimp)
+                   apply (clarsimp simp: frame_gp_registers_convs n_gpRegisters_def
+                                         unat_of_nat64 word_bits_def word_of_nat_less)
+                  apply (simp add: frame_gp_registers_convs n_gpRegisters_def)
+                 apply (rule allI, rule conseqPre, vcg exspec=sanitiseRegister_modifies)
+                 apply clarsimp
+                apply (wp | simp)+
+               apply (simp add: word_bits_def frame_gp_registers_convs n_gpRegisters_def)
+              apply simp
+             apply (rule ccorres_pre_getCurThread)
+             apply (rename_tac thread)
+             apply (ctac add: postModifyRegisters_ccorres)
+               apply (rule ccorres_split_nothrow_novcg_dc)
+                  apply (rule_tac R="\<lambda>s. thread = ksCurThread s" in ccorres_when)
+                   apply (clarsimp simp: rf_sr_ksCurThread)
+                  apply clarsimp
+                  apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
+                 apply (simp only: liftE_bindE[symmetric] return_returnOk)
+                 apply (ctac(no_vcg) add: Arch_performTransfer_ccorres)
+                   apply (rule ccorres_return_CE, simp+)[1]
+                  apply (rule ccorres_return_C_errorE, simp+)[1]
+                 apply simp
+                 apply wp+
+               apply (clarsimp simp: guard_is_UNIV_def)
+              apply simp
+              apply (wpsimp simp: postModifyRegisters_def pred_conj_def
+                            cong: if_cong
+                              wp: hoare_drop_imp)
+             apply vcg
+            apply (simp add: pred_conj_def guard_is_UNIV_def cong: if_cong
+                    | wp mapM_x_wp_inv hoare_drop_imp)+
+       apply vcg
       apply clarsimp
-      apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
+      apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' destn and tcb_at' source"
+                   in hoare_strengthen_post[rotated])
        apply (fastforce simp: sch_act_wf_weak)
       apply (wpsimp wp: hoare_drop_imp restart_invs')+
      apply (clarsimp simp add: guard_is_UNIV_def)
     apply (wp hoare_drop_imp hoare_vcg_if_lift)+
     apply simp
-    apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
-     apply (fastforce simp: sch_act_wf_weak)
-    apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp add: guard_is_UNIV_def)
   apply (clarsimp simp: invs_weak_sch_act_wf invs_valid_objs'
                  split: if_split cong: if_cong | rule conjI)+
