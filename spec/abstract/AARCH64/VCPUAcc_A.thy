@@ -112,15 +112,13 @@ definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
-        vcpu_save_reg vr VCPURegCPACR; \<comment> \<open>since FPU enabled\<close>
-        do_machine_op isb
+        vcpu_save_reg vr VCPURegCPACR \<comment> \<open>since FPU enabled\<close>
       od
     | _ \<Rightarrow> return ();
     do_machine_op $ do
         set_gic_vcpu_ctrl_hcr 0; \<comment> \<open>turn VGIC off\<close>
-        isb;
+        dsb; \<comment> \<open>for GIC memory-mapped register\<close>
         setSCTLR sctlrDefault; \<comment> \<open>turn S1 MMU off\<close>
-        isb;
         setHCR hcrNative;
         isb;
         \<comment> \<open>allow FPU instructions in EL0 and EL1 for native threads\<close>

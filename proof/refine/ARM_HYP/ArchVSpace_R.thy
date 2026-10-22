@@ -912,7 +912,7 @@ lemma restoreVirtTimer_corres[corres]:
 lemma vcpuSave_corres:
   "corres dc (none_bot (\<lambda>vcpu. vcpu_at (fst vcpu)) cvcpu) (none_bot (\<lambda>vcpu. vcpu_at' (fst vcpu)) cvcpu and no_0_obj')
              (vcpu_save cvcpu) (vcpuSave cvcpu)"
-  supply no_fail_isb[wp] no_fail_dsb[wp]
+  supply no_fail_dsb[wp]
   unfolding vcpu_save_def vcpuSave_def armvVCPUSave_def
   apply (cases cvcpu; clarsimp; rename_tac v active)
   apply (rule corres_guard_imp)
@@ -946,10 +946,7 @@ lemma vcpuSave_corres:
                           apply (rule vgicUpdateLR_corres)
                          apply wpsimp+
                     apply (rule corres_split[OF corres_when[OF refl vcpuSaveReg_corres]])
-                      apply (rule corres_split[OF vcpuSaveRegRange_corres])
-                        apply (rule corres_machine_op)
-                        apply (rule corres_Id; wpsimp)
-                       apply wpsimp+
+                      apply (rule vcpuSaveRegRange_corres)
                      apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
                                  simp: if_apply_def2)+
   done

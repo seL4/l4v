@@ -379,12 +379,10 @@ For initialisation, see makeVCPUObject.
 >            vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
 >            vcpuSaveReg vcpuPtr VCPURegSCTLR
 >            vcpuSaveReg vcpuPtr VCPURegCPACR
->            doMachineOp isb
 >         Nothing -> return ()
 >
 >     doMachineOp $ do
 >         set_gic_vcpu_ctrl_hcr 0 -- VGIC off
->         isb
 >         setSCTLR sctlrDefault -- S1 MMU off
 >         setHCR hcrNative
 >         setCPACR cpacrDefault -- guest may have changed CPACR
@@ -401,7 +399,6 @@ For initialisation, see makeVCPUObject.
 >     -- disabled vcpus already have CPACR stored
 >     when active $ vcpuSaveReg vcpuPtr VCPURegCPACR
 >     vcpuSaveRegRange vcpuPtr VCPURegACTLR VCPURegTTBR1high
->     doMachineOp isb
 
 > vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 > vcpuSave (Just (vcpuPtr, active)) = do

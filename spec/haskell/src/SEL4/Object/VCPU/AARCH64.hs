@@ -383,14 +383,12 @@ vcpuDisable vcpuPtrOpt = do
            vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
            vcpuSaveReg vcpuPtr VCPURegSCTLR
            vcpuSaveReg vcpuPtr VCPURegCPACR -- since FPU enabled
-           doMachineOp isb
         Nothing -> return ()
 
     doMachineOp $ do
         set_gic_vcpu_ctrl_hcr 0 -- VGIC off
-        isb
+        dsb -- for GIC memory-mapped register
         setSCTLR sctlrDefault -- S1 MMU off
-        isb
         setHCR hcrNative
         isb
         -- allow FPU instructions in EL0 and EL1 for native threads

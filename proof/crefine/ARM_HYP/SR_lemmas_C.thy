@@ -2393,7 +2393,6 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_NMRR_def
     seL4_VCPUReg_CIDR_def
     seL4_VCPUReg_TPIDRPRW_def
-    seL4_VCPUReg_FPEXC_def
     seL4_VCPUReg_LRsvc_def
     seL4_VCPUReg_SPsvc_def
     seL4_VCPUReg_LRabt_def
@@ -2427,6 +2426,7 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_CNTVOFFlow_def
     seL4_VCPUReg_CNTKCTL_def
     seL4_VCPUReg_CPACR_def
+    seL4_VCPUReg_FPEXC_def
 
 (* rewrite a definition from a C enum into a vcpureg enumeration lookup *)
 (* FIXME type annotations are ham-fisted and repetitive *)
