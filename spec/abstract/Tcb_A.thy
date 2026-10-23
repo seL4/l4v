@@ -248,7 +248,9 @@ where
 
 | "invoke_tcb (SetTLSBase tcb tls_base) =
   (liftE $ do
-    as_user tcb $ setRegister tlsBaseRegister tls_base;
+    sanitise_info \<leftarrow> arch_get_sanitise_register_info tcb;
+    as_user tcb $
+      setRegister tlsBaseRegister (sanitise_register sanitise_info tlsBaseRegister tls_base);
     cur \<leftarrow> gets cur_thread;
     when (tcb = cur) reschedule_required;
     return []
