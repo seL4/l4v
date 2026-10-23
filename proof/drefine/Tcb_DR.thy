@@ -1683,7 +1683,8 @@ lemma invoke_tcb_corres_setTLSBase:
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id' and tcb_at obj_id')
   (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
-  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def
+                        arch_get_sanitise_register_info_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'=dc])
