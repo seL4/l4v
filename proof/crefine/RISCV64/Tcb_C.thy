@@ -4455,11 +4455,15 @@ lemma decodeSetSpace_ccorres:
   apply clarsimp
   done
 
+lemma TLS_BASE_register_from_H:
+  "scast TLS_BASE = register_from_H tlsBaseRegister"
+  by (simp add: tlsBaseRegister_def RISCV64.tlsBaseRegister_def C_register_defs)
+
 lemma invokeTCB_SetTLSBase_ccorres:
   notes hoare_weak_lift_imp [wp]
   shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
-   (invs')
+   (invs' and tcb_at' tcb)
    ({s. thread_' s = tcb_ptr_to_ctcb_ptr tcb}
          \<inter> {s. tls_base_' s = tls_base}) []
    (invokeTCB (SetTLSBase tcb tls_base))
@@ -4467,20 +4471,25 @@ lemma invokeTCB_SetTLSBase_ccorres:
   apply (cinit lift: thread_' tls_base_')
    apply (simp add: liftE_def bind_assoc
                del: Collect_const)
-   apply (ctac add: setRegister_ccorres)
-     apply (rule ccorres_pre_getCurThread)
-     apply (rename_tac cur_thr)
-     apply (rule ccorres_split_nothrow_novcg_dc)
-        apply (rule_tac R="\<lambda>s. cur_thr = ksCurThread s" in ccorres_when)
-         apply (clarsimp simp: rf_sr_ksCurThread)
-        apply clarsimp
-        apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
-       apply (unfold return_returnOk)[1]
-       apply (rule ccorres_return_CE, simp+)[1]
-      apply (wpsimp wp: hoare_drop_imp simp: guard_is_UNIV_def)+
-   apply vcg
-  apply (fastforce simp: tlsBaseRegister_def RISCV64.tlsBaseRegister_def
-                         invs_weak_sch_act_wf C_register_defs)
+   apply (ctac (no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
+    apply (clarsimp simp only: o_def)
+    apply (rule_tac R'=UNIV in ccorres_symb_exec_r)
+      apply (ctac add: setRegister_ccorres)
+        apply (rule ccorres_pre_getCurThread)
+        apply (rename_tac cur_thr)
+        apply (rule ccorres_split_nothrow_novcg_dc)
+           apply (rule_tac R="\<lambda>s. cur_thr = ksCurThread s" in ccorres_when)
+            apply (clarsimp simp: rf_sr_ksCurThread)
+           apply clarsimp
+           apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
+          apply (unfold return_returnOk)[1]
+          apply (rule ccorres_return_CE, simp+)[1]
+         apply (wpsimp wp: hoare_drop_imp simp: guard_is_UNIV_def)+
+      apply vcg
+     apply (vcg, clarsimp simp: TLS_BASE_register_from_H)
+    apply (rule conseqPre, vcg, clarsimp simp: TLS_BASE_register_from_H)
+   apply wp
+  apply (fastforce simp: invs_weak_sch_act_wf)
   done
 
 lemma decodeSetTLSBase_ccorres:
@@ -4526,7 +4535,7 @@ lemma decodeSetTLSBase_ccorres:
   apply (clarsimp simp: Collect_const_mem)
   apply (rule conjI)
    apply (clarsimp simp: ct_in_state'_def sysargs_rel_n_def n_msgRegisters_def)
-   apply (auto simp: valid_tcb_state'_def
+   apply (auto simp: valid_tcb_state'_def isCap_simps valid_cap'_def
               elim!: pred_tcb'_weakenE)[1]
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)

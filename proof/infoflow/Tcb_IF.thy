@@ -544,8 +544,9 @@ lemma invoke_tcb_reads_respects_f:
               | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
     \<comment> \<open>SetTLSBase\<close>
     apply (wpsimp wp: when_ev reschedule_required_reads_respects_f
-                      as_user_reads_respects_f hoare_drop_imps)+
-    apply (auto simp: det_setRegister authorised_tcb_inv_def)[1]
+                      as_user_reads_respects_f hoare_drop_imps
+                simp: det_setRegister)
+    apply (auto simp: authorised_tcb_inv_def)[1]
    \<comment> \<open>SetFlags\<close>
    apply (wpsimp wp: set_flags_reads_respects_f thread_get_reads_respects_f
                      arch_post_set_flags_reads_respects_f)

@@ -551,7 +551,9 @@ Modifying the current thread may require rescheduling because modified registers
 
 > invokeTCB (SetTLSBase tcb tls_base) =
 >   withoutPreemption $ do
->     asUser tcb $ setRegister tlsBaseRegister tls_base
+>     sanitiseInfo <- getSanitiseRegisterInfo tcb
+>     asUser tcb $
+>         setRegister tlsBaseRegister (sanitiseRegister sanitiseInfo tlsBaseRegister tls_base)
 >     cur <- getCurThread
 >     when (tcb == cur) rescheduleRequired
 >     return []
