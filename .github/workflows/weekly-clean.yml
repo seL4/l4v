@@ -25,13 +25,9 @@ jobs:
             num_domains: '7'
 
           - arch: ARM
-            plat: exynos4
-          - arch: ARM
             plat: exynos5410
           - arch: ARM
             plat: exynos5422
-          - arch: ARM
-            plat: hikey
           - arch: ARM
             plat: tk1
           - arch: ARM
@@ -52,8 +48,6 @@ jobs:
 
           - arch: AARCH64
             plat: bcm2711
-          - arch: AARCH64
-            plat: hikey
           - arch: AARCH64
             plat: imx8mm
           - arch: AARCH64
