@@ -95,6 +95,18 @@ lemma corres_mapM_x:
 
 lemmas corres_mapM_x' = corres_mapM_x[OF _ _ _ _ order_refl]
 
+(* Specialised for corres method when the lists are equal and the precondition trivial *)
+lemma corres_mapM_x_same_list:
+  assumes "\<And>x. x \<in> set xs \<Longrightarrow>
+           corres_underlying sr nf nf' dc \<top> \<top> (f x) (f' x)"
+  shows "corres_underlying sr nf nf' dc \<top> \<top> (mapM_x f xs) (mapM_x f' xs)"
+  apply (rule corres_mapM_x[where S="{(x, x) |x. x \<in> set xs}", OF _ _ _ refl])
+     apply (fastforce simp: assms)
+    apply wp
+   apply wp
+  apply (fastforce simp: zip_same_conv_map)
+  done
+
 (* FIXME: see comment for mapM rule. Same applies for lemma strength *)
 lemma corres_mapME:
   assumes x: "r [] []"
