@@ -37,6 +37,18 @@ assumes sfence_ccorres:
            (doMachineOp RISCV64.sfence)
            (Call sfence_'proc)"
 
+assumes ifence_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp RISCV64.ifence)
+           (Call ifence_local_'proc)"
+
+assumes ifence_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call ifence_local_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+                 \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x
+                     = hrs_mem (t_hrs_' (globals s)) x)}"
+
 assumes maskInterrupt_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>disable = from_bool m\<rbrace> \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>) []
            (doMachineOp (maskInterrupt m irq))

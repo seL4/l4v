@@ -299,6 +299,10 @@ lemma no_fail_sfence[intro!,simp,wp]:
   "no_fail \<top> sfence"
   by (simp add: sfence_def)
 
+lemma no_fail_ifence[intro!,simp,wp]:
+  "no_fail \<top> ifence"
+  by (simp add: ifence_def)
+
 lemma unmapPageTable_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"
   shows "corres dc
@@ -603,13 +607,19 @@ crunch setVMRoot
   for obj_at[wp]: "\<lambda>s. P (obj_at' P' t s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch sfence, setVSpaceRoot
+crunch sfence, ifence, setVSpaceRoot
   for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
 
 lemma dmo_sfence_invs'[wp]:
   "doMachineOp sfence \<lbrace>invs'\<rbrace>"
   apply (wp dmo_invs')
   apply (clarsimp simp: in_monad sfence_def machine_op_lift_def machine_rest_lift_def select_f_def)
+  done
+
+lemma dmo_ifence_invs'[wp]:
+  "doMachineOp ifence \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs')
+  apply (clarsimp simp: in_monad ifence_def machine_op_lift_def machine_rest_lift_def select_f_def)
   done
 
 lemma dmo_setVSpaceRoot_invs'[wp]:

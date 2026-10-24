@@ -424,6 +424,10 @@ definition invalidateCacheRange_I ::
   "invalidateCacheRange_I vstart vend pstart =
      machine_op_lift (invalidateCacheRange_I_impl vstart vend pstart)"
 
+consts' invalidateCaches_I_impl :: "unit machine_rest_monad"
+definition invalidateCaches_I :: "unit machine_monad" where
+  "invalidateCaches_I = machine_op_lift invalidateCaches_I_impl"
+
 consts' branchFlushRange_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition branchFlushRange ::
@@ -439,6 +443,7 @@ lemmas cache_machine_op_defs =
   cleanCacheRange_PoU_def
   invalidateCacheRange_RAM_def
   invalidateCacheRange_I_def
+  invalidateCaches_I_def
   branchFlushRange_def
 
 

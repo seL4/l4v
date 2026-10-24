@@ -94,6 +94,20 @@ assumes dsb_preserves_kernel_bytes:
          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
              \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
 
+assumes isb_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call isb_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+                 \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x
+                     = hrs_mem (t_hrs_' (globals s)) x)}"
+
+assumes invalidate_I_PoU_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call invalidate_I_PoU_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+                 \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x
+                     = hrs_mem (t_hrs_' (globals s)) x)}"
+
 assumes invalidateByVA_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
            (doMachineOp (invalidateByVA w1 w2))
@@ -693,6 +707,21 @@ lemma cleanCaches_PoU_ccorres:
       apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
        apply (ctac (no_vcg) add: dsb_ccorres)
       apply wp+
+  apply clarsimp
+  done
+
+lemma invalidateCaches_I_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp invalidateCaches_I)
+           (Call invalidateCaches_I_'proc)"
+  apply cinit'
+   apply (simp add: invalidateCaches_I_def doMachineOp_bind empty_fail_cond
+                    empty_fail_dsb empty_fail_invalidate_I_PoU empty_fail_isb)
+   apply (ctac (no_vcg) add: dsb_ccorres)
+    apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
+     apply (ctac (no_vcg) add: dsb_ccorres)
+      apply (ctac (no_vcg) add: isb_ccorres)
+     apply wp+
   apply clarsimp
   done
 

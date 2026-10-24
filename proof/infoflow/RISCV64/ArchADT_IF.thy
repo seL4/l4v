@@ -60,7 +60,7 @@ lemma dmo_getActiveIRQ_valid_irq_states[ADT_IF_assms,wp]:
   "do_machine_op (getActiveIRQ in_kernel) \<lbrace>valid_irq_states\<rbrace>"
   unfolding getActiveIRQ_def by wpsimp
 
-crunch setVSpaceRoot, sfence, hwASIDFlush
+crunch setVSpaceRoot, sfence, ifence, hwASIDFlush
   for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
 
 crunch prepare_thread_delete, arch_finalise_cap, arch_post_cap_deletion
@@ -416,7 +416,13 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
   apply simp
   done
 
-declare init_arch_objects_inv[ADT_IF_assms]
+crunch ifence
+  for irq_state[wp]: "\<lambda>s. P (irq_state s)"
+  (simp: machine_op_lift_def machine_rest_lift_def)
+
+crunch init_arch_objects
+  for irq_states_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp)
 
 end
 

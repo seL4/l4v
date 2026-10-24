@@ -34,7 +34,7 @@ context Arch begin arch_global_naming (H)
   isb dsb dmb \
   invalidateTranslationASID invalidateTranslationSingle \
   cleanByVA_PoU cleanInvalidateCacheRange_RAM cleanCacheRange_RAM cleanCacheRange_PoU \
-  invalidateCacheRange_RAM invalidateCacheRange_I branchFlushRange \
+  invalidateCacheRange_RAM invalidateCacheRange_I invalidateCaches_I branchFlushRange \
   enableFpuEL01 \
   getFAR getDFSR getIFSR getHSR setHCR getESR  getSCTLR setSCTLR \
   addressTranslateS1 \

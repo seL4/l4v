@@ -1103,21 +1103,23 @@ proof -
                          objBits_simps)[6]
         apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
                          getObjectSize_def bit_simps
-                         add.commute append)
+                         add.commute append mapM_x_append mapM_x_singleton)
         apply ((subst gsUserPages_update gsCNodes_update
-                    gsUserPages_upd_createObjects'_comm
-                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
-                   | simp add: modify_modify_bind o_def)+)[1]
+                      gsUserPages_upd_createObjects'_comm
+                      monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+                | simp add: modify_modify_bind o_def empty_fail_cond ifence_def)+)[1]
        apply (subst monad_eq, rule createObjects_Cons)
              apply (simp_all add: field_simps shiftl_t2n pageBits_def
                         getObjectSize_def objBits_simps)[6]
        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
                         getObjectSize_def
-                        pageBits_def add.commute append)
+                        pageBits_def add.commute append mapM_x_append mapM_x_singleton)
        apply (subst gsUserPages_update gsCNodes_update
-                   gsUserPages_upd_createObjects'_comm
-                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
-                  | simp add: modify_modify_bind o_def)+
+                    gsUserPages_upd_createObjects'_comm
+                    monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                    monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+              | simp add: modify_modify_bind o_def empty_fail_cond ifence_def)+
       \<comment> \<open>LargePageObject\<close>
       apply (simp add: Arch_createNewCaps_def
                        Retype_H.createObject_def createObjects_def bind_assoc
@@ -1128,21 +1130,23 @@ proof -
              apply (simp_all add: field_simps shiftl_t2n bit_simps
                         getObjectSize_def objBits_simps)[6]
        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps bit_simps
-                        getObjectSize_def add.commute append)
+                        getObjectSize_def add.commute append mapM_x_append mapM_x_singleton)
        apply ((subst gsUserPages_update gsCNodes_update
-                   gsUserPages_upd_createObjects'_comm
-                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
-                  | simp add: modify_modify_bind o_def)+)[1]
+                     gsUserPages_upd_createObjects'_comm
+                     monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                     monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+               | simp add: modify_modify_bind o_def empty_fail_cond ifence_def)+)[1]
       apply (subst monad_eq, rule createObjects_Cons)
             apply (simp_all add: field_simps shiftl_t2n pageBits_def
-                       RISCV64_H.getObjectSize_def objBits_simps)[6]
+                                 RISCV64_H.getObjectSize_def objBits_simps)[6]
       apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
-                        RISCV64_H.getObjectSize_def
-                       pageBits_def add.commute append)
+                       RISCV64_H.getObjectSize_def
+                       pageBits_def add.commute append mapM_x_append mapM_x_singleton)
       apply (subst gsUserPages_update gsCNodes_update
                    gsUserPages_upd_createObjects'_comm
-                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
-             | simp add: modify_modify_bind o_def)+
+                   monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                   monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+             | simp add: modify_modify_bind o_def empty_fail_cond ifence_def)+
      \<comment> \<open>HugePageObject\<close>
      apply (simp add: Arch_createNewCaps_def
                       Retype_H.createObject_def createObjects_def bind_assoc
@@ -1152,20 +1156,22 @@ proof -
             apply (simp_all add: field_simps shiftl_t2n pageBits_def
                        getObjectSize_def objBits_simps)[6]
       apply (simp add: bind_assoc placeNewObject_def2 objBits_simps bit_simps
-                       getObjectSize_def add.commute append)
+                       getObjectSize_def add.commute append mapM_x_append mapM_x_singleton)
       apply ((subst gsUserPages_update gsCNodes_update
                     gsUserPages_upd_createObjects'_comm
-                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
-              | simp add: modify_modify_bind o_def)+)[1]
+                    monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                    monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+              | simp add: modify_modify_bind o_def empty_fail_cond ifence_def)+)[1]
      apply (subst monad_eq, rule createObjects_Cons)
            apply (simp_all add: field_simps shiftl_t2n pageBits_def
                       RISCV64_H.getObjectSize_def objBits_simps)[6]
-     apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
-                      getObjectSize_def bit_simps add.commute append)
+     apply (simp add: bind_assoc placeNewObject_def2 objBits_simps getObjectSize_def bit_simps
+                      add.commute append mapM_x_append mapM_x_singleton)
      apply (subst gsUserPages_update gsCNodes_update
                   gsUserPages_upd_createObjects'_comm
-                  dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
-            | simp add: modify_modify_bind o_def)+
+                  monad_commute_simple'[OF map_dmo'_createObjects'_comm]
+                  monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+            | simp add: modify_modify_bind o_def empty_fail_cond ifence_def)+
    \<comment> \<open>PageTableObject\<close>
     apply (simp add:Arch_createNewCaps_def Retype_H.createObject_def
             createObjects_def bind_assoc RISCV64_H.toAPIType_def

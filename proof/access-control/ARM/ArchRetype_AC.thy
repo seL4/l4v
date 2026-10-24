@@ -399,6 +399,10 @@ lemma dmo_cleanCacheRange_RAM_respects [wp]:
              simp: dmo_bind_valid cleanCacheRange_RAM_def cleanCacheRange_PoC_def
                    cleanL2Range_def dsb_def cleanByVA_def)
 
+lemma dmo_invalidateCaches_I_respects[wp]:
+  "do_machine_op invalidateCaches_I \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp simp: dmo_bind_valid invalidateCaches_I_def dsb_def invalidate_I_PoU_def isb_def)
+
 lemma dmo_mapM_x_cleanCacheRange_PoU_integrity:
   "do_machine_op (mapM_x (\<lambda>x. cleanCacheRange_PoU (f x) (g x) (h x)) refs) \<lbrace>integrity aag X st\<rbrace>"
   by (wp dmo_mapM_x_wp_inv)
@@ -412,7 +416,8 @@ lemma init_arch_objects_integrity[Retype_AC_assms]:
   apply (cases new_type; simp add: init_arch_objects_def split del: if_split)
   apply (wpsimp wp: mapM_x_wp[OF _ subset_refl] copy_global_mappings_integrity
                     dmo_mapM_x_cleanCacheRange_PoU_integrity
-              simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
+              simp: dmo_bind_valid obj_bits_api_def default_arch_object_def pd_bits_def
+                    pageBits_def)
   done
 
 lemma integrity_asids_detype[Retype_AC_assms]:

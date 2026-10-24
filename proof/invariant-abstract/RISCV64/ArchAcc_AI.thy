@@ -2901,11 +2901,7 @@ lemma machine_op_lift_device_state[wp]:
                      select_def ignore_failure_def select_f_def
               split: if_splits)
 
-crunch sfence
-  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-crunch hwASIDFlush
-  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-crunch setVSpaceRoot
+crunch sfence, ifence, hwASIDFlush, setVSpaceRoot
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 lemma as_user_inv:

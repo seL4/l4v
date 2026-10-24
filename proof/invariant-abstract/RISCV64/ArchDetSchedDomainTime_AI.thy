@@ -20,7 +20,7 @@ crunch
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
   arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
   for domain_fields_invs[wp, Arch_assms]: "domain_fields P"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"

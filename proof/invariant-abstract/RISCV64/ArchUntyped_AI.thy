@@ -193,13 +193,15 @@ lemma init_arch_objects_descendants_range[wp,Arch_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). descendants_range x cref s \<rbrace>
    init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
-  unfolding init_arch_objects_def by wp
+  unfolding init_arch_objects_def descendants_range_def
+  by (wp mapM_x_wp' | wps)+ simp
 
 lemma init_arch_objects_caps_overlap_reserved[wp,Arch_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). caps_overlap_reserved S s\<rbrace>
    init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
-  unfolding init_arch_objects_def by wp
+  unfolding init_arch_objects_def caps_overlap_reserved_def
+  by (wp mapM_x_wp' | wps)+ simp
 
 lemma set_untyped_cap_invs_simple[Arch_assms]:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s \<and> pspace_no_overlap_range_cover ptr sz s \<and> invs s
@@ -325,7 +327,8 @@ lemma init_arch_objects_nonempty_table[Arch_assms, wp]:
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
         init_arch_objects tp dev ptr bits us refs
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
-  unfolding init_arch_objects_def by wpsimp
+  unfolding init_arch_objects_def
+  by (wpsimp wp: mapM_x_wp')
 
 lemma nonempty_table_caps_of[Arch_assms]:
   "nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
@@ -342,6 +345,7 @@ lemma nonempty_default[simp, Arch_assms]:
 
 crunch init_arch_objects
   for cte_wp_at_iin[wp]: "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
+  (wp: mapM_x_wp')
 
 lemmas init_arch_objects_ex_cte_cap_wp_to = init_arch_objects_excap
 

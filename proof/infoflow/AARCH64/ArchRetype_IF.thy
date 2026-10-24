@@ -235,9 +235,11 @@ lemma dmo_freeMemory_globals_equiv[Retype_IF_assms]:
 lemma init_arch_objects_reads_respects_g:
   "reads_respects_g aag l \<top> (init_arch_objects new_type dev ptr num_objects obj_sz refs)"
   unfolding init_arch_objects_def cleanCacheRange_RAM_def cleanCacheRange_PoU_def
+            invalidateCaches_I_def
   by (wpsimp wp: reads_respects_g do_machine_op_reads_respects
                  equiv_valid_guard_imp[OF machine_op_lift_ev]
-                 doesnt_touch_globalsI mapM_x_ev mapM_x_wp_inv)
+                 doesnt_touch_globalsI mapM_x_ev mapM_x_wp_inv
+           simp: dmo_distr)
 
 (* FIXME: cleanup this proof *)
 lemma retype_region_globals_equiv[Retype_IF_assms]:
@@ -610,7 +612,8 @@ lemma reset_untyped_cap_globals_equiv:
 lemma init_arch_objects_globals_equiv[wp]:
   "init_arch_objects tp dev ptr n us refs \<lbrace>globals_equiv st\<rbrace>"
   unfolding init_arch_objects_def cleanCacheRange_RAM_def cleanCacheRange_PoU_def
-  by (wpsimp wp: mapM_x_wp_inv)
+            invalidateCaches_I_def
+  by (wpsimp wp: mapM_x_wp_inv simp: dmo_distr)
 
 lemma invoke_untyped_globals_equiv:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff

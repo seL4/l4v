@@ -246,20 +246,22 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSmallPage)})
->             when (not isDevice) $ doMachineOp $
+>             when (not isDevice) $ doMachineOp $ do
 >                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
 >                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSmallPage))
 >                     (addrFromPPtr regionBase)
+>                 invalidateCaches_I
 >             return $ mkPageCap ARMSmallPage
 >         Arch.Types.LargePageObject -> do
 >             placeNewDataObject regionBase 4 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
->             when (not isDevice) $ doMachineOp $
+>             when (not isDevice) $ doMachineOp $ do
 >                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
 >                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMLargePage))
 >                     (addrFromPPtr regionBase)
+>                 invalidateCaches_I
 >             return $ mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -270,10 +272,11 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
->             when (not isDevice) $ doMachineOp $
+>             when (not isDevice) $ doMachineOp $ do
 >                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
 >                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSection))
 >                     (addrFromPPtr regionBase)
+>                 invalidateCaches_I
 >             return $ mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -284,10 +287,11 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
->             when (not isDevice) $ doMachineOp $
+>             when (not isDevice) $ doMachineOp $ do
 >                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
 >                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSuperSection))
 >                     (addrFromPPtr regionBase)
+>                 invalidateCaches_I
 >             return $ mkPageCap ARMSuperSection
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)

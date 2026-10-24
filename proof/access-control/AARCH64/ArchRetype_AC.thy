@@ -196,7 +196,7 @@ lemma aobj_refs'_default'[Retype_AC_assms]:
   by (cases tp; simp add: arch_default_cap_def ptr_range_memI obj_bits_api_def default_arch_object_def)
 
 crunch cleanCacheRange_RAM, cleanInvalidateCacheRange_RAM, cleanCacheRange_PoU,
-       invalidateCacheRange_RAM, invalidateCacheRange_I
+       invalidateCacheRange_RAM, invalidateCacheRange_I, invalidateCaches_I
   for vcpu_state[wp]: "\<lambda>ms. P (vcpu_state ms)"
   and fpu_state[wp]: "\<lambda>ms. P (fpu_state ms)"
 

@@ -1510,7 +1510,7 @@ proof -
          apply ((subst gsUserPages_update gsCNodes_update
                        gsUserPages_upd_createObjects'_comm
                        monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-                 | simp add: modify_modify_bind o_def)+)[1]
+                 | simp add: modify_modify_bind o_def empty_fail_cond)+)[1]
         (* not device *)
         apply (subst monad_eq, rule createObjects_Cons)
               apply (simp_all add: field_simps shiftl_t2n pageBits_def
@@ -1521,7 +1521,7 @@ proof -
                      gsUserPages_upd_createObjects'_comm
                      monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-               | simp add: modify_modify_bind o_def)+
+               | simp add: modify_modify_bind o_def empty_fail_cond)+
        \<comment> \<open>LargePageObject\<close>
        apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def bind_assoc
                         ARM_HYP_H.toAPIType_def ARM_HYP_H.createObject_def placeNewDataObject_def)
@@ -1535,7 +1535,7 @@ proof -
         apply ((subst gsUserPages_update gsCNodes_update
                       gsUserPages_upd_createObjects'_comm
                       monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-                | simp add: modify_modify_bind o_def)+)[1]
+                | simp add: modify_modify_bind o_def empty_fail_cond)+)[1]
        (* not device *)
        apply (subst monad_eq, rule createObjects_Cons)
              apply (simp_all add: field_simps shiftl_t2n pageBits_def
@@ -1547,7 +1547,7 @@ proof -
                    gsUserPages_upd_createObjects'_comm
                    monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                    monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-             | simp add: modify_modify_bind o_def)+
+             | simp add: modify_modify_bind o_def empty_fail_cond)+
       \<comment> \<open>SectionObject\<close>
       apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def bind_assoc
                        toAPIType_def ARM_HYP_H.createObject_def placeNewDataObject_def)
@@ -1561,7 +1561,7 @@ proof -
        apply ((subst gsUserPages_update gsCNodes_update
                      gsUserPages_upd_createObjects'_comm
                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-               | simp add: modify_modify_bind o_def)+)[1]
+               | simp add: modify_modify_bind o_def empty_fail_cond)+)[1]
       (* not device *)
       apply (subst monad_eq, rule createObjects_Cons)
             apply (simp_all add: field_simps shiftl_t2n pageBits_def
@@ -1572,7 +1572,7 @@ proof -
                   gsUserPages_upd_createObjects'_comm
                   monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                   monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-            | simp add: modify_modify_bind o_def)+
+            | simp add: modify_modify_bind o_def empty_fail_cond)+
      \<comment> \<open>SuperSectionObject\<close>
      apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def bind_assoc
                       toAPIType_def ARM_HYP_H.createObject_def placeNewDataObject_def)
@@ -1586,7 +1586,7 @@ proof -
       apply ((subst gsUserPages_update gsCNodes_update
                     gsUserPages_upd_createObjects'_comm
                     monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-              | simp add: modify_modify_bind o_def)+)[1]
+              | simp add: modify_modify_bind o_def empty_fail_cond)+)[1]
      (* not device *)
      apply (subst monad_eq, rule createObjects_Cons)
            apply (simp_all add: field_simps shiftl_t2n pageBits_def
@@ -1597,7 +1597,7 @@ proof -
                  gsUserPages_upd_createObjects'_comm
                  monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                  monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-           | simp add: modify_modify_bind o_def)+
+           | simp add: modify_modify_bind o_def empty_fail_cond)+
     \<comment> \<open>PageTableObject\<close>
     apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def bind_assoc
                      ARM_HYP_H.toAPIType_def ARM_HYP_H.createObject_def)

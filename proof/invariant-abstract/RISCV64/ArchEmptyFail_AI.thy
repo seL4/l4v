@@ -13,8 +13,8 @@ context Arch begin arch_global_naming
 clear_named_theorems Arch_assms (* accumulate assumptions for EmptyFail_AI locale *)
 
 crunch_ignore (empty_fail)
-  (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_stval resetTimer_impl stval_val
-        pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
+  (add: setVSpaceRoot_impl sfence_impl ifence_impl hwASIDFlush_impl read_stval resetTimer_impl
+        stval_val pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
 
 crunch
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs

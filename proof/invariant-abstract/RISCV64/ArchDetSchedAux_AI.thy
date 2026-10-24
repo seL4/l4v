@@ -31,7 +31,7 @@ lemma tcb_sched_action_valid_idle_etcb:
 
 crunch init_arch_objects
   for valid_blocked[wp, Arch_assms]: valid_blocked
-  (wp: valid_blocked_lift)
+  (wp: valid_blocked_lift crunch_wps)
 
 lemma perform_asid_control_etcb_at:
   "\<lbrace>etcb_at P t\<rbrace>

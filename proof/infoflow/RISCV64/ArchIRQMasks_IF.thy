@@ -24,6 +24,8 @@ lemma delete_objects_irq_masks[IRQMasks_IF_assms, wp]:
   apply (wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
 
+lemmas ifence_irq_masks[wp] = no_irq[OF no_irq_ifence]
+
 crunch invoke_untyped
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
@@ -150,10 +152,6 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
      apply blast
     apply (simp add: option_update_thread_def | wp hoare_weak_lift_imp hoare_vcg_all_lift | wpc)+
   by fastforce+
-
-lemma init_arch_objects_irq_masks:
-  "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  by (rule init_arch_objects_inv)
 
 crunch arch_prepare_set_domain
   for inv[IRQMasks_IF_assms,wp]: P

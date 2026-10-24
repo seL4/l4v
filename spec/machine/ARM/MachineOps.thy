@@ -473,6 +473,14 @@ where
     dsb
   od"
 
+definition invalidateCaches_I :: "unit machine_monad" where
+  "invalidateCaches_I \<equiv> do
+    dsb;
+    invalidate_I_PoU;
+    dsb;
+    isb
+  od"
+
 definition
   cleanInvalidateL1Caches :: "unit machine_monad"
 where
