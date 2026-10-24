@@ -69,7 +69,6 @@ lemma arch_derive_cap_silc[FinalCaps_assms]:
 declare init_arch_objects_cte_wp_at[FinalCaps_assms]
 declare handle_vm_fault_cur_thread[FinalCaps_assms]
 declare finalise_cap_makes_halted[FinalCaps_assms]
-declare init_arch_objects_inv[FinalCaps_assms]
 
 end
 

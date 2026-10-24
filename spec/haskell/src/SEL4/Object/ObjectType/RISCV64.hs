@@ -162,6 +162,7 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVSmallPage)})
+            when (not isDevice) $ doMachineOp ifence
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
@@ -169,6 +170,7 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVLargePage)})
+            when (not isDevice) $ doMachineOp ifence
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
@@ -176,6 +178,7 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVHugePage)})
+            when (not isDevice) $ doMachineOp ifence
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVHugePage isDevice Nothing
         Arch.Types.PageTableObject -> do

@@ -280,6 +280,11 @@ lemma no_fail_cleanCaches_PoU[simp, wp]:
   by (simp add: cleanCaches_PoU_def, rule no_fail_pre,
       wp no_fail_dsb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
 
+lemma no_fail_invalidateCaches_I[simp, wp]:
+  "no_fail \<top> invalidateCaches_I"
+  by (simp add: invalidateCaches_I_def, rule no_fail_pre,
+      wp no_fail_dsb no_fail_invalidate_I_PoU no_fail_isb, simp)
+
 lemma no_fail_cleanInvalidateL1Caches[simp, wp]:
   "no_fail \<top> cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def, rule no_fail_pre,
@@ -600,6 +605,11 @@ lemma no_irq_cleanCaches_PoU[simp, wp]:
   by (simp add: cleanCaches_PoU_def,
       wp no_irq_dsb no_irq_clean_D_PoU no_irq_invalidate_I_PoU)
 
+lemma no_irq_invalidateCaches_I[simp, wp]:
+  "no_irq invalidateCaches_I"
+  by (simp add: invalidateCaches_I_def,
+      wp no_irq_dsb no_irq_invalidate_I_PoU no_irq_isb)
+
 lemma no_irq_cleanInvalidateL1Caches[simp, wp]:
   "no_irq cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def,
@@ -748,6 +758,11 @@ lemma empty_fail_branchFlushRange[simp, intro!]:
 lemma empty_fail_cleanCaches_PoU[simp, intro!]:
   "empty_fail cleanCaches_PoU"
   by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+
+lemma empty_fail_invalidateCaches_I[simp, intro!]:
+  "empty_fail invalidateCaches_I"
+  by (fastforce simp: invalidateCaches_I_def empty_fail_dsb empty_fail_invalidate_I_PoU
+                      empty_fail_isb)
 
 lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
   "empty_fail cleanInvalidateL1Caches"

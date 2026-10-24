@@ -302,22 +302,21 @@ proof -
       apply (clarsimp simp: RISCV64_H.toAPIType_def APIType_capBits_def
                       split: RISCV64_H.object_type.splits)
          apply (in_case "HugePageObject")
-         apply wp
+         apply (wp mapM_x_wp' hoare_vcg_op_lift)
           apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
           apply (wp createObjects_aligned2 createObjects_nonzero'
                     cwo_ret'[where bs="ptTranslationBits + ptTranslationBits", simplified]
                  | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
          apply (simp add:pageBits_def ptr word_bits_def)
         apply (in_case "SmallPageObject")
-        apply wp
+        apply (wp mapM_x_wp' hoare_vcg_op_lift)
          apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
          apply (wp createObjects_aligned2 createObjects_nonzero'
                    cwo_ret'[where bs=0, simplified]
                 | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
         apply (simp add:pageBits_def ptr word_bits_def)
        apply (in_case \<open>LargePageObject\<close>)
-
-       apply wp
+       apply (wp mapM_x_wp' hoare_vcg_op_lift)
         apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
         apply (wp createObjects_aligned2 createObjects_nonzero'
                   cwo_ret'[where bs=ptTranslationBits, simplified]
@@ -767,7 +766,7 @@ lemma createNewCaps_valid_bitmaps[Arch_assms]:
                         split del: if_split)
       apply (rename_tac apiobject_type)
       apply (case_tac apiobject_type; simp split del: if_split)
-          apply (wpsimp wp: createObjects_valid_bitmaps[simplified o_def]
+          apply (wpsimp wp: createObjects_valid_bitmaps[simplified o_def] mapM_x_wp
                  | simp add: makeObject_tcb objBits_def createObjects_def
                  | intro conjI impI)+
   done
@@ -782,7 +781,7 @@ lemma createNewCaps_valid_sched_pointers[Arch_assms]:
                         split del: if_split)
       apply (rename_tac apiobject_type)
       apply (case_tac apiobject_type; simp split del: if_split)
-          apply (wpsimp wp: createObjects_valid_sched_pointers[simplified o_def]
+          apply (wpsimp wp: createObjects_valid_sched_pointers[simplified o_def] mapM_x_wp
                  | simp add: makeObject_tcb objBits_def createObjects_def
                  | intro conjI impI)+
   done
@@ -1494,8 +1493,8 @@ lemma createNewCaps_valid_pspace[Arch_assms]:
                 | simp add: power_add)+
   done
 
-lemma init_arch_objects_APIType_map2_noop:
-  "init_arch_objects (APIType_map2 tp) dev ptr n m addrs = return ()"
+lemma init_arch_objects_APIType_map2_PageTable_noop:
+  "init_arch_objects (APIType_map2 (Inr PageTableObject)) dev ptr n m addrs = return ()"
   apply (simp add: init_arch_objects_def APIType_map2_def)
   done
 
@@ -1505,11 +1504,6 @@ lemma data_page_relation_retype:
   apply (simp_all add: obj_relation_retype_def shiftl_t2n mult_ac
                    objBits_simps pbfs_atleast_pageBits)
    apply (clarsimp simp: image_def)+
-  done
-
-lemma init_arch_objects_APIType_map2_VCPU_noop:
-  "init_arch_objects (APIType_map2 (Inr VCPUObject)) dev ptr n m addrs = return ()"
-  apply (simp add: init_arch_objects_def APIType_map2_def)
   done
 
 lemma corres_retype_region_createNewCaps[Arch_assms]:
@@ -1607,50 +1601,59 @@ lemma corres_retype_region_createNewCaps[Arch_assms]:
                   | rule captable_relation_retype)+)[5]
      apply (in_case \<open>HugePageObject\<close>)
      apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
-     apply (rule corres_rel_imp)
-      apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
-      apply (rule corres_guard_imp)
+     apply (simp add: init_arch_objects_def split del: if_split)
+     apply (subst regroup_createObjects_dmo_userPages)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split)
+          apply (rule corres_retype_update_gsI;
+                 clarsimp simp: obj_bits_api_def3 APIType_map2_def objBits_simps ext
+                                default_object_def default_arch_object_def makeObjectKO_def
+                                data_page_relation_retype bit_simps
+                         elim!: range_cover.aligned;
+                 assumption)
+         apply (simp add: APIType_map2_def flip: when_def split del: if_split cong: if_cong)
+          apply (corres corres: corres_mapM_x_same_list corres_returnTT
+                        simp: APIType_map2_def arch_default_cap_def vm_read_write_def
+                              vmrights_map_def list_all2_map1 list_all2_map2 list_all2_same)
+         apply ((wpsimp split_del: if_split)+)[4]
+    apply (in_case \<open>SmallPageObject\<close>)
+    apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
+    apply (simp add: init_arch_objects_def split del: if_split)
+    apply (subst regroup_createObjects_dmo_userPages)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split)
+         apply (rule corres_retype_update_gsI;
+                clarsimp simp: obj_bits_api_def3 APIType_map2_def objBits_simps ext
+                               default_object_def default_arch_object_def makeObjectKO_def
+                               data_page_relation_retype
+                        elim!: range_cover.aligned;
+                assumption)
+        apply (simp add: APIType_map2_def flip: when_def split del: if_split cong: if_cong)
+         apply (corres corres: corres_mapM_x_same_list corres_returnTT
+                       simp: APIType_map2_def arch_default_cap_def vm_read_write_def
+                             vmrights_map_def list_all2_map1 list_all2_map2 list_all2_same)
+        apply ((wpsimp split_del: if_split)+)[4]
+   apply (in_case \<open>LargePageObject\<close>)
+   apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
+   apply (simp add: init_arch_objects_def split del: if_split)
+   apply (subst regroup_createObjects_dmo_userPages)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split)
         apply (rule corres_retype_update_gsI;
                clarsimp simp: obj_bits_api_def3 APIType_map2_def objBits_simps ext
                               default_object_def default_arch_object_def makeObjectKO_def
-                              data_page_relation_retype bit_simps
+                              data_page_relation_retype
                        elim!: range_cover.aligned;
                assumption)
-       apply fastforce+
-     apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                      list_all2_map1 list_all2_map2 list_all2_same)
-    apply (in_case \<open>SmallPageObject\<close>)
-    apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
-    apply (rule corres_rel_imp)
-     apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
-     apply (rule corres_guard_imp)
-       apply (rule corres_retype_update_gsI;
-              clarsimp simp: obj_bits_api_def3 APIType_map2_def objBits_simps ext
-                             default_object_def default_arch_object_def makeObjectKO_def
-                             data_page_relation_retype
-                      elim!: range_cover.aligned;
-              assumption)
-      apply fastforce+
-    apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                     list_all2_map1 list_all2_map2 list_all2_same)
-   apply (in_case \<open>LargePageObject\<close>)
-   apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
-   apply (rule corres_rel_imp)
-    apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
-    apply (rule corres_guard_imp)
-      apply (rule corres_retype_update_gsI;
-             clarsimp simp: obj_bits_api_def3 APIType_map2_def objBits_simps ext
-                            default_object_def default_arch_object_def makeObjectKO_def
-                            data_page_relation_retype
-                     elim!: range_cover.aligned;
-             assumption)
-     apply fastforce+
-   apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                    list_all2_map1 list_all2_map2 list_all2_same)
+       apply (simp add: APIType_map2_def flip: when_def split del: if_split cong: if_cong)
+        apply (corres corres: corres_mapM_x_same_list corres_returnTT
+                      simp: APIType_map2_def arch_default_cap_def vm_read_write_def
+                            vmrights_map_def list_all2_map1 list_all2_map2 list_all2_same)
+       apply ((wpsimp split_del: if_split)+)[4]
   apply (in_case \<open>PageTableObject\<close>)
   apply (simp_all add: corres_liftM2_simp[unfolded liftM_def])
   apply (rule corres_guard_imp)
-    apply (simp add: init_arch_objects_APIType_map2_noop)
+    apply (simp add: init_arch_objects_APIType_map2_PageTable_noop)
     apply (rule corres_rel_imp)
      apply (rule corres_retype[where 'a=pte];
             simp add: APIType_map2_def obj_bits_api_def default_arch_object_def objBits_simps

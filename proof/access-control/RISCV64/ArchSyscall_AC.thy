@@ -161,7 +161,9 @@ crunch
 declare handle_arch_fault_reply_cur_thread[Syscall_AC_assms]
 declare handle_arch_fault_reply_it[Syscall_AC_assms]
 declare arch_prepare_set_domain_idle_thread[Syscall_AC_assms]
-declare init_arch_objects_inv[Syscall_AC_assms]
+crunch init_arch_objects
+  for arch_state[Syscall_AC_assms, wp]: "\<lambda>s. P (arch_state s)"
+  (wp: crunch_wps)
 declare arch_post_set_flags_inv[Syscall_AC_assms]
 
 lemma ackInterrupt_integrity[Syscall_AC_assms,wp]:

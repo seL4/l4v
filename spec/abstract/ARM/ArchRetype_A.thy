@@ -45,9 +45,11 @@ definition init_arch_objects ::
         new_type \<in> {ArchObject SmallPageObj, ArchObject LargePageObj,
                     ArchObject SectionObj, ArchObject SuperSectionObj}
      then
-       mapM_x (\<lambda>ref. do_machine_op $
+       mapM_x (\<lambda>ref. do_machine_op $ do
                        cleanCacheRange_RAM ref (ref + mask (vs_apiobj_size new_type))
-                                           (addrFromPPtr ref))
+                                           (addrFromPPtr ref);
+                       invalidateCaches_I
+                     od)
               refs
      else if new_type \<in> {ArchObject PageTableObj, ArchObject PageDirectoryObj}
      then

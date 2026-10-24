@@ -200,7 +200,7 @@ lemma init_arch_objects_valid_vspace:
            and K (range_cover ptr sz (obj_bits_api type us) n)\<rbrace>
      init_arch_objects type dev ptr n obj_sz orefs
    \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  unfolding init_arch_objects_def by wpsimp
+  unfolding init_arch_objects_def by (wpsimp wp: mapM_x_wp')
 
 lemma delete_objects_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> delete_objects ptr bits \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"

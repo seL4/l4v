@@ -21,10 +21,12 @@ private abbreviation (input)
           if addr `~elem~` map fromPPtr addrs then Just pSize
           else gsUserPages ks addr)\<rparr>);
         when (\<not>dev) $
-          mapM_x (\<lambda>addr. doMachineOp $
+          mapM_x (\<lambda>addr. doMachineOp $ do
                             cleanCacheRange_RAM addr
                                                 (addr + mask (pageBitsForSize pSize))
-                                                (addrFromPPtr addr)) addrs;
+                                                (addrFromPPtr addr);
+                            invalidateCaches_I
+                          od) addrs;
         return $ map (\<lambda>n. PageCap dev (PPtr (fromPPtr n)) VMReadWrite pSize Nothing) addrs
      od)"
 

@@ -595,6 +595,8 @@ lemma invalidate_asid_entry_invs [wp]:
 
 lemmas cleanCaches_PoU_irq_masks = no_irq[OF no_irq_cleanCaches_PoU]
 
+lemmas invalidateCaches_I_irq_masks[wp] = no_irq[OF no_irq_invalidateCaches_I]
+
 lemmas ackInterrupt_irq_masks = no_irq[OF no_irq_ackInterrupt]
 
 lemmas setIRQTrigger_irq_masks = no_irq[OF no_irq_setIRQTrigger]
@@ -613,10 +615,10 @@ lemma clean_D_PoU_underlying_memory[wp]:
   by (clarsimp simp: clean_D_PoU_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
 
-crunch dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
+crunch dsb, isb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU, invalidateCaches_I
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
-  (ignore_del: dsb invalidate_I_PoU clean_D_PoU cleanCaches_PoU)
+  (ignore_del: dsb isb invalidate_I_PoU clean_D_PoU cleanCaches_PoU invalidateCaches_I)
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)

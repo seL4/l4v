@@ -58,7 +58,7 @@ crunch do_machine_op
 
 lemmas ackInterrupt_irq_masks = no_irq[OF no_irq_ackInterrupt]
 
-crunch sfence, hwASIDFlush, setVSpaceRoot
+crunch sfence, ifence, hwASIDFlush, setVSpaceRoot
   for underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
 
 
@@ -280,6 +280,12 @@ lemma dmo_sfence[wp]:
   "do_machine_op sfence \<lbrace>invs\<rbrace>"
   apply (wp dmo_invs)
   apply (auto simp: sfence_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
+  done
+
+lemma dmo_ifence[wp]:
+  "do_machine_op ifence \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply (auto simp: ifence_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
   done
 
 lemma find_vspace_for_asid_inv[wp]:
@@ -610,6 +616,9 @@ lemma not_in_global_refs_vs_lookup:
 lemma no_irq_sfence[wp,intro!]: "no_irq sfence"
   by (wpsimp simp: sfence_def no_irq_def machine_op_lift_def machine_rest_lift_def)
 
+lemma no_irq_ifence[wp,intro!]: "no_irq ifence"
+  by (wpsimp simp: ifence_def no_irq_def machine_op_lift_def machine_rest_lift_def)
+
 lemma pt_lookup_from_level_wp:
   "\<lbrace>\<lambda>s. (\<forall>level pt' pte.
             pt_walk top_level level top_level_pt vref (ptes_of s) = Some (level, pt') \<longrightarrow>
@@ -932,11 +941,11 @@ lemma is_final_cap_caps_of_state_2D:
                         prod_eqI)
   done
 
-crunch ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
+crunch ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence, ifence
   for underlying_memory[wp]: "\<lambda>m'. underlying_memory m' p = um"
   (simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def)
 
-crunch storeWord, ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
+crunch storeWord, ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence, ifence
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   (simp: crunch_simps)
 

@@ -479,6 +479,13 @@ supplied range.
 >     invalidate_I_PoU
 >     dsb
 
+> invalidateCaches_I :: MachineMonad ()
+> invalidateCaches_I = do
+>     dsb
+>     invalidate_I_PoU
+>     dsb
+>     isb
+
 > cleanInvalidateL1Caches :: MachineMonad ()
 > cleanInvalidateL1Caches = do
 >     dsb

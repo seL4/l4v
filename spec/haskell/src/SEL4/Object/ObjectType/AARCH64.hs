@@ -219,10 +219,11 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSmallPage)})
-            when (not isDevice) $ doMachineOp $
+            when (not isDevice) $ doMachineOp $ do
                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMSmallPage))
                     (addrFromPPtr regionBase)
+                invalidateCaches_I
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
@@ -230,10 +231,11 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMLargePage)})
-            when (not isDevice) $ doMachineOp $
+            when (not isDevice) $ doMachineOp $ do
                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMLargePage))
                     (addrFromPPtr regionBase)
+                invalidateCaches_I
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
@@ -241,10 +243,11 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMHugePage)})
-            when (not isDevice) $ doMachineOp $
+            when (not isDevice) $ doMachineOp $ do
                 cleanCacheRange_RAM (VPtr $ fromPPtr regionBase)
                     (VPtr $ fromPPtr regionBase + mask (pageBitsForSize ARMHugePage))
                     (addrFromPPtr regionBase)
+                invalidateCaches_I
             return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMHugePage isDevice Nothing
         Arch.Types.PageTableObject -> do

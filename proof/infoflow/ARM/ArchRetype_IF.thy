@@ -222,6 +222,18 @@ lemma dmo_cleanCacheRange_RAM_globals_equiv:
   by (wpsimp wp: dmo_mol_globals_equiv dmo_cacheRangeOp_lift
              simp: dmo_bind_valid dsb_def cleanCacheRange_PoC_def cleanByVA_def cleanL2Range_def)
 
+lemma dmo_invalidateCaches_I_globals_equiv:
+  "do_machine_op invalidateCaches_I \<lbrace>globals_equiv s\<rbrace>"
+  unfolding invalidateCaches_I_def
+  by (wpsimp wp: dmo_mol_globals_equiv
+           simp: dmo_bind_valid dsb_def invalidate_I_PoU_def isb_def)
+
+lemma dmo_cleanCacheRange_RAM_invalidateCaches_I_globals_equiv:
+  "do_machine_op (do cleanCacheRange_RAM x y z; invalidateCaches_I od)
+   \<lbrace>globals_equiv s\<rbrace>"
+  by (wpsimp wp: dmo_cleanCacheRange_RAM_globals_equiv dmo_invalidateCaches_I_globals_equiv
+           simp: dmo_bind_valid)
+
 lemma mol_globals_equiv:
   "machine_op_lift mop \<lbrace>\<lambda>ms. globals_equiv st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
   unfolding machine_op_lift_def
@@ -282,7 +294,8 @@ lemma init_arch_objects_globals_equiv:
   apply (rule hoare_gen_asm)+
   apply (rule hoare_pre)
    apply (wpc | wp mapM_x_wp[OF dmo_cleanCacheRange_PoU_globals_equiv subset_refl]
-                   mapM_x_wp[OF dmo_cleanCacheRange_RAM_globals_equiv subset_refl])+
+                   mapM_x_wp[OF dmo_cleanCacheRange_RAM_invalidateCaches_I_globals_equiv
+                                subset_refl])+
     apply (rule_tac Q'="\<lambda>_. globals_equiv s and (\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs)"
                  in hoare_strengthen_post)
      apply (wp mapM_x_wp[OF _ subset_refl] copy_global_mappings_globals_equiv
@@ -529,6 +542,30 @@ lemma dmo_cleanCacheRange_RAM_reads_respects_g:
    apply (rule doesnt_touch_globalsI[where P="\<top>", simplified, OF dmo_cleanCacheRange_RAM_globals_equiv])
   by simp
 
+lemma dmo_invalidateCaches_I_reads_respects:
+  "reads_respects aag l \<top> (do_machine_op invalidateCaches_I)"
+  unfolding invalidateCaches_I_def
+  by (wp dmo_mol_reads_respects empty_fail_dsb empty_fail_invalidate_I_PoU empty_fail_isb
+      | simp add: dsb_def invalidate_I_PoU_def isb_def
+      | subst do_machine_op_bind)+
+
+lemma dmo_cleanCacheRange_RAM_invalidateCaches_I_reads_respects:
+  "reads_respects aag l \<top>
+     (do_machine_op (do cleanCacheRange_RAM x y z; invalidateCaches_I od))"
+  by (wp dmo_cleanCacheRange_RAM_reads_respects dmo_invalidateCaches_I_reads_respects
+      | simp
+      | subst do_machine_op_bind)+
+
+lemma dmo_cleanCacheRange_RAM_invalidateCaches_I_reads_respects_g:
+  "reads_respects_g aag l \<top>
+     (do_machine_op (do cleanCacheRange_RAM x y z; invalidateCaches_I od))"
+  apply (rule equiv_valid_guard_imp[OF reads_respects_g])
+    apply (rule dmo_cleanCacheRange_RAM_invalidateCaches_I_reads_respects)
+   apply (rule doesnt_touch_globalsI[where P="\<top>", simplified,
+                                     OF dmo_cleanCacheRange_RAM_invalidateCaches_I_globals_equiv])
+  apply simp
+  done
+
 lemma init_arch_objects_reads_respects_g:
   "reads_respects_g aag l ((\<lambda>s. arm_global_pd (arch_state s) \<notin> set refs \<and>
                                 pspace_aligned s \<and> valid_arch_state s) and
@@ -540,7 +577,7 @@ lemma init_arch_objects_reads_respects_g:
   apply (unfold init_arch_objects_def fun_app_def)
   apply (rule gen_asm_ev)+
   apply (rule equiv_valid_guard_imp)
-   apply (wp dmo_cleanCacheRange_RAM_reads_respects_g
+   apply (wp dmo_cleanCacheRange_RAM_invalidateCaches_I_reads_respects_g
              dmo_cleanCacheRange_PoU_reads_respects_g
              mapM_x_ev'' when_ev
              equiv_valid_guard_imp[OF copy_global_mappings_reads_respects_g]

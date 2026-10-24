@@ -205,7 +205,9 @@ lemma aobj_refs'_default'[Retype_AC_assms]:
   by (cases tp; simp add: arch_default_cap_def ptr_range_memI obj_bits_api_def default_arch_object_def)
 
 crunch init_arch_objects
-  for inv[wp]: P
+  for pas_refined[Retype_AC_assms,wp]: "pas_refined aag"
+  and integrity_autarch[Retype_AC_assms,wp]: "integrity aag X st"
+  (wp: crunch_wps dmo_no_mem_respects)
 
 lemma region_in_kernel_window_preserved:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
@@ -382,7 +384,6 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
                  dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
                  simp: image_def p_assoc_help power_sub)
 
-declare init_arch_objects_inv[Retype_AC_assms]
 declare state_hyp_refs_of_detype[Retype_AC_assms]
 
 end

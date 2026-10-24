@@ -20,6 +20,7 @@ private abbreviation (input)
         modify (\<lambda>ks. ks \<lparr> gsUserPages := (\<lambda> addr.
           if addr `~elem~` map fromPPtr addrs then Just pSize
           else gsUserPages ks addr)\<rparr>);
+        when (\<not>dev) $ mapM_x (\<lambda>_. doMachineOp ifence) addrs;
         return $ map (\<lambda>n. FrameCap  (PPtr (fromPPtr n)) VMReadWrite pSize dev Nothing) addrs
      od)"
 

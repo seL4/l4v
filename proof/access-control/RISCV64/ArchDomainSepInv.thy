@@ -45,8 +45,6 @@ lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
   "arch_post_modify_registers cur t \<lbrace>domain_sep_inv irqs st\<rbrace>"
   unfolding arch_post_modify_registers_def by wpsimp
 
-declare init_arch_objects_inv[DomainSepInv_assms]
-
 end
 
 

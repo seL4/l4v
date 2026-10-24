@@ -216,6 +216,18 @@ assumes invalidateCacheRange_I_ccorres:
            (doMachineOp (invalidateCacheRange_I w1 w2 w3))
            (Call invalidateCacheRange_I_'proc)"
 
+assumes invalidateCaches_I_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp invalidateCaches_I)
+           (Call invalidateCaches_I_'proc)"
+
+assumes invalidateCaches_I_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call invalidateCaches_I_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+                 \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x
+                     = hrs_mem (t_hrs_' (globals s)) x)}"
+
 assumes cleanCacheRange_RAM_preserves_kernel_bytes:
  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_RAM_'proc
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))

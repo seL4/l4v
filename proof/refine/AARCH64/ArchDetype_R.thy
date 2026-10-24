@@ -1222,7 +1222,7 @@ proof -
                         gsUserPages_upd_createObjects'_comm
                         monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                         monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-                     | simp add: modify_modify_bind o_def)+)[1]
+                     | simp add: modify_modify_bind o_def empty_fail_cond)+)[1]
 
          apply (subst monad_eq, rule createObjects_Cons)
                apply (simp_all add: field_simps shiftl_t2n pageBits_def
@@ -1234,7 +1234,7 @@ proof -
                       gsUserPages_upd_createObjects'_comm
                       monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                       monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-                    | simp add: modify_modify_bind o_def)+
+                    | simp add: modify_modify_bind o_def empty_fail_cond)+
 
         apply (in_case "VSpaceObject")
         apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def
@@ -1277,7 +1277,7 @@ proof -
                       gsUserPages_upd_createObjects'_comm
                       monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                       monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-                   | simp add: modify_modify_bind o_def)+)[1]
+                   | simp add: modify_modify_bind o_def empty_fail_cond)+)[1]
        apply (subst monad_eq, rule createObjects_Cons)
              apply (simp_all add: field_simps shiftl_t2n pageBits_def
                                  AARCH64_H.getObjectSize_def objBits_simps)[6]
@@ -1288,7 +1288,7 @@ proof -
                     gsUserPages_upd_createObjects'_comm
                     monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                     monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-              | simp add: modify_modify_bind o_def)+
+              | simp add: modify_modify_bind o_def empty_fail_cond)+
 
       apply (in_case "LargePageObject")
       apply (simp add: Arch_createNewCaps_def
@@ -1304,7 +1304,7 @@ proof -
                      gsUserPages_upd_createObjects'_comm
                      monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-               | simp add: modify_modify_bind o_def)+)[1]
+               | simp add: modify_modify_bind o_def empty_fail_cond)+)[1]
       apply (subst monad_eq, rule createObjects_Cons)
             apply (simp_all add: field_simps shiftl_t2n pageBits_def
                        AARCH64_H.getObjectSize_def objBits_simps)[6]
@@ -1314,7 +1314,7 @@ proof -
                    gsUserPages_upd_createObjects'_comm
                    monad_commute_simple'[OF map_dmo'_createObjects'_comm]
                    monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-             | simp add: modify_modify_bind o_def)+
+             | simp add: modify_modify_bind o_def empty_fail_cond)+
 
      apply (in_case "PageTableObject")
      apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def bind_assoc

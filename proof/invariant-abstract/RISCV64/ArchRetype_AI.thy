@@ -215,10 +215,7 @@ lemma init_arch_objects_invs_from_restricted:
      init_arch_objects new_type dev ptr bits obj_sz refs
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: init_arch_objects_def split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_const_Ball_lift
-             valid_irq_node_typ
-                  | wpc)+
+  apply (wpsimp wp: mapM_x_wp')
   apply (auto simp: post_retype_invs_def)
   done
 

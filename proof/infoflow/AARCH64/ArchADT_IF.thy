@@ -445,6 +445,10 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
   apply simp
   done
 
+crunch cleanCacheRange_RAM, invalidateCaches_I
+  for irq_state[wp]: "\<lambda>s. P (irq_state s)"
+  (simp: machine_op_lift_def machine_rest_lift_def)
+
 crunch init_arch_objects
   for irq_states_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp)

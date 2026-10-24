@@ -238,7 +238,10 @@ lemma dmo_freeMemory_globals_equiv[Retype_IF_assms]:
 
 lemma init_arch_objects_reads_respects_g:
   "reads_respects_g aag l \<top> (init_arch_objects new_type dev ptr num_objects obj_sz refs)"
-  unfolding init_arch_objects_def by wp
+  unfolding init_arch_objects_def ifence_def
+  by (wpsimp wp: reads_respects_g do_machine_op_reads_respects
+                 equiv_valid_guard_imp[OF machine_op_lift_ev]
+                 doesnt_touch_globalsI mapM_x_ev mapM_x_wp_inv)
 
 lemma copy_global_mappings_globals_equiv:
   "\<lbrace>globals_equiv s and (\<lambda>s. x \<noteq> riscv_global_pt (arch_state s) \<and> is_aligned x pt_bits)\<rbrace>
@@ -478,6 +481,10 @@ lemma post_retype_invs_valid_global_objsI:
   "post_retype_invs ty rv s \<Longrightarrow> valid_global_objs s"
   by (clarsimp simp: post_retype_invs_def invs_def valid_state_def split: if_split_asm)
 
+crunch init_arch_objects
+  for valid_global_objs[wp]: valid_global_objs
+  (wp: crunch_wps)
+
 lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
                          atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost
@@ -631,6 +638,11 @@ lemma reset_untyped_cap_globals_equiv:
   apply (cases slot)
   apply (fastforce dest: valid_global_arch_objs_global_ptD[OF invs_valid_global_arch_objs])
   done
+
+lemma init_arch_objects_globals_equiv[wp]:
+  "init_arch_objects tp dev ptr n us refs \<lbrace>globals_equiv st\<rbrace>"
+  unfolding init_arch_objects_def ifence_def
+  by (wpsimp wp: mapM_x_wp_inv)
 
 lemma invoke_untyped_globals_equiv:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff

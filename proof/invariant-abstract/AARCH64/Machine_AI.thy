@@ -256,6 +256,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     initL2Cache_impl
     initTimer_impl
     invalidateCacheRange_I_impl
+    invalidateCaches_I_impl
     invalidateCacheRange_RAM_impl
     invalidateTranslationASID_impl
     invalidateTranslationSingle_impl
@@ -316,6 +317,7 @@ crunch
   initL2Cache,
   initTimer,
   invalidateCacheRange_I,
+  invalidateCaches_I,
   invalidateCacheRange_RAM,
   invalidateTranslationASID,
   invalidateTranslationSingle,

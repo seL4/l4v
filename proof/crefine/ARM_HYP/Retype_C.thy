@@ -5735,9 +5735,10 @@ proof -
            apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
                                  ARM_HYP_H.createObject_def pageBits_def
                                  cond_second_eq_seq_ccorres modify_gsUserPages_update
+                                 doMachineOp_bind_dist bind_assoc
                            intro!: ccorres_rhs_assoc)
            apply (rule ccorres_cases[where P=deviceMemory])
-            apply clarsimp
+            apply (clarsimp simp: bind_assoc)
             apply (rule ccorres_rhs_assoc)+
             apply (rule ccorres_split_nothrow_novcg)
                 apply (rule placeNewDataObject_dev_ccorres[where us=0 and newType=newType, simplified])
@@ -5753,7 +5754,7 @@ proof -
                      simp add: mask_def)
              apply wp
             apply (simp add: guard_is_UNIV_def)
-           apply clarsimp
+           apply (clarsimp simp: bind_assoc)
            apply (rule ccorres_rhs_assoc)+
            apply (rule ccorres_split_nothrow_novcg)
                apply (rule placeNewDataObject_no_dev_ccorres[where us=0 and newType=newType, simplified])
@@ -5762,9 +5763,11 @@ proof -
                apply csymbr+
                apply (rule ccorres_Guard_Seq)
                apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
-                apply ccorres_rewrite
-                apply csymbr
-                apply (rule ccorres_return_C; simp)
+                apply (ctac (no_vcg) add: invalidateCaches_I_ccorres)
+                 apply ccorres_rewrite
+                 apply csymbr
+                 apply (rule ccorres_return_C; simp)
+                apply wp
                apply wp
               apply wp
              apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
@@ -5790,9 +5793,10 @@ proof -
            apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
                                  ARM_HYP_H.createObject_def pageBits_def
                                  cond_second_eq_seq_ccorres modify_gsUserPages_update
+                                 doMachineOp_bind_dist bind_assoc
                            intro!: ccorres_rhs_assoc)
           apply (rule ccorres_cases[where P=deviceMemory])
-           apply clarsimp
+           apply (clarsimp simp: bind_assoc)
            apply (rule ccorres_rhs_assoc)+
            apply (rule ccorres_split_nothrow_novcg)
                apply (rule placeNewDataObject_dev_ccorres[where us=4 and newType=newType, simplified])
@@ -5809,7 +5813,7 @@ proof -
                                    vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
             apply wp
            apply (simp add: guard_is_UNIV_def)
-          apply clarsimp
+          apply (clarsimp simp: bind_assoc)
           apply (rule ccorres_rhs_assoc)+
           apply (rule ccorres_split_nothrow_novcg)
               apply (rule placeNewDataObject_no_dev_ccorres[where us=4 and newType=newType, simplified])
@@ -5818,9 +5822,11 @@ proof -
               apply csymbr+
               apply (rule ccorres_Guard_Seq)
               apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
-               apply ccorres_rewrite
-               apply csymbr
-               apply (rule ccorres_return_C; simp)
+               apply (ctac (no_vcg) add: invalidateCaches_I_ccorres)
+                apply ccorres_rewrite
+                apply csymbr
+                apply (rule ccorres_return_C; simp)
+               apply wp
               apply wp
              apply wp
             apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
@@ -5846,9 +5852,10 @@ proof -
          apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
                                ARM_HYP_H.createObject_def pageBits_def
                                cond_second_eq_seq_ccorres modify_gsUserPages_update
+                               doMachineOp_bind_dist bind_assoc
                          intro!: ccorres_rhs_assoc)
          apply (rule ccorres_cases[where P=deviceMemory])
-          apply clarsimp
+          apply (clarsimp simp: bind_assoc)
           apply (rule ccorres_rhs_assoc)+
           apply (rule ccorres_split_nothrow_novcg)
               apply (rule placeNewDataObject_dev_ccorres[where us=9 and newType=newType, simplified])
@@ -5865,7 +5872,7 @@ proof -
                                   vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
            apply wp
           apply (simp add: guard_is_UNIV_def)
-         apply clarsimp
+         apply (clarsimp simp: bind_assoc)
          apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_split_nothrow_novcg)
              apply (rule placeNewDataObject_no_dev_ccorres[where us=9 and newType=newType, simplified])
@@ -5874,9 +5881,11 @@ proof -
              apply csymbr+
              apply (rule ccorres_Guard_Seq)
              apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
-              apply ccorres_rewrite
-              apply csymbr
-              apply (rule ccorres_return_C; simp)
+              apply (ctac (no_vcg) add: invalidateCaches_I_ccorres)
+               apply ccorres_rewrite
+               apply csymbr
+               apply (rule ccorres_return_C; simp)
+              apply wp
              apply wp
             apply wp
            apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
@@ -5902,9 +5911,10 @@ proof -
         apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps
                               ARM_HYP_H.createObject_def pageBits_def
                               cond_second_eq_seq_ccorres modify_gsUserPages_update
+                              doMachineOp_bind_dist bind_assoc
                         intro!: ccorres_rhs_assoc)
         apply (rule ccorres_cases[where P=deviceMemory])
-         apply clarsimp
+         apply (clarsimp simp: bind_assoc)
          apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_split_nothrow_novcg)
              apply (rule placeNewDataObject_dev_ccorres[where us=13 and newType=newType, simplified])
@@ -5921,7 +5931,7 @@ proof -
                                  vm_page_size_defs cl_valid_cap_def c_valid_cap_def mask_def)
           apply wp
          apply (simp add: guard_is_UNIV_def)
-        apply clarsimp
+        apply (clarsimp simp: bind_assoc)
         apply (rule ccorres_rhs_assoc)+
         apply (rule ccorres_split_nothrow_novcg)
             apply (rule placeNewDataObject_no_dev_ccorres[where us=13 and newType=newType, simplified])
@@ -5930,9 +5940,11 @@ proof -
             apply csymbr+
             apply (rule ccorres_Guard_Seq)
             apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
-             apply ccorres_rewrite
-             apply csymbr
-             apply (rule ccorres_return_C; simp)
+             apply (ctac (no_vcg) add: invalidateCaches_I_ccorres)
+              apply ccorres_rewrite
+              apply csymbr
+              apply (rule ccorres_return_C; simp)
+             apply wp
             apply wp
            apply wp
           apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
@@ -7996,6 +8008,17 @@ lemma cleanCacheRange_RAM_preserves_bytes:
   apply (clarsimp simp: byte_regions_unmodified_def)
   done
 
+lemma invalidateCaches_I_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call invalidateCaches_I_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> byte_regions_unmodified' s t}"
+  apply (hoare_rule HoarePartial.ProcNoRec1, rule allI)
+  apply (rule conseqPre, vcg exspec=dsb_preserves_kernel_bytes
+                             exspec=invalidate_I_PoU_preserves_kernel_bytes
+                             exspec=isb_preserves_kernel_bytes)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
 lemma hrs_htd_update_canon:
   "hrs_htd_update (\<lambda>_. f (hrs_htd hrs)) hrs = hrs_htd_update f hrs"
   by (cases hrs, simp add: hrs_htd_update_def hrs_htd_def)
@@ -8015,6 +8038,7 @@ lemma Arch_createObject_preserves_bytes:
                              exspec=addrFromPPtr_modifies
                              exspec=cleanCacheRange_PoU_preserves_bytes
                              exspec=cleanCacheRange_RAM_preserves_bytes
+                             exspec=invalidateCaches_I_preserves_bytes
                              exspec=cap_page_directory_cap_new_modifies
                              exspec=cap_vcpu_cap_new_modifies)
   apply (clarsimp simp: vm_page_size_defs)
@@ -8186,7 +8210,8 @@ lemma Arch_createObject_not_untyped:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub>
    {s} Call Arch_createObject_'proc {t. cap_get_tag (ret__struct_cap_C_' t) \<noteq> scast cap_untyped_cap}"
   apply (rule allI, rule conseqPre)
-   apply (vcg exspec=cleanCacheRange_PoU_modifies exspec=cleanCacheRange_RAM_modifies)
+   apply (vcg exspec=cleanCacheRange_PoU_modifies exspec=cleanCacheRange_RAM_modifies
+              exspec=invalidateCaches_I_modifies)
   apply (clarsimp simp: cap_tag_defs vm_page_size_defs mask_def)
   done
 

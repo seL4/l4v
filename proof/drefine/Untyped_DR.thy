@@ -705,6 +705,11 @@ lemma dcorres_mapM_x_machine_op_noop:
     apply wpsimp+
   done
 
+lemma cleanCacheRange_RAM_invalidateCaches_I_mem[wp]:
+  "(do cleanCacheRange_RAM a b c; invalidateCaches_I od)
+   \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
+  by wpsimp
+
 lemma init_arch_objects_corres_noop:
   notes [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff
   shows
@@ -723,7 +728,8 @@ lemma init_arch_objects_corres_noop:
             split: Structures_A.apiobject_type.split aobject_type.split)
   apply (subst dcorres_machine_op_noop[THEN corres_guard_imp]
                dcorres_mapM_x_machine_op_noop[THEN corres_guard_imp]
-         | rule cleanCacheRange_PoU_mem cleanCacheRange_RAM_mem TrueI)+
+         | rule cleanCacheRange_PoU_mem cleanCacheRange_RAM_mem TrueI
+         | wp)+
   apply clarsimp
   apply (rule conj_commute[THEN iffD1])
   apply (rule context_conjI)

@@ -317,8 +317,7 @@ proof -
                       split: AARCH64_H.object_type.splits)
 
            apply (in_case "HugePageObject")
-           apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-           apply (wp hoare_vcg_op_lift)
+           apply (wp mapM_x_wp' hoare_vcg_op_lift)
             apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
             apply (wp createObjects_aligned2 createObjects_nonzero'
                       cwo_ret'[where bs="2 * ptTranslationBits NormalPT_T", simplified]
@@ -326,8 +325,7 @@ proof -
            apply (simp add:pageBits_def ptr word_bits_def)
 
           apply (in_case "VSpaceObject")
-          apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-          apply (wp hoare_vcg_op_lift)
+          apply (wp mapM_x_wp' hoare_vcg_op_lift)
            apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
            apply (rule hoare_chain)
              apply (rule hoare_vcg_conj_lift)
@@ -348,8 +346,7 @@ proof -
           apply clarsimp
 
          apply (in_case "SmallPageObject")
-         apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-         apply (wp hoare_vcg_op_lift)
+         apply (wp mapM_x_wp' hoare_vcg_op_lift)
           apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
           apply (wp createObjects_aligned2 createObjects_nonzero'
                     cwo_ret'[where bs=0, simplified]
@@ -357,8 +354,7 @@ proof -
          apply (simp add:pageBits_def ptr word_bits_def)
 
         apply (in_case \<open>LargePageObject\<close>)
-        apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-        apply (wp hoare_vcg_op_lift)
+        apply (wp mapM_x_wp' hoare_vcg_op_lift)
          apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
          apply (wp createObjects_aligned2 createObjects_nonzero'
                    cwo_ret'[where bs="ptTranslationBits NormalPT_T", simplified]
@@ -366,8 +362,7 @@ proof -
         apply (simp add:pageBits_def ptr word_bits_def)
 
        apply (in_case \<open>PageTableObject\<close>)
-       apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-       apply (wp hoare_vcg_op_lift)
+       apply (wp mapM_x_wp' hoare_vcg_op_lift)
         apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
         apply (rule hoare_chain)
           apply (rule hoare_vcg_conj_lift)
@@ -1739,16 +1734,10 @@ lemma corres_retype_region_createNewCaps[Arch_assms]:
                    assumption)
            apply (simp add: APIType_map2_def vs_apiobj_size_def
                        flip: when_def split del: if_split cong: if_cong)
-           apply (rule corres_split)
-              apply corres
-              apply (rule corres_mapM_x')
-                 apply corres
-                apply wp+
-              apply (rule refl)
-             apply (rule corres_returnTT)
-             apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                              list_all2_map1 list_all2_map2 list_all2_same)
-            apply ((wpsimp split_del: if_split)+)[6]
+           apply (corres corres: corres_mapM_x_same_list corres_machine_op corres_returnTT
+                         simp: APIType_map2_def arch_default_cap_def vm_read_write_def
+                               vmrights_map_def list_all2_map1 list_all2_map2 list_all2_same)
+          apply ((wpsimp split_del: if_split)+)[4]
       \<comment> \<open>VSpaceObject\<close>
       apply (in_case \<open>VSpaceObject\<close>)
       apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -1786,16 +1775,10 @@ lemma corres_retype_region_createNewCaps[Arch_assms]:
                  assumption)
          apply (simp add: APIType_map2_def vs_apiobj_size_def
                      flip: when_def split del: if_split cong: if_cong)
-         apply (rule corres_split)
-            apply corres
-            apply (rule corres_mapM_x')
-               apply corres
-              apply wp+
-            apply (rule refl)
-           apply (rule corres_returnTT)
-           apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                            list_all2_map1 list_all2_map2 list_all2_same)
-          apply ((wpsimp split_del: if_split)+)[6]
+         apply (corres corres: corres_mapM_x_same_list corres_machine_op corres_returnTT
+                       simp: APIType_map2_def arch_default_cap_def vm_read_write_def
+                             vmrights_map_def list_all2_map1 list_all2_map2 list_all2_same)
+        apply ((wpsimp split_del: if_split)+)[4]
     \<comment> \<open>LargePageObject\<close>
     apply (in_case \<open>LargePageObject\<close>)
     apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -1811,16 +1794,10 @@ lemma corres_retype_region_createNewCaps[Arch_assms]:
                 assumption)
         apply (simp add: APIType_map2_def vs_apiobj_size_def
                     flip: when_def split del: if_split cong: if_cong)
-        apply (rule corres_split)
-           apply corres
-           apply (rule corres_mapM_x')
-              apply corres
-             apply wp+
-           apply (rule refl)
-          apply (rule corres_returnTT)
-          apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                           list_all2_map1 list_all2_map2 list_all2_same)
-         apply ((wpsimp split_del: if_split)+)[6]
+        apply (corres corres: corres_mapM_x_same_list corres_machine_op corres_returnTT
+                      simp: APIType_map2_def arch_default_cap_def vm_read_write_def
+                            vmrights_map_def list_all2_map1 list_all2_map2 list_all2_same)
+       apply ((wpsimp split_del: if_split)+)[4]
    \<comment> \<open>PageTableObject\<close>
    apply (in_case \<open>PageTableObject\<close>)
    apply (simp_all add: corres_liftM2_simp[unfolded liftM_def])
