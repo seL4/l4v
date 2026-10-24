@@ -1112,6 +1112,7 @@ lemma dmo_valid_machine_state[wp]:
   "do_machine_op (set_cntv_off_64 w') \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (maskInterrupt m irq) \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (setHCR word) \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (trapDebugExceptions trap) \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op isb \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op dsb \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (set_gic_vcpu_ctrl_hcr f) \<lbrace>valid_machine_state\<rbrace>"

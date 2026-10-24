@@ -31,12 +31,12 @@ crunch
   get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr, addressTranslateS1, getHDFAR, getHSR,
   writeVCPUHardwareReg, readVCPUHardwareReg, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_hcr,
   set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, setHCR, setSCTLR, setCPACR,
-  set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr
+  set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr, getHDCR, setHDCR, trapDebugExceptions
   for (no_fail) no_fail[wp, intro!, simp]
   (wp: no_fail_machine_op_lift crunch_wps
    ignore: get_gic_vcpu_ctrl_lr_impl bind addressTranslateS1_impl writeVCPUHardwareReg_impl
            set_gic_vcpu_ctrl_hcr_impl set_gic_vcpu_ctrl_vmcr_impl setHCR_impl setSCTLR_impl
-           setCPACR_impl set_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_apr_impl)
+           setCPACR_impl set_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_apr_impl setHDCR_impl)
 
 (* Move to ArchVSpace_AI *)
 lemma flush_space_vspace_objs[wp]:

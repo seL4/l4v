@@ -171,7 +171,7 @@ where
   "HardwareASID_ \<lparr> fromHWASID= v0 \<rparr> == HardwareASID v0"
 
 (* Machine/Hardware/ARM.lhs - vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize pageForPageBits hcrCommon hcrTWE hcrTWI hcrVCPU hcrNative vgicHCREN vgicHCRTALL0 sctlrDefault actlrDefault cpacrDefault gicVCPUMaxNumLR
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize pageForPageBits hcrCommon hcrTWE hcrTWI hcrVCPU hcrNative hdcrTDE vgicHCREN vgicHCRTALL0 sctlrDefault actlrDefault cpacrDefault gicVCPUMaxNumLR
 
 lemmas vmpage_size_simps = vmpage_size.simps
 end
