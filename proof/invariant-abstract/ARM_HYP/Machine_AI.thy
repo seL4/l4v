@@ -483,6 +483,12 @@ lemma no_irq_setSCTLR: "no_irq (setSCTLR w)"
 lemma no_irq_setCPACR: "no_irq (setCPACR w)"
   by (simp add: setCPACR_def)
 
+lemma no_irq_getHDCR: "no_irq getHDCR"
+  by (simp add: getHDCR_def)
+
+lemma no_irq_setHDCR: "no_irq (setHDCR w)"
+  by (simp add: setHDCR_def)
+
 lemma no_irq_getSCTLR: "no_irq getSCTLR"
     by (simp add: getSCTLR_def)
 
@@ -669,6 +675,10 @@ lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
   apply (wp no_irq_mapM_x no_irq_storeWord no_irq_cleanCacheRange_PoU)
   done
 
+lemma no_irq_trapDebugExceptions: "no_irq (trapDebugExceptions trap)"
+  unfolding trapDebugExceptions_def
+  by (wp no_irq_getHDCR no_irq_setHDCR)
+
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
@@ -787,6 +797,18 @@ lemma empty_fail_setSCTLR[simp, intro!]:
 lemma empty_fail_setCPACR[simp, intro!]:
   "empty_fail (setCPACR w)"
   by (simp add: setCPACR_def)
+
+lemma empty_fail_getHDCR[simp, intro!]:
+  "empty_fail getHDCR"
+  by (simp add: getHDCR_def)
+
+lemma empty_fail_setHDCR[simp, intro!]:
+  "empty_fail (setHDCR w)"
+  by (simp add: setHDCR_def)
+
+lemma empty_fail_trapDebugExceptions[simp, intro!]:
+  "empty_fail (trapDebugExceptions trap)"
+  by (wpsimp simp: trapDebugExceptions_def)
 
 lemma empty_fail_getSCTLR[simp, intro!]:
   "empty_fail getSCTLR"

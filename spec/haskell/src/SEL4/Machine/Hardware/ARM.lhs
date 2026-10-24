@@ -535,6 +535,19 @@ implementation assumes the monitor is not modelled in our simulator.
 > setCPACR :: Word -> MachineMonad ()
 > setCPACR _cpacr = isabelleOp
 
+> getHDCR :: MachineMonad Word
+> getHDCR = isabelleOp
+
+> setHDCR :: Word -> MachineMonad ()
+> setHDCR _hdcr = isabelleOp
+
+Set or unset the HDCR.TDE (trap debug exceptions) field in the HDCR register
+
+> trapDebugExceptions :: Bool -> MachineMonad ()
+> trapDebugExceptions trap = do
+>     hdcr <- getHDCR
+>     setHDCR $ if trap then hdcr .|. hdcrTDE else hdcr .&. complement hdcrTDE
+
 \subsection{Hypervisor banked registers}
 
 Rather than a line-for-line copy of every hypervisor register storage and
@@ -909,6 +922,10 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > cpacrDefault = bit 28
 
 > hcrNative = (0xFE8103B :: Word) -- HCR_NATIVE
+
+> hdcrTDE :: Word -- HDCR_DEBUG_TDE
+> hdcrTDE = bit 8
+
 > vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
 
 > -- trap VCPU access to group 0 registers on GICv3, do nothing on GICv2
