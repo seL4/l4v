@@ -104,11 +104,9 @@ Library
     if flag(ArchArm)
         other-modules:
                             SEL4.Machine.Hardware.ARM.KZM
-                            SEL4.Machine.Hardware.ARM.Exynos4210
                             SEL4.Machine.Hardware.ARM.Sabre
                             SEL4.Machine.Hardware.ARM.Callbacks
                             SEL4.Machine.Hardware.GICInterface
-                            SEL4.Machine.Hardware.MCTInterface
                             SEL4.Machine.Hardware.MPTimerInterface
 
                             SEL4.API.Types.ARM
