@@ -81,7 +81,7 @@ lemma no_fail_machine_state_rest_T[simp, intro!]:
   apply (simp add: o_def)
   done
 
-definition
+definition machine_op_lift :: "unit machine_rest_monad \<Rightarrow> unit machine_monad" where
   "machine_op_lift \<equiv> machine_rest_lift o ignore_failure"
 
 end

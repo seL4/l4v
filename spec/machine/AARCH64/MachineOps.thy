@@ -467,7 +467,8 @@ text \<open>
   Initialize memory to be used as user memory. Note that zeroing out the memory is redundant
   in the specifications. In any case, we cannot abstract from the call to cleanCacheRange, which
   appears in the implementation.\<close>
-abbreviation (input) "initMemory == clearMemory"
+abbreviation (input) initMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
+  "initMemory \<equiv> clearMemory"
 
 text \<open>
   Free memory that had been initialized as user memory. While freeing memory is a no-op in the

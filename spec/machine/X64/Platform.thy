@@ -30,8 +30,11 @@ type_synonym irq = "irq_len word"
 type_synonym paddr = word64
 
 
-abbreviation (input) "toPAddr \<equiv> id"
-abbreviation (input) "fromPAddr \<equiv> id"
+abbreviation (input) toPAddr :: "machine_word \<Rightarrow> paddr" where
+  "toPAddr \<equiv> id"
+
+abbreviation (input) fromPAddr :: "paddr \<Rightarrow> machine_word" where
+  "fromPAddr \<equiv> id"
 
 definition pptrBase :: word64 where
   "pptrBase = 0xffffff8000000000"

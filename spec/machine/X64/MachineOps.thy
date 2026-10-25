@@ -121,7 +121,7 @@ definition debugPrint :: "unit list \<Rightarrow> unit machine_monad" where
 text \<open>
   Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
   but that can occur from user mode. Empty on plain x86-64.\<close>
-definition
+definition non_kernel_IRQs :: "irq set" where
   "non_kernel_IRQs = {}"
 
 text \<open>
@@ -165,7 +165,8 @@ text \<open>
   Note that zeroing out the memory is redundant in the specifications.
   In any case, we cannot abstract from the call to cleanCacheRange,
   which appears in the implementation.\<close>
-abbreviation (input) "initMemory == clearMemory"
+abbreviation (input) initMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
+  "initMemory \<equiv> clearMemory"
 
 text \<open>
   Free memory that had been initialized as user memory.
@@ -195,16 +196,16 @@ type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 definition getRegister :: "register \<Rightarrow> machine_word user_monad" where
   "getRegister r \<equiv> gets (\<lambda>s. user_regs s r)"
 
-definition
+definition modify_registers :: "(user_regs \<Rightarrow> user_regs) \<Rightarrow> user_context \<Rightarrow> user_context" where
   "modify_registers f uc \<equiv> UserContext (user_fpu_state uc) (f (user_regs uc))"
 
 definition setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad" where
   "setRegister r v \<equiv> modify (\<lambda>s. UserContext (user_fpu_state s) ((user_regs s) (r := v)))"
 
-definition
+definition getRestartPC :: "machine_word user_monad" where
   "getRestartPC \<equiv> getRegister FaultIP"
 
-definition
+definition setNextPC :: "machine_word \<Rightarrow> unit user_monad" where
   "setNextPC \<equiv> setRegister NextIP"
 
 

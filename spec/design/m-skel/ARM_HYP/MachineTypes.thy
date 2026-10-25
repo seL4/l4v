@@ -95,7 +95,7 @@ translations
 context Arch begin arch_global_naming
 
 text \<open>After kernel initialisation all IRQs are masked.\<close>
-definition
+definition init_irq_masks :: "irq \<Rightarrow> bool" where
   "init_irq_masks \<equiv> \<lambda>_. True"
 
 text \<open>The initial contents of the user-visible memory is 0.\<close>
