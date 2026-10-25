@@ -72,9 +72,9 @@ nextInstructionRegister = NextIP
 data VCPUReg =
       VCPURegSCTLR
     | VCPURegCPACR
+    | VCPURegTCR
     | VCPURegTTBR0
     | VCPURegTTBR1
-    | VCPURegTCR
     | VCPURegMAIR
     | VCPURegAMAIR
     | VCPURegCIDR
@@ -103,11 +103,12 @@ vcpuRegNum = fromEnum (maxBound :: VCPUReg)
 
 vcpuRegSavedWhenDisabled :: VCPUReg -> Bool
 vcpuRegSavedWhenDisabled VCPURegSCTLR = True
+vcpuRegSavedWhenDisabled VCPURegCPACR = True
+vcpuRegSavedWhenDisabled VCPURegTCR = True
 vcpuRegSavedWhenDisabled VCPURegCNTV_CTL = True
 vcpuRegSavedWhenDisabled VCPURegCNTV_CVAL = True
 vcpuRegSavedWhenDisabled VCPURegCNTVOFF = True
 vcpuRegSavedWhenDisabled VCPURegCNTKCTL_EL1 = True
-vcpuRegSavedWhenDisabled VCPURegCPACR = True
 vcpuRegSavedWhenDisabled _ = False
 
 {- User-level Context -}

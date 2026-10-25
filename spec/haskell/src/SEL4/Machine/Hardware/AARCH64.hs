@@ -262,6 +262,9 @@ getSCTLR = isabelleOp
 setSCTLR :: Word -> MachineMonad ()
 setSCTLR _sctlr = isabelleOp
 
+writeTCR :: Word -> MachineMonad ()
+writeTCR _tcr = isabelleOp
+
 {- Hypervisor banked registers -}
 
 -- Rather than a line-for-line copy of every hypervisor register storage and
@@ -469,6 +472,7 @@ hcrVCPU = if config_DISABLE_WFI_WFE_TRAPS
 hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
+tcrEL1Native = (0 :: Word) -- TCR_EL1_NATIVE
 vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
 
 -- trap VCPU access to group 0 registers on GICv3, do nothing on GICv2

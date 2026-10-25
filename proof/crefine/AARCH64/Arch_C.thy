@@ -3405,17 +3405,18 @@ lemma vcpu_reg_saved_when_disabled_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
            Call vcpu_reg_saved_when_disabled_'proc
            \<lbrace> \<acute>ret__unsigned_long = from_bool (\<^bsup>s\<^esup>field \<in> {scast seL4_VCPUReg_SCTLR,
+                                                          scast seL4_VCPUReg_CPACR,
+                                                          scast seL4_VCPUReg_TCR,
                                                           scast seL4_VCPUReg_CNTV_CVAL,
                                                           scast seL4_VCPUReg_CNTVOFF,
                                                           scast seL4_VCPUReg_CNTKCTL_EL1,
-                                                          scast seL4_VCPUReg_CNTV_CTL,
-                                                          scast seL4_VCPUReg_CPACR}) \<rbrace>"
+                                                          scast seL4_VCPUReg_CNTV_CTL}) \<rbrace>"
   by vcg clarsimp
 
 lemma vcpuRegSavedWhenDisabled_spec[simp]:
-  "vcpuRegSavedWhenDisabled reg = (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CVAL \<or>
-                                   reg = VCPURegCNTVOFF \<or> reg = VCPURegCNTKCTL_EL1 \<or>
-                                   reg = VCPURegCNTV_CTL \<or> reg = VCPURegCPACR)"
+  "vcpuRegSavedWhenDisabled reg = (reg = VCPURegSCTLR \<or> reg = VCPURegCPACR \<or> reg = VCPURegTCR \<or>
+                                   reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
+                                   reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL)"
   by (simp add: vcpuRegSavedWhenDisabled_def split: vcpureg.splits)
 
 lemma writeVCPUReg_ccorres:
@@ -3441,8 +3442,9 @@ lemma writeVCPUReg_ccorres:
     apply clarsimp
     apply (rename_tac curvcpuactive)
     apply csymbr
-    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
-                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL \<or> reg = VCPURegCPACR) \<and> \<not>curvcpuactive }"
+    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCPACR \<or> reg = VCPURegTCR \<or>
+                             reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
+                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL) \<and> \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
      subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
@@ -3486,8 +3488,9 @@ lemma readVCPUReg_ccorres:
     apply clarsimp
     apply (rename_tac curvcpuactive)
     apply csymbr
-    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
-                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL \<or> reg = VCPURegCPACR) \<and> \<not>curvcpuactive }"
+    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCPACR \<or> reg = VCPURegTCR \<or>
+                             reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
+                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL) \<and> \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
      subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
