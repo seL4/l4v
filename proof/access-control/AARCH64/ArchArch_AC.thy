@@ -1882,7 +1882,7 @@ lemma integrity_no_hyp_arm_current_vcpu[simp]:
   by (simp add: integrity_no_hyp_def integrity_asids_def integrity_fpu_def)
 
 crunch readVCPUHardwareReg, writeVCPUHardwareReg,
-       check_export_arch_timer, maskInterrupt, setHCR, setSCTLR, enableFpuEL01,
+       check_export_arch_timer, maskInterrupt, setHCR, setSCTLR, writeTCR, enableFpuEL01,
        set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_lr,
        get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr
   for fpu_state[wp]: "\<lambda>s. P (fpu_state s)"
@@ -1912,7 +1912,7 @@ definition vcpu_proj where
 abbreviation (input)
   "vtimerRegs \<equiv> {VCPURegCNTV_CTL,VCPURegCNTV_CVAL,VCPURegCNTVOFF,VCPURegCNTKCTL_EL1}"
 abbreviation (input)
-  "savedWhenDisabledRegs \<equiv> {VCPURegSCTLR,VCPURegCPACR} \<union> vtimerRegs"
+  "savedWhenDisabledRegs \<equiv> {VCPURegSCTLR,VCPURegCPACR,VCPURegTCR} \<union> vtimerRegs"
 
 lemma savedWhenDisabledRegs_def:
   "savedWhenDisabledRegs = Collect vcpuRegSavedWhenDisabled"
@@ -2092,7 +2092,8 @@ lemma vcpu_disable_vcpu_proj[wp]:
    vcpu_disable vcpu
    \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
   supply if_split[split del] if_split_asm[split]
-  apply (case_tac vcpu; simp add: vcpu_disable_def enableFpuEL01_def setSCTLR_def dmo_distr)
+  apply (case_tac vcpu;
+         simp add: vcpu_disable_def enableFpuEL01_def setSCTLR_def writeTCR_def dmo_distr)
   by (wpsimp wp: vcpu_save_reg_vcpu_proj modify_reg_vcpu_proj
            simp: insert_commute Diff_insert[symmetric] | wp dmo_lift_vcpu_proj)+
 

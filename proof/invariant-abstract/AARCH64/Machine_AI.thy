@@ -269,6 +269,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     setHCR_impl
     setIRQTrigger_impl
     setSCTLR_impl
+    writeTCR_impl
     setVSpaceRoot_impl
     writeFpuState_impl
     writeVCPUHardwareReg_impl
@@ -329,6 +330,7 @@ crunch
   setHCR,
   setIRQTrigger,
   setSCTLR,
+  writeTCR,
   setVSpaceRoot,
   writeFpuState,
   readVCPUHardwareReg,

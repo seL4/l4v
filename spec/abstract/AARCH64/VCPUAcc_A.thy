@@ -112,13 +112,15 @@ definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
-        vcpu_save_reg vr VCPURegCPACR \<comment> \<open>since FPU enabled\<close>
+        vcpu_save_reg vr VCPURegCPACR; \<comment> \<open>since FPU enabled\<close>
+        vcpu_save_reg vr VCPURegTCR
       od
     | _ \<Rightarrow> return ();
     do_machine_op $ do
         set_gic_vcpu_ctrl_hcr 0; \<comment> \<open>turn VGIC off\<close>
         dsb; \<comment> \<open>for GIC memory-mapped register\<close>
         setSCTLR sctlrDefault; \<comment> \<open>turn S1 MMU off\<close>
+        writeTCR tcrEL1Native;
         setHCR hcrNative;
         isb;
         \<comment> \<open>allow FPU instructions in EL0 and EL1 for native threads\<close>
@@ -135,6 +137,7 @@ definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_
 text \<open>Turn VCPU mode on, on the hardware level.\<close>
 definition vcpu_enable :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_enable vr \<equiv> do
+     vcpu_restore_reg vr VCPURegTCR;
      vcpu_restore_reg vr VCPURegSCTLR;
      vcpu \<leftarrow> get_vcpu vr;
      do_machine_op $ do
@@ -186,7 +189,10 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
             gicIndices;
 
           \<comment> \<open>armvVCPUSave\<close>
-          when active $ vcpu_save_reg vr VCPURegCPACR;
+          when active $ do
+            vcpu_save_reg vr VCPURegCPACR;
+            vcpu_save_reg vr VCPURegTCR
+          od;
           vcpu_save_reg_range vr VCPURegTTBR0 VCPURegVDISR_EL2
        od
      | _ \<Rightarrow> fail"

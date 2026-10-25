@@ -364,6 +364,7 @@ restoreVirtTimer vcpuPtr = do
 
 vcpuEnable :: PPtr VCPU -> Kernel ()
 vcpuEnable vcpuPtr = do
+    vcpuRestoreReg vcpuPtr VCPURegTCR
     vcpuRestoreReg vcpuPtr VCPURegSCTLR
     vcpu <- getObject vcpuPtr
     doMachineOp $ do
@@ -383,12 +384,14 @@ vcpuDisable vcpuPtrOpt = do
            vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
            vcpuSaveReg vcpuPtr VCPURegSCTLR
            vcpuSaveReg vcpuPtr VCPURegCPACR -- since FPU enabled
+           vcpuSaveReg vcpuPtr VCPURegTCR
         Nothing -> return ()
 
     doMachineOp $ do
         set_gic_vcpu_ctrl_hcr 0 -- VGIC off
         dsb -- for GIC memory-mapped register
         setSCTLR sctlrDefault -- S1 MMU off
+        writeTCR tcrEL1Native
         setHCR hcrNative
         isb
         -- allow FPU instructions in EL0 and EL1 for native threads
@@ -402,7 +405,9 @@ vcpuDisable vcpuPtrOpt = do
 
 armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 armvVCPUSave vcpuPtr active = do
-    when active $ vcpuSaveReg vcpuPtr VCPURegCPACR
+    when active $ do
+        vcpuSaveReg vcpuPtr VCPURegCPACR
+        vcpuSaveReg vcpuPtr VCPURegTCR
     vcpuSaveRegRange vcpuPtr VCPURegTTBR0 VCPURegVDISR_EL2
 
 vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
