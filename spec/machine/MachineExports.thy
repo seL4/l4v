@@ -6,7 +6,7 @@
 
 
 theory MachineExports
-imports MachineOps
+  imports MachineOps
 begin
 
 (* Check consistency of machine_word and machine_word_len. *)
