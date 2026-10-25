@@ -75,10 +75,8 @@ lemma upto0_7_def:
 
 lemma loadWord_storeWord_is_return:
   "p && mask 3 = 0 \<Longrightarrow> (do w \<leftarrow> loadWord p; storeWord p w od) = return ()"
-  apply (rule ext)
-  by (simp add: loadWord_def storeWord_def bind_def assert_def return_def
-                modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def
-                word_rsplit_rcat_size word_size)
+  by (simp add: loadWord_def storeWord_def upto0_7_def word_rsplit_rcat_size word_size
+                simpler_gets_def simpler_modify_def bind_def return_def fun_eq_iff)
 
 
 text \<open>This instruction is required in the simulator, only.\<close>
