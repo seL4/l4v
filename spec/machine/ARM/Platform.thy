@@ -7,20 +7,19 @@
 chapter "Platform Definitions"
 
 theory Platform
-imports
-  "Lib.Defs"
-  "Lib.Lib"
-  "Word_Lib.WordSetup"
-  Setup_Locale
-  Kernel_Config
+  imports
+    "Lib.Defs"
+    "Lib.Lib"
+    "Word_Lib.WordSetup"
+    Setup_Locale
+    Kernel_Config
 begin
 
 text \<open>
   This theory lists platform-specific types and basic constants, in particular
   the types of interrupts and physical addresses, constants for the
   kernel location, the offsets between physical and virtual kernel
-  addresses, as well as the range of IRQs on the platform.
-\<close>
+  addresses, as well as the range of IRQs on the platform.\<close>
 
 section \<open>ABI Setup\<close>
 
