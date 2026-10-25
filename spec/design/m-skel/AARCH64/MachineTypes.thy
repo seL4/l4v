@@ -6,12 +6,12 @@
 chapter "AARCH64 Machine Types"
 
 theory MachineTypes
-imports
-  Word_Lib.WordSetup
-  Monads.Nondet_Empty_Fail
-  Monads.Nondet_Reader_Option
-  Lib.HaskellLib_H
-  Platform
+  imports
+    Word_Lib.WordSetup
+    Monads.Nondet_Empty_Fail
+    Monads.Nondet_Reader_Option
+    Lib.HaskellLib_H
+    Platform
 begin
 
 context Arch begin arch_global_naming
@@ -20,8 +20,7 @@ context Arch begin arch_global_naming
 
 text \<open>
   An implementation of the machine's types, defining register set
-  and some observable machine state.
-\<close>
+  and some observable machine state.\<close>
 
 section "Types"
 
@@ -47,13 +46,12 @@ text \<open>
   Most of the machine state is left underspecified at this level.
   We know it exists, we will declare some interface functions, but
   at this level we do not have access to how this state is transformed
-  or what effect it has on the machine.
-\<close>
+  or what effect it has on the machine.\<close>
 typedecl machine_state_rest
 
 type_synonym virq = machine_word
 
-text \<open> There are 64 general FPU registers saved. \<close>
+text \<open>There are 64 general FPU registers saved.\<close>
 type_synonym fpu_regs = 64
 
 text \<open>
@@ -96,9 +94,7 @@ end_qualify
 
 context Arch begin arch_global_naming
 
-text \<open>
-  The machine monad is used for operations on the state defined above.
-\<close>
+text \<open>The machine monad is used for operations on the state defined above.\<close>
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
 end
@@ -116,18 +112,12 @@ context Arch begin arch_global_naming
   hcrVCPU hcrNative vgicHCREN vgicHCRTALL0 sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR \
   vcpuBits
 
-text \<open>
-  After kernel initialisation all IRQs are masked.
-\<close>
+text \<open>After kernel initialisation all IRQs are masked.\<close>
 definition
   "init_irq_masks \<equiv> \<lambda>_. True"
 
-text \<open>
-  The initial contents of the user-visible memory is 0.
-\<close>
-definition
-  init_underlying_memory :: "machine_word \<Rightarrow> word8"
-  where
+text \<open>The initial contents of the user-visible memory is 0.\<close>
+definition init_underlying_memory :: "machine_word \<Rightarrow> word8" where
   "init_underlying_memory \<equiv> \<lambda>_. 0"
 
 definition default_gic_vcpu_interface :: gic_vcpu_interface where
@@ -138,27 +128,22 @@ definition default_gic_vcpu_interface :: gic_vcpu_interface where
       vgic_lr   = \<lambda>_. 0
    \<rparr>"
 
-definition
-  default_vcpu_state :: vcpu_state where
+definition default_vcpu_state :: vcpu_state where
   "default_vcpu_state \<equiv> \<lparr>
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM)
    \<rparr>"
 
-text \<open>
-  We leave open the underspecified rest of the machine state in
-  the initial state.
-\<close>
-definition
-  init_machine_state :: machine_state where
- "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
-                         irq_state = 0,
-                         underlying_memory = init_underlying_memory,
-                         device_state = Map.empty,
-                         vcpu_state = default_vcpu_state,
-                         fpu_state = FPUState (\<lambda>_. 0) 0 0,
-                         fpu_enabled = False,
-                         machine_state_rest = undefined \<rparr>"
+text \<open>We leave open the underspecified rest of the machine state in the initial state.\<close>
+definition init_machine_state :: machine_state where
+  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
+                          irq_state = 0,
+                          underlying_memory = init_underlying_memory,
+                          device_state = Map.empty,
+                          vcpu_state = default_vcpu_state,
+                          fpu_state = FPUState (\<lambda>_. 0) 0 0,
+                          fpu_enabled = False,
+                          machine_state_rest = undefined \<rparr>"
 
 end
 
@@ -169,4 +154,5 @@ context Arch begin arch_global_naming
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 instanceproofs ONLY VMFaultType HypFaultType VMPageSize
 
 end
+
 end

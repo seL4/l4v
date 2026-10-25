@@ -7,9 +7,9 @@
 (* Architecture-specific lemmas constraining Kernel_Config definitions *)
 
 theory Arch_Kernel_Config_Lemmas
-imports
-  Kernel_Config_Lemmas
-  Platform
+  imports
+    Kernel_Config_Lemmas
+    Platform
 begin
 
 context Arch begin global_naming ARM
@@ -131,4 +131,5 @@ lemma cacheLineBits_sanity:
   by (simp add: cacheLineBits_def Kernel_Config.CONFIG_L1_CACHE_LINE_SIZE_BITS_def)
 
 end
+
 end

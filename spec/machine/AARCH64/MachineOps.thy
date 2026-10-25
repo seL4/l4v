@@ -8,10 +8,10 @@
 chapter "Machine Operations"
 
 theory MachineOps
-imports
-  Word_Lib.WordSetup
-  Monads.Nondet_Monad
-  MachineMonad
+  imports
+    Word_Lib.WordSetup
+    Monads.Nondet_Monad
+    MachineMonad
 begin
 
 section "Wrapping and Lifting Machine Operations"
@@ -48,7 +48,8 @@ definition storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> u
    od"
 
 lemma upto0_7_def:
-  "[0..7] = [0,1,2,3,4,5,6,7]" by eval
+  "[0..7] = [0,1,2,3,4,5,6,7]"
+  by eval
 
 lemma loadWord_storeWord_is_return:
   "p && mask 3 = 0 \<Longrightarrow> (do w \<leftarrow> loadWord p; storeWord p w od) = return ()"
@@ -110,9 +111,10 @@ text \<open>
 definition non_kernel_IRQs :: "irq set" where
   "non_kernel_IRQs = {irqVGICMaintenance, irqVTimerEvent}"
 
-text \<open>@{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
-updates the IRQ state to the reflect the passage of time since last the IRQ, then it gets the active
-IRQ (if there is one).\<close>
+text \<open>
+  @{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
+  updates the IRQ state to the reflect the passage of time since last the IRQ, then it gets the
+  active IRQ (if there is one).\<close>
 definition getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad" where
   "getActiveIRQ in_kernel \<equiv> do
      is_masked \<leftarrow> gets $ irq_masks;
@@ -136,8 +138,9 @@ consts' sendSGI_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> u
 definition sendSGI :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "sendSGI sgi_irq target \<equiv> machine_op_lift $ sendSGI_impl sgi_irq target"
 
-text \<open>Only exists on GICv3 platforms. We model interrupt deactivation as unmasking
-  for the purposes of the interrupt oracle.\<close>
+text \<open>
+  Only exists on GICv3 platforms. We model interrupt deactivation as unmasking for the purposes of
+  the interrupt oracle.\<close>
 definition deactivateInterrupt :: "irq \<Rightarrow> unit machine_monad" where
   "deactivateInterrupt irq \<equiv> do
      assert config_ARM_GIC_V3;
@@ -177,27 +180,28 @@ definition getFPUState :: "fpu_state user_monad" where
 definition setFPUState :: "fpu_state \<Rightarrow> unit user_monad" where
   "setFPUState fc \<equiv> modify (\<lambda>s. UserContext fc (user_regs s))"
 
-\<comment> \<open>This function touches the CPACR_EL1 register, which is used to enable/disable the FPU for EL0
-   and EL1 and is generally controlled by the VM. seL4 only modifies it when unconditionally enabling
-   it while disabling a VCPU, and seL4 instead toggles CPTR_EL2 to enable or disable the FPU for
-   native tasks.\<close>
+\<comment> \<open>This function touches the CPACR_EL1 register, which is used to enable/disable the FPU for EL0 and
+   EL1 and is generally controlled by the VM. seL4 only modifies it when unconditionally enabling it
+   while disabling a VCPU, and seL4 instead toggles CPTR_EL2 to enable or disable the FPU for native
+   tasks.\<close>
 consts' enableFpuEL01_impl :: "unit machine_rest_monad"
 consts' enableFpuEL01_val :: "machine_word \<Rightarrow> machine_word"
 definition enableFpuEL01 :: "unit machine_monad" where
   "enableFpuEL01 \<equiv> do
-     modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(VCPURegCPACR := enableFpuEL01_val (r VCPURegCPACR)))));
+     modify (vcpu_state_update
+               (vcpu_regs_update (\<lambda>r. r(VCPURegCPACR := enableFpuEL01_val (r VCPURegCPACR)))));
      machine_op_lift enableFpuEL01_impl
    od"
 
 definition readFpuState :: "fpu_state machine_monad" where
-  "readFpuState \<equiv>  do
+  "readFpuState \<equiv> do
      state_assert fpu_enabled;
      gets fpu_state
    od"
 
 consts' writeFpuState_impl :: "fpu_state \<Rightarrow> unit machine_rest_monad"
 definition writeFpuState :: "fpu_state \<Rightarrow> unit machine_monad" where
-  "writeFpuState fpu \<equiv>  do
+  "writeFpuState fpu \<equiv> do
      state_assert fpu_enabled;
      modify (fpu_state_update (\<lambda>_. fpu));
      machine_op_lift $ writeFpuState_impl fpu
@@ -222,7 +226,6 @@ definition isFpuEnable :: "bool machine_monad" where
 
 
 subsection "Fault Registers"
-
 
 consts' FAR_val :: "machine_state \<Rightarrow> machine_word"
 definition getFAR :: "machine_word machine_monad" where
@@ -267,9 +270,9 @@ consts' addressTranslateS1_impl :: "machine_word \<Rightarrow> unit machine_rest
 consts' addressTranslateS1_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition addressTranslateS1 :: "machine_word \<Rightarrow> machine_word machine_monad" where
   "addressTranslateS1 w \<equiv> do
-    machine_op_lift (addressTranslateS1_impl w);
-    gets (addressTranslateS1_val w)
-  od"
+     machine_op_lift (addressTranslateS1_impl w);
+     gets (addressTranslateS1_val w)
+   od"
 
 
 subsection "GIC VCPU Interface"
@@ -333,7 +336,7 @@ definition get_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word mach
 
 consts' set_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition set_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
-  "set_gic_vcpu_ctrl_lr n w  \<equiv> do
+  "set_gic_vcpu_ctrl_lr n w \<equiv> do
      modify (vcpu_state_update (vcpu_vgic_update (vgic_lr_update (\<lambda>f. f(unat n := w)))));
      machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)
    od"
@@ -345,7 +348,8 @@ consts' check_export_arch_timer_impl :: "unit machine_rest_monad"
 consts' check_export_arch_timer_val :: "machine_word"
 definition check_export_arch_timer :: "unit machine_monad" where
   "check_export_arch_timer \<equiv> do
-     modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(VCPURegCNTKCTL_EL1 := check_export_arch_timer_val))));
+     modify (vcpu_state_update
+               (vcpu_regs_update (\<lambda>r. r(VCPURegCNTKCTL_EL1 := check_export_arch_timer_val))));
      machine_op_lift check_export_arch_timer_impl
    od"
 
@@ -392,42 +396,48 @@ definition cleanByVA_PoU :: "machine_word \<Rightarrow> machine_word \<Rightarro
 consts' cleanInvalidateCacheRange_RAM_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition cleanInvalidateCacheRange_RAM ::
-  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "cleanInvalidateCacheRange_RAM vstart vend pstart =
      machine_op_lift (cleanInvalidateCacheRange_RAM_impl vstart vend pstart)"
 
 consts' cleanCacheRange_RAM_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition cleanCacheRange_RAM ::
-  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "cleanCacheRange_RAM vstart vend pstart =
      machine_op_lift (cleanCacheRange_RAM_impl vstart vend pstart)"
 
 consts' cleanCacheRange_PoU_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition cleanCacheRange_PoU ::
-  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "cleanCacheRange_PoU vstart vend pstart =
      machine_op_lift (cleanCacheRange_PoU_impl vstart vend pstart)"
 
 consts' invalidateCacheRange_RAM_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition invalidateCacheRange_RAM ::
-  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "invalidateCacheRange_RAM vstart vend pstart =
      machine_op_lift (invalidateCacheRange_RAM_impl vstart vend pstart)"
 
 consts' invalidateCacheRange_I_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition invalidateCacheRange_I ::
-  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "invalidateCacheRange_I vstart vend pstart =
      machine_op_lift (invalidateCacheRange_I_impl vstart vend pstart)"
 
 consts' branchFlushRange_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition branchFlushRange ::
-  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "branchFlushRange vstart vend pstart = machine_op_lift (branchFlushRange_impl vstart vend pstart)"
 
 lemmas cache_machine_op_defs =
@@ -466,7 +476,7 @@ text \<open>
   content in the specifications is.\<close>
 definition freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
   "freeMemory ptr bits \<equiv>
-     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
+     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + 2 ^ bits - 1]"
 
 
 subsection "Virtual Memory"
@@ -483,7 +493,7 @@ definition numSMCRegs :: nat where
 
 (* Tempting to use a list, but encoding the length requirement would make it ugly, and numSCMRegs
    is only going to change when the SMC spec changes. *)
-type_synonym 'a eight_tuple = "'a \<times> 'a \<times>'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a"
+type_synonym 'a eight_tuple = "'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a"
 
 (* SMC calls can theoretically change any state in the machine. We assume here that they are well
    behaved (that the secure monitor is implemented correctly), that they do not affect main memory
@@ -494,13 +504,12 @@ type_synonym 'a eight_tuple = "'a \<times> 'a \<times>'a \<times> 'a \<times> 'a
    modelled. *)
 consts' doSMC_mop_impl :: "machine_word eight_tuple \<Rightarrow> unit machine_rest_monad"
 consts' doSMC_mop_val :: "machine_word eight_tuple \<Rightarrow> machine_state \<Rightarrow> machine_word eight_tuple"
-definition doSMC_mop :: "machine_word eight_tuple \<Rightarrow> (machine_word eight_tuple) machine_monad"
-  where
+definition doSMC_mop :: "machine_word eight_tuple \<Rightarrow> (machine_word eight_tuple) machine_monad" where
   "doSMC_mop args \<equiv> do
      machine_op_lift (doSMC_mop_impl args);
      gets (doSMC_mop_val args)
-  od"
-
+   od"
 
 end
+
 end
