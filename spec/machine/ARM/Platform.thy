@@ -86,8 +86,11 @@ type_synonym sgi_target = "sgi_target_len word"
 
 (* Physical addresses *)
 type_synonym paddr = machine_word
-abbreviation (input) "toPAddr \<equiv> id"
-abbreviation (input) "fromPAddr \<equiv> id"
+abbreviation (input) toPAddr :: "machine_word \<Rightarrow> paddr" where
+  "toPAddr \<equiv> id"
+
+abbreviation (input) fromPAddr :: "paddr \<Rightarrow> machine_word" where
+  "fromPAddr \<equiv> id"
 
 definition cacheLineBits :: nat where
   "cacheLineBits = CONFIG_L1_CACHE_LINE_SIZE_BITS"
@@ -113,7 +116,8 @@ lemma pptrBase_top_neq_0: (* 20 = size of ARMSectionBits *)
   "pptrBase >> 20 \<noteq> 0"
   by (simp add: pptrBase_def)
 
-abbreviation (input) "paddrBase \<equiv> physBase"
+abbreviation (input) paddrBase :: machine_word where
+  "paddrBase \<equiv> physBase"
 
 definition pptrBaseOffset :: word32 where
   "pptrBaseOffset \<equiv> pptrBase - paddrBase"
