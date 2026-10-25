@@ -61,8 +61,11 @@ type_synonym sgi_target = "sgi_target_len word"
 
 (* Physical addresses *)
 type_synonym paddr = machine_word
-abbreviation (input) "toPAddr \<equiv> id"
-abbreviation (input) "fromPAddr \<equiv> id"
+abbreviation (input) toPAddr :: "machine_word \<Rightarrow> paddr" where
+  "toPAddr \<equiv> id"
+
+abbreviation (input) fromPAddr :: "paddr \<Rightarrow> machine_word" where
+  "fromPAddr \<equiv> id"
 
 (* For address space layout with hypervisor enabled see:
    seL4/include/arch/arm/arch/64/mode/hardware.h
