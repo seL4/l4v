@@ -2657,6 +2657,10 @@ lemma preemption_point_irq_state_inv'[wp]:
 lemmas preemption_point_irq_state_inv[wp] = validE_validE_R'[OF preemption_point_irq_state_inv']
 lemmas preemption_point_irq_state_next[wp] = validE_validE_E'[OF preemption_point_irq_state_inv']
 
+lemma finalise_cap_irq_state_inv:
+  "\<lbrace>irq_state_inv st and non_kernel_IRQs_masked\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+  by (wp irq_state_inv_triv' finalise_cap_irq_masks)
+
 lemma rec_del_irq_state_inv':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del] rec_del.simps[simp del]
   shows
@@ -2694,9 +2698,9 @@ next
                      drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                   | simp add: without_preemption_def split del: if_split
                   | wp (once) hoare_drop_imps
-                  | wp irq_state_inv_triv
+                  | wp finalise_cap_irq_state_inv irq_state_inv_triv
                   | fastforce)+
-    apply (blast dest: cte_wp_at_domain_sep_inv_cap)
+    apply (fastforce dest: cte_wp_at_domain_sep_inv_cap)
     done
 next
   case (3 ptr bits n slot s) show ?case
@@ -2796,11 +2800,8 @@ lemma checked_insert_irq_state_of_state[wp]:
   by (wp | simp add: check_cap_at_def)+
 
 lemma irq_state_inv_invoke_domain[wp]:
-  "invoke_domain di \<lbrace>irq_state_inv st\<rbrace>"
-  apply (simp add: irq_state_inv_def[abs_def])
-  apply (wp_pre, wps, wpsimp)
-  apply clarsimp
-  done
+  "\<lbrace>irq_state_inv st and non_kernel_IRQs_masked\<rbrace> invoke_domain di \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+  by (wp irq_state_inv_triv' invoke_domain_irq_masks)
 
 crunch bind_notification
   for irq_state_of_state: "\<lambda>s. P (irq_state_of_state s)"
@@ -2870,7 +2871,8 @@ lemma perform_invocation_irq_state_inv:
   apply (case_tac op; simp;
          (solves \<open>(wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv
                       invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def]
-                   | clarsimp | simp add: invoke_domain_def)+\<close>)?)
+                   | clarsimp | simp)+\<close>)?)
+     apply (wpsimp wp: irq_state_inv_invoke_domain)
     apply wp
      apply (wpsimp wp: irq_state_inv_triv' invoke_irq_control_irq_masks)
      apply assumption
@@ -2879,7 +2881,8 @@ lemma perform_invocation_irq_state_inv:
     apply (wp irq_state_inv_triv' invoke_irq_handler_irq_masks | clarsimp)+
     apply assumption
    apply auto[1]
-  apply (wp irq_state_inv_triv' arch_perform_invocation_irq_masks)
+  apply (wp irq_state_inv_triv'[where Q="domain_sep_inv False sta and non_kernel_IRQs_masked"])
+   apply (wpsimp wp: arch_perform_invocation_irq_masks[where st=sta])
   apply fastforce
   done
 

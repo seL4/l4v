@@ -2076,12 +2076,13 @@ lemma modify_reg_vcpu_proj[wp]:
   apply (fastforce intro: vcpu.equality split: option.splits)
   done
 
-lemma save_virt_timer_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then r - vtimerRegs else r) l h v a p s \<and> vtimerRegs \<subseteq> r\<rbrace>
-   save_virt_timer vr
+lemma disable_virt_timer_vcpu_proj[wp]:
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vcpu_ptr_opt = Some p then r - vtimerRegs else r) l h v a p s \<and>
+        vtimerRegs \<subseteq> r\<rbrace>
+   disable_virt_timer vcpu_ptr_opt
    \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
   by (wpsimp wp: vcpu_save_reg_vcpu_proj modify_reg_vcpu_proj
-           simp: save_virt_timer_def dmo_distr Diff_insert[symmetric]
+           simp: disable_virt_timer_def dmo_distr Diff_insert[symmetric]
                  writeVCPUHardwareReg_def check_export_arch_timer_def
           split: if_split_asm split_del: if_split
       | wp dmo_lift_vcpu_proj)+
@@ -2104,7 +2105,7 @@ lemma vcpu_save_vcpu_proj[wp]:
         r = UNIV \<and> arm_current_vcpu (arch_state s) = Some (vr,b) \<and> valid_arch_state s\<rbrace>
    vcpu_save (Some (vr,b))
    \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
-  apply (wpsimp wp: save_virt_timer_vcpu_proj hoare_weak_lift_imp dmo_lift_vcpu_proj
+  apply (wpsimp wp: disable_virt_timer_vcpu_proj hoare_weak_lift_imp dmo_lift_vcpu_proj
               simp: vcpu_save_def if_fun_split split_del: if_split)
   by (auto intro: vcpureg.exhaust intro!: arg_cong[where f="\<lambda>x. _ (vcpu_proj x)"]
             simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def)
@@ -2178,7 +2179,7 @@ lemma vcpu_update_extra_lrs[wp]:
   apply (auto intro!: ext simp: vcpu_extra_lrs_def)
   done
 
-crunch vcpu_save_reg, vcpu_save_reg_range, save_virt_timer
+crunch vcpu_save_reg, vcpu_save_reg_range, disable_virt_timer
   for extra_lrs[wp]: "\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))"
   (wp: mapM_x_wp)
 
@@ -2228,10 +2229,11 @@ lemma vcpu_switch_respects:
 crunch vcpu_invalidate_active
   for integrity_no_hyp[wp]: "integrity_no_hyp aag X st"
   and arm_gicvcpu_numlistregs[wp]: "\<lambda>s. P (arm_gicvcpu_numlistregs (arch_state s))"
+  (wp: dmo_no_mem_integrity_no_hyp crunch_wps)
 
 lemma vcpu_invalidate_active_integrity_hyp[wp]:
   "\<lbrace>\<lambda>s. integrity_hyp aag subjects x st s \<and>
-        (\<exists>v b. arm_current_vcpu (arch_state s) = Some (v,b) \<and> pasObjectAbs aag v \<in> subjects)\<rbrace>
+        (\<exists>v b. arm_current_vcpu (arch_state s) = Some (v, b) \<and> pasObjectAbs aag v \<in> subjects)\<rbrace>
    vcpu_invalidate_active
    \<lbrace>\<lambda>_. integrity_hyp aag subjects x st\<rbrace>"
   unfolding vcpu_invalidate_active_def integrity_hyp_def vcpu_integrity_def vcpu_proj_of_state
@@ -2308,7 +2310,7 @@ lemma dissociate_vcpu_tcb_respects:
 
 crunch vcpu_invalidate_active
   for vcpus_of[wp]: "\<lambda>s. P (vcpus_of s)"
-  (simp: vcpu_invalidate_active_def vcpu_disable_def)
+  (simp: vcpu_invalidate_active_def vcpu_disable_def disable_virt_timer_def)
 
 lemma thread_set_vcpus_of[wp]:
   "thread_set f tptr \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"

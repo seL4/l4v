@@ -474,10 +474,11 @@ lemma irq_state_independent_globals_equiv[simp,intro!]:
 lemma irq_state_independent_A_only_timer_irq_inv[simp]:
   "irq_state_independent_A (only_timer_irq_inv irq st)"
   apply (simp add: only_timer_irq_inv_def)
-  apply (rule irq_state_independent_A_conjI)
-   apply (simp add: domain_sep_inv_def)
-  apply (simp add: irq_state_independent_A_def only_timer_irq_def
-                   irq_is_recurring_def is_irq_at_def)
+  apply (rule irq_state_independent_A_conjI)+
+    apply (simp add: domain_sep_inv_def)
+   apply (simp add: irq_state_independent_A_def only_timer_irq_def
+                    irq_is_recurring_def is_irq_at_def)
+  apply (simp add: irq_state_independent_A_def)
   done
 
 lemma only_timer_irq_inv_work_units_completed[simp]:

@@ -331,13 +331,17 @@ vcpuFinalise vcpuPtr = do
 
 {- VCPU State Control -}
 
-saveVirtTimer :: PPtr VCPU -> Kernel ()
-saveVirtTimer vcpuPtr = do
-    vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+disableVirtTimer :: Maybe (PPtr VCPU) -> Kernel ()
+disableVirtTimer vcpuPtrOpt = do
+    case vcpuPtrOpt of
+        Just vcpuPtr -> do
+            vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+            vcpuSaveReg vcpuPtr VCPURegCNTV_CVAL
+            vcpuSaveReg vcpuPtr VCPURegCNTVOFF
+            vcpuSaveReg vcpuPtr VCPURegCNTKCTL_EL1
+        Nothing -> return ()
+    -- with or without VCPU, turn off the timer and return to user-mode timer config
     doMachineOp $ writeVCPUHardwareReg VCPURegCNTV_CTL 0
-    vcpuSaveReg vcpuPtr VCPURegCNTV_CVAL
-    vcpuSaveReg vcpuPtr VCPURegCNTVOFF
-    vcpuSaveReg vcpuPtr VCPURegCNTKCTL_EL1
     doMachineOp check_export_arch_timer
 
 restoreVirtTimer :: PPtr VCPU -> Kernel ()
@@ -388,11 +392,8 @@ vcpuDisable vcpuPtrOpt = do
         -- allow FPU instructions in EL0 and EL1 for native threads
         enableFpuEL01
 
-    case vcpuPtrOpt of
-        Just vcpuPtr -> do
-            saveVirtTimer vcpuPtr
-            doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
-        Nothing -> return ()
+    disableVirtTimer vcpuPtrOpt
+    doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
 
 armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 armvVCPUSave vcpuPtr active = do
@@ -410,7 +411,7 @@ vcpuSave (Just (vcpuPtr, active)) = do
           vcpuSaveReg vcpuPtr VCPURegSCTLR
           hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
           vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
-          saveVirtTimer vcpuPtr
+          disableVirtTimer (Just vcpuPtr)
 
     vmcr <- doMachineOp get_gic_vcpu_ctrl_vmcr
     vgicUpdate vcpuPtr (\vgic -> vgic { vgicVMCR = vmcr })

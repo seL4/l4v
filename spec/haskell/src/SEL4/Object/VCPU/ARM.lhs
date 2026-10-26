@@ -322,17 +322,21 @@ For initialisation, see makeVCPUObject.
 
 \subsection{VCPU State Control}
 
-> saveVirtTimer :: PPtr VCPU -> Kernel ()
-> saveVirtTimer vcpuPtr = do
->     vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+> disableVirtTimer :: Maybe (PPtr VCPU) -> Kernel ()
+> disableVirtTimer vcpuPtrOpt = do
+>     case vcpuPtrOpt of
+>         Just vcpuPtr -> do
+>             vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+>             cval <- doMachineOp get_cntv_cval_64
+>             cntvoff <- doMachineOp get_cntv_off_64
+>             vcpuWriteReg vcpuPtr VCPURegCNTV_CVALhigh (fromIntegral $ cval `shiftR` 32)
+>             vcpuWriteReg vcpuPtr VCPURegCNTV_CVALlow (fromIntegral cval)
+>             vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ cntvoff `shiftR` 32)
+>             vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral cntvoff)
+>             vcpuSaveReg vcpuPtr VCPURegCNTKCTL
+>         Nothing -> return ()
+>     -- with or without VCPU, turn off the timer and return to user-mode timer config
 >     doMachineOp $ writeVCPUHardwareReg VCPURegCNTV_CTL 0
->     cval <- doMachineOp get_cntv_cval_64
->     cntvoff <- doMachineOp get_cntv_off_64
->     vcpuWriteReg vcpuPtr VCPURegCNTV_CVALhigh (fromIntegral $ cval `shiftR` 32)
->     vcpuWriteReg vcpuPtr VCPURegCNTV_CVALlow (fromIntegral cval)
->     vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ cntvoff `shiftR` 32)
->     vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral cntvoff)
->     vcpuSaveReg vcpuPtr VCPURegCNTKCTL
 >     doMachineOp check_export_arch_timer
 
 > restoreVirtTimer :: PPtr VCPU -> Kernel ()
@@ -385,11 +389,8 @@ For initialisation, see makeVCPUObject.
 >         trapDebugExceptions True -- native threads always trap debug exceptions
 >         isb
 >
->     case vcpuPtrOpt of
->         Just vcpuPtr -> do
->             saveVirtTimer vcpuPtr
->             doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
->         Nothing -> return ()
+>     disableVirtTimer vcpuPtrOpt
+>     doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
 
 > armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 > armvVCPUSave vcpuPtr active = do
@@ -406,7 +407,7 @@ For initialisation, see makeVCPUObject.
 >           vcpuSaveReg vcpuPtr VCPURegSCTLR
 >           hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
 >           vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
->           saveVirtTimer vcpuPtr
+>           disableVirtTimer (Just vcpuPtr)
 >
 >     vmcr <- doMachineOp get_gic_vcpu_ctrl_vmcr
 >     vgicUpdate vcpuPtr (\vgic -> vgic { vgicVMCR = vmcr })
