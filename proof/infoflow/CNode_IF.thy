@@ -5,7 +5,7 @@
  *)
 
 theory CNode_IF
-imports ArchFinalCaps
+imports ArchFinalCaps IRQMasks_IF
 begin
 
 lemma cap_fault_on_failure_rev:
@@ -434,7 +434,8 @@ lemma only_timer_irq_pres:
   by simp
 
 definition only_timer_irq_inv :: "irq \<Rightarrow> 'z :: state_ext state \<Rightarrow> 'z state \<Rightarrow> bool" where
-  "only_timer_irq_inv irq st \<equiv> domain_sep_inv False st and only_timer_irq irq"
+  "only_timer_irq_inv irq st \<equiv>
+     domain_sep_inv False st and only_timer_irq irq and non_kernel_IRQs_masked"
 
 lemma only_timer_irq_inv_pres:
   assumes a:
@@ -444,10 +445,11 @@ lemma only_timer_irq_inv_pres:
   assumes b: "\<And>st :: 's state. \<lbrace>domain_sep_inv False st and P\<rbrace> f \<lbrace>\<lambda>_. domain_sep_inv False st\<rbrace>"
   shows "\<lbrace>only_timer_irq_inv irq (st :: 's state) and Q and P\<rbrace> f \<lbrace>\<lambda>_. only_timer_irq_inv irq st\<rbrace>"
   apply (clarsimp simp: only_timer_irq_inv_def valid_def)
-  apply (rule conjI)
-   apply (erule use_valid[OF _ b], simp)
-  apply (erule use_valid[OF _ only_timer_irq_pres[OF a b]])
-  apply simp
+  apply (intro conjI)
+    apply (erule use_valid[OF _ b], simp)
+   apply (erule use_valid[OF _ only_timer_irq_pres[OF a b]])
+   apply simp
+  apply (erule use_valid[OF _ a], simp)
   done
 
 lemma only_timer_irq_inv_domain_sep_inv[intro]:

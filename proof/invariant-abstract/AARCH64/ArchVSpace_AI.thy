@@ -58,7 +58,7 @@ sublocale
   by (wpsimp wp: set_vcpu.vsobj_at get_vcpu.vsobj_at mapM_wp mapM_x_wp
              simp: vcpu_update_def vgic_update_def vcpu_save_reg_def vcpu_restore_reg_def
                    vcpu_restore_reg_range_def vcpu_save_reg_range_def vgic_update_lr_def
-                   save_virt_timer_def vcpu_write_reg_def restore_virt_timer_def
+                   disable_virt_timer_def vcpu_write_reg_def restore_virt_timer_def
                    vcpu_read_reg_def is_irq_active_def get_irq_state_def
          | assumption)+
 
@@ -251,7 +251,7 @@ lemma valid_vcpu_typ_at:
   by (wpsimp simp: valid_vcpu_def split: option.splits)
 
 crunch vgic_update_lr, vcpu_write_reg, vcpu_save_reg, vcpu_disable, vcpu_restore,
-          save_virt_timer, restore_virt_timer, vcpu_save, vcpu_switch, vcpu_save_reg_range
+       disable_virt_timer, restore_virt_timer, vcpu_save, vcpu_switch, vcpu_save_reg_range
   for valid_objs[wp]: valid_objs
   (ignore: vcpu_update simp: vcpu_update_def valid_vcpu_def wp: crunch_wps)
 
@@ -336,7 +336,7 @@ crunch vcpu_save_reg, vcpu_write_reg
   (simp_del: fun_upd_apply simp: opt_map_upd_triv)
 
 crunch vcpu_save_reg_range, vgic_update_lr, vcpu_disable, vcpu_save, vcpu_restore,
-         save_virt_timer, restore_virt_timer
+       disable_virt_timer, restore_virt_timer
   for vcpu_hyp_live[wp]: "\<lambda>s. P (vcpu_hyp_live_of s)"
   (wp: vcpu_update_obj_at crunch_wps
    simp_del: fun_upd_apply
@@ -359,8 +359,7 @@ lemma set_vcpu_pts_of[wp]:
   by (wpsimp wp: get_object_wp)
      (fastforce simp: obind_def opt_map_def obj_at_def split: option.split elim!: rsubst[where P=P])
 
-crunch vgic_update, vcpu_restore_reg, save_virt_timer, vcpu_save_reg, save_virt_timer,
-         restore_virt_timer
+crunch vgic_update, vcpu_restore_reg, disable_virt_timer, vcpu_save_reg, restore_virt_timer
   for asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of s)"
   and pts_of[wp]: "\<lambda>s. P (pts_of s)"
   and arch_state[wp]: "\<lambda>s. P (arch_state s)"
@@ -2644,6 +2643,7 @@ lemma dmo_isb_invs[wp]: "do_machine_op isb \<lbrace>invs\<rbrace>"
   and dmo_set_gic_vcpu_ctrl_hcr_invs[wp]: "\<And>x. do_machine_op (set_gic_vcpu_ctrl_hcr x) \<lbrace>invs\<rbrace>"
   and dmo_writeVCPUHardwareReg_invs[wp]: "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>invs\<rbrace>"
   and dmo_readVCPUHardwareReg_invs[wp]: "do_machine_op (readVCPUHardwareReg r) \<lbrace>invs\<rbrace>"
+  and dmo_check_export_arch_timer_invs[wp]: "do_machine_op check_export_arch_timer \<lbrace>invs\<rbrace>"
   by (all \<open>wp dmo_invs_lift\<close>)
 
 crunch set_vcpu
@@ -2939,9 +2939,9 @@ lemma vcpu_write_reg_invs[wp]:
   unfolding vcpu_write_reg_def
   by (wpsimp cong: vcpu_state.fold_congs) (* crunch can't do cong yet *)
 
-lemma save_virt_timer_invs[wp]:
-  "save_virt_timer vcpu_ptr \<lbrace>invs\<rbrace>"
-  unfolding save_virt_timer_def
+lemma disable_virt_timer_invs[wp]:
+  "disable_virt_timer vcpu_ptr_opt \<lbrace>invs\<rbrace>"
+  unfolding disable_virt_timer_def
   by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift' dmo_invs_lift)
 
 (* migrated from ArchInterrupt_AI, which is not visible from here *)
@@ -3047,7 +3047,8 @@ lemma vcpu_write_reg_hyp_refs_of[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_write_reg_def by (wpsimp cong: vcpu_state.fold_congs)
 
-crunch save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save, vcpu_switch
+crunch disable_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save,
+       vcpu_switch
   for hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (ignore: vcpu_update wp: crunch_wps)
 
@@ -3062,9 +3063,9 @@ lemma vcpu_save_reg_hyp_live[wp]:
   unfolding vcpu_save_reg_def vcpu_update_def set_vcpu_def
   by (wpsimp wp: set_object_wp get_vcpu_wp hoare_vcg_imp_lift simp: obj_at_hyp_live_vcpu_regs)
 
-lemma save_virt_timer_hyp_live[wp]:
-  "save_virt_timer vcpu_ptr \<lbrace>obj_at hyp_live p\<rbrace>"
-  unfolding save_virt_timer_def by wp
+lemma disable_virt_timer_hyp_live[wp]:
+  "disable_virt_timer vcpu_ptr_opt \<lbrace>obj_at hyp_live p\<rbrace>"
+  unfolding disable_virt_timer_def by wpsimp
 
 lemma vcpu_write_reg_hyp_live[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>obj_at hyp_live p\<rbrace>"

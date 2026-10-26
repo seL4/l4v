@@ -902,7 +902,7 @@ lemma obj_at_upd2:
 
 lemma vcpu_invalidate_active_hyp_refs_empty[wp]:
   "\<lbrace>obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>r. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace>"
-  unfolding vcpu_invalidate_active_def vcpu_disable_def by wpsimp
+  unfolding vcpu_invalidate_active_def vcpu_disable_def disable_virt_timer_def by wpsimp
 
 lemma as_user_hyp_refs_empty[wp]:
   "\<lbrace>obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace> as_user t f \<lbrace>\<lambda>r. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace>"

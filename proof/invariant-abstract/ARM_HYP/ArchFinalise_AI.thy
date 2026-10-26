@@ -446,7 +446,8 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
 lemma vcpu_invalidate_tcbs_inv[wp]:
   "\<lbrace>obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>
     vcpu_invalidate_active \<lbrace>\<lambda>rv. obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>"
-  unfolding vcpu_invalidate_active_def vcpu_disable_def by wpsimp
+  unfolding vcpu_invalidate_active_def vcpu_disable_def disable_virt_timer_def
+  by wpsimp
 
 lemma sym_refs_vcpu_None:
   assumes sym_refs: "sym_refs (state_hyp_refs_of s)"
@@ -605,7 +606,8 @@ crunch dissociate_vcpu_tcb
 
 crunch dissociate_vcpu_tcb
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
-  (wp: crunch_wps)
+  (wp: crunch_wps device_region_dmos
+   ignore: do_machine_op)
 
 crunch dissociate_vcpu_tcb
   for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
@@ -668,7 +670,7 @@ crunch vcpu_save_reg, vgic_update, vcpu_disable
   (wp: dmo_maskInterrupt_True_valid_irq_states dmo_valid_irq_states
    simp: get_cntv_off_64_def get_cntv_cval_64_def set_gic_vcpu_ctrl_hcr_def get_gic_vcpu_ctrl_hcr_def
          readVCPUHardwareReg_def writeVCPUHardwareReg_def setHCR_def setSCTLR_def getSCTLR_def
-         setCPACR_def isb_def dsb_def maskInterrupt_def check_export_arch_timer_def)
+         setCPACR_def isb_def dsb_def check_export_arch_timer_def)
 
 lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
   "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>valid_machine_state\<rbrace>"
@@ -682,7 +684,7 @@ lemma dmo_check_export_arch_timer_valid_machine_state[wp]:
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift
                  check_export_arch_timer_underlying_memory)
 
-crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, save_virt_timer
+crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, disable_virt_timer
   for in_user_frame[wp]: "in_user_frame p"
   and valid_machine_state[wp]: valid_machine_state
   and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
@@ -737,14 +739,16 @@ lemma as_user_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> as_user t f \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
   unfolding valid_ioc_def by (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
 
-lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>_. invs\<rbrace>"
+lemma dissociate_vcpu_tcb_invs[wp]:
+  "dissociate_vcpu_tcb vr t \<lbrace>invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: pred_conj_def)
   apply (rule hoare_vcg_conj_lift[rotated])+
-  apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle
+  apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle dmo_valid_irq_states
          | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def arch_get_sanitise_register_info_def
          | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
-         | simp add: vcpu_disable_def valid_global_vspace_mappings_def valid_global_objs_def
+         | simp add: vcpu_disable_def disable_virt_timer_def valid_global_vspace_mappings_def
+                     valid_global_objs_def
          | wp (once) hoare_drop_imps)+
   done
 

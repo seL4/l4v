@@ -118,7 +118,7 @@ lemma valid_cur_vcpu_vcpu_update[simp]:
   by (clarsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def pred_tcb_at_def obj_at_def
                      in_cur_domain_def etcb_at_def etcbs_of'_def)
 
-crunch vcpu_save_reg, vcpu_write_reg, save_virt_timer, vgic_update, vcpu_disable
+crunch vcpu_save_reg, vcpu_write_reg, disable_virt_timer, vgic_update, vcpu_disable
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: set_vcpu_wp)
 
@@ -152,8 +152,8 @@ lemma vcpu_save_reg_active_cur_vcpu_of[wp]:
   "vcpu_save_reg vr reg \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>"
   by (wpsimp simp: vcpu_save_reg_def)
 
-crunch vcpu_restore, do_machine_op, vcpu_save_reg, vgic_update, save_virt_timer,
-         vcpu_save_reg_range, vgic_update_lr, vcpu_enable, vcpu_save, set_vcpu
+crunch vcpu_restore, do_machine_op, vcpu_save_reg, vgic_update, disable_virt_timer,
+       vcpu_save_reg_range, vgic_update_lr, vcpu_enable, vcpu_save, set_vcpu
   for in_cur_domain[wp]: "in_cur_domain t"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift in_cur_domain_lift_weak crunch_wps simp: active_cur_vcpu_of_def)
@@ -966,9 +966,9 @@ lemma vcpu_save_reg_vcpu_tcbs_of[wp]:
   apply wpsimp
   by (fastforce simp: opt_map_def elim!: rsubst[where P=P])
 
-lemma save_virt_timer_vcpu_tcbs_of[wp]:
-  "save_virt_timer vcpu_ptr \<lbrace>\<lambda>s. P (vcpu_tcbs_of s)\<rbrace>"
-  unfolding save_virt_timer_def
+lemma disable_virt_timer_vcpu_tcbs_of[wp]:
+  "disable_virt_timer vcpu_ptr_opt \<lbrace>\<lambda>s. P (vcpu_tcbs_of s)\<rbrace>"
+  unfolding disable_virt_timer_def
   by wpsimp
 
 crunch vcpu_disable, vcpu_restore, vcpu_save
