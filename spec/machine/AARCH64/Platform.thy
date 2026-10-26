@@ -7,12 +7,12 @@
 chapter "Platform Definitions"
 
 theory Platform
-imports
-  "Lib.Lib"
-  "Word_Lib.WordSetup"
-  "Lib.Defs"
-  Setup_Locale
-  Kernel_Config
+  imports
+    "Lib.Lib"
+    "Word_Lib.WordSetup"
+    "Lib.Defs"
+    Setup_Locale
+    Kernel_Config
 begin
 
 section \<open>ABI Setup\<close>
@@ -61,8 +61,11 @@ type_synonym sgi_target = "sgi_target_len word"
 
 (* Physical addresses *)
 type_synonym paddr = machine_word
-abbreviation (input) "toPAddr \<equiv> id"
-abbreviation (input) "fromPAddr \<equiv> id"
+abbreviation (input) toPAddr :: "machine_word \<Rightarrow> paddr" where
+  "toPAddr \<equiv> id"
+
+abbreviation (input) fromPAddr :: "paddr \<Rightarrow> machine_word" where
+  "fromPAddr \<equiv> id"
 
 (* For address space layout with hypervisor enabled see:
    seL4/include/arch/arm/arch/64/mode/hardware.h
@@ -92,7 +95,7 @@ definition kdevBase :: machine_word where
 
 (* Fixed value. See KERNEL_ELF_BASE in include/arch/arm/arch/64/mode/hardware.h *)
 definition kernelELFBase :: machine_word where
-  "kernelELFBase =  2^40 - 2^30" (* 0x000000ffc0000000 *)
+  "kernelELFBase = 2^40 - 2^30" (* 0x000000ffc0000000 *)
 
 definition kernelELFPAddrBase :: machine_word where
   "kernelELFPAddrBase = physBase"
@@ -152,13 +155,15 @@ lemmas [code] = AARCH64.vs_index_bits_def
 
 context Arch begin global_naming AARCH64
 
-lemma vs_index_bits_ge0[simp, intro!]: "0 < vs_index_bits"
+lemma vs_index_bits_ge0[simp, intro!]:
+  "0 < vs_index_bits"
   by (simp add: vs_index_bits_def)
 
 (* A dependent-ish type in Isabelle. We use typedef here instead of value_type so that we can
    retain a symbolic value (vs_index_bits) for the size of the type instead of getting a plain
    number such as 9 or 10. *)
-typedef vs_index_len = "{n :: nat. n < vs_index_bits}" by auto
+typedef vs_index_len = "{n :: nat. n < vs_index_bits}"
+  by auto
 
 end
 
@@ -174,8 +179,8 @@ begin
   interpretation Arch .
   instance
   proof
-   show "0 < LENGTH(vs_index_len)"
-     by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
+    show "0 < LENGTH(vs_index_len)"
+      by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
   qed
 end
 
