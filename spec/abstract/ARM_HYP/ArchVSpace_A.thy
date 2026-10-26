@@ -525,7 +525,7 @@ where
 
           \<comment> \<open>disabled VCPUs already have CPACR stored\<close>
           when active $ vcpu_save_reg vr VCPURegCPACR;
-          vcpu_save_reg_range vr VCPURegACTLR VCPURegTTBR1high
+          vcpu_save_reg_range vr VCPURegACTLR VCPURegVDISR
        od
      | _ \<Rightarrow> fail"
 
@@ -547,7 +547,7 @@ where
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
     \<comment> \<open>restore banked VCPU registers except SCTLR (that's in VCPUEnable)\<close>
-     vcpu_restore_reg_range vr VCPURegACTLR VCPURegTTBR1high;
+     vcpu_restore_reg_range vr VCPURegACTLR VCPURegVDISR;
      vcpu_enable vr
   od"
 
