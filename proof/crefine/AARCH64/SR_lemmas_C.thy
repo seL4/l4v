@@ -2371,7 +2371,6 @@ lemmas seL4_VCPUReg_defs =
   seL4_VCPUReg_MAIR_def
   seL4_VCPUReg_AMAIR_def
   seL4_VCPUReg_CIDR_def
-  seL4_VCPUReg_ACTLR_def
   seL4_VCPUReg_AFSR0_def
   seL4_VCPUReg_AFSR1_def
   seL4_VCPUReg_ESR_def
@@ -2436,10 +2435,6 @@ lemmas vcpureg_eq_use_types =
 lemma unat_ucast_seL4_VCPUReg_SCTLR_simp[simp]:
   "unat (scast seL4_VCPUReg_SCTLR :: machine_word) = fromEnum VCPURegSCTLR"
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegSCTLR, simplified, symmetric])
-
-lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
-  "unat (scast seL4_VCPUReg_ACTLR :: machine_word) = fromEnum VCPURegACTLR"
-  by (simp add: vcpureg_eq_use_types[where reg=VCPURegACTLR, simplified, symmetric])
 
 lemmas cvcpu_relation_regs_def =
           cvcpu_relation_def[simplified cvcpu_regs_relation_def Let_def vcpuSCTLR_def, simplified]

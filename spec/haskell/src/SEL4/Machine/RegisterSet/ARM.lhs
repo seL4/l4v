@@ -50,7 +50,6 @@ This module defines the ARM register set.
 
 > data VCPUReg =
 >       VCPURegSCTLR
->     | VCPURegACTLR
 >     | VCPURegTTBCR
 >     | VCPURegTTBR0
 >     | VCPURegTTBR1

@@ -78,7 +78,6 @@ data VCPUReg =
     | VCPURegMAIR
     | VCPURegAMAIR
     | VCPURegCIDR
-    | VCPURegACTLR
     | VCPURegAFSR0
     | VCPURegAFSR1
     | VCPURegESR
