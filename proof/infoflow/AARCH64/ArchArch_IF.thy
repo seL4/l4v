@@ -1946,11 +1946,13 @@ lemma vcpu_save_reg_states_equiv_valid[wp]:
 
 lemma vcpu_save_reg_range_states_equiv_valid[wp]:
   "states_equiv_valid aag L (\<lambda>s. \<exists>b. current_vcpu s = Some (vr,b))
-                      (vcpu_save_reg_range vr VCPURegTTBR0 VCPURegVDISR_EL2)"
+                      (vcpu_save_reg_range vr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd)"
   (is "states_equiv_valid _ _ ?P _")
   unfolding vcpu_save_reg_range_def
   apply (wpsimp wp: mapM_x_ev[where I="\<lambda>s. \<exists>b. current_vcpu s = Some (vr,b)"])
-    apply (auto simp: upto_enum_def fromEnum_def enum_vcpureg toEnum_def vcpuRegSavedWhenDisabled_def)[1]
+    apply (auto simp: upto_enum_def fromEnum_def enum_vcpureg toEnum_def
+                      vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def
+                      vcpuRegSavedWhenDisabled_def)[1]
    apply wpsimp+
   done
 

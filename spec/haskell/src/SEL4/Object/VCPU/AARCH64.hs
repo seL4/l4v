@@ -27,7 +27,7 @@ import SEL4.Object.Instances()
 import SEL4.API.InvocationLabels.AARCH64
 import SEL4.API.Invocation
 import SEL4.API.Invocation.AARCH64 as ArchInv
-import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..), vcpuRegNum, vcpuRegSavedWhenDisabled)
+import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..), vcpuRegSaveRangeStart, vcpuRegSaveRangeEnd, vcpuRegNum, vcpuRegSavedWhenDisabled)
 import SEL4.API.Types
 import SEL4.API.InvocationLabels
 import SEL4.API.Failures.TARGET
@@ -400,7 +400,7 @@ armvVCPUSave vcpuPtr active = do
     when active $ do
         vcpuSaveReg vcpuPtr VCPURegCPACR
         vcpuSaveReg vcpuPtr VCPURegTCR
-    vcpuSaveRegRange vcpuPtr VCPURegTTBR0 VCPURegVDISR_EL2
+    vcpuSaveRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 
 vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 vcpuSave (Just (vcpuPtr, active)) = do
@@ -448,7 +448,7 @@ vcpuRestore vcpuPtr = do
         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 
     -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
-    vcpuRestoreRegRange vcpuPtr VCPURegTTBR0 VCPURegVDISR_EL2
+    vcpuRestoreRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 
     vcpuEnable vcpuPtr
 

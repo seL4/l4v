@@ -30,7 +30,7 @@ hypervisor extensions on ARM.
 > import SEL4.API.InvocationLabels.ARM
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
-> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..), vcpuRegNum, vcpuRegSavedWhenDisabled)
+> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..), vcpuRegSaveRangeStart, vcpuRegSaveRangeEnd, vcpuRegNum, vcpuRegSavedWhenDisabled)
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
 > import SEL4.API.Failures.TARGET
@@ -396,7 +396,7 @@ For initialisation, see makeVCPUObject.
 > armvVCPUSave vcpuPtr active = do
 >     -- disabled vcpus already have CPACR stored
 >     when active $ vcpuSaveReg vcpuPtr VCPURegCPACR
->     vcpuSaveRegRange vcpuPtr VCPURegTTBCR VCPURegVDISR
+>     vcpuSaveRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 
 > vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 > vcpuSave (Just (vcpuPtr, active)) = do
@@ -444,7 +444,7 @@ For initialisation, see makeVCPUObject.
 >         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 >
 >     -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
->     vcpuRestoreRegRange vcpuPtr VCPURegTTBCR VCPURegVDISR
+>     vcpuRestoreRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 >
 >     vcpuEnable vcpuPtr
 
