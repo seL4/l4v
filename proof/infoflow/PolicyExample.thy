@@ -260,28 +260,28 @@ lemma subjectReads_EP:
   done
 
 lemma NTFN2_in_subjectReads_RM:
-   "partition_label NTFN2 \<in> subjectReads example_auth_graph (partition_label RM)"
+  "partition_label NTFN2 \<in> subjectReads example_auth_graph (partition_label RM)"
   apply(rule reads_ep, auto)
   done
 
 lemma EP_in_subjectReads_RM:
-   "partition_label EP \<in> subjectReads example_auth_graph (partition_label RM)"
+  "partition_label EP \<in> subjectReads example_auth_graph (partition_label RM)"
   apply(rule reads_ep, auto)
   done
 
 lemma CTR_in_subjectReads_RM:
-   "partition_label CTR \<in> subjectReads example_auth_graph (partition_label RM)"
+  "partition_label CTR \<in> subjectReads example_auth_graph (partition_label RM)"
   apply(rule read_sync_ep_read_senders[where ep="partition_label EP", OF EP_in_subjectReads_RM], auto)
   done
 
 lemma C_in_subjectReads_RM:
-   "partition_label C \<in> subjectReads example_auth_graph (partition_label RM)"
+  "partition_label C \<in> subjectReads example_auth_graph (partition_label RM)"
   apply(rule reads_read_thread_read_pages[where t="partition_label CTR", OF CTR_in_subjectReads_RM], auto)
   done
 
 
 lemma NTFN1_in_subjectReads_RM:
-   "partition_label NTFN1 \<in> subjectReads example_auth_graph (partition_label RM)"
+  "partition_label NTFN1 \<in> subjectReads example_auth_graph (partition_label RM)"
   apply(rule reads_read_queued_thread_read_ep[where a="partition_label T" and t="partition_label CTR", OF _ _ _ _ CTR_in_subjectReads_RM], auto)
   done
 
@@ -302,28 +302,28 @@ lemma subjectReads_RM:
 
 
 lemma NTFN1_in_subjectAffects_T:
-  "partition_label NTFN1 \<in> subjectAffects example_auth_graph (partition_label T)
-" apply(auto intro: affects_ep)
+  "partition_label NTFN1 \<in> subjectAffects example_auth_graph (partition_label T)"
+  apply(auto intro: affects_ep)
   done
 
 lemma NTFN2_in_subjectAffects_T:
-  "partition_label NTFN2 \<in> subjectAffects example_auth_graph (partition_label T)
-" apply(auto intro: affects_ep)
+  "partition_label NTFN2 \<in> subjectAffects example_auth_graph (partition_label T)"
+  apply(auto intro: affects_ep)
   done
 
 lemma C_in_subjectAffects_T:
-  "partition_label C \<in> subjectAffects example_auth_graph (partition_label T)
-" apply(rule affects_send[where auth="Notify" and ep="partition_label NTFN1"], auto)
+  "partition_label C \<in> subjectAffects example_auth_graph (partition_label T)"
+  apply(rule affects_send[where auth="Notify" and ep="partition_label NTFN1"], auto)
   done
 
 lemma CTR_in_subjectAffects_T:
-  "partition_label CTR \<in> subjectAffects example_auth_graph (partition_label T)
-" apply(rule affects_send[where auth="Notify" and ep="partition_label NTFN1"], auto)
+  "partition_label CTR \<in> subjectAffects example_auth_graph (partition_label T)"
+  apply(rule affects_send[where auth="Notify" and ep="partition_label NTFN1"], auto)
   done
 
 lemma RM_in_subjectAffects_T:
-  "partition_label RM \<in> subjectAffects example_auth_graph (partition_label T)
-" apply(rule affects_send[where auth="Notify" and ep="partition_label NTFN2"], auto)
+  "partition_label RM \<in> subjectAffects example_auth_graph (partition_label T)"
+  apply(rule affects_send[where auth="Notify" and ep="partition_label NTFN2"], auto)
   done
 
 lemma EP_in_subjectAffects_T:

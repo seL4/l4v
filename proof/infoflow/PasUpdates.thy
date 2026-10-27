@@ -71,16 +71,15 @@ lemma tcb_domain_map_wellformed_pasSubject_update:
    tcb_domain_map_wellformed_aux aag irqn"
   by (clarsimp simp: tcb_domain_map_wellformed_aux_def)
 
-
-locale PasUpdates_1 =
+locale PasUpdates =
   fixes aag :: "'a subject_label PAS"
   assumes state_asids_to_policy_pasSubject_update:
     "state_asids_to_policy (aag\<lparr>pasSubject := subject\<rparr>) s =
      state_asids_to_policy aag s"
-  and state_asids_to_policy_pasMayActivate_update:
+  assumes state_asids_to_policy_pasMayActivate_update:
     "state_asids_to_policy (aag\<lparr>pasMayActivate := b\<rparr>) s =
      state_asids_to_policy aag s"
-  and state_asids_to_policy_pasMayEditReadyQueues_update:
+  assumes state_asids_to_policy_pasMayEditReadyQueues_update:
     "state_asids_to_policy (aag\<lparr>pasMayEditReadyQueues := b\<rparr>) s =
      state_asids_to_policy aag s"
 begin
@@ -90,7 +89,7 @@ crunch send_signal
 
 lemma pas_refined_pasSubject_update':
   "\<lbrakk> pas_refined aag s; pas_wellformed (aag\<lparr>pasSubject := x\<rparr>) \<rbrakk>
-     \<Longrightarrow> pas_refined (aag\<lparr>pasSubject := x\<rparr>) s"
+   \<Longrightarrow> pas_refined (aag\<lparr>pasSubject := x\<rparr>) s"
   apply (subst pas_refined_def)
   apply (safe del: subsetI)
       apply (simp add: irq_map_wellformed_pasSubject_update pas_refined_def)
@@ -102,14 +101,13 @@ lemma pas_refined_pasSubject_update':
 
 lemma pas_wellformed_pasSubject_update:
   "\<lbrakk> pas_wellformed_noninterference aag; l \<in> pasDomainAbs aag d \<rbrakk>
-     \<Longrightarrow> pas_wellformed (aag\<lparr>pasSubject := l\<rparr>)"
+   \<Longrightarrow> pas_wellformed (aag\<lparr>pasSubject := l\<rparr>)"
   by (auto simp: pas_wellformed_noninterference_def)
 
 lemmas pas_refined_pasSubject_update =
   pas_refined_pasSubject_update'[OF _ pas_wellformed_pasSubject_update]
 
-end
-
+end (* PasUpdates *)
 
 lemma guarded_pas_domain_pasSubject_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasSubject := x\<rparr>) s = guarded_pas_domain aag s"
@@ -117,12 +115,12 @@ lemma guarded_pas_domain_pasSubject_update[simp]:
 
 lemma silc_inv_pasSubject_update':
   "\<lbrakk> silc_inv aag st s; x \<noteq> SilcLabel \<rbrakk>
-     \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := x\<rparr>) st s"
+   \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := x\<rparr>) st s"
   by (auto simp: silc_inv_def silc_dom_equiv_def intra_label_cap_def cap_points_to_label_def)
 
 lemma silc_inv_pasSubject_update:
   "\<lbrakk> silc_inv aag st s; pas_wellformed_noninterference aag; l \<in> pasDomainAbs aag d \<rbrakk>
-     \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := l\<rparr>) st s"
+   \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := l\<rparr>) st s"
   by (fastforce intro: silc_inv_pasSubject_update' dest: pas_wellformed_noninterference_silc)
 
 
@@ -164,7 +162,7 @@ lemma guarded_pas_domainMayActivate_update[simp]:
   by (simp add: guarded_pas_domain_def)
 
 lemma cdt_change_allowedMayActivate_update[simp]:
-  "cdt_change_allowed (aag\<lparr>pasMayActivate := x\<rparr>) = cdt_change_allowed aag "
+  "cdt_change_allowed (aag\<lparr>pasMayActivate := x\<rparr>) = cdt_change_allowed aag"
   by (simp add: cdt_change_allowed_def[abs_def] cdt_direct_change_allowed.simps direct_call_def)
 
 
@@ -201,8 +199,7 @@ lemma state_irqs_to_policy_pasMayEditReadyQueues_update:
              , rule state_irqs_to_policy_aux.intros, assumption+)
   done
 
-
-context PasUpdates_1 begin
+context PasUpdates begin
 
 lemma pas_refined_pasMayActivate_update:
   "pas_refined aag s
@@ -218,8 +215,7 @@ lemma pas_refined_pasMayEditReadyQueues_update:
                      state_asids_to_policy_pasMayEditReadyQueues_update[simplified]
                      state_irqs_to_policy_pasMayEditReadyQueues_update)
 
-end
-
+end (* PasUpdates *)
 
 lemma guarded_pas_domainMayEditReadyQueues_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasMayEditReadyQueues := False\<rparr>) = guarded_pas_domain aag"

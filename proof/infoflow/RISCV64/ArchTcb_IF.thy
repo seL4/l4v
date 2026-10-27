@@ -23,7 +23,7 @@ crunch as_user, restart
 
 lemma cap_ne_global_pt:
   "\<lbrakk> ex_nonz_cap_to word s; valid_global_refs s; valid_global_arch_objs s \<rbrakk>
-     \<Longrightarrow> word \<noteq> riscv_global_pt (arch_state s)"
+   \<Longrightarrow> word \<noteq> riscv_global_pt (arch_state s)"
   unfolding ex_nonz_cap_to_def
   apply (simp only: cte_wp_at_caps_of_state zobj_refs_to_obj_refs)
   apply (elim exE conjE)
@@ -68,16 +68,14 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
   "reads_respects_f aag l \<top> (arch_get_sanitise_register_info rv)"
   by wpsimp
 
-end
+end (* Arch *)
 
-
-global_interpretation Tcb_IF_1?: Tcb_IF_1
+global_interpretation Tcb_IF?: Tcb_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Tcb_IF_assms | solves \<open>wp only: Tcb_IF_assms; simp\<close>)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 
@@ -153,7 +151,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
 
 lemma tc_reads_respects_f[Tcb_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  and tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
+  assumes tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
   notes validE_valid[wp del] hoare_weak_lift_imp [wp]
   shows
     "reads_respects_f aag l
@@ -163,7 +161,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
        (invoke_tcb ti)"
   apply (simp add: split_def cong: option.case_cong)
-  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where  st=st and Q=\<top>]])
+  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where st=st and Q=\<top>]])
                     apply (wpsimp wp: hoare_vcg_const_imp_liftE_R simp: when_def | wpc)+
                     apply (rule conjI)
                      apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
@@ -256,8 +254,7 @@ lemma arch_post_set_flags_reads_respects_f[Tcb_IF_assms]:
 
 declare arch_post_set_flags_inv[Tcb_IF_assms]
 
-end
-
+end (* Arch *)
 
 global_interpretation Tcb_IF_2?: Tcb_IF_2
 proof goal_cases

@@ -70,7 +70,7 @@ definition equiv_hyp :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<
 definition equiv_fpu :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
   "equiv_fpu P s s' \<equiv> True"
 
-end
+end (* Arch *)
 
 requalify_consts
   RISCV64.equiv_asid

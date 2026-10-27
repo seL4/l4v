@@ -91,16 +91,14 @@ crunch schedule
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps dxo_wp_weak simp: crunch_simps)
 
-end
+end (* Arch *)
 
-
-global_interpretation IRQMasks_IF_1?: IRQMasks_IF_1
+global_interpretation IRQMasks_IF?: IRQMasks_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact IRQMasks_IF_assms)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 
@@ -119,12 +117,12 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply (case_tac tinv)
-         apply((wp restart_irq_masks hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
+         apply((wp restart_irq_masks hoare_vcg_if_lift mapM_x_wp[OF _ subset_refl]
                 | wpc
                 | simp split del: if_split add: check_cap_at_def
                 | clarsimp)+)[3]
       defer
-      apply ((wp | simp )+)[2]
+      apply ((wp | simp)+)[2]
     (* NotificationControl *)
     apply (rename_tac option)
     apply (case_tac option)
@@ -161,8 +159,7 @@ crunch arch_prepare_set_domain
 crunch arch_prepare_next_domain
   for valid_irq_states[wp]: valid_irq_states
 
-end
-
+end (* Arch *)
 
 global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2
 proof goal_cases
@@ -170,7 +167,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact IRQMasks_IF_assms | solves wpsimp)?)
 qed
-
 
 requalify_facts
   RISCV64.init_arch_objects_irq_masks

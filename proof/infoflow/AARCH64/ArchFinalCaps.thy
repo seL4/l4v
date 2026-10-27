@@ -34,7 +34,7 @@ lemma set_pt_silc_inv[wp]:
   done
 
 lemma set_asid_pool_silc_inv[wp]:
-   "set_asid_pool ptr pool \<lbrace>silc_inv aag st\<rbrace>"
+  "set_asid_pool ptr pool \<lbrace>silc_inv aag st\<rbrace>"
   unfolding set_asid_pool_def
   apply (rule silc_inv_pres)
     apply (wpsimp wp: set_object_wp_strong simp: a_type_def split: kernel_object.splits)
@@ -97,27 +97,25 @@ declare init_arch_objects_cte_wp_at[FinalCaps_assms]
 declare handle_vm_fault_cur_thread[FinalCaps_assms]
 declare finalise_cap_makes_halted[FinalCaps_assms]
 
-end
+end (* Arch *)
 
-
-global_interpretation FinalCaps_1?: FinalCaps_1
+global_interpretation FinalCaps?: FinalCaps
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
 
-
 context Arch begin arch_global_naming
 
 lemma perform_page_table_invocation_silc_inv_get_cap_helper:
-   "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_frame_cap) xa\<rbrace>
-    get_cap xa
-    \<lbrace>(\<lambda>capa s. (\<not> cap_points_to_label aag (ArchObjectCap $ update_map_data capa None)
-                                           (pasObjectAbs aag (fst xa))
-                \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps
-                                       (ArchObjectCap $ update_map_data capa None) s \<and>
-                             pasObjectAbs aag (fst lslot) = SilcLabel))) \<circ> the_arch_cap\<rbrace>"
+  "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_frame_cap) xa\<rbrace>
+   get_cap xa
+   \<lbrace>(\<lambda>capa s. (\<not> cap_points_to_label aag (ArchObjectCap $ update_map_data capa None)
+                                          (pasObjectAbs aag (fst xa))
+               \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps
+                                      (ArchObjectCap $ update_map_data capa None) s \<and>
+                            pasObjectAbs aag (fst lslot) = SilcLabel))) \<circ> the_arch_cap\<rbrace>"
   apply (wp get_cap_wp)
   apply clarsimp
   apply (drule cte_wp_at_norm)
@@ -155,8 +153,8 @@ lemma is_arch_eq_pg_is_pt_or_pg_cap:
   by (clarsimp simp: is_frame_cap_def is_pt_cap_def)
 
 lemma perform_page_table_invocation_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_pti blah and K (authorised_page_table_inv aag blah)\<rbrace>
-   perform_page_table_invocation blah
+  "\<lbrace>silc_inv aag st and valid_pti iv and K (authorised_page_table_inv aag iv)\<rbrace>
+   perform_page_table_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_page_table_invocation_def perform_pt_inv_map_def perform_pt_inv_unmap_def
   apply (rule hoare_pre)
@@ -181,8 +179,8 @@ crunch invalidate_tlb_by_asid_va, perform_flush
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
 
 lemma perform_page_invocation_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_page_inv blah and authorised_page_inv aag blah\<rbrace>
-   perform_page_invocation blah
+  "\<lbrace>silc_inv aag st and valid_page_inv iv and authorised_page_inv aag iv\<rbrace>
+   perform_page_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_page_invocation_def perform_pg_inv_map_def perform_pg_inv_unmap_def perform_pg_inv_get_addr_def
   apply (rule hoare_pre)
@@ -210,10 +208,8 @@ lemma perform_page_invocation_silc_inv:
   done
 
 lemma perform_asid_control_invocation_silc_inv:
-  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-  shows
-  "\<lbrace>silc_inv aag st and valid_aci blah and invs and K (authorised_asid_control_inv aag blah)\<rbrace>
-   perform_asid_control_invocation blah
+  "\<lbrace>silc_inv aag st and valid_aci iv and invs and K (authorised_asid_control_inv aag iv)\<rbrace>
+   perform_asid_control_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)
   unfolding perform_asid_control_invocation_def
@@ -234,15 +230,15 @@ lemma perform_asid_control_invocation_silc_inv:
   apply (simp add: p_assoc_help)
   apply (clarsimp simp: cap_points_to_label_def)
   apply (erule bspec)
-  apply (fastforce intro: is_aligned_no_wrap' simp: blah)
+  apply (fastforce intro: is_aligned_no_wrap')
   done
 
 crunch store_asid_pool_entry, handle_spurious_irq
   for silc_inv[wp]: "silc_inv aag st"
 
 lemma perform_asid_pool_invocation_silc_inv:
-  "\<lbrace>silc_inv aag st and K (authorised_asid_pool_inv aag blah)\<rbrace>
-   perform_asid_pool_invocation blah
+  "\<lbrace>silc_inv aag st and K (authorised_asid_pool_inv aag iv)\<rbrace>
+   perform_asid_pool_invocation iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_asid_pool_invocation_def
   apply (wpsimp wp: set_cap_silc_inv get_cap_wp)+
@@ -274,7 +270,7 @@ lemma arch_perform_invocation_silc_inv[FinalCaps_assms]:
 
 lemma new_irq_handler_caps_are_intra_label:
   "\<lbrakk> cte_wp_at ((=) (IRQControlCap)) slot s; pas_refined aag s; is_subject aag (fst slot) \<rbrakk>
-     \<Longrightarrow> cap_points_to_label aag (IRQHandlerCap irq) (pasSubject aag)"
+   \<Longrightarrow> cap_points_to_label aag (IRQHandlerCap irq) (pasSubject aag)"
   apply (clarsimp simp: cap_points_to_label_def)
   apply (frule cap_cur_auth_caps_of_state[rotated])
     apply assumption
@@ -388,8 +384,7 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
                      split: cap.splits option.splits pt_type.splits arch_cap.splits)+
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation FinalCaps_2?: FinalCaps_2
 proof goal_cases
@@ -397,7 +392,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -415,7 +409,7 @@ lemma vppi_event_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding vppi_event_def
   apply (wpsimp wp: gts_wp hoare_vcg_all_lift vcpu_update_trivial_invs maskInterrupt_invs
-                    hoare_vcg_imp_lift  | wps | wp dmo_wp)+
+                    hoare_vcg_imp_lift | wps | wp dmo_wp)+
   apply (clarsimp simp: valid_fault_def)
   using ct_active_st_tcb_at_weaken runnable_eq by blast
 
@@ -443,8 +437,7 @@ lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
   apply (wpsimp wp: when_wp[where P'="\<bottom>"] simp: non_kernel_IRQs_def irq_vppi_event_index_def)
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation FinalCaps_3?: FinalCaps_3
 proof goal_cases

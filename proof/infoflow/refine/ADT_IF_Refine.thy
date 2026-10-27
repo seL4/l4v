@@ -128,7 +128,7 @@ lemma kernelExit_inv[wp]:
 
 lemma corres_ex_abs_lift:
   "\<lbrakk> corres r S P' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>ex_abs (P and S) and P'\<rbrace> f' \<lbrace>\<lambda>_. ex_abs Q\<rbrace>"
+   \<Longrightarrow> \<lbrace>ex_abs (P and S) and P'\<rbrace> f' \<lbrace>\<lambda>_. ex_abs Q\<rbrace>"
   by (fastforce simp: corres_underlying_def valid_def ex_abs_def)
 
 lemmas schedaction_related = sched_act_rct_related
@@ -143,8 +143,8 @@ crunch device_memory_update
 
 lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
-  and rimp : "\<And>s. P s \<Longrightarrow> R (f s) s"
-  and corres: "\<And>r.  corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
+  assumes rimp: "\<And>s. P s \<Longrightarrow> R (f s) s"
+  assumes corres: "\<And>r. corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
   shows "corres_underlying sr b c rr P Q (do r \<leftarrow> gets f; n r od) (do r \<leftarrow> gets g; m r od)"
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r' = "(=)"])
@@ -159,7 +159,7 @@ lemma corres_gets_same:
 
 lemma corres_assert_imp_r:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> Q'; corres_underlying state_relation a b rr P Q f (g ()) \<rbrakk>
-     \<Longrightarrow> corres_underlying state_relation a b rr P Q f (assert Q' >>= g)"
+   \<Longrightarrow> corres_underlying state_relation a b rr P Q f (assert Q' >>= g)"
   by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
 lemma corres_return_same_trivial:
@@ -171,7 +171,7 @@ crunch device_memory_update
 
 lemma corres_ex_abs_lift':
   "\<lbrakk> corres_underlying state_relation False False r S P' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>ex_abs (P and S) and P'\<rbrace> f' \<lbrace>\<lambda>_. ex_abs Q\<rbrace>"
+   \<Longrightarrow> \<lbrace>ex_abs (P and S) and P'\<rbrace> f' \<lbrace>\<lambda>_. ex_abs Q\<rbrace>"
   by (fastforce simp: corres_underlying_def valid_def ex_abs_def)
 
 lemma getCurThread_corres':
@@ -197,7 +197,7 @@ lemma corres_assert':
 
 consts arch_extras :: "kernel_state \<Rightarrow> bool"
 
-locale ADT_IF_Refine_1 =
+locale ADT_IF_Refine =
   fixes doUserOp_if :: "user_transition_if \<Rightarrow> user_context \<Rightarrow> (event option \<times> user_context) kernel"
   assumes arch_tcb_context_set_tcb_relation:
     "tcb_relation tcb tcb'
@@ -382,7 +382,7 @@ lemma handlePreemption_ex_abs[wp]:
   apply (auto simp: ex_abs_def domain_time_rel_eq valid_domain_list_from_invs')
   done
 
-end
+end (* ADT_IF_Refine *)
 
 lemmas handle_preemption_if_valid_domain_time = handle_preemption_if_domain_time_sched_action
 
@@ -561,7 +561,6 @@ lemma step_corresE:
    apply simp+
   done
 
-
 locale global_automaton_invs =
   fixes check_active_irq
   fixes do_user_op
@@ -631,8 +630,7 @@ lemma ADT_invs: "ADT \<Turnstile> invs"
   apply (rule preservesE[OF check_active_irq_idle_invs],assumption+)
   done
 
-end
-
+end (* global_automaton_invs *)
 
 lemma invariant_holds_inter:
   "A \<Turnstile> I \<Longrightarrow> A \<Turnstile> S \<Longrightarrow> A \<Turnstile> (I \<inter> S)"
@@ -656,8 +654,8 @@ lemma preserves_lift':
   by (fastforce simp: preserves_def valid_def)
 
 lemma preserves_lift'':
-   "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f e tc \<lbrace>\<lambda>tc' s'. ((snd tc',s'),mode') \<in> P\<rbrace>)
-    \<Longrightarrow> preserves mode mode' P
+  "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f e tc \<lbrace>\<lambda>tc' s'. ((snd tc',s'),mode') \<in> P\<rbrace>)
+   \<Longrightarrow> preserves mode mode' P
          {((a, b), ba, tc, s') | a b ba tc s'.
                                  \<exists>r. ((r, tc), s') \<in> fst (f e a b) \<and> ba = (r \<noteq> Inr ())}"
   by (fastforce simp: preserves_def valid_def)
@@ -807,8 +805,7 @@ lemma kernelEntry_if_no_preempt:
   unfolding kernelEntry_if_def handleEvent_def
   by (wp | clarsimp intro!: validE_cases_valid)+
 
-
-context ADT_IF_Refine_1 begin
+context ADT_IF_Refine begin
 
 definition doUserOp_H_if where
   "doUserOp_H_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_if uop) s)}"
@@ -895,8 +892,7 @@ lemma Fin_Init_ADT_H:
   apply clarsimp
   done
 
-end
-
+end (* ADT_IF_Refine *)
 
 lemma step_corres_exE:
   assumes step: "step_corres nf srel mode invs_abs invs_conc f f'"
@@ -915,7 +911,6 @@ lemma step_corres_exE:
   apply (rule ex)
     apply assumption+
   done
-
 
 locale global_automata_refine =
   abs: global_automaton_invs check_active_irq_abs do_user_op_abs kernel_call_abs
@@ -936,7 +931,7 @@ locale global_automata_refine =
     "has_srel_state (lift_fst_rel srel) invs_conc \<subseteq> extras_abs"
   assumes srel_Fin:
     "\<lbrakk> (s,s') \<in> srel; (s,mode) \<in> invs_abs; (s',mode) \<in> invs_conc \<rbrakk>
-       \<Longrightarrow> (Fin (ADT_conc)) (s',mode) = (Fin (ADT_abs)) (s,mode)"
+     \<Longrightarrow> (Fin (ADT_conc)) (s',mode) = (Fin (ADT_abs)) (s,mode)"
   assumes init_refinement:
     "((Init (ADT_conc)) a) \<subseteq> lift_fst_rel srel `` ((Init (ADT_abs)) a)"
   assumes corres_check_active_irq:
@@ -958,7 +953,7 @@ locale global_automata_refine =
 begin
 
 lemma extras_inter'[dest!]:
-   "(t,mode) \<in> has_srel_state (lift_fst_rel srel) invs_conc \<Longrightarrow> (t,mode) \<in> extras_abs"
+  "(t,mode) \<in> has_srel_state (lift_fst_rel srel) invs_conc \<Longrightarrow> (t,mode) \<in> extras_abs"
   apply (rule set_mp)
    apply (rule extras_abs_intro)
   apply simp
@@ -1069,16 +1064,15 @@ lemma abs_serial:
   apply auto
   done
 
-end
-
+end (* global_automata_refine *)
 
 lemma step_corres_lift:
   "\<lbrakk> \<And>tc. corres_underlying srel False nf (=) (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P')
                             (f tc) (f' tc);
      \<And>tc. nf \<Longrightarrow> empty_fail (f' tc) \<rbrakk>
-     \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
-           {((tc, s), irq, tc', s'). ((irq, tc'), s') \<in> fst (f tc s)}
-           {((tc, s), irq, tc', s'). ((irq, tc'), s') \<in> fst (f' tc s)}"
+   \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
+         {((tc, s), irq, tc', s'). ((irq, tc'), s') \<in> fst (f tc s)}
+         {((tc, s), irq, tc', s'). ((irq, tc'), s') \<in> fst (f' tc s)}"
   by (fastforce simp: corres_underlying_def step_corres_def lift_snd_rel_def empty_fail_def)
 
 lemma step_corres_lift':
@@ -1098,20 +1092,20 @@ lemma step_corres_lift'':
             (\<lambda>r r'. ((fst r) = Inr ()) = ((fst r') = Inr ()) \<and> (snd r) = (snd r'))
             (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f e tc) (f' e tc);
      \<And>tc. nf \<Longrightarrow> empty_fail (f' e tc) \<rbrakk>
-     \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
-           {((a, b), ba, tc, s') |a b ba tc s'. \<exists>r. ((r, tc), s') \<in> fst (f e a b) \<and>
-                                                    ba = (r \<noteq> Inr ())}
-           {((a, b), ba, tc, s') |a b ba tc s'. \<exists>r. ((r, tc), s') \<in> fst (f' e a b) \<and>
-                                                    ba = (r \<noteq> Inr ())}"
+   \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
+         {((a, b), ba, tc, s') |a b ba tc s'. \<exists>r. ((r, tc), s') \<in> fst (f e a b) \<and>
+                                                  ba = (r \<noteq> Inr ())}
+         {((a, b), ba, tc, s') |a b ba tc s'. \<exists>r. ((r, tc), s') \<in> fst (f' e a b) \<and>
+                                                  ba = (r \<noteq> Inr ())}"
   by (fastforce simp: corres_underlying_def step_corres_def lift_snd_rel_def empty_fail_def)
 
 lemma step_corres_lift''':
   "\<lbrakk> \<And>tc. corres_underlying srel False nf (=) (\<lambda>s. ((tc,s),mode) \<in> P)
                             (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc);
      \<And>tc. nf \<Longrightarrow> empty_fail (f' tc) \<rbrakk>
-     \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
-           {(s, u, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f x xa)}
-           {(s, u, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f' x xa)}"
+   \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
+         {(s, u, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f x xa)}
+         {(s, u, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f' x xa)}"
   by (fastforce simp: corres_underlying_def step_corres_def lift_snd_rel_def empty_fail_def)
 
 lemma step_corres_lift'''':
@@ -1121,9 +1115,9 @@ lemma step_corres_lift'''':
      \<And>tc s s'. (s,s') \<in> srel \<Longrightarrow> S' s' \<Longrightarrow> S s \<Longrightarrow> y s = y' s';
      \<And>tc. \<lbrace>\<lambda>s'. ((tc,s'),mode) \<in> P'\<rbrace> (f' tc) \<lbrace>\<lambda>_. S'\<rbrace>;
      \<And>tc. \<lbrace>\<lambda>s'. ((tc,s'),mode) \<in> P\<rbrace> (f tc) \<lbrace>\<lambda>_. S\<rbrace> \<rbrakk>
-     \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
-           {(s, m, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f x xa) \<and> m = (y (snd s'))}
-           {(s, m, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f' x xa) \<and> m = (y' (snd s'))}"
+   \<Longrightarrow> step_corres nf (lift_snd_rel srel) mode P P'
+         {(s, m, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f x xa) \<and> m = (y (snd s'))}
+         {(s, m, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f' x xa) \<and> m = (y' (snd s'))}"
   apply (clarsimp simp: corres_underlying_def step_corres_def lift_snd_rel_def empty_fail_def)
   apply (clarsimp simp: valid_def)
   apply (drule_tac x=a in meta_spec)+
@@ -1135,7 +1129,7 @@ lemmas step_corres_lifts =
 
 lemma st_tcb_at_coerce_haskell:
   "\<lbrakk> st_tcb_at P t a; (a, c) \<in> state_relation; tcb_at' t c \<rbrakk>
-     \<Longrightarrow> st_tcb_at' (\<lambda>st'. \<exists>st. thread_state_relation st st' \<and> P st) t c"
+   \<Longrightarrow> st_tcb_at' (\<lambda>st'. \<exists>st. thread_state_relation st st' \<and> P st) t c"
   apply (clarsimp simp: state_relation_def pspace_relation_def
                         obj_at_def st_tcb_at'_def st_tcb_at_def)
   apply (drule_tac x=t in bspec)
@@ -1151,7 +1145,7 @@ lemma st_tcb_at_coerce_haskell:
 
 lemma ct_running'_related:
   "\<lbrakk> (a, c) \<in> state_relation; invs' c; ct_running a \<rbrakk>
-     \<Longrightarrow> ct_running' c"
+   \<Longrightarrow> ct_running' c"
   apply (clarsimp simp: ct_in_state_def ct_in_state'_def
                         curthread_relation)
   apply (frule(1) st_tcb_at_coerce_haskell)
@@ -1162,7 +1156,7 @@ lemma ct_running'_related:
 
 lemma ct_idle'_related:
   "\<lbrakk> (a, c) \<in> state_relation; invs' c; ct_idle a \<rbrakk>
-     \<Longrightarrow> ct_idle' c"
+   \<Longrightarrow> ct_idle' c"
   apply (clarsimp simp: ct_in_state_def ct_in_state'_def curthread_relation)
   apply (frule(1) st_tcb_at_coerce_haskell)
    apply (simp add: invs'_def cur_tcb'_def curthread_relation)
@@ -1177,10 +1171,10 @@ lemma invs_machine_state:
 (* FIXME MOVE to where sched_act_rct_related *)
 lemma sched_act_cnt_related:
   "\<lbrakk> (a, c) \<in> state_relation; ksSchedulerAction c = ChooseNewThread \<rbrakk>
-     \<Longrightarrow> scheduler_action a = choose_new_thread"
+   \<Longrightarrow> scheduler_action a = choose_new_thread"
   by (case_tac "scheduler_action a", simp_all add: state_relation_def)
 
-context ADT_IF_Refine_1 begin
+context ADT_IF_Refine begin
 
 lemma kernel_exit_if_corres:
   "corres (=) (invs) (invs') (kernel_exit_if tc) (kernelExit_if tc)"
@@ -1303,8 +1297,7 @@ lemma ADT_A_if_enabled:
   apply simp
   done
 
-end
-
+end (* ADT_IF_Refine *)
 
 lemma (in valid_initial_state_noenabled) uop_nonempty:
   "uop_nonempty utf"
@@ -1317,7 +1310,7 @@ lemma (in valid_initial_state_noenabled) uop_sane:
   apply blast
   done
 
-locale ADT_valid_initial_state_noenabled = ADT_IF_Refine_1 + valid_initial_state_noenabled
+locale ADT_valid_initial_state_noenabled = ADT_IF_Refine + valid_initial_state_noenabled
 
 sublocale ADT_valid_initial_state_noenabled \<subseteq> valid_initial_state
   using ADT_A_if_enabled[of utf s0, OF uop_sane] ADT_A_if_Init_Fin_serial[OF uop_sane, of s0]
