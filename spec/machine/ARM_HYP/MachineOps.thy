@@ -591,6 +591,21 @@ definition
 where
   "setCPACR w \<equiv> machine_op_lift (setCPACR_impl w)"
 
+consts' HDCR_val :: "machine_state \<Rightarrow> machine_word"
+definition getHDCR :: "machine_word machine_monad" where
+  "getHDCR \<equiv> gets HDCR_val"
+
+consts' setHDCR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition setHDCR :: "machine_word \<Rightarrow> unit machine_monad" where
+  "setHDCR w \<equiv> machine_op_lift (setHDCR_impl w)"
+
+(* Set or unset HDCR.TDE (trap debug exceptions) *)
+definition trapDebugExceptions :: "bool \<Rightarrow> unit machine_monad" where
+  "trapDebugExceptions trap \<equiv> do
+     hdcr \<leftarrow> getHDCR;
+     setHDCR (if trap then hdcr || hdcrTDE else hdcr && ~~ hdcrTDE)
+   od"
+
 definition
   vgic_irq_active :: "machine_word"
 where

@@ -1732,15 +1732,16 @@ lemma invokeTCB_corres:
      apply clarsimp
      apply (clarsimp simp: obj_at_def is_ntfn)
     apply (clarsimp simp: obj_at'_def)
-   apply (simp add: invokeTCB_def tlsBaseRegister_def')
+   apply (simp add: invokeTCB_def tlsBaseRegister_def' sanitiseRegister_sanitise_register)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF asUser_setRegister_corres])
-       apply (rule corres_split[OF Bits_R.getCurThread_corres])
-         apply (rule corres_split[OF Corres_UL.corres_when])
-             apply simp
-            apply (rule rescheduleRequired_corres)
-           apply (rule corres_trivial, simp)
-          apply (wpsimp wp: hoare_drop_imp)+
+     apply (rule corres_split_eqr[OF arch_getSanitiseRegisterInfo_corres])
+       apply (rule corres_split[OF asUser_setRegister_corres])
+         apply (rule corres_split[OF Bits_R.getCurThread_corres])
+           apply (rule corres_split[OF Corres_UL.corres_when])
+               apply simp
+              apply (rule rescheduleRequired_corres)
+             apply (rule corres_trivial, simp)
+            apply (wpsimp wp: hoare_drop_imp arch_get_sanitise_register_info_inv)+
     apply (fastforce del: valid_sched_valid_queues dest: valid_sched_valid_queues
                      simp: valid_sched_weak_strg)
    apply fastforce

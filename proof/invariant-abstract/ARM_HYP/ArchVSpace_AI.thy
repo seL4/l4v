@@ -105,7 +105,7 @@ definition
   "glob_vs_refs \<equiv> arch_obj_fun_lift glob_vs_refs_arch {}"
 
 crunch_ignore (add: writeContextIDAndPD_impl addressTranslateS1_impl
-           setSCTLR_impl setHCR_impl setCPACR_impl
+           setSCTLR_impl setHCR_impl setCPACR_impl setHDCR_impl
            check_export_arch_timer_impl
            set_gic_vcpu_ctrl_vmcr_impl
            set_gic_vcpu_ctrl_apr_impl
@@ -2181,6 +2181,8 @@ crunch writeVCPUHardwareReg, readVCPUHardwareReg
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 crunch setSCTLR,setHCR,setCPACR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+crunch getHDCR, setHDCR, trapDebugExceptions
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 crunch
   get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
@@ -2195,7 +2197,8 @@ crunch writeVCPUHardwareReg, check_export_arch_timer
 crunch isb, dsb, setSCTLR, getSCTLR, setHCR, setCPACR,
        get_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_apr,
        get_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_hcr,
-       writeVCPUHardwareReg, readVCPUHardwareReg, check_export_arch_timer
+       writeVCPUHardwareReg, readVCPUHardwareReg, check_export_arch_timer, getHDCR, setHDCR,
+       trapDebugExceptions
   for underlying_memory_pred[wp]: "\<lambda>m'. P (underlying_memory m')"
   and irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
   (ignore_del: isb dsb)
@@ -2219,6 +2222,7 @@ lemma
   and dmo_setHCR_invs[wp]: "do_machine_op (setHCR w) \<lbrace>invs\<rbrace>"
   and dmo_setSCTLR_invs[wp]: "do_machine_op (setSCTLR x) \<lbrace>invs\<rbrace>"
   and dmo_setCPACR_invs[wp]: "do_machine_op (setCPACR x) \<lbrace>invs\<rbrace>"
+  and dmo_trapDebugExceptions_invs[wp]: "do_machine_op (trapDebugExceptions trap) \<lbrace>invs\<rbrace>"
   and dmo_getSCTLR_invs[wp]: "do_machine_op getSCTLR \<lbrace>invs\<rbrace>"
   and dmo_get_gic_vcpu_ctrl_vmcr_invs[wp]: "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>invs\<rbrace>"
   and dmo_set_gic_vcpu_ctrl_vmcr_invs[wp]: "do_machine_op (set_gic_vcpu_ctrl_vmcr x) \<lbrace>invs\<rbrace>"

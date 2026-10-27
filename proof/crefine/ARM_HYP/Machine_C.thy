@@ -85,6 +85,16 @@ assumes setCPACR_ccorres:
            (doMachineOp (setCPACR cpacr))
            (Call setCPACR_'proc)"
 
+assumes getHDCR_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getHDCR)
+           (Call getHDCR_'proc)"
+
+assumes setHDCR_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>hdcr = hdcr\<rbrace> []
+           (doMachineOp (setHDCR hdcr))
+           (Call setHDCR_'proc)"
+
 assumes readTPIDRURO_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getTPIDRURO)

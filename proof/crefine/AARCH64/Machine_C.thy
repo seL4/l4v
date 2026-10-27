@@ -122,6 +122,11 @@ assumes setSCTLR_ccorres:
            (doMachineOp (setSCTLR sctlr))
            (Call setSCTLR_'proc)"
 
+assumes writeTCR_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>reg = tcr\<rbrace> []
+           (doMachineOp (writeTCR tcr))
+           (Call writeTCR_'proc)"
+
 assumes isb_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp isb)

@@ -312,7 +312,7 @@ crunch
   vcpuUpdate, vgicUpdateLR, vcpuSave
   for irq_states' [wp]: valid_irq_states'
   (wp: crunch_wps maskInterrupt_irq_states'[where b=True, simplified] no_irq no_irq_mapM_x
-       no_irq_isb no_irq_dsb
+       no_irq_isb no_irq_dsb no_irq_trapDebugExceptions
    simp: crunch_simps no_irq_modify
          set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def setCPACR_def get_gic_vcpu_ctrl_hcr_def
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def

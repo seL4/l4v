@@ -432,6 +432,7 @@ where
         setSCTLR sctlrDefault; \<comment> \<open>turn SI MMU off\<close>
         setHCR hcrNative;
         setCPACR cpacrDefault;
+        trapDebugExceptions True; \<comment> \<open>native threads always trap debug exceptions\<close>
         isb
       od;
     case vo of
@@ -452,7 +453,8 @@ where
      do_machine_op $ do
         setHCR hcrVCPU;
         isb;
-        set_gic_vcpu_ctrl_hcr (vgic_hcr $ vcpu_vgic vcpu)
+        set_gic_vcpu_ctrl_hcr (vgic_hcr $ vcpu_vgic vcpu);
+        trapDebugExceptions False \<comment> \<open>guests handle their own debug exceptions\<close>
      od;
      vcpu_restore_reg vr VCPURegCPACR;
      restore_virt_timer vr

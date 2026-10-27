@@ -263,6 +263,14 @@ definition setSCTLR :: "machine_word \<Rightarrow> unit machine_monad" where
      machine_op_lift (setSCTLR_impl w)
    od"
 
+consts' writeTCR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+consts' writeTCR_val :: "machine_word \<Rightarrow> machine_word"
+definition writeTCR :: "machine_word \<Rightarrow> unit machine_monad" where
+  "writeTCR w \<equiv> do
+     modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(VCPURegTCR := writeTCR_val w))));
+     machine_op_lift (writeTCR_impl w)
+   od"
+
 consts' addressTranslateS1_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 consts' addressTranslateS1_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition addressTranslateS1 :: "machine_word \<Rightarrow> machine_word machine_monad" where

@@ -3489,6 +3489,8 @@ lemma
     "doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>invs_no_cicd'\<rbrace>"
   and setHCR_invs_no_cicd'[wp]:
     "doMachineOp (setHCR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and trapDebugExceptions_invs_no_cicd'[wp]:
+    "doMachineOp (trapDebugExceptions trap) \<lbrace>invs_no_cicd'\<rbrace>"
   and get_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
     "doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>invs_no_cicd'\<rbrace>"
   and get_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
@@ -3852,6 +3854,7 @@ lemma
   and dmo_setSCTLR_invs'[wp]: "doMachineOp (setSCTLR w) \<lbrace>invs'\<rbrace>"
   and dmo_setCPACR_invs'[wp]: "doMachineOp (setCPACR w) \<lbrace>invs'\<rbrace>"
   and dmo_setHCR_invs'[wp]: "doMachineOp (setHCR w) \<lbrace>invs'\<rbrace>"
+  and dmo_trapDebugExceptions_invs'[wp]: "doMachineOp (trapDebugExceptions trap) \<lbrace>invs'\<rbrace>"
   and dmo_isb_invs'[wp]: "doMachineOp isb \<lbrace>invs'\<rbrace>"
   and dmo_dsb_invs'[wp]: "doMachineOp dsb \<lbrace>invs'\<rbrace>"
   by (all \<open>wp dmo_invs_lift'\<close>)

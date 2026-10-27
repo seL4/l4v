@@ -366,6 +366,7 @@ For initialisation, see makeVCPUObject.
 >         setHCR hcrVCPU
 >         isb
 >         set_gic_vcpu_ctrl_hcr (vgicHCR . vcpuVGIC $ vcpu)
+>         trapDebugExceptions False -- guests handle their own debug exceptions
 >     vcpuRestoreReg vcpuPtr VCPURegCPACR
 >     restoreVirtTimer vcpuPtr
 
@@ -386,6 +387,7 @@ For initialisation, see makeVCPUObject.
 >         setSCTLR sctlrDefault -- S1 MMU off
 >         setHCR hcrNative
 >         setCPACR cpacrDefault -- guest may have changed CPACR
+>         trapDebugExceptions True -- native threads always trap debug exceptions
 >         isb
 >
 >     case vcpuPtrOpt of
