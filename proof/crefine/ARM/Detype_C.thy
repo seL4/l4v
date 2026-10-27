@@ -1442,9 +1442,9 @@ lemma deleteObjects_ccorres':
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: in_monad)
-  apply (rule bexI [rotated])
-   apply (rule iffD2 [OF in_monad(21)])
-   apply (rule conjI [OF refl refl])
+  apply (rule bexI[rotated])
+   apply (rule iffD2[OF in_modify])
+   apply (rule conjI[OF refl refl])
   apply (clarsimp simp: simpler_modify_def)
 proof -
   let ?mmu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then 0 else h x)"
