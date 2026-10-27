@@ -933,7 +933,6 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > vgicHCRTALL0 = if config_ARM_GIC_V3 then bit 11 else 0
 
 > sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
-> actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
 > gicVCPUMaxNumLR = (64 :: Int)
 
 > -- Wether to trap WFI/WFE instructions or not in hyp mode

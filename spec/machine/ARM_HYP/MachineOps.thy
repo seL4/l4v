@@ -545,7 +545,6 @@ consts'
   HSR_val :: "machine_state \<Rightarrow> machine_word"
   HDFAR_val :: "machine_state \<Rightarrow> machine_word"
   SCTLR_val :: "machine_state \<Rightarrow> machine_word"
-  ACTLR_val :: "machine_state \<Rightarrow> machine_word"
 
 definition
   getHSR :: "machine_word machine_monad"

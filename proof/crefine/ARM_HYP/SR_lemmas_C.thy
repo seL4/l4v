@@ -2378,7 +2378,6 @@ lemma vcpu_at_rf_sr:
 lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_SCTLR_def
     seL4_VCPURegSaveRange_start_def
-    seL4_VCPUReg_ACTLR_def
     seL4_VCPUReg_TTBCR_def
     seL4_VCPUReg_TTBR0_def
     seL4_VCPUReg_TTBR1_def
@@ -2525,10 +2524,6 @@ where
 lemma unat_scast_seL4_VCPUReg_SCTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_SCTLR) = fromEnum VCPURegSCTLR"
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegSCTLR, simplified, symmetric])
-
-lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
-  "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_ACTLR) = fromEnum VCPURegACTLR"
-  by (simp add: vcpureg_eq_use_types[where reg=VCPURegACTLR, simplified, symmetric])
 
 lemma unat_scast_seL4_VCPUReg_CNTKCTL_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_CNTKCTL) = fromEnum VCPURegCNTKCTL"

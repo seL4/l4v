@@ -32,7 +32,6 @@ defs makeVCPUObject_def:
                         , vgicLR= (\<lambda>_. 0)
                         \<rparr>
         , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)
-                                             ,(VCPURegACTLR, actlrDefault)
                                              ,(VCPURegCPACR, cpacrDefault)]
         , vcpuVPPIMasked= (\<lambda>_. False)
         \<rparr>"
