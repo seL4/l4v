@@ -2107,7 +2107,8 @@ lemma vcpu_save_vcpu_proj[wp]:
   apply (wpsimp wp: save_virt_timer_vcpu_proj hoare_weak_lift_imp dmo_lift_vcpu_proj
               simp: vcpu_save_def if_fun_split split_del: if_split)
   by (auto intro: vcpureg.exhaust intro!: arg_cong[where f="\<lambda>x. _ (vcpu_proj x)"]
-            simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def)
+            simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def
+                  vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
 
 \<comment> \<open>Enable/Restore\<close>
 
@@ -2151,7 +2152,8 @@ lemma vcpu_restore_vcpu_proj[wp]:
          | wp dmo_lift_vcpu_proj)+
   apply (rule conjI)
    apply (auto intro!: arg_cong[where f="\<lambda>x. _ (vcpu_proj x)"] intro: vcpureg.exhaust
-                 simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def)[1]
+                 simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def
+                       vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)[1]
   apply (clarsimp simp: vcpu_proj_def split: if_splits)
   done
 

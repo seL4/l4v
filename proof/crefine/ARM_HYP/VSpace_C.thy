@@ -1982,7 +1982,8 @@ lemma armv_vcpu_save_ccorres:
       apply ceqv
      apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
     apply wpsimp
-   apply (auto simp: guard_is_UNIV_def seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
+   apply (auto simp: guard_is_UNIV_def seL4_VCPUReg_defs fromEnum_def enum_vcpureg
+                     vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
   done
 
 lemma trapDebugExceptions_ccorres:
@@ -2176,13 +2177,14 @@ lemma vcpu_restore_ccorres:
         apply (wpsimp simp: guard_is_UNIV_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv
                | rule UNIV_I
                | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
-        apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_defs)
+        apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_defs
+                               vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
        apply (clarsimp simp: guard_is_UNIV_def)
       apply (wpsimp simp: vcpu_at_ko'_eq wp: hoare_vcg_imp_lift')+
   apply (rule conjI)
    apply (fastforce simp: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   apply (rule conjI)
-   apply (fastforce simp: fromEnum_def enum_vcpureg)
+   apply (fastforce simp: fromEnum_def enum_vcpureg vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
   apply (fastforce dest!: vcpu_at_rf_sr
                    simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
   done

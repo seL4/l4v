@@ -97,6 +97,12 @@ data VCPUReg =
     | VCPURegCNTKCTL_EL1
     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
+vcpuRegSaveRangeStart :: VCPUReg
+vcpuRegSaveRangeStart = VCPURegTTBR0
+
+vcpuRegSaveRangeEnd :: VCPUReg
+vcpuRegSaveRangeEnd = VCPURegVDISR_EL2
+
 vcpuRegNum :: Int
 vcpuRegNum = fromEnum (maxBound :: VCPUReg)
 

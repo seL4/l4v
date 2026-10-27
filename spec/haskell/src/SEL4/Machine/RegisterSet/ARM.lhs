@@ -101,6 +101,12 @@ This module defines the ARM register set.
 >     | VCPURegFPEXC
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
+> vcpuRegSaveRangeStart :: VCPUReg
+> vcpuRegSaveRangeStart = VCPURegTTBCR
+
+> vcpuRegSaveRangeEnd :: VCPUReg
+> vcpuRegSaveRangeEnd = VCPURegVDISR
+
 > vcpuRegNum :: Int
 > vcpuRegNum = fromEnum (maxBound :: VCPUReg)
 
