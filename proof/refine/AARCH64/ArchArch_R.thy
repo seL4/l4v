@@ -744,20 +744,6 @@ lemma list_all2_Cons: "list_all2 f (x#xs) b \<Longrightarrow> \<exists>y ys. b =
 
 declare corres_gets_gicvcpu_numlistregs[corres]
 
-lemma get_vcpu_LR_corres[corres]:
-  "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
-             (liftE (get_vcpu v)) (liftE (liftM (vgicLR \<circ> vcpuVGIC) (getObject v)))"
-  apply simp
-  apply (rule corres_rel_imp, rule getObject_vcpu_corres)
-  apply (rename_tac vcpu', case_tac vcpu')
-  apply (clarsimp simp: vcpu_relation_def vgic_map_def)
-  done
-
-lemma isVIRQActive_eq[simp]:
-  "isVIRQActive = is_virq_active"
-  unfolding isVIRQActive_def is_virq_active_def
-  by simp
-
 lemma makeVIRQ_eq[simp]:
   "makeVIRQ = make_virq"
   unfolding make_virq_def makeVIRQ_def
@@ -790,7 +776,7 @@ lemma decodeARMVCPUInvocation_corres:
      apply (cases args; clarsimp)
      apply (clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
      apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
-     apply (corresKsimp wp: get_vcpu_wp)
+     apply corresKsimp
      apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def
                            valid_cap'_def valid_cap_def)
     (* read register *)

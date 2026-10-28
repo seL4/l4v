@@ -838,12 +838,6 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 \subsection{GIC VCPU interface}
 
-> vgicIRQActive :: Word
-> vgicIRQActive = 2 `shiftL` 28
-
-> vgicIRQMask :: Word
-> vgicIRQMask = 3 `shiftL` 28
-
 > get_gic_vcpu_ctrl_hcr :: MachineMonad Word
 > get_gic_vcpu_ctrl_hcr = isabelleOp
 

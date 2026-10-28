@@ -3789,19 +3789,6 @@ lemma virq_virq_pending_EN_new_spec:
                         eoiirqen_shift_def mask_def)
   by (simp add: bit.disj_commute  bit.disj_assoc bit.disj_ac)
 
-lemma virq_virq_active_eq_is_virq_active:
-  "(of_nat (virq_type virq) = (scast virq_virq_active :: machine_word)) = is_virq_active virq"
-  apply (simp add: is_virq_active_def virq_virq_active_def)
-  apply (rule iffI; clarsimp?)
-  apply (clarsimp simp: virq_type_def)
-  done
-
-lemma virq_get_tag_eq_of_nat_virq_type:
-  "virq_get_tag virq = of_nat (virq_type (virq_to_H virq))"
-  (* config unfolding to match bitfield shift in virq_get_tag with virq_type_shift in virq_type *)
-  by (simp add: virq_to_H_def virq_type_def virq_get_tag_def virq_type_shift_def mask_def
-                Kernel_Config.config_ARM_GIC_V3_def)
-
 lemma decodeVCPUInjectIRQ_ccorres:
   notes if_cong[cong] Collect_const[simp del]
   (* csymbr will use this instead now *)
@@ -3916,33 +3903,6 @@ lemma decodeVCPUInjectIRQ_ccorres:
      apply (prop_tac "\<not> (of_nat nregs \<le> (args ! 0 >> 32) && 0xFF)")
       apply (simp add: word_le_nat_alt not_le)
      apply clarsimp
-     apply (rule ccorres_move_const_guard)
-     apply (rule ccorres_move_c_guard_vcpu)
-     apply (simp add: liftM_def)
-     apply (clarsimp simp: rangeCheck_def not_le[symmetric]
-                           liftE_liftM[symmetric] liftE_bindE_assoc)
-
-     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-     apply csymbr
-     apply (rule ccorres_abstract_cleanup)
-
-     apply (rule_tac P="ret__unsigned_longlong =
-                          of_nat (virq_type (vgicLR (vcpuVGIC vcpu)
-                                            (unat ((args ! 0 >> 32) && 0xFF))))"
-                     in ccorres_gen_asm2)
-     apply clarsimp
-     apply (rule ccorres_Cond_rhs_Seq)
-      apply (prop_tac "isVIRQActive (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
-       apply (clarsimp simp add: virq_virq_active_eq_is_virq_active)
-      apply (simp add: rangeCheck_def not_le[symmetric])
-      apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
-                 cong: StateSpace.state.fold_congs globals.fold_congs)
-      apply (rule syscall_error_throwError_ccorres_n)
-      apply (simp add: syscall_error_to_H_cases)
-
-     apply (prop_tac "\<not>is_virq_active (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
-      apply (clarsimp simp add: virq_virq_active_eq_is_virq_active)
-     apply clarsimp
      apply (simp add: returnOk_bind bindE_assoc not_le
                       performARMMMUInvocations performARMVCPUInvocation_def)
      apply csymbr
@@ -3980,18 +3940,13 @@ lemma decodeVCPUInjectIRQ_ccorres:
    apply (erule order_less_trans; simp)
 
   apply (safe; clarsimp?)
-       apply (simp add: unat_eq_zero)
-      apply (erule order_less_le_trans)
-      apply (simp add: unat_of_nat_eq)
-     apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                      elim: obj_at'_weakenE)
+     apply (simp add: unat_eq_zero)
     apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                      elim: obj_at'_weakenE)
+                     elim: obj_at'_weakenE)
+   apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                    elim: obj_at'_weakenE)
+  apply (erule order_less_le_trans)
   apply (simp add: unat_of_nat_eq)
-  apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
-  apply (subgoal_tac "unat ((args ! 0 >> 32) && 0xFF) < max_armKSGICVCPUNumListRegs")
-   apply (simp add: virq_get_tag_eq_of_nat_virq_type)
-  apply (fastforce simp: unat_of_nat_eq max_armKSGICVCPUNumListRegs_val)
   done
 
 lemma decodeVCPUReadReg_ccorres:

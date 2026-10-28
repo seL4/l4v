@@ -386,7 +386,7 @@ lemma ARMMMU_improve_cases:
   by (cases cap, simp_all add: isCap_simps) (* not sure if this is useful as is *)
 
 lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp getVCPU_wp | rule conjI)+
+  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp | rule conjI)+
 
 crunch Arch.decodeInvocation
   for inv[Arch_assms, wp]: "P"
@@ -715,20 +715,6 @@ lemma corres_gets_numlistregs [corres]:
       (gets (arm_gicvcpu_numlistregs \<circ> arch_state)) (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
-lemma get_vcpu_LR_corres[corres]:
-  "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
-             (liftE (get_vcpu v)) (liftE (liftM (vgicLR \<circ> vcpuVGIC) (getObject v)))"
-  apply simp
-  apply (rule corres_rel_imp, rule getObject_vcpu_corres)
-  apply (rename_tac vcpu', case_tac vcpu')
-  apply (clarsimp simp: vcpu_relation_def vgic_map_def)
-  done
-
-lemma vgi_mask[simp]:
-  "vgicIRQMask = vgic_irq_mask"
-  "vgicIRQActive = vgic_irq_active"
-  by (auto simp: vgicIRQMask_def vgic_irq_mask_def vgic_irq_active_def vgicIRQActive_def)
-
 lemma decodeARMVCPUInvocation_corres:
   notes if_split [split del]
   shows
@@ -760,7 +746,7 @@ lemma decodeARMVCPUInvocation_corres:
      apply (cases args; clarsimp)
      apply (case_tac list; clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
      apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
-     apply (corresKsimp wp: get_vcpu_wp)
+     apply corresKsimp
      supply if_split[split del] (* FIXME: this avoids corresK if_split not in set warnings *)
      apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def
                         valid_cap'_def valid_cap_def

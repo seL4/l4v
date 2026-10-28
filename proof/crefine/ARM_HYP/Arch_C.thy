@@ -4838,43 +4838,6 @@ lemma decodeVCPUInjectIRQ_ccorres:
         prefer 2
   subgoal by (simp add: word_le_nat_alt not_le)
        apply clarsimp
-       apply (rule ccorres_move_const_guard)
-       apply (rule ccorres_move_c_guard_vcpu)
-       apply (simp add: liftM_def)
-       apply (clarsimp simp: rangeCheck_def not_le[symmetric]
-                             liftE_liftM[symmetric] liftE_bindE_assoc)
-
-       apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-       apply csymbr
-       apply (rule ccorres_abstract_cleanup)
-       apply (simp add: virq_virq_active_def)
-       apply (rule_tac
-                P="ret__unsigned = (vgicLR (vcpuVGIC vcpu) (unat (args ! Suc 0 && 0xFF))
-                                     && vgic_irq_mask) >> 28"
-                in ccorres_gen_asm2)
-       apply clarsimp
-       apply (rule ccorres_Cond_rhs_Seq)
-        apply (subgoal_tac "vgicLR (vcpuVGIC vcpu) (unat (args ! Suc 0 && 0xFF)) && vgic_irq_mask =
-                          vgic_irq_active")
-         prefer 2
-  subgoal
-           apply (clarsimp simp: vgic_irq_active_def vgic_irq_mask_def shiftr_over_and_dist)
-           apply (drule shiftr_and_eq_shiftl)
-           apply simp
-           done
-
-        apply (simp add: rangeCheck_def not_le[symmetric])
-        apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
-                   cong: StateSpace.state.fold_congs globals.fold_congs)
-        apply (rule syscall_error_throwError_ccorres_n)
-        apply (simp add: syscall_error_to_H_cases)
-
-       apply (subgoal_tac "vgicLR (vcpuVGIC vcpu) (unat (args ! Suc 0 && 0xFF)) && vgic_irq_mask \<noteq>
-                          vgic_irq_active")
-               prefer 2
-  subgoal by (clarsimp simp: vgic_irq_active_def)
-
-       apply clarsimp
        apply (simp add: returnOk_bind bindE_assoc
                         performARMMMUInvocations performARMVCPUInvocation_def)
        apply csymbr
@@ -4917,36 +4880,13 @@ lemma decodeVCPUInjectIRQ_ccorres:
   prefer 2 subgoal by (erule order_le_less_trans; simp)
 
   apply (safe; clarsimp?)
-    apply (subgoal_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
-     prefer 2 subgoal by (erule order_le_less_trans; simp)
-    apply (erule order_less_le_trans)
-    apply (simp add: unat_of_nat_eq)
-  apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+    apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                     elim: obj_at'_weakenE)
+   apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
                     elim: obj_at'_weakenE)
-  apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                    elim: obj_at'_weakenE)
-
-  apply (subgoal_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
-  prefer 2 subgoal by (erule order_le_less_trans; simp)
   apply (erule order_less_le_trans)
   apply (simp add: unat_of_nat_eq)
-  apply (clarsimp simp: typ_heap_simps')
-  apply (simp add: virq_get_tag_def mask_def vgic_irq_mask_def shiftr_over_and_dist)
-  apply (simp add: cvcpu_relation_def cvgic_relation_def virq_to_H_def)
-  apply (clarsimp simp: cvcpu_relation_def cvgic_relation_def virq_get_tag_def vgic_irq_mask_def
-                        shiftr_over_and_dist mask_def )
-  apply (subgoal_tac "unat ((args ! Suc 0) && 0xFF) \<le> 63")
-  apply (rule sym)
-  apply simp
-  apply (subgoal_tac "gic_vcpu_num_list_regs_' (globals s') \<le> 63")
-  apply (simp add: word_le_nat_alt)
-  apply (simp add: rf_sr_armKSGICVCPUNumListRegs)
-  apply (simp add: word_le_nat_alt)
-  apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_def dest!: invs_arch_state')
-  apply (clarsimp simp: rf_sr_armKSGICVCPUNumListRegs)
-  apply (subst unat_of_nat_eq)
-  apply (erule order_le_less_trans, simp+)
-done
+  done
 
 lemma decodeVCPUReadReg_ccorres:
   notes if_cong[cong] Collect_const[simp del]

@@ -228,10 +228,6 @@ makeVIRQ grp prio irq =
 virqType :: Word -> Int
 virqType virq = fromIntegral $ (virq `shiftR` virqTypeShift) .&. 3
 
--- combination of virq_get_virqType and virq_virq_active
-isVIRQActive :: VIRQ -> Bool
-isVIRQActive virq = virqType virq == 2
-
 -- identical for pending/active/invalid VIRQs
 -- there is no virq type == 3, so do nothing, as per VGICMaintenance in C
 virqSetEOIIRQEN :: VIRQ -> Word -> VIRQ
@@ -258,11 +254,6 @@ decodeVCPUInjectIRQ (mr0:_) cap@(VCPUCap {}) = do
 
     when (index >= fromIntegral gic_vcpu_num_list_regs) $
        (throw $ RangeError 0 (fromIntegral gic_vcpu_num_list_regs - 1))
-
-    vcpuLR <- withoutFailure $ liftM (vgicLR . vcpuVGIC) $ getObject vcpuPtr
-
-    when (isVIRQActive (vcpuLR ! (fromIntegral index))) $
-        throw DeleteFirst
 
     let virq = makeVIRQ (fromIntegral grp) (fromIntegral priority) (fromIntegral vid)
     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq

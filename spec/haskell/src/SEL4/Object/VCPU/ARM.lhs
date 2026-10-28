@@ -246,11 +246,6 @@ it is the value that is stored inside of lr in the vgic
 >     when (index >= fromIntegral gic_vcpu_num_list_regs) $
 >        (throw $ RangeError 0 (fromIntegral gic_vcpu_num_list_regs - 1))
 >
->     vcpuLR <- withoutFailure $ liftM (vgicLR . vcpuVGIC) $ getObject vcpuPtr
->
->     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $
->         throw DeleteFirst
->
 >     let virq = makeVIRQ (fromIntegral grp) (fromIntegral priority) (fromIntegral vid)
 >     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
 > decodeVCPUInjectIRQ _ _ = throw TruncatedMessage
