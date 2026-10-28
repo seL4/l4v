@@ -147,11 +147,6 @@ where
      whenE (index \<ge> of_nat num_list_regs) $
         (throwError $ RangeError 0 (of_nat num_list_regs - 1));
 
-     vcpu \<leftarrow> liftE $ get_vcpu p;
-     vcpuLR \<leftarrow> returnOk (vgic_lr $ vcpu_vgic $ vcpu);
-
-     whenE (vcpuLR (unat index) && vgic_irq_mask = vgic_irq_active) $ throwError DeleteFirst;
-
      virq \<leftarrow> returnOk (make_virq group priority vid);
      returnOk $ InvokeVCPU $ VCPUInjectIRQ p (unat index) virq
   odE

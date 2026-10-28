@@ -350,14 +350,11 @@ lemma decode_vcpu_inject_irq_reads_respects_f:
                                      (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
             (decode_vcpu_inject_irq args (VCPUCap vcpu_ptr))"
   unfolding decode_vcpu_inject_irq_def range_check_def unlessE_whenE
-  apply (wpsimp wp: reads_respects_f[OF get_vcpu_reads_respects, where st=st])
-  apply (prop_tac "valid_numlistregs x")
-   apply (frule invs_arch_state)
-   apply (clarsimp simp: valid_arch_state_def)
-  apply (clarsimp simp: valid_numlistregs_def)
-  apply (auto simp: aag_cap_auth_VCPUCap reads_equiv_f_def reads_equiv_def2
-                    states_equiv_for_def equiv_hyp_def equiv_for_def
-              dest: aag_can_read_self)
+  apply wpsimp
+  apply (frule (1) aag_cap_auth_VCPUCap)
+  apply (fastforce simp: reads_equiv_f_def reads_equiv_def2 states_equiv_for_def equiv_hyp_def
+                         equiv_for_def
+                   dest: aag_can_read_self)
   done
 
 lemma decode_vcpu_invocation_reads_respects_f:

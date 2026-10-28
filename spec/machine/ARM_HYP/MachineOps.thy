@@ -605,16 +605,6 @@ definition trapDebugExceptions :: "bool \<Rightarrow> unit machine_monad" where
      setHDCR (if trap then hdcr || hdcrTDE else hdcr && ~~ hdcrTDE)
    od"
 
-definition
-  vgic_irq_active :: "machine_word"
-where
-  "vgic_irq_active \<equiv> 2 << 28"
-
-definition
-  vgic_irq_mask :: "machine_word"
-where
-  "vgic_irq_mask \<equiv> 3 << 28"
-
 consts'
   gic_vcpu_ctrl_hcr_val :: "machine_state \<Rightarrow> machine_word"
 definition
