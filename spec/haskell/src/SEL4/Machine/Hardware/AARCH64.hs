@@ -451,9 +451,20 @@ check_export_arch_timer = isabelleOp
 
 {- Constants -}
 
+-- HCR_COMMON
 hcrCommon :: Word
---          HCR_VM  | HCR_RW   | HCR_AMO | HCR_IMO | HCR_FMO | HCR_TSC
-hcrCommon = bit 0  .|. bit 31 .|. bit 5 .|. bit 4 .|. bit 3 .|. bit 19
+hcrCommon = bit 0  -- HCR_VM
+        .|. bit 5  -- HCR_AMO
+        .|. bit 4  -- HCR_IMO
+        .|. bit 3  -- HCR_FMO
+        .|. bit 19 -- HCR_TSC
+        .|. bit 20 -- HCR_TIDCP
+        .|. bit 21 -- HCR_TACR
+        .|. bit 1  -- HCR_SWIO
+        .|. bit 31 -- HCR_RW
+        .|. bit 35 -- HCR_TLOR
+        .|. bit 36 -- HCR_TERR
+        .|. bit 58 -- HCR_TID5
 
 hcrTWE :: Word
 hcrTWE = bit 14
@@ -461,15 +472,19 @@ hcrTWE = bit 14
 hcrTWI :: Word
 hcrTWI = bit 13
 
-hcrTERR :: Word
-hcrTERR = bit 36
-
 hcrVCPU :: Word -- HCR_VCPU
 hcrVCPU = if config_DISABLE_WFI_WFE_TRAPS
-          then hcrCommon .|. hcrTERR
-          else hcrCommon .|. hcrTERR .|. hcrTWE .|. hcrTWI
+          then hcrCommon
+          else hcrCommon .|. hcrTWE .|. hcrTWI
 
-hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
+hcrNative :: Word -- HCR_NATIVE
+hcrNative = hcrCommon
+        .|. bit 12 -- HCR_DC
+        .|. bit 25 -- HCR_TTLB
+        .|. bit 26 -- HCR_TVM
+        .|. bit 30 -- HCR_TRVM
+        .|. bit 27 -- HCR_TGE
+
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
 tcrEL1Native = (0 :: Word) -- TCR_EL1_NATIVE

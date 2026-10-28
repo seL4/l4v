@@ -2701,8 +2701,8 @@ lemma vcpu_disable_ccorres:
              apply (ctac (no_vcg) add: save_virt_timer_ccorres)
               apply (ctac (no_vcg) add: maskInterrupt_ccorres)
              apply (wpsimp wp: hoare_vcg_all_lift)+
-    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def sctlrDefault_def
-                          tcrEL1Native_def irqVTimerEvent_def IRQ_def)
+    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def hcrCommon_def
+                          sctlrDefault_def tcrEL1Native_def irqVTimerEvent_def IRQ_def)
    apply (wpsimp wp: hoare_vcg_all_lift)+
   apply (clarsimp simp: Collect_const_mem ko_at'_not_NULL dest!: vcpu_at_ko split: option.splits)
   done

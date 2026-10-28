@@ -895,9 +895,17 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
+> -- HCR_COMMON
 > hcrCommon :: Word
-> --          HCR_TSC | HCR_AMO  | HCR_IO | HCR_FMO | HCR_DC  | HCR_VM
-> hcrCommon = bit 19 .|. bit 5  .|. bit 4 .|. bit 3 .|. bit 12 .|. bit 0
+> hcrCommon = bit 0  -- HCR_VM
+>         .|. bit 5  -- HCR_AMO
+>         .|. bit 4  -- HCR_IMO
+>         .|. bit 3  -- HCR_FMO
+>         .|. bit 19 -- HCR_TSC
+>         .|. bit 20 -- HCR_TIDCP
+>         .|. bit 21 -- HCR_TACR
+>         .|. bit 1  -- HCR_SWIO
+>         .|. bit 12 -- HCR_DC
 
 > hcrTWE :: Word
 > hcrTWE = bit 14
@@ -915,11 +923,17 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > cpacrDefault :: Word -- CPACR_DEFAULT
 > cpacrDefault = bit 28
 
-> hcrNative = (0xFE8103B :: Word) -- HCR_NATIVE
-
 > hdcrTDE :: Word -- HDCR_DEBUG_TDE
 > hdcrTDE = bit 8
-
+>
+> -- HCR_NATIVE. This assumes ARMv7-A boards only for ARM_HYP (currently true).
+> -- When we add an AArch32 ARMv8-A HYP config, we need to make this conditional as in C.
+> hcrNative :: Word
+> hcrNative = hcrCommon
+>         .|. bit 25 -- HCR_TTLB
+>         .|. bit 26 -- HCR_TVM
+>         .|. bit 27 -- HCR_TGE
+>
 > vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
 
 > -- trap VCPU access to group 0 registers on GICv3, do nothing on GICv2
