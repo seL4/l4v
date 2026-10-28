@@ -286,12 +286,12 @@ lemma no_fail_branchFlushRange[simp, wp]:
 lemma no_fail_cleanCaches_PoU[simp, wp]:
   "no_fail \<top> cleanCaches_PoU"
   by (simp add: cleanCaches_PoU_def, rule no_fail_pre,
-      wp no_fail_dsb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
+      wp no_fail_dsb no_fail_isb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
 
 lemma no_fail_cleanInvalidateL1Caches[simp, wp]:
   "no_fail \<top> cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def, rule no_fail_pre,
-      wp no_fail_dsb no_fail_cleanInvalidate_D_PoC no_fail_invalidate_I_PoU, simp)
+      wp no_fail_dsb no_fail_isb no_fail_cleanInvalidate_D_PoC no_fail_invalidate_I_PoU, simp)
 
 lemma no_fail_clearMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 2) (clearMemory p b)"
@@ -662,12 +662,12 @@ lemma no_irq_branchFlushRange[simp, wp]:
 lemma no_irq_cleanCaches_PoU[simp, wp]:
   "no_irq cleanCaches_PoU"
   by (simp add: cleanCaches_PoU_def,
-      wp no_irq_dsb no_irq_clean_D_PoU no_irq_invalidate_I_PoU)
+      wp no_irq_dsb no_irq_isb no_irq_clean_D_PoU no_irq_invalidate_I_PoU)
 
 lemma no_irq_cleanInvalidateL1Caches[simp, wp]:
   "no_irq cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def,
-      wp no_irq_dsb no_irq_cleanInvalidate_D_PoC no_irq_invalidate_I_PoU)
+      wp no_irq_dsb no_irq_isb no_irq_cleanInvalidate_D_PoC no_irq_invalidate_I_PoU)
 
 
 lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
@@ -891,12 +891,13 @@ lemma empty_fail_branchFlushRange[simp, intro!]:
 
 lemma empty_fail_cleanCaches_PoU[simp, intro!]:
   "empty_fail cleanCaches_PoU"
-  by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_isb empty_fail_clean_D_PoU
+                      empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
   "empty_fail cleanInvalidateL1Caches"
-  by (fastforce simp: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_cleanInvalidate_D_PoC
-                     empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_isb
+                      empty_fail_cleanInvalidate_D_PoC empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"

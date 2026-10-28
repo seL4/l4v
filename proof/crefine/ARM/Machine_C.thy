@@ -686,13 +686,14 @@ lemma cleanCaches_PoU_ccorres:
            (Call cleanCaches_PoU_'proc)"
   apply cinit'
    apply (simp add: cleanCaches_PoU_def doMachineOp_bind empty_fail_cond
-                   empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+                   empty_fail_dsb empty_fail_isb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (ctac (no_vcg) add: clean_D_PoU_ccorres)
      apply (ctac (no_vcg) add: dsb_ccorres)
       apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
        apply (ctac (no_vcg) add: dsb_ccorres)
-      apply wp+
+        apply (ctac (no_vcg) add: isb_ccorres)
+       apply wp+
   apply clarsimp
   done
 
