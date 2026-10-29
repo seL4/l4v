@@ -457,9 +457,22 @@ supplied range.
 >     cacheRangeOp invalidateByVA vstart vend pstart
 >     dsb
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+> invalidateCacheRange_I :: VPtr -> VPtr -> PAddr -> MachineMonad ()
+> invalidateCacheRange_I vstart vend pstart = do
+>     pipt <- isICachePIPT
+>     if pipt
+>         then cacheRangeOp invalidateByVA_I vstart vend pstart
+>         else invalidate_I_PoU
+
+#else
+
 > invalidateCacheRange_I :: VPtr -> VPtr -> PAddr -> MachineMonad ()
 > invalidateCacheRange_I vstart vend pstart =
 >     cacheRangeOp invalidateByVA_I vstart vend pstart
+
+#endif
 
 > branchFlushRange :: VPtr -> VPtr -> PAddr -> MachineMonad ()
 > branchFlushRange vstart vend pstart =
@@ -536,6 +549,22 @@ implementation assumes the monitor is not modelled in our simulator.
 
 > setHDCR :: Word -> MachineMonad ()
 > setHDCR _hdcr = isabelleOp
+
+> readCTR :: MachineMonad Word
+> readCTR = isabelleOp
+
+The L1 instruction cache policy is in the L1IP field (bits 15:14) of the cache type register CTR.
+
+> ctrL1IP :: Word -> Word -- CTR_L1IP
+> ctrL1IP ctr = (ctr `shiftR` 14) .&. mask 2
+
+> ctrL1IPPIPT :: Word -- CTR_L1IP_PIPT
+> ctrL1IPPIPT = 3
+
+> isICachePIPT :: MachineMonad Bool
+> isICachePIPT = do
+>     ctr <- readCTR
+>     return $ ctrL1IP ctr == ctrL1IPPIPT
 
 Set or unset the HDCR.TDE (trap debug exceptions) field in the HDCR register
 
