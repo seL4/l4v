@@ -23,34 +23,47 @@ to make it harder to unfold architecture-specific definitions by accident. We
 also have a collection of hacks to keep existing proofs checking while we
 continue to work towards the ultimate goal of proofs on multiple architectures.
 
-So far, the `ASpec` and `AInvs` sessions have been arch-split, with some work
-already done on the executable design spec (`ExecSpec`).
+So far, the `ASpec`, `AInvs`, `Refine` (including `RefineOrphanage`), `Access`,
+`InfoFlow` and `InfoFlowC` sessions have been arch-split. `CRefine` is not split
+and has a full copy per architecture. `DRefine` and the other capDL proofs still
+use the workaround described in [Workaround for non-split
+theories](#workaround-for-non-split-theories). Remaining work is marked with
+`FIXME arch-split` comments.
 
 
 ## L4V_ARCH
 
 When running a session, the `L4V_ARCH` environment variable is used to specify
 the target architecture; this affects which seL4 kernel configuration gets
-used, where Isabelle images are stored, as well as the arch-split infrastructure
-via parametrised theory imports.
+used, where Isabelle images are stored, as well as which architecture-specific
+theories are included in a session.
 
-By using `$L4V_ARCH` in the theory imports section, we can include
-the appropriate architecture-specific theories for the currently selected
-architecture. For example:
+For the `ARM` architecture, we make subdirectories named `ARM` for
+architecture-specific theories, and set `L4V_ARCH=ARM` in the environment before
+starting Isabelle. The session declares the subdirectory for the current
+architecture in the corresponding `ROOT` file:
+
+- `l4v/spec/ROOT`
+
+```isabelle
+session ASpec in "abstract" = Word_Lib +
+  ...
+  directories
+    "$L4V_ARCH"
+```
+
+Generic theories can then import architecture-specific theories by name, and get
+the right one for the currently selected architecture. For example:
 
 - `l4v/spec/abstract/CSpace_A.thy`
 
 ```isabelle
 theory CSpace_A
 imports
-  "./$L4V_ARCH/ArchVSpace_A"
+  ArchVSpace_A
   IpcCancel_A
-  "./$L4V_ARCH/ArchCSpace_A"
+  ArchCSpace_A
 ```
-
-For the `ARM` architecture, we make subdirectories named `ARM` for
-architecture-specific theories, and set `L4V_ARCH=ARM` in the environment before
-starting Isabelle.
 
 Theories often come in pairs of a generic theory and an associated
 architecture-specific theory. Since theory base names must be unique, regardless
@@ -69,7 +82,7 @@ definitions and lemmas, defined as follows:
 
 ```isabelle
 theory Setup_Locale
-imports "../../lib/Qualify" "../../lib/Requalify" "../../lib/Extend_Locale"
+imports "Lib.Qualify" "Lib.Requalify"
 begin
 (*
    We use a locale for namespacing architecture-specific definitions.
@@ -101,23 +114,23 @@ particular architecture. The mechanisms for doing this are described below.
 
 ## Workaround for non-split theories
 
-For many sessions, the proofs remain duplicated between architectures.
+For some sessions (e.g. `CRefine`), the proofs remain duplicated between
+architectures.
 
 As a temporary measure, we wrap existing proofs in an anonymous context block,
 in which we interpret the Arch locale. For example:
 
 ```isabelle
-theory Retype_R
-imports VSpace_R
+theory Finalise_DR
+imports
+  KHeap_DR
+  "AInvs.VSpaceEntries_AI"
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma placeNewObject_def2:
- "placeNewObject ptr val gb = createObjects' ptr 1 (injectKO val) gb"
-   apply (clarsimp simp:placeNewObject_def placeNewObject'_def
-     createObjects'_def shiftL_nat)
-  done
+definition
+  "transform_pd_slot_ref x = (x && ~~ mask pd_bits, unat ((x && mask pd_bits) >> 2))"
 
 (* ... *)
 end
@@ -213,7 +226,7 @@ in the global namespace: **requalify_types**, **requalify_consts**,
 new name is based on the context in which the requalification command is
 executed. As with `global_naming`, we provide `L4V_ARCH`-aware versions of
 these commands: **arch_requalify_types**, **arch_requalify_consts** and
-**arch_requalify_types**.
+**arch_requalify_facts**.
 
 To understand how these commands function, see `lib/test/Requalify_Test.thy`.
 
@@ -519,8 +532,10 @@ proofs were broken. For example, `ArchRetype_H.updateCapData_def` became
 
 Fixing this required search-and-replace, but rather than entrench the fragility
 of theory-qualified references, we introduced different `global_naming` schemes
-for abstract and Haskell specs: `ARM_A` for abstract specs, and `ARM_H` for
-Haskell specs. We use `ARM` everywhere else. This means that the arch-specific
+for abstract and Haskell specs: `ARM_A` for abstract specs (`arch_global_naming
+(A)`), `ARM_H` for Haskell/design specs (`arch_global_naming (H)`), and `ARM_D`
+for the capDL spec (`arch_global_naming (H)`). We use `ARM` everywhere else
+(`arch_global_naming` without parameter). This means that the arch-specific
 references only require either an `ARM_A` or `ARM_H` qualifier. No theory
 qualifier is required, and the result is more robust to theory reorganisation.
 
@@ -528,9 +543,9 @@ Requalification of consts/types/facts from these prefixes should be done as
 follows:
 
 ```isabelle
-arch_requalify_const some_const (* requalifies ARM.some_const *)
-arch_requalify_const (A) some_const (* requalifies ARM_A.some_const *)
-arch_requalify_const (H) some_const (* requalifies ARM_H.some_const *)
+arch_requalify_consts some_const (* requalifies ARM.some_const *)
+arch_requalify_consts (A) some_const (* requalifies ARM_A.some_const *)
+arch_requalify_consts (H) some_const (* requalifies ARM_H.some_const *)
 ```
 
 In the future, when we are properly splitting the refinement proofs, we may
@@ -659,26 +674,31 @@ end
 
 ```isabelle
 theory ArchRetype_AI
-imports "../Retype_AI"
+imports Retype_AI
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
-(* We declare a collection of lemmas, initially empty,
-   to which we'll add lemmas which will be needed to discharge
-   the assumptions of the Retype_AI locale. *)
+(* Arch_assms is a collection of lemmas (declared in ArchInvariants_AI) to
+   which we add the lemmas needed to discharge the assumptions of the
+   Retype_AI locale. We clear it first, so that it only contains the lemmas
+   for this locale. *)
 
-named_theorems Retype_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_AI locale *)
 
 (* We prove a lemma which matches an assumption of the Retype_AI locale,
    making use of an arch-specific definition.
-   We declare the lemma as a memory of the Retype_AI_assms collection. *)
+   We declare the lemma as a member of the Arch_assms collection. *)
 
-lemma clearMemoryVM_return[simp, Retype_AI_assms]:
+lemma clearMemoryVM_return[simp, Arch_assms]:
   "clearMemoryVM a b = return ()"
   by (simp add: clearMemoryVM_def)
 
-end
+(* Export the accumulated lemmas under a name specific to the locale. *)
+
+lemmas Retype_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 (* Having proved the Retype_AI locale assumptions, we can make a global
    interpretation of that locale, which has the effect of making all
@@ -686,12 +706,11 @@ end
    The proof incantation is designed to give useful error messages if
    some locale assumptions have not been satisfied. For each theory,
    the same proof should be used, substituting only the names of the
-   locale and the named_theorems collection. *)
+   locale and of the assumption collection. *)
 
 global_interpretation Retype_AI?: Retype_AI
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Retype_AI_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact ARM.Retype_AI_assms)?)
 qed
 
 (* ... *)
@@ -702,6 +721,10 @@ end
 Note: `global_interpretation Retype_AI?` exports all names into the global
 context, but they are also accessible with a `Retype_AI.` prefix, which is
 useful to know in case of name collision.
+
+The `Arch_assms` collection replaced an older convention where each theory had
+its own lemma set (e.g. `named_theorems Retype_AI_assms`). Any remaining uses
+should be replaced over time.
 
 
 ### Need for multiple theory-specific architecture-generic locales
@@ -726,7 +749,7 @@ locale Foo_AI_1 =
 lemma (in Foo_AI_1) GB: "XXX"
   by (* using AA *)
 
-locale Foo_AI2 = Foo_AI_1 +
+locale Foo_AI_2 = Foo_AI_1 +
   assumes AC: (* ... *) "XXX"
 
 lemma (in Foo_AI_2) GD: "XXX"
@@ -737,33 +760,38 @@ This allows instantiation of the locales in stages in the arch-specific theory
 (e.g. `ArchFoo_AI`):
 
 ```isabelle
+context Arch begin arch_global_naming
 
-context Arch begin global_naming ARM
+clear_named_theorems Arch_assms (* accumulate assumptions for Foo_AI_1 locale *)
 
-lemma AA[Foo_AI_assms]: "XXX"
+lemma AA[Arch_assms]: "XXX"
   by (* ... *)
 
-end
+lemmas Foo_AI_1_assms = Arch_assms (* extract accumulated assumptions *)
 
-interpretation Foo_AI_1?: Foo_AI_1
+end (* Arch *)
+
+global_interpretation Foo_AI_1?: Foo_AI_1
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact ARM.Foo_AI_1_assms)?)
 qed
 
 (* now we get access to GB in the global context *)
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
-lemma AC[Foo_AI_assms]: "XXX"
+clear_named_theorems Arch_assms (* accumulate assumptions for Foo_AI_2 locale *)
+
+lemma AC[Arch_assms]: "XXX"
   by (* using GB *)
 
-end
+lemmas Foo_AI_2_assms = Arch_assms (* extract accumulated assumptions *)
 
-interpretation Foo_AI_2?: Foo_AI_2
+end (* Arch *)
+
+global_interpretation Foo_AI_2?: Foo_AI_2
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact ARM.Foo_AI_2_assms)?)
 qed
 
 (* now we get access to GD in the global context *)

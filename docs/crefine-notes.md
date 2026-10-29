@@ -319,7 +319,7 @@ So, something to look out for. Running the VCG over a function whose spec has pr
 
 The main reason for most of this machinery is to get the result out of a C function. Unlike Haskell where the result is separate to the state, the C result is just stored in a variable. This variable is that function's *extraction function* (usually denoted xf).
 
-A general method that applies to most of the tactics is lifting replacing a xf (i.e., something like `cPtr_' s`) with a HOL variable. The actual rewriting is done through the term `ceqv`, the rules for which are in seL4-api/crefine/Corres\_UL\_C.thy.
+A general method that applies to most of the tactics is lifting replacing a xf (i.e., something like `cPtr_' s`) with a HOL variable. The actual rewriting is done through the term `ceqv`, the rules for which are in `lib/clib/Corres_UL_C.thy`.
 
 Procedure invocation involves transferring the result from the function's return variable into the local variable. For example, in the code
 
@@ -357,7 +357,7 @@ The rules need both functions and are different than for the non-record case —
 
 ## Tactics
 
-There are a number of tactics which basically take care of some of the annoying steps required by the way the C verification works. They are set up in seL4-api/crefine/Corres\_C.thy and implemented in seL4-api/crefine/ctac-method.ML.
+There are a number of tactics which basically take care of some of the annoying steps required by the way the C verification works. They are set up in `proof/crefine/lib/Ctac.thy` and `proof/crefine/lib/Corres_C.thy`, and implemented in `proof/crefine/lib/ctac-method.ML`.
 
 ### Arguments and Options
 
@@ -371,8 +371,7 @@ apply (ctac (no_vcg, trace) add: foo_ccorres simp: blah_simp)
 
 ### Debugging
 
-Most tactics (all the important ones, see below) take tracing arguments (in parentheses) which control the tracing behaviour. Tracing output is prefixed by the depth, which can be used with
-[[simp-outline.el|simp-outline.el]] — have a look at the outline-mode docs for usage.
+Most tactics (all the important ones, see below) take tracing arguments (in parentheses) which control the tracing behaviour. Tracing output is prefixed by the depth.
 
 The tactic `ctac_print_xf` will print some information about what `ctac` and friends think is the current xf.
 
@@ -382,7 +381,7 @@ The tactic `ctac_print_xf` will print some information about what `ctac` and fri
 
 `ceqv` solves goals of the form `ceqv G xf v t t' c ?C` which essentially means replace `xf s` by `v` in `c` to get `?C`. ceqv rules typically rely on `xpres xf v G c`, which states that the statements in c preserve the value at xf (where xf is a field in the state).
 
-The details of how `ceqv` works are somewhat gruesome (see `ctac-method.ML`), although the following probably needs to be known by users:
+The details of how `ceqv` works are somewhat gruesome (see `proof/crefine/lib/ctac-method.ML`), although the following probably needs to be known by users:
 
 * `ceqv` will try to replace as many occurrences as it can. Typically this means that occurrences will be replaced up until xpres fails. This will occur if the variable under consideration is updated. In the tactic, rule `Seq_ceqv` will fail, then `Seq_weak_ceqv`, which looks at the LHS of a Seq only, will be tried.
 * While will fail if the variable is updated in the body.
@@ -504,6 +503,6 @@ Note that tracing options stack — (trace, trace\_ceqv) == (trace)
 Attributes are (any order is permissible):
 
 * add | del | only: add/remove/use only the given rules for solving corres goals. These rules can have assumptions which must be solvable by simp. Rules can also be added via the corres attribute
-* pre (add? | del | only): add/remove/use only the given rules for pre-processing corres goals. pre rules must have only one premise which is corres. Rules can also be added via the corres\_pre attribute
+* pre (add? | del | only): add/remove/use only the given rules for pre-processing corres goals. pre rules must have only one premise which is corres. Rules can also be added via the ccorres\_pre attribute
 * simp (add? | del | only): as for simp
 * cong (add? | del | only): as for simp
