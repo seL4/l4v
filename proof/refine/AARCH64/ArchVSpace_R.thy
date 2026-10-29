@@ -359,11 +359,11 @@ lemma vcpuRestoreRegRange_corres[corres]:
      apply (wpsimp wp: vcpuRestoreReg_corres)+
   done
 
-lemma saveVirtTimer_corres[corres]:
-  "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
-             (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
-  unfolding save_virt_timer_def saveVirtTimer_def
-  by corres
+lemma disableVirtTimer_corres[corres]:
+  "corres dc (none_top vcpu_at vcpu_ptr_opt) (none_top vcpu_at' vcpu_ptr_opt and no_0_obj')
+             (disable_virt_timer vcpu_ptr_opt) (disableVirtTimer vcpu_ptr_opt)"
+  unfolding disable_virt_timer_def disableVirtTimer_def
+  by (cases vcpu_ptr_opt; simp add: bind_assoc; corres)
 
 lemma restoreVirtTimer_corres[corres]:
   "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
@@ -389,7 +389,7 @@ lemma vcpuSave_corres:
               apply (rule corres_Id; wpsimp)
              apply (rule corres_split[OF vgicUpdate_corres])
                 apply (clarsimp simp: vgic_map_def)
-               apply (rule saveVirtTimer_corres)
+               apply (rule disableVirtTimer_corres)
               apply wpsimp+
           apply (rule corres_split_eqr[OF corres_machine_op])
            apply (rule corres_Id; wpsimp)
@@ -423,11 +423,12 @@ lemma vcpuDisable_corres:
   apply (cases vcpuopt; clarsimp simp: vcpu_disable_def vcpuDisable_def)
    (* no current VCPU *)
    subgoal
-     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind empty_fail_cond)
+     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc empty_fail_cond IRQ_def)
      apply (rule corres_guard_imp)
        apply (rule corres_split_dc[OF corres_machine_op]
-         | rule corres_machine_op corres_Id
-         | wpsimp)+
+                   corres_split_dc[OF disableVirtTimer_corres]
+              | rule corres_machine_op corres_Id
+              | wpsimp)+
      done
   (* have current VCPU *)
    apply (rename_tac vcpu)
@@ -443,7 +444,7 @@ lemma vcpuDisable_corres:
              apply (rule corres_split_dc[OF vcpuSaveReg_corres])
                apply (rule corres_split_dc[OF vcpuSaveReg_corres])
                  apply (rule corres_split_dc[OF corres_machine_op]
-                             corres_split_dc[OF saveVirtTimer_corres]
+                             corres_split_dc[OF disableVirtTimer_corres]
                         | rule corres_machine_op corres_Id
                         | wpsimp)+
    done
@@ -859,9 +860,9 @@ crunch vcpuRestoreRegRange, vcpuSaveRegRange, vgicUpdateLR
   for invs_no_cicd'[wp]: invs_no_cicd'
   (wp: mapM_x_wp ignore: loadObject)
 
-lemma saveVirtTimer_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> saveVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  by (wpsimp simp: saveVirtTimer_def)
+lemma disableVirtTimer_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> disableVirtTimer vcpu_ptr_opt \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: disableVirtTimer_def)
 
 lemma restoreVirtTimer_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> restoreVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
@@ -918,9 +919,9 @@ crunch
   for hyp[wp]: "ko_wp_at' (is_vcpu' and hyp_live') v"
   (wp: crunch_wps setVCPU_regs_vcpu_live dmo_vcpu_hyp)
 
-lemma saveVirtTimer_hyp[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
-  by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
+lemma disableVirtTimer_hyp[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: disableVirtTimer_def vcpuUpdate_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
 
 lemma restoreVirtTimer_hyp[wp]:
   "restoreVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
@@ -1082,9 +1083,9 @@ lemma vcpuSaveReg_invs'[wp]:
   "vcpuSaveReg v r \<lbrace>invs'\<rbrace>"
   by (wpsimp simp: vcpuSaveReg_def vcpuUpdate_def wp: setVCPU_regs_invs')
 
-lemma saveVirtTimer_invs'[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>invs'\<rbrace>"
-  unfolding saveVirtTimer_def
+lemma disableVirtTimer_invs'[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>invs'\<rbrace>"
+  unfolding disableVirtTimer_def
   by wpsimp
 
 lemma vcpuDisable_invs'[wp]:

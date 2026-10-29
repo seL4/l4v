@@ -672,7 +672,7 @@ context DomainSepInv_1 begin
 
 crunch finalise_slot, invoke_untyped, send_signal
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)"
-  (wp: crunch_wps mapME_x_inv_wp simp: crunch_simps mapM_x_def_bak)
+  (wp: crunch_wps mapME_x_inv_wp arch_post_reset_untyped_inv simp: crunch_simps mapM_x_def_bak)
 
 lemma invoke_cnode_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_cnode_inv ci\<rbrace>

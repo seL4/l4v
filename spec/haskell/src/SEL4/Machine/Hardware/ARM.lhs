@@ -478,6 +478,7 @@ supplied range.
 >     dsb
 >     invalidate_I_PoU
 >     dsb
+>     isb
 
 > cleanInvalidateL1Caches :: MachineMonad ()
 > cleanInvalidateL1Caches = do
@@ -486,6 +487,7 @@ supplied range.
 >     dsb
 >     invalidate_I_PoU
 >     dsb
+>     isb
 
 This function is used to clear the load exclusive monitor. This dummy
 implementation assumes the monitor is not modelled in our simulator.

@@ -3259,6 +3259,10 @@ lemma dmo_invalidateLocalTLB_ASID_invs'[wp]:
                      machine_rest_lift_def split_def | wp)+
   done
 
+lemma dmo_machine_op_lift_invs'[wp]:
+  "doMachineOp (machine_op_lift f) \<lbrace>invs'\<rbrace>"
+  by (wpsimp wp: dmo_invs' simp: machine_op_lift_def in_monad machine_rest_lift_def select_f_def)
+
 lemma dmo_cleanCaches_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp cleanCaches_PoU \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq_cleanCaches_PoU no_irq)

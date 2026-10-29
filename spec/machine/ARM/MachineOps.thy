@@ -470,7 +470,8 @@ where
     clean_D_PoU;
     dsb;
     invalidate_I_PoU;
-    dsb
+    dsb;
+    isb
   od"
 
 definition
@@ -481,7 +482,8 @@ where
     cleanInvalidate_D_PoC;
     dsb;
     invalidate_I_PoU;
-    dsb
+    dsb;
+    isb
   od"
 
 section "Memory Clearance"

@@ -74,7 +74,7 @@ sublocale
   apply (wpsimp wp: set_vcpu.vsobj_at get_vcpu.vsobj_at mapM_wp mapM_x_wp
                 simp: vcpu_update_def vgic_update_def vcpu_save_reg_def vcpu_restore_reg_def
                       vcpu_restore_reg_range_def vcpu_save_reg_range_def vgic_update_lr_def
-                      save_virt_timer_def vcpu_write_reg_def restore_virt_timer_def
+                      disable_virt_timer_def vcpu_write_reg_def restore_virt_timer_def
                       vcpu_read_reg_def is_irq_active_def get_irq_state_def
          | assumption)+
   done
@@ -724,10 +724,10 @@ lemma clean_D_PoU_underlying_memory[wp]:
   by (clarsimp simp: clean_D_PoU_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
 
-crunch dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
+crunch dsb, isb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
-  (ignore_del: dsb invalidate_I_PoU clean_D_PoU cleanCaches_PoU)
+  (ignore_del: dsb isb invalidate_I_PoU clean_D_PoU cleanCaches_PoU)
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -1272,7 +1272,7 @@ lemma valid_vcpu_typ_at:
   by (wpsimp simp: valid_vcpu_def split: option.splits)
 
 crunch vgic_update_lr, vcpu_write_reg, vcpu_save_reg, vcpu_disable, vcpu_restore,
-          save_virt_timer, restore_virt_timer, vcpu_save, vcpu_switch, vcpu_save_reg_range
+       disable_virt_timer, restore_virt_timer, vcpu_save, vcpu_switch, vcpu_save_reg_range
   for valid_objs[wp]: valid_objs
   (ignore: vcpu_update simp: vcpu_update_def valid_vcpu_def wp: crunch_wps)
 
@@ -1348,7 +1348,7 @@ lemma obj_at_ko_atD:
   by (erule (2) obj_at_ko_atE)
 
 crunch vcpu_save_reg, vcpu_save_reg_range, vgic_update_lr, vcpu_disable, vcpu_save, vcpu_restore,
-          save_virt_timer, restore_virt_timer
+       disable_virt_timer, restore_virt_timer
   for hyp_live[wp]: "obj_at hyp_live p"
   (wp: vcpu_update_obj_at hoare_vcg_imp_lift' hoare_vcg_all_lift
        crunch_wps
@@ -2234,6 +2234,7 @@ lemma
   and dmo_set_gic_vcpu_ctrl_hcr_invs[wp]: "do_machine_op (set_gic_vcpu_ctrl_hcr x) \<lbrace>invs\<rbrace>"
   and dmo_writeVCPUHardwareReg_invs[wp]: "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>invs\<rbrace>"
   and dmo_readVCPUHardwareReg_invs[wp]: "do_machine_op (readVCPUHardwareReg r) \<lbrace>invs\<rbrace>"
+  and dmo_check_export_arch_timer_invs[wp]: "do_machine_op check_export_arch_timer \<lbrace>invs\<rbrace>"
   by (all \<open>wp dmo_invs_lift\<close>)
 
 (* set_vcpu invariants *)
@@ -2539,9 +2540,9 @@ lemma vcpu_write_reg_invs[wp]:
   unfolding vcpu_write_reg_def
   by (wpsimp cong: vcpu.fold_congs) (* crunch can't do cong yet *)
 
-lemma save_virt_timer_invs[wp]:
-  "\<lbrace>\<lambda> s. invs s\<rbrace> save_virt_timer vcpu_ptr \<lbrace>\<lambda>_ . invs\<rbrace>"
-  unfolding save_virt_timer_def check_export_arch_timer_def
+lemma disable_virt_timer_invs[wp]:
+  "disable_virt_timer vcpu_ptr_opt \<lbrace>invs\<rbrace>"
+  unfolding disable_virt_timer_def check_export_arch_timer_def
             get_cntv_off_64_def get_cntv_cval_64_def
   by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift')
 
@@ -2690,7 +2691,8 @@ lemma vcpu_write_reg_hyp_refs_of[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
 
-crunch save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save, vcpu_switch
+crunch disable_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save,
+       vcpu_switch
   for hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (ignore: vcpu_update wp: crunch_wps)
 

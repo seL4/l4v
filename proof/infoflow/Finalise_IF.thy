@@ -1124,9 +1124,10 @@ lemma rec_del_only_timer_irq:
    rec_del call
    \<lbrace>\<lambda>_. only_timer_irq irq\<rbrace>"
   apply (simp add: only_timer_irq_inv_def)
-  apply (rule hoare_pre, rule only_timer_irq_pres)
-    apply (rule hoare_pre, wp rec_del_irq_masks)
-    apply (wp rec_del_domain_sep_inv | force | rule hoare_pre, wp (once) rec_del_domain_sep_inv)+
+  apply (rule hoare_pre,
+         rule only_timer_irq_pres[where Q="domain_sep_inv False st and non_kernel_IRQs_masked"])
+    apply (wpsimp wp: rec_del_irq_masks[where st=st])
+   apply (wp rec_del_domain_sep_inv | force | rule hoare_pre, wp (once) rec_del_domain_sep_inv)+
   done
 
 lemma rec_del_only_timer_irq_inv:
@@ -1136,7 +1137,8 @@ lemma rec_del_only_timer_irq_inv:
   apply (simp add: only_timer_irq_inv_def)
   apply (rule hoare_wp_simps)
   apply (rule hoare_conjI)
-   apply (wp rec_del_domain_sep_inv rec_del_only_timer_irq | force simp: only_timer_irq_inv_def)+
+   apply (wp rec_del_domain_sep_inv rec_del_only_timer_irq rec_del_irq_masks[where st=st]
+          | force simp: only_timer_irq_inv_def)+
   done
 
 lemma set_cap_only_timer_irq_inv:

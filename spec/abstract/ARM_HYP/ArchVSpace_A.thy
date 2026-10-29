@@ -373,17 +373,22 @@ where
   "vcpu_write_reg vr reg val \<equiv>
     vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu)(reg := val) \<rparr> )"
 
-definition save_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "save_virt_timer vcpu_ptr \<equiv> do
-     vcpu_save_reg vcpu_ptr VCPURegCNTV_CTL;
+definition disable_virt_timer :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "disable_virt_timer vcpu_ptr_opt \<equiv> do
+     case vcpu_ptr_opt of
+       Some vcpu_ptr \<Rightarrow> do
+         vcpu_save_reg vcpu_ptr VCPURegCNTV_CTL;
+         cval \<leftarrow> do_machine_op get_cntv_cval_64;
+         cntvoff \<leftarrow> do_machine_op get_cntv_off_64;
+         vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALhigh (ucast (cval >> 32));
+         vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALlow (ucast cval);
+         vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (cntvoff >> 32));
+         vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast cntvoff);
+         vcpu_save_reg vcpu_ptr VCPURegCNTKCTL
+       od
+     | None \<Rightarrow> return ();
+     \<comment> \<open>with or without VCPU, turn off the timer and return to user-mode timer config\<close>
      do_machine_op $ writeVCPUHardwareReg VCPURegCNTV_CTL 0;
-     cval \<leftarrow> do_machine_op get_cntv_cval_64;
-     cntvoff \<leftarrow> do_machine_op get_cntv_off_64;
-     vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALhigh (ucast (cval >> 32));
-     vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALlow (ucast cval);
-     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (cntvoff >> 32));
-     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast cntvoff);
-     vcpu_save_reg vcpu_ptr VCPURegCNTKCTL;
      do_machine_op check_export_arch_timer
    od"
 
@@ -417,9 +422,9 @@ text \<open>Turn VPCU mode off on the hardware level.\<close>
 definition
   vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "vcpu_disable vo \<equiv> do
+  "vcpu_disable vcpu_ptr_opt \<equiv> do
     do_machine_op dsb;
-    (case vo of
+    (case vcpu_ptr_opt of
       Some vr \<Rightarrow> do
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
@@ -435,13 +440,9 @@ where
         trapDebugExceptions True; \<comment> \<open>native threads always trap debug exceptions\<close>
         isb
       od;
-    case vo of
-      Some vr \<Rightarrow> do
-          save_virt_timer vr;
-          do_machine_op $ maskInterrupt True irqVTimerEvent
-        od
-      | _ \<Rightarrow> return ()
-    od"
+    disable_virt_timer vcpu_ptr_opt;
+    do_machine_op $ maskInterrupt True irqVTimerEvent
+  od"
 
 text \<open>Turn VCPU mode on, on the hardware level.\<close>
 definition
@@ -507,7 +508,7 @@ where
             vcpu_save_reg vr VCPURegSCTLR;
             hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
             vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
-            save_virt_timer vr
+            disable_virt_timer (Some vr)
           od;
 
           vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;

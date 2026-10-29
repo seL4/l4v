@@ -82,7 +82,7 @@ crunch arch_perform_invocation
 crunch arch_finalise_cap, prepare_thread_delete
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: modify_wp crunch_wps dmo_wp
-   simp: crunch_simps invalidateLocalTLB_ASID_def dsb_def
+   simp: crunch_simps invalidateLocalTLB_ASID_def dsb_def isb_def
          cleanCaches_PoU_def invalidate_I_PoU_def clean_D_PoU_def)
 
 lemma equiv_asid_machine_state_update[Arch_IF_assms, simp]:
@@ -911,7 +911,8 @@ crunch flush_space
   for states_equiv_for: "states_equiv_for P Q R S st"
   (wp: mol_states_equiv_for dmo_wp
    ignore: do_machine_op
-   simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
+   simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def isb_def invalidate_I_PoU_def
+         clean_D_PoU_def)
 
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
   "\<lbrakk> (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of base
@@ -1163,7 +1164,7 @@ lemma flush_space_globals_equiv[wp]:
   unfolding flush_space_def
   by (wp dmo_mol_globals_equiv load_hw_asid_wp
       | wpc
-      | simp add: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def
+      | simp add: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def isb_def
                   invalidate_I_PoU_def clean_D_PoU_def dmo_bind_valid)+
 
 lemma delete_asid_pool_globals_equiv[wp]:

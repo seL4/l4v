@@ -932,11 +932,11 @@ lemma is_final_cap_caps_of_state_2D:
                         prod_eqI)
   done
 
-crunch ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
+crunch ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence, ifence
   for underlying_memory[wp]: "\<lambda>m'. underlying_memory m' p = um"
   (simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def)
 
-crunch storeWord, ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
+crunch storeWord, ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence, ifence
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   (simp: crunch_simps)
 

@@ -883,7 +883,7 @@ lemma obj_at_upd2:
 
 lemma vcpu_invalidate_active_hyp_refs_empty[wp]:
   "\<lbrace>obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>r. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace>"
-  unfolding vcpu_invalidate_active_def vcpu_disable_def by wpsimp
+  unfolding vcpu_invalidate_active_def vcpu_disable_def disable_virt_timer_def by wpsimp
 
 lemma as_user_hyp_refs_empty[wp]:
   "\<lbrace>obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace> as_user t f \<lbrace>\<lambda>r. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace>"
@@ -1071,7 +1071,7 @@ crunch vcpu_switch
 lemma associate_vcpu_tcb_valid_irq_states[wp]:
   "associate_vcpu_tcb vcpu tcb \<lbrace>valid_irq_states\<rbrace>"
   apply (clarsimp simp: associate_vcpu_tcb_def)
-  by (wp hoare_vcg_all_lift
+  by (wp hoare_vcg_all_lift dmo_valid_irq_states
       | wp (once) hoare_drop_imps
       | wpc
       | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def)+

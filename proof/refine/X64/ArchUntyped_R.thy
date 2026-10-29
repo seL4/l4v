@@ -378,6 +378,22 @@ crunch resetUntypedCap
          preemptionPoint_inv
    ignore: freeMemory)
 
+lemma postResetUntyped_corres[Arch_assms]:
+  "corres dc \<top> \<top> (arch_post_reset_untyped dev sz) (postResetUntyped dev sz)"
+  unfolding arch_post_reset_untyped_def postResetUntyped_def
+  by (rule corres_return_trivial)
+
+lemma postResetUntyped_inv[Arch_assms]:
+  assumes "\<And>s f. P (ksMachineState_update f s) = P s"
+  shows "postResetUntyped dev sz \<lbrace>P\<rbrace>"
+  unfolding postResetUntyped_def
+  by wpsimp
+
+lemma postResetUntyped_invs'[wp, Arch_assms]:
+  "postResetUntyped dev sz \<lbrace>invs'\<rbrace>"
+  unfolding postResetUntyped_def
+  by wpsimp
+
 lemmas Untyped_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

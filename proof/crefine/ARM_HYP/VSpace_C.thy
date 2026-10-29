@@ -1945,28 +1945,42 @@ lemma restore_virt_timer_ccorres:
   apply (fastforce simp: fromEnum_def enum_vppievent_irq)
   done
 
-lemma save_virt_timer_ccorres:
+lemma disable_virt_timer_ccorres:
   "ccorres dc xfdc
-     (vcpu_at' vcpuptr)
-     (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
-     (saveVirtTimer vcpuptr) (Call save_virt_timer_'proc)"
-  apply (cinit lift: vcpu_')
-   apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+     (no_0_obj' and none_top vcpu_at' vcpu_ptr_opt)
+     \<lbrace>\<acute>vcpu = option_to_ptr vcpu_ptr_opt\<rbrace> hs
+     (disableVirtTimer vcpu_ptr_opt) (Call disable_virt_timer_'proc)"
+  apply (cases vcpu_ptr_opt; clarsimp)
+   (* vcpu_ptr_opt = None *)
+   apply (cinit lift: vcpu_')
+    apply ccorres_rewrite
     apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
-     apply (ctac (no_vcg) add: get_cntv_cval_64_ccorres)
-      apply (ctac (no_vcg) add: get_cntv_off_64_ccorres)
+     apply (ctac (no_vcg) add: check_export_arch_timer_ccorres)
+    apply wpsimp
+   apply (clarsimp simp: vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric])
+  (* vcpu_ptr_opt = Some vcpuptr *)
+  apply (rename_tac vcpuptr)
+  apply (cinit lift: vcpu_')
+   apply (rule ccorres_cond_true_seq)
+   apply (rule ccorres_rhs_assoc)+
+   apply (simp only: bind_assoc)
+   apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+    apply (ctac (no_vcg) add: get_cntv_cval_64_ccorres)
+     apply (ctac (no_vcg) add: get_cntv_off_64_ccorres)
+      apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
        apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
         apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
          apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-          apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-           apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+          apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+           apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
             apply (ctac (no_vcg) add: check_export_arch_timer_ccorres)
        apply wpsimp+
-  apply (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALhigh, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALlow, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTVOFFhigh, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTVOFFlow, simplified, symmetric])
+  apply (clarsimp simp: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALhigh, simplified, symmetric]
+                        vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALlow, simplified, symmetric]
+                        vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric]
+                        vcpureg_eq_use_types[where reg=VCPURegCNTVOFFhigh, simplified, symmetric]
+                        vcpureg_eq_use_types[where reg=VCPURegCNTVOFFlow, simplified, symmetric]
+                 dest!: typ_at'_no_0_objD)
   done
 
 lemma armv_vcpu_save_ccorres:
@@ -2040,17 +2054,14 @@ lemma vcpu_disable_ccorres:
          apply (ctac (no_vcg) add: setCPACR_ccorres)
           apply (ctac (no_vcg) add: trapDebugExceptions_ccorres)
            apply (ctac (no_vcg) add: isb_ccorres)
-            apply (wpc; ccorres_rewrite)
-             apply (rule ccorres_return_Skip)
-            apply (rename_tac vcpu_ptr)
-            apply (rule_tac P="the v \<noteq> 0" in ccorres_gen_asm)
-            apply ccorres_rewrite
-            apply (ctac (no_vcg) add: save_virt_timer_ccorres)
+            apply (ctac (no_vcg) add: disable_virt_timer_ccorres)
              apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-            apply (wpsimp wp: hoare_vcg_all_lift)+
+            apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                          simp: none_top_fun_all[abs_def])+
     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def hcrCommon_def
                           cpacrDefault_val irqVTimerEvent_def IRQ_def sctlrDefault_def)
-   apply (wpsimp wp: hoare_vcg_all_lift)+
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                 simp: none_top_fun_all[abs_def])+
   apply (clarsimp simp: Collect_const_mem ko_at'_not_NULL dest!: vcpu_at_ko split: option.splits)
   done
 
@@ -2278,7 +2289,7 @@ lemma vcpu_save_ccorres:
           apply (rule ccorres_move_c_guard_vcpu)
           apply (clarsimp)
           apply (ctac (no_vcg) add: vgicUpdate_HCR_ccorres)
-            apply (rule ccorres_call[where xf'=xfdc], rule save_virt_timer_ccorres)
+            apply (rule ccorres_call[where xf'=xfdc], rule disable_virt_timer_ccorres)
          apply wpsimp+
        apply ceqv
       apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_vmcr_ccorres)
@@ -2317,7 +2328,7 @@ lemma vcpu_save_ccorres:
                   apply (fastforce simp: word_bits_def)
                  apply ceqv
                 apply (ctac (no_vcg) add: armv_vcpu_save_ccorres)
-               apply (wpsimp simp: guard_is_UNIV_def wp: mapM_x_wp_inv)+
+               apply (wpsimp simp: guard_is_UNIV_def wp: mapM_x_wp_inv hoare_vcg_const_imp_lift)+
   apply (simp add: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   done
 
@@ -2496,59 +2507,48 @@ lemma armHSCurVCPU_update_curv_Null_ccorres:
                  split: bool.split option.splits)
   done
 
+(* Reorder vcpuInvalidateActive to better line up with C *)
+lemma vcpuInvalidateActive_def2:
+  "vcpuInvalidateActive = do
+     hsCurVCPU \<leftarrow> gets (armHSCurVCPU \<circ> ksArchState);
+     when (hsCurVCPU \<noteq> None \<and> snd (the hsCurVCPU)) (do
+       vcpuDisable None;
+       modifyArchState (armHSCurVCPU_update (case_option None (\<lambda>(a, _). Some (a, False))))
+     od);
+     modifyArchState (armHSCurVCPU_update (\<lambda>_. None))
+   od"
+  unfolding vcpuInvalidateActive_def
+  apply (rule bind_cong[OF refl])
+  apply (rename_tac cur s s')
+  apply (case_tac cur; clarsimp simp: when_def bind_assoc split: bool.splits)
+  apply (rule bind_apply_cong[OF refl])+
+  apply (subst modify_armHSCurVCPU_split[where f="case_option None (\<lambda>(a, _). Some (a, False))"])
+  apply simp
+  done
+
 lemma vcpuInvalidateActive_ccorres:
   "ccorres dc xfdc invs' UNIV hs
-           vcpuInvalidateActive
-           (Call vcpu_invalidate_active_'proc)"
-  apply cinit
-   apply (rule ccorres_pre_getCurVCPU)
-        apply (subst modify_armHSCurVCPU_when_split)
-   apply (subst bind_assoc[symmetric])
-   apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-    apply (rule_tac Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = hsCurVCPU"
-                and Q'=UNIV
-                and C'="{s. \<exists> t. hsCurVCPU =  Some t \<and> snd t}"
-                 in ccorres_rewrite_cond_sr)
-        apply clarsimp
-        apply (frule rf_sr_ksArchState_armHSCurVCPU)
-        apply (case_tac "\<exists> t. (armHSCurVCPU \<circ> ksArchState) s =  Some t \<and> snd t")
-         apply (clarsimp simp: cur_vcpu_relation_def)
-        apply (clarsimp simp: cur_vcpu_relation_def)
-        apply (case_tac "(armHSCurVCPU \<circ> ksArchState) s"; clarsimp)
-       apply (rule_tac a=" _ >>= (\<lambda>_. when (hsCurVCPU \<noteq> None \<and> snd (the hsCurVCPU))
-                                          (modifyArchState(armHSCurVCPU_update
-                                             (\<lambda>a. case a of None \<Rightarrow> None
-                                                                  | Some (a,_) \<Rightarrow> Some (a, False)))))"
-                    in match_ccorres)
-       apply (wpc; clarsimp ; ccorres_rewrite)
-        apply (rule ccorres_return_Skip)
-       apply (rule_tac Q="\<lambda>s. (b \<longrightarrow> _ s) \<and> (\<not> b \<longrightarrow> _ s)" in  ccorres_guard_imp)
-        apply (case_tac b)
-        apply clarsimp
-        apply ccorres_rewrite
-          apply (rule ccorres_guard_imp)
-          apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-            apply (ctac add: vcpu_disable_ccorres)
-           apply ceqv
-              apply (rule armHSCurVCPU_update_active_false_ccorres)
-             apply wp
-            apply (vcg exspec=vcpu_disable_modifies)
-           apply clarsimp
-           apply assumption
-          apply simp
-         apply simp
-         apply ccorres_rewrite
-         apply (rule ccorres_return_Skip)
-        apply clarsimp
-        apply assumption
-        apply simp
+     vcpuInvalidateActive (Call vcpu_invalidate_active_'proc)"
+  apply (subst vcpuInvalidateActive_def2)
+  apply cinit'
+   apply (rule ccorres_pre_getCurVCPU, rename_tac curVCPU)
+   apply (rule_tac Q="\<lambda>s. invs' s \<and> armHSCurVCPU (ksArchState s) = curVCPU" and Q'=UNIV
+               and C'="{s. curVCPU \<noteq> None \<and> snd (the curVCPU)}"
+                in ccorres_rewrite_cond_sr_Seq)
+    apply (fastforce simp: cur_vcpu_relation_def Collect_const_mem split: option.splits
+                     dest!: rf_sr_ksArchState_armHSCurVCPU)
+   apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
+       apply (rule ccorres_when[where R=\<top>])
+        apply (clarsimp simp: Collect_const_mem)
+       apply (ctac (no_vcg) add: vcpu_disable_ccorres)
+        apply (rule armHSCurVCPU_update_active_false_ccorres)
+       apply wp
       apply ceqv
-     apply clarsimp
      apply (rule armHSCurVCPU_update_curv_Null_ccorres)
-    apply (wpsimp simp: modifyArchState_def if_apply_def2)
-   apply (vcg exspec=vcpu_disable_modifies)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-  apply (rule UNIV_I)
+    apply (wpsimp simp: modifyArchState_def)
+   apply (clarsimp simp: guard_is_UNIV_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def if_apply_def2
+                 split: option.splits)
   done
 
 lemma vcpu_flush_ccorres:
