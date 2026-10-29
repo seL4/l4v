@@ -6,6 +6,12 @@
 
 This module defines the behavior of untyped objects.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.Object.Untyped (
 >         decodeUntypedInvocation, invokeUntyped
 >     ) where
@@ -24,6 +30,7 @@ This module defines the behavior of untyped objects.
 > import SEL4.Object.Instances()
 > import {-# SOURCE #-} SEL4.Object.CNode
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
+> import qualified SEL4.Object.ObjectType.TARGET as Arch
 
 > import Data.Bits
 > import Data.WordLib
@@ -195,6 +202,7 @@ The objects in the Haskell model are removed at this time. This operation is spe
 >                     withoutPreemption $ updateFreeIndex slot
 >                         (getFreeIndex (capPtr cap) addr)
 >                     preemptionPoint
+>         withoutPreemption $ Arch.postResetUntyped (capIsDevice cap) sz
 
 \begin{impdetails}
 Will be set to something stricter in Isabelle when required.

@@ -391,7 +391,8 @@ lemma reset_untyped_cap_etcb_at':
    reset_untyped_cap slot
    \<lbrace>\<lambda>_ s. Q (etcb_at P t s)\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
-   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv get_cap_wp delete_objects_etcb_at')
+   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv get_cap_wp
+                     delete_objects_etcb_at')
   apply (auto simp: cte_wp_at_caps_of_state bits_of_def is_cap_simps)
   done
 

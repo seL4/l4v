@@ -232,7 +232,12 @@ definition sfence :: "unit machine_monad"
   where
   "sfence \<equiv> machine_op_lift sfence_impl"
 
-lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
+consts' ifence_impl :: "unit machine_rest_monad"
+definition ifence :: "unit machine_monad"
+  where
+  "ifence \<equiv> machine_op_lift ifence_impl"
+
+lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def ifence_def
 
 
 subsection "Faults"

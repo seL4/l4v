@@ -577,8 +577,12 @@ lemma tcbSchedDequeue_no_orphans[wp]:
   done
 
 lemma all_queued_tcb_ptrs_machine_state[simp]:
-  "all_queued_tcb_ptrs (s\<lparr>ksMachineState := m\<rparr>) = all_queued_tcb_ptrs s"
+  "all_queued_tcb_ptrs (ksMachineState_update f s) = all_queued_tcb_ptrs s"
   by (simp add: all_queued_tcb_ptrs_def)
+
+lemma no_orphans_machine_state[simp]:
+  "no_orphans (ksMachineState_update f s) = no_orphans s"
+  by (simp add: no_orphans_def all_active_tcb_ptrs_def is_active_tcb_ptr_def)
 
 lemma all_queued_tcb_ptrs_arch_state[simp]:
   "all_queued_tcb_ptrs (s\<lparr>ksArchState := as\<rparr>) = all_queued_tcb_ptrs s"
@@ -1421,7 +1425,8 @@ lemma resetUntypedCap_no_orphans[wp]:
    resetUntypedCap slot
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (simp add: resetUntypedCap_def)
-  apply (wpsimp wp: mapME_x_inv_wp preemptionPoint_inv getSlotCap_wp hoare_drop_imps
+  apply (wpsimp wp: mapME_x_inv_wp preemptionPoint_inv postResetUntyped_inv getSlotCap_wp
+                    hoare_drop_imps
                 split_del: if_split)
   apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD])

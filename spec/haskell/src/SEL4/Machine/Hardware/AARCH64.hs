@@ -231,6 +231,9 @@ invalidateCacheRange_RAM vstart vend pstart = isabelleOp
 invalidateCacheRange_I :: VPtr -> VPtr -> PAddr -> MachineMonad ()
 invalidateCacheRange_I vstart vend pstart = isabelleOp
 
+invalidate_I_PoU :: MachineMonad ()
+invalidate_I_PoU = isabelleOp
+
 branchFlushRange :: VPtr -> VPtr -> PAddr -> MachineMonad ()
 branchFlushRange vstart vend pstart = isabelleOp
 

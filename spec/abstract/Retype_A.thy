@@ -22,6 +22,7 @@ arch_requalify_consts (A)
   arch_default_cap
   default_arch_object
   init_arch_objects
+  arch_post_reset_untyped
 
 section "Creating Caps"
 
@@ -139,34 +140,34 @@ text \<open>Untyped capabilities note a currently free region. Sometimes this
 region is reset during a Retype operation. This progressively clears the
 underlying memory and also the object level representation, moving the free
 region pointer back to the start of the newly cleared region each time.\<close>
-definition
-  reset_untyped_cap :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
-where
+definition reset_untyped_cap :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad" where
   "reset_untyped_cap src_slot = doE
-  cap \<leftarrow> liftE $ get_cap src_slot;
-  sz \<leftarrow> returnOk $ bits_of cap;
-  base \<leftarrow> returnOk $ obj_ref_of cap;
-  if free_index_of cap = 0
-    then returnOk ()
-  else doE
-    liftE $ delete_objects base sz;
-  dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
+     cap \<leftarrow> liftE $ get_cap src_slot;
+     sz \<leftarrow> returnOk $ bits_of cap;
+     base \<leftarrow> returnOk $ obj_ref_of cap;
+     if free_index_of cap = 0
+     then returnOk ()
+     else doE
+       liftE $ delete_objects base sz;
+       dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
 
-  if dev \<or> sz < resetChunkBits
-      then liftE $ do
-        unless dev $ do_machine_op $ clearMemory base (2 ^ sz);
-        set_cap (UntypedCap dev base sz 0) src_slot
-      od
-    else mapME_x (\<lambda>i. doE
-          liftE $ do_machine_op $ clearMemory (base + (of_nat i << resetChunkBits))
-              (2 ^ resetChunkBits);
-          liftE $ set_cap (UntypedCap dev base sz
-              (i * 2 ^ resetChunkBits)) src_slot;
-          preemption_point
-        odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - resetChunkBits)].
-            i * 2 ^ resetChunkBits < free_index_of cap])
-    odE
-  odE"
+       if dev \<or> sz < resetChunkBits
+       then liftE $ do
+         unless dev $ do_machine_op $ clearMemory base (2 ^ sz);
+         set_cap (UntypedCap dev base sz 0) src_slot
+       od
+       else
+         mapME_x (\<lambda>i. doE
+           liftE $ do_machine_op $
+                clearMemory (base + (of_nat i << resetChunkBits)) (2 ^ resetChunkBits);
+           liftE $ set_cap (UntypedCap dev base sz (i * 2 ^ resetChunkBits)) src_slot;
+              preemption_point
+         odE)
+         (rev [i \<leftarrow> [0 ..< 2 ^ (sz - resetChunkBits)].
+            i * 2 ^ resetChunkBits < free_index_of cap]);
+       liftE $ arch_post_reset_untyped dev sz
+     odE
+   odE"
 
 text \<open>Untyped capabilities confer authority to the Retype method. This
 clears existing objects from a region, creates new objects of the requested type,

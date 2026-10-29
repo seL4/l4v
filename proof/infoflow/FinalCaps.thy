@@ -1260,15 +1260,16 @@ lemma cancel_ipc_indirect_silc_inv:
   done
 
 lemma intra_label_cap_machine_state[simp]:
-  "intra_label_cap aag slot (s\<lparr>machine_state := X\<rparr>) = intra_label_cap aag slot s"
+  "intra_label_cap aag slot (machine_state_update f s) = intra_label_cap aag slot s"
   by (simp add: intra_label_cap_def)
 
 lemma slots_holding_overlapping_caps_machine_state[simp]:
-  "slots_holding_overlapping_caps cap (s\<lparr>machine_state := X\<rparr>) = slots_holding_overlapping_caps cap s"
+  "slots_holding_overlapping_caps cap (machine_state_update f s) =
+   slots_holding_overlapping_caps cap s"
   by (simp add: slots_holding_overlapping_caps_def2 ctes_wp_at_def)
 
 lemma silc_inv_machine_state[simp]:
-  "silc_inv aag st (s\<lparr>machine_state := X\<rparr>) = silc_inv aag st s"
+  "silc_inv aag st (machine_state_update f s) = silc_inv aag st s"
   by (simp add: silc_inv_def silc_dom_equiv_def equiv_for_def)
 
 lemma intra_label_cap_arch_state[simp]:
@@ -1978,7 +1979,7 @@ lemma reset_untyped_cap_untyped_cap:
    \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>cp. P (is_untyped_cap cp) (untyped_range cp)) slot\<rbrace>"
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule hoare_pre)
-   apply (wp set_cap_cte_wp_at | simp add: unless_def)+
+   apply (wp set_cap_cte_wp_at arch_post_reset_untyped_inv | simp add: unless_def)+
      apply (rule valid_validE,
             rule_tac Q'="\<lambda>rv. cte_wp_at (\<lambda>cp. is_untyped_cap cp \<and> is_untyped_cap cap \<and>
                                              untyped_range cp = untyped_range cap \<and>
@@ -2104,7 +2105,7 @@ lemma reset_untyped_cap_silc_inv:
   apply (rule hoare_gen_asm)
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule validE_valid, rule hoare_pre)
-   apply (wp set_cap_silc_inv_simple | simp add: unless_def)+
+   apply (wp set_cap_silc_inv_simple arch_post_reset_untyped_inv | simp add: unless_def)+
      apply (rule valid_validE, rule_tac Q'="\<lambda>_. cte_wp_at is_untyped_cap slot and
                                                silc_inv aag st" in hoare_strengthen_post)
       apply (rule validE_valid, rule mapME_x_inv_wp, rule hoare_pre)

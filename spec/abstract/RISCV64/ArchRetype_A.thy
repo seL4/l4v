@@ -29,6 +29,10 @@ definition init_arch_objects ::
   where
   "init_arch_objects new_type is_device ptr num_objects obj_sz refs \<equiv> return ()"
 
+definition arch_post_reset_untyped :: "bool \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "arch_post_reset_untyped is_device sz \<equiv>
+     when (\<not>is_device \<and> pageBits \<le> sz) $ do_machine_op ifence"
+
 definition empty_context :: user_context
   where
   "empty_context \<equiv> UserContext (\<lambda>_. 0)"
