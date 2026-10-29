@@ -298,9 +298,9 @@ crunch vcpuUpdate, vcpuWriteReg, vcpuSaveReg, vcpuRestoreReg, vcpuReadReg
   and ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   (ignore: getObject setObject)
 
-lemma saveVirtTimer_irq_states'[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
-  unfolding saveVirtTimer_def
+lemma disableVirtTimer_irq_states'[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>valid_irq_states'\<rbrace>"
+  unfolding disableVirtTimer_def
   by (wpsimp wp: doMachineOp_irq_states')
 
 lemma restoreVirtTimer_irq_states'[wp]:
@@ -321,7 +321,7 @@ crunch
          get_gic_vcpu_ctrl_vmcr_def
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
          set_gic_vcpu_ctrl_lr_def
-   ignore: saveVirtTimer)
+   ignore: disableVirtTimer)
 
 crunch Arch_finaliseCap, prepareThreadDelete
   for irq_states'[Arch_assms, wp]: valid_irq_states'

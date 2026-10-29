@@ -1170,9 +1170,14 @@ lemma domain_sep_inv_s0:
         | rule conjI allI | clarsimp simp: s0_internal_def non_kernel_IRQs_def)+
   done
 
+lemma non_kernel_IRQs_masked_s0:
+  "non_kernel_IRQs_masked s0_internal"
+  by (simp add: non_kernel_IRQs_masked_def non_kernel_IRQs_def s0_internal_def machine_state0_def)
+
 lemma only_timer_irq_inv_s0:
   "only_timer_irq_inv timer_irq s0_internal s0_internal"
-  by (simp add: only_timer_irq_inv_def only_timer_irq_s0 domain_sep_inv_s0)
+  by (simp add: only_timer_irq_inv_def only_timer_irq_s0 domain_sep_inv_s0
+                non_kernel_IRQs_masked_s0)
 
 lemma Sys1_guarded_pas_domain:
   "guarded_pas_domain Sys1PAS s0_internal"

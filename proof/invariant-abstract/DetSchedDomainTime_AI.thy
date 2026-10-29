@@ -177,7 +177,7 @@ crunch preemption_point
 
 crunch reset_untyped_cap
   for domain_fields_invs[wp]: "domain_fields P"
-  (wp: crunch_wps unless_wp mapME_x_inv_wp select_inv
+  (wp: crunch_wps unless_wp mapME_x_inv_wp select_inv arch_post_reset_untyped_inv
    simp: crunch_simps)
 
 context DetSchedDomainTime_AI begin

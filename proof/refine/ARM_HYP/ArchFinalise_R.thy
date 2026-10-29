@@ -955,7 +955,7 @@ lemma vcpuInvalidateActive_inactive[wp]:
 
 lemma vcpuDisableNone_obj_at'[wp]:
   "vcpuDisable None \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"
-  unfolding vcpuDisable_def by wpsimp
+  unfolding vcpuDisable_def disableVirtTimer_def by wpsimp
 
 lemma vcpuInvalidateActive_obj_at'[wp]:
   "vcpuInvalidateActive \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"

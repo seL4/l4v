@@ -257,6 +257,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     initTimer_impl
     invalidateCacheRange_I_impl
     invalidateCacheRange_RAM_impl
+    invalidate_I_PoU_impl
     invalidateTranslationASID_impl
     invalidateTranslationSingle_impl
     isb_impl
@@ -318,6 +319,7 @@ crunch
   initTimer,
   invalidateCacheRange_I,
   invalidateCacheRange_RAM,
+  invalidate_I_PoU,
   invalidateTranslationASID,
   invalidateTranslationSingle,
   isb,

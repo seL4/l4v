@@ -104,7 +104,7 @@ lemma delete_objects_etcb_at[wp]:
 
 crunch reset_untyped_cap
   for etcb_at[wp]: "etcb_at P t"
-  (wp: preemption_point_inv mapME_x_inv_wp crunch_wps)
+  (wp: preemption_point_inv arch_post_reset_untyped_inv mapME_x_inv_wp crunch_wps)
 
 lemma foldr_kh_eq:
   "foldr (\<lambda>p kh. kh(p \<mapsto> ko')) ptrs kh t = Some ko \<Longrightarrow>
@@ -138,7 +138,7 @@ crunch invoke_untyped
   and scheduler_action[wp]: "\<lambda>s::'state_ext state. P (scheduler_action s)"
   and cur_domain[wp]: "\<lambda>s::'state_ext state. P (cur_domain s)"
   and idle_thread[wp]: "\<lambda>s::'state_ext state. P (idle_thread s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv
    simp: detype_def crunch_simps mapM_x_defsym)
 
 lemma invoke_untyped_etcb_at':
@@ -198,7 +198,7 @@ lemma delete_objects_valid_blocked[wp]:
 
 crunch reset_untyped_cap
   for valid_blocked[wp]: "valid_blocked"
-  (wp: preemption_point_inv mapME_x_inv_wp crunch_wps
+  (wp: preemption_point_inv arch_post_reset_untyped_inv mapME_x_inv_wp crunch_wps
    simp: unless_def)
 
 context DetSchedAux_AI begin
@@ -311,7 +311,7 @@ lemma valid_idle_etcb_lift:
 
 crunch invoke_untyped
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv
    simp: crunch_simps mapM_x_defsym)
 
 context DetSchedAux_AI begin

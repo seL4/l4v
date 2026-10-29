@@ -303,6 +303,11 @@ locale Untyped_AI_arch =
      \<lbrace>\<lambda>s. valid_arch_state s \<and> cte_wp_at (\<lambda>_. \<not>is_arch_cap cap) ptr s\<rbrace>
      set_cap cap ptr
      \<lbrace>\<lambda>rv. valid_arch_state :: 'state_ext state \<Rightarrow> _ \<rbrace>"
+  assumes arch_post_reset_untyped_inv:
+  "\<And>P dev sz. (\<And>s f. P (machine_state_update f s) = P s) \<Longrightarrow>
+     arch_post_reset_untyped dev sz \<lbrace>P :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes arch_post_reset_untyped_invs[wp]:
+  "\<And>dev sz. arch_post_reset_untyped dev sz \<lbrace>invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
 
 lemmas is_aligned_triv2 = Aligned.is_aligned_triv
 
@@ -2770,6 +2775,12 @@ lemma reset_untyped_cap_invs_etc:
      (simp add: cte_wp_at_caps_of_state descendants_range_def)+)
    apply (drule caps_of_state_valid_cap | clarify)+
    apply (intro conjI; clarify?; blast)[1]
+  (* the final arch step preserves invs and does not touch the rest of the postcondition *)
+  apply (rule bindE_wp_fwd[rotated])
+   apply (rule liftE_wp)
+   apply (simp only: pred_conj_def conj_assoc)
+   apply (rule hoare_vcg_conj_lift[OF arch_post_reset_untyped_invs arch_post_reset_untyped_inv])
+   apply (simp add: ex_cte_cap_wp_to_def ct_in_state_def)
   apply (cases "dev \<or> sz < resetChunkBits")
    apply (simp add: bits_of_def)
    apply (simp add: unless_def)
@@ -2822,13 +2833,14 @@ lemma get_cap_prop_known:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-lemma reset_untyped_cap_pred_tcb_at:
+lemma (in Untyped_AI_arch) reset_untyped_cap_pred_tcb_at:
   "\<lbrace>invs and pred_tcb_at proj P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
    reset_untyped_cap slot
-   \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>, \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+   \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>, \<lbrace>\<lambda>_. pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
+   apply (wp mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv
+          | simp add: unless_def)+
     apply (simp add: delete_objects_def)
     apply (wp get_cap_wp hoare_vcg_const_imp_lift | simp)+
   apply (auto simp: cte_wp_at_caps_of_state cap_range_def

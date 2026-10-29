@@ -203,6 +203,9 @@ setVSpaceRoot addr asid = isabelleOp
 sfence :: MachineMonad ()
 sfence = isabelleOp
 
+ifence :: MachineMonad ()
+ifence = isabelleOp
+
 {- Cache Cleaning and TLB Flushes -}
 
 hwASIDFlush :: Word64 -> MachineMonad ()

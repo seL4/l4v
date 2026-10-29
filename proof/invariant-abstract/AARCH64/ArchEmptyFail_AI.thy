@@ -143,7 +143,7 @@ lemma empty_fail_pt_lookup_from_level[wp]:
   apply wpsimp
   done
 
-crunch vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
+crunch vcpu_update, vcpu_save_reg_range, vgic_update_lr, disable_virt_timer
   for (empty_fail) empty_fail[wp]
   (ignore: set_object get_object)
 

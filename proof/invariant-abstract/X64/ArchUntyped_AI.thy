@@ -603,6 +603,17 @@ lemma obj_is_device_vui_eq[Arch_assms]:
 
 lemmas [Arch_assms] = set_cap_non_arch_valid_arch_state
 
+lemma arch_post_reset_untyped_inv[Arch_assms]:
+  assumes "\<And>s f. P (machine_state_update f s) = P s"
+  shows "arch_post_reset_untyped dev sz \<lbrace>P\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by wpsimp
+
+lemma arch_post_reset_untyped_invs[wp, Arch_assms]:
+  "arch_post_reset_untyped dev sz \<lbrace>invs\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by wpsimp
+
 lemmas Untyped_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end

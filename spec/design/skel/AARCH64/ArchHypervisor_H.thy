@@ -23,7 +23,7 @@ context Arch begin arch_global_naming (H)
   ONLY countTrailingZeros irqVPPIEventIndex virqTypeShift eoiirqenShift
 #INCLUDE_HASKELL SEL4/Object/VCPU/AARCH64.hs CONTEXT AARCH64_H ArchInv=Arch \
   ONLY vcpuUpdate vgicUpdate vgicUpdateLR vcpuSaveReg vcpuRestoreReg \
-    vcpuSaveRegRange vcpuRestoreRegRange vcpuWriteReg vcpuReadReg saveVirtTimer \
+    vcpuSaveRegRange vcpuRestoreRegRange vcpuWriteReg vcpuReadReg disableVirtTimer \
     restoreVirtTimer vcpuDisable vcpuEnable vcpuRestore armvVCPUSave \
     vcpuSave vcpuSwitch vcpuFlush vcpuInvalidateActive vcpuCleanInvalidateActive \
     virqType virqSetEOIIRQEN vgicMaintenance vppiEvent curVCPUActive

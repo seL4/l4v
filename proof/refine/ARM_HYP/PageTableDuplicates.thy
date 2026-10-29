@@ -932,7 +932,7 @@ lemma resetUntypedCap_valid_duplicates'[wp]:
   (is "\<lbrace>?P\<rbrace> ?f \<lbrace>\<lambda>_. ?Q\<rbrace>")
   apply (clarsimp simp: resetUntypedCap_def)
   apply (rule hoare_pre)
-   apply (wp | simp add: unless_def)+
+   apply (wp postResetUntyped_inv | simp add: unless_def)+
    apply (wp mapME_x_inv_wp preemptionPoint_inv | simp | wp (once) hoare_drop_imps)+
    apply (wp getSlotCap_wp)
   apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
