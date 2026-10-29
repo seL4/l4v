@@ -464,11 +464,30 @@ where
     dsb
   od"
 
+consts' CTR_val :: "machine_state \<Rightarrow> machine_word"
+definition readCTR :: "machine_word machine_monad" where
+  "readCTR \<equiv> gets CTR_val"
+
+text \<open>L1 instruction cache policy\<close>
+definition ctrL1IP :: "machine_word \<Rightarrow> machine_word" where
+  "ctrL1IP ctr \<equiv> (ctr >> 14) && mask 2"
+
+definition ctrL1IPVIPT :: machine_word where
+  "ctrL1IPVIPT \<equiv> 2"
+
+definition isICacheVIPT :: "bool machine_monad" where
+  "isICacheVIPT \<equiv> do
+     ctr \<leftarrow> readCTR;
+     return (ctrL1IP ctr = ctrL1IPVIPT)
+   od"
+
 definition
   invalidateCacheRange_I :: "machine_word \<Rightarrow> machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where
-  "invalidateCacheRange_I vstart vend pstart \<equiv> invalidate_I_PoU"
-  (* for other than A53 and A35: "cacheRangeOp invalidateByVA_I vstart vend pstart" *)
+  "invalidateCacheRange_I vstart vend pstart \<equiv> do
+     vipt \<leftarrow> isICacheVIPT;
+     if vipt then invalidate_I_PoU else cacheRangeOp invalidateByVA_I vstart vend pstart
+   od"
 
 definition
   branchFlushRange :: "machine_word \<Rightarrow> machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
