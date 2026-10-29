@@ -309,12 +309,6 @@ caches must be done separately.
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
 > writeContextIDAndPD = isabelleOp
 
-> getTPIDRURO :: MachineMonad Word
-> getTPIDRURO = isabelleOp
-
-> setTPIDRURO :: Word -> MachineMonad ()
-> setTPIDRURO = isabelleOp
-
 #endif
 
 \subsubsection{Memory Barriers}
