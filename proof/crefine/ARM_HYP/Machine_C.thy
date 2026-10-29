@@ -95,6 +95,11 @@ assumes setHDCR_ccorres:
            (doMachineOp (setHDCR hdcr))
            (Call setHDCR_'proc)"
 
+assumes readCTR_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp readCTR)
+           (Call readCTR_'proc)"
+
 assumes readTPIDRURO_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getTPIDRURO)
@@ -780,6 +785,18 @@ lemma invalidateCacheRange_RAM_ccorres:
   apply (simp add: lineStart_mask mask_eqs)
   done
 
+lemma isICacheVIPT_ccorres:
+  "ccorres (\<lambda>vipt vipt'. vipt' = from_bool vipt) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp isICacheVIPT)
+           (Call isICacheVIPT_'proc)"
+  apply cinit'
+   apply (simp add: isICacheVIPT_def doMachineOp_bind)
+   apply (ctac (no_vcg) add: readCTR_ccorres)
+    apply (rule ccorres_return_C; simp)
+   apply wp
+  apply (simp add: ctrL1IP_def ctrL1IPVIPT_def mask_def)
+  done
+
 lemma invalidateCacheRange_I_ccorres:
   "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
                       \<and> w1 && mask cacheLineBits = w3 && mask cacheLineBits)
@@ -788,9 +805,35 @@ lemma invalidateCacheRange_I_ccorres:
            (Call invalidateCacheRange_I_'proc)"
   apply (rule ccorres_gen_asm[where G=\<top>, simplified])
   apply (cinit' lift: start_' end_' pstart_')
-   apply (unfold invalidateCacheRange_I_def)
-   apply (ctac add: invalidate_I_PoU_ccorres)
-  apply simp
+   apply (clarsimp simp: word_sle_def whileAnno_def)
+   apply (fold cacheLineBits_val) (* make CACHE_LINE_SIZE_BITS value symbolic *)
+   apply (ccorres_remove_UNIV_guard)
+   apply (simp add: invalidateCacheRange_I_def doMachineOp_bind empty_fail_cond
+                    empty_fail_invalidate_I_PoU empty_fail_invalidateByVA_I dmo_if)
+   apply (ctac (no_vcg) add: isICacheVIPT_ccorres)
+    apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+       apply (vcg exspec=invalidate_I_PoU_modifies)
+      apply (simp add: from_bool_0)
+     apply (rule ccorres_add_return2)
+     apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
+      (* return_void_C; ccorres_return_void_C is only available later, in CSpace_C *)
+      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (simp add: return_def)
+     apply wp
+    apply csymbr
+    apply (rule cacheRangeOp_ccorres)
+      apply (rule empty_fail_invalidateByVA_I)
+     apply clarsimp
+     apply (cinitlift index_')
+     apply (rule ccorres_guard_imp2)
+      apply csymbr
+      apply (ctac add: invalidateByVA_I_ccorres)
+     apply (clarsimp simp: lineStart_def shiftr_shiftl1 mask_out_sub_mask)
+     apply (drule_tac s="w1 && mask cacheLineBits" in sym, simp add: cache_range_lineIndex_helper)
+    apply (vcg exspec=invalidateByVA_I_modifies)
+   apply wpsimp
+  apply clarsimp
   done
 
 lemma branchFlushRange_ccorres:

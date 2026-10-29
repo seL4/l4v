@@ -270,9 +270,18 @@ lemma no_fail_cleanCacheRange_RAM[simp, wp]:
   apply (rule no_fail_pre, wp no_fail_dsb no_fail_cleanL2Range, simp)
   done
 
+lemma no_fail_readCTR[simp, wp]:
+  "no_fail \<top> readCTR"
+  by (simp add: readCTR_def)
+
+lemma no_fail_isICacheVIPT[simp, wp]:
+  "no_fail \<top> isICacheVIPT"
+  by (wpsimp simp: isICacheVIPT_def)
+
 lemma no_fail_invalidateCacheRange_I[simp, wp]:
   "no_fail \<top> (invalidateCacheRange_I s e p)"
-  by (simp add: invalidateCacheRange_I_def, wp no_fail_invalidate_I_PoU)
+  unfolding invalidateCacheRange_I_def
+  by (wpsimp wp: no_fail_invalidate_I_PoU no_fail_invalidateByVA_I)
 
 lemma no_fail_invalidateCacheRange_RAM[simp, wp]:
   "no_fail \<top> (invalidateCacheRange_RAM s e p)"
@@ -641,9 +650,18 @@ lemma no_irq_cleanCacheRange_RAM[simp, wp]:
   apply (wp no_irq_dsb no_irq_cleanL2Range)
   done
 
+lemma no_irq_readCTR[simp, wp]:
+  "no_irq readCTR"
+  by (simp add: readCTR_def)
+
+lemma no_irq_isICacheVIPT[simp, wp]:
+  "no_irq isICacheVIPT"
+  by (wpsimp simp: isICacheVIPT_def)
+
 lemma no_irq_invalidateCacheRange_I[simp, wp]:
   "no_irq (invalidateCacheRange_I s e p)"
-  by (simp add: invalidateCacheRange_I_def, wp no_irq_invalidate_I_PoU)
+  unfolding invalidateCacheRange_I_def
+  by (wpsimp simp: no_irq_invalidate_I_PoU no_irq_invalidateByVA_I)
 
 lemma no_irq_when:
   "\<lbrakk>P \<Longrightarrow> no_irq f\<rbrakk> \<Longrightarrow> no_irq (when P f)"
@@ -876,9 +894,18 @@ lemma empty_fail_cleanCacheRange_RAM[simp, intro!]:
   "empty_fail (cleanCacheRange_RAM s e p)"
   by (fastforce simp: cleanCacheRange_RAM_def empty_fail_dsb empty_fail_cleanL2Range)
 
+lemma empty_fail_readCTR[simp, intro!]:
+  "empty_fail readCTR"
+  by (simp add: readCTR_def)
+
+lemma empty_fail_isICacheVIPT[simp, intro!]:
+  "empty_fail isICacheVIPT"
+  by (wpsimp simp: isICacheVIPT_def)
+
 lemma empty_fail_invalidateCacheRange_I[simp, intro!]:
   "empty_fail (invalidateCacheRange_I s e p)"
-  by (simp add: invalidateCacheRange_I_def empty_fail_invalidate_I_PoU)
+  unfolding invalidateCacheRange_I_def
+  by (wpsimp simp: empty_fail_invalidate_I_PoU empty_fail_invalidateByVA_I)
 
 lemma empty_fail_invalidateCacheRange_RAM[simp, intro!]:
   "empty_fail (invalidateCacheRange_RAM s e p)"
