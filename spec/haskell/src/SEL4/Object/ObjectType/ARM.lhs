@@ -119,6 +119,16 @@ Page capabilities have read and write permission bits, which are used to restric
 > postCapDeletion :: ArchCapability -> Kernel ()
 > postCapDeletion _ = return ()
 
+Flush the instruction cache for Untypeds that could be turned into non-device frames.
+
+> postResetUntyped :: Bool -> Int -> Kernel ()
+> postResetUntyped isDevice sizeBits =
+>     when (not isDevice && sizeBits >= pageBits) $ doMachineOp $ do
+>         dsb
+>         invalidate_I_PoU
+>         dsb
+>         isb
+
 > finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
 Deletion of a final capability to an ASID pool requires that the pool is removed from the global ASID table.

@@ -321,6 +321,13 @@ locale Untyped_R = mdb_insert_again_all_common +
     "word_size_bits \<le> untyped_min_bits"
   assumes resetChunkBits_le_word_bits:
     "resetChunkBits < word_bits"
+  assumes postResetUntyped_corres:
+    "\<And>dev sz. corres dc \<top> \<top> (arch_post_reset_untyped dev sz) (postResetUntyped dev sz)"
+  assumes postResetUntyped_inv:
+    "\<And>P dev sz. (\<And>s f. P (ksMachineState_update f s) = P s) \<Longrightarrow>
+       postResetUntyped dev sz \<lbrace>P\<rbrace>"
+  assumes postResetUntyped_invs'[wp]:
+    "\<And>dev sz. postResetUntyped dev sz \<lbrace>invs'\<rbrace>"
   assumes maxUntypedSizeBits_less_word_bits:
     "maxUntypedSizeBits < word_bits"
   (* FIXME arch-split: candidate for Kernel_Config lemmas *)
@@ -4140,6 +4147,9 @@ lemma resetUntypedCap_corres:
           apply (clarsimp simp: valid_cap_def cap_aligned_def)
          apply (clarsimp simp: valid_cap_def cap_aligned_def
                                order_trans[OF word_size_bits_le_untyped_min_bits])
+        apply (rule corres_splitEE[where f=dc and r'=dc and Q=\<top> and Q'=\<top>, rotated])
+           apply (rule corres_liftE_rel_sum[THEN iffD2], rule postResetUntyped_corres)
+          apply (rule wp_post_tautE)+
         apply (rule corres_if)
           apply simp
          apply (simp add: bits_of_def shiftL_nat)
@@ -4415,6 +4425,12 @@ lemma (in Untyped_R) resetUntypedCap_invs_etc:
    apply (strengthen descendants_range_ex_cte'[rotated, OF _ order_refl, mk_strg D _ E])
    apply (clarsimp simp: gen_isCap_simps empty_descendants_range_in' add_mask_fold)
    apply auto[1]
+  (* the final arch step preserves invs' and does not touch the rest of the postcondition *)
+  apply (rule bindE_wp_fwd[rotated])
+   apply (rule liftE_wp)
+   apply (simp only: pred_conj_def conj_assoc)
+   apply (rule hoare_vcg_conj_lift[OF postResetUntyped_invs' postResetUntyped_inv])
+   apply (simp add: sch_act_simple_def)
   apply (cases "dev \<or> sz < resetChunkBits")
    apply (simp add: pred_conj_def unless_def)
    apply (rule hoare_pre)
@@ -5041,7 +5057,7 @@ context Untyped_R begin
 crunch invokeUntyped
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM
-     wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv)
+     wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv postResetUntyped_inv)
 
 crunch deleteObjects
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
@@ -5566,7 +5582,7 @@ end (* Untyped_R_2 *)
 crunch updateFreeIndex
   for pred_tcb_at'[wp]: "pred_tcb_at' pr P p"
 
-lemma resetUntypedCap_st_tcb_at':
+lemma (in Untyped_R) resetUntypedCap_st_tcb_at':
   "\<lbrace>invs' and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) t
       and cte_wp_at' (\<lambda>cp. isUntypedCap (cteCap cp)) slot
       and ct_active' and sch_act_simple and (\<lambda>s. descendants_of' slot (ctes_of s) = {})\<rbrace>
@@ -5576,7 +5592,7 @@ lemma resetUntypedCap_st_tcb_at':
   apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps)
   apply (simp add: resetUntypedCap_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp preemptionPoint_inv
+   apply (wp mapME_x_inv_wp preemptionPoint_inv postResetUntyped_inv
              deleteObjects_st_tcb_at'[where p=slot] getSlotCap_wp
            | simp add: unless_def
            | wp (once) hoare_drop_imps)+
@@ -5619,7 +5635,7 @@ lemma inv_untyp_tcb'[wp]:
 
 crunch invokeUntyped
   for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv
+  (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv postResetUntyped_inv
    simp: crunch_simps)
 
 lemma resetUntypedCap_IRQInactive:
@@ -5630,7 +5646,7 @@ lemma resetUntypedCap_IRQInactive:
   apply (simp add: resetUntypedCap_def)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp[where P=valid_irq_states' and E="?E", THEN hoare_strengthen_postE]
-             doMachineOp_irq_states' preemptionPoint_inv hoare_drop_imps
+             doMachineOp_irq_states' preemptionPoint_inv postResetUntyped_inv hoare_drop_imps
      | simp add: no_irq_clearMemory if_apply_def2)+
   done
 

@@ -137,6 +137,11 @@ assumes dsb_ccorres:
            (doMachineOp dsb)
            (Call dsb_'proc)"
 
+assumes invalidate_I_PoU_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp invalidate_I_PoU)
+           (Call invalidate_I_PoU_'proc)"
+
 assumes dsb_preserves_kernel_bytes:
  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call dsb_'proc
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))

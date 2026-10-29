@@ -159,6 +159,11 @@ Page capabilities have read and write permission bits, which are used to restric
 >     IOPortCap f l -> freeIOPortRange f l
 >     _ -> return ()
 
+Nothing to do after resetting an Untyped region on x86.
+
+> postResetUntyped :: Bool -> Int -> Kernel ()
+> postResetUntyped _ _ = return ()
+
 > finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
 Deletion of a final capability to an ASID pool requires that the pool is removed from the global ASID table.

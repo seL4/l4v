@@ -296,6 +296,11 @@ lemma reset_untyped_cap_pas_cur_domain[Retype_AC_assms, wp]:
   "reset_untyped_cap src_slot \<lbrace>pas_cur_domain aag\<rbrace>"
   by wp
 
+lemma arch_post_reset_untyped_integrity[Retype_AC_assms, wp]:
+  "arch_post_reset_untyped dev sz \<lbrace>integrity aag X st\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by (wpsimp simp: dmo_bind_valid dsb_def invalidate_I_PoU_def isb_def)
+
 lemma arch_data_to_obj_type_not_ASIDPoolObj[Retype_AC_assms, simp]:
   "arch_data_to_obj_type v \<noteq> Some ASIDPoolObj"
   by (clarsimp simp: arch_data_to_obj_type_def)

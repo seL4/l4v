@@ -37,6 +37,11 @@ assumes sfence_ccorres:
            (doMachineOp RISCV64.sfence)
            (Call sfence_'proc)"
 
+assumes ifence_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp RISCV64.ifence)
+           (Call ifence_'proc)"
+
 assumes maskInterrupt_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>disable = from_bool m\<rbrace> \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>) []
            (doMachineOp (maskInterrupt m irq))

@@ -328,6 +328,24 @@ crunch createObject
   for nosch[Arch_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and ksInterruptState[Arch_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
 
+lemma postResetUntyped_corres[Arch_assms]:
+  "corres dc \<top> \<top> (arch_post_reset_untyped dev sz) (postResetUntyped dev sz)"
+  unfolding arch_post_reset_untyped_def postResetUntyped_def
+  by (corres corres: corres_machine_op_Id_dc
+             wp: no_fail_dsb no_fail_invalidate_I_PoU no_fail_isb)
+
+lemma postResetUntyped_inv[Arch_assms]:
+  assumes "\<And>s f. P (ksMachineState_update f s) = P s"
+  shows "postResetUntyped dev sz \<lbrace>P\<rbrace>"
+  unfolding postResetUntyped_def doMachineOp_def
+  by (wpsimp simp: assms)
+
+lemma postResetUntyped_invs'[wp, Arch_assms]:
+  "postResetUntyped dev sz \<lbrace>invs'\<rbrace>"
+  unfolding postResetUntyped_def
+  by (wpsimp wp: dmo_machine_op_lift_invs'
+             simp: doMachineOp_bind_dist dsb_def invalidate_I_PoU_def isb_def)
+
 lemmas Untyped_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

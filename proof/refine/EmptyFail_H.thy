@@ -217,6 +217,8 @@ locale EmptyFail_H =
     "\<And>t vmfault. empty_fail (handleVMFault t vmfault)"
   assumes checkIRQ_empty_fail[intro!, wp, simp]:
     "\<And>irq. empty_fail (checkIRQ irq)"
+  assumes postResetUntyped_empty_fail[intro!, wp, simp]:
+    "\<And>dev sz. empty_fail (postResetUntyped dev sz)"
 begin
 
 lemma deriveCap_empty_fail[intro!, wp, simp]:

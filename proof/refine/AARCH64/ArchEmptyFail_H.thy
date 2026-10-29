@@ -82,7 +82,8 @@ crunch
   deleteGhost, Arch.createObject, getSanitiseRegisterInfo,
   handleArchFaultReply, prepareSetDomain, postModifyRegisters, postSetFlags,
   Arch.performIRQControl, Arch.invokeIRQHandler, Arch.performInvocation, handleSpuriousIRQ,
-  maskIrqSignal, handleVMFault, checkIRQ, prepareThreadDelete, Arch.postCapDeletion
+  maskIrqSignal, handleVMFault, checkIRQ, prepareThreadDelete, Arch.postCapDeletion,
+  postResetUntyped
   for (empty_fail) empty_fail[Arch_assms, intro!, wp, simp]
   (simp: Let_def)
 

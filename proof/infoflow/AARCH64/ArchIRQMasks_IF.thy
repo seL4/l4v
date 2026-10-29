@@ -24,6 +24,11 @@ lemma delete_objects_irq_masks[IRQMasks_IF_assms, wp]:
   apply (wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
 
+lemma arch_post_reset_untyped_irq_masks[wp]:
+  "arch_post_reset_untyped dev sz \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by (wpsimp wp: dmo_wp)
+
 crunch invoke_untyped
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
