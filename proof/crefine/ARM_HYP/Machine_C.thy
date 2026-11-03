@@ -95,16 +95,6 @@ assumes setHDCR_ccorres:
            (doMachineOp (setHDCR hdcr))
            (Call setHDCR_'proc)"
 
-assumes readTPIDRURO_ccorres:
-  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp getTPIDRURO)
-           (Call readTPIDRURO_'proc)"
-
-assumes writeTPIDRURO_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>reg = reg \<rbrace>) []
-           (doMachineOp (setTPIDRURO reg))
-           (Call writeTPIDRURO_'proc)"
-
 assumes addressTranslateS1_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
            (doMachineOp (addressTranslateS1 vaddr))
