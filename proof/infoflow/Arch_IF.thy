@@ -163,7 +163,7 @@ definition labels_are_invisible where
 lemma equiv_but_for_reads_equiv':
   "\<lbrakk> pas_domains_distinct aag \<or> equiv_for (aag_can_read_domain aag) ready_queues s s';
      labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
-     \<Longrightarrow> reads_equiv aag s s'"
+   \<Longrightarrow> reads_equiv aag s s'"
   apply (simp add: reads_equiv_def2)
   apply (rule conjI)
    apply (clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def)
@@ -182,7 +182,7 @@ lemma equiv_but_for_reads_equiv':
 lemma equiv_but_for_affects_equiv':
   "\<lbrakk> pas_domains_distinct aag \<or> equiv_for (aag_can_affect_domain aag l) ready_queues s s';
      labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
-     \<Longrightarrow> affects_equiv aag l s s'"
+   \<Longrightarrow> affects_equiv aag l s s'"
   apply (subst affects_equiv_def2)
   apply (clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def aag_can_affect_label_def)
   apply (rule states_equiv_forI)
@@ -218,8 +218,8 @@ lemma ev2_invisible':
   "\<lbrakk> labels_are_invisible aag l L; labels_are_invisible aag l L';
      modifies_at_most aag L Q f; modifies_at_most aag L' Q' g;
      \<forall>s t. P s \<and> P' t \<longrightarrow> (\<forall>(rva,s') \<in> fst (f s). \<forall>(rvb,t') \<in> fst (g t). W rva rvb) \<rbrakk>
-     \<Longrightarrow> equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
-                        W (P and Q) (P' and Q') f g"
+   \<Longrightarrow> equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
+                     W (P and Q) (P' and Q') f g"
   apply (clarsimp simp: equiv_valid_2_def)
   apply (rule conjI)
    apply blast
@@ -252,12 +252,12 @@ lemma revrv_invisible:
   shows
     "\<lbrakk> labels_are_invisible aag l L; modifies_at_most aag L Q f;
        \<forall>s t. P s \<and> P t \<longrightarrow> (\<forall>(rva, s') \<in> fst (f s). \<forall>(rvb, t') \<in> fst(f t). W rva rvb) \<rbrakk>
-       \<Longrightarrow> reads_equiv_valid_rv_inv (affects_equiv aag l) aag W (P and Q) f"
+     \<Longrightarrow> reads_equiv_valid_rv_inv (affects_equiv aag l) aag W (P and Q) f"
   by (rule ev2_invisible[OF domains_distinct]; simp)
 
 lemma reads_respects_unit_invisible:
   "\<lbrakk> labels_are_invisible aag l L; modifies_at_most aag L P f; \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects aag l P (f :: (det_state,unit) nondet_monad)"
+   \<Longrightarrow> reads_respects aag l P (f :: (det_state,unit) nondet_monad)"
   apply (rule equiv_valid_guard_imp)
    apply (simp add: equiv_valid_def2)
    apply (rule ev2_invisible')
@@ -267,7 +267,7 @@ lemma reads_respects_unit_cases':
   "\<lbrakk> reads_respects aag l (P and K (aag_can_read_or_affect aag l ptr)) f;
      modifies_at_most aag {pasObjectAbs aag ptr} (Q and K (\<not> aag_can_read_or_affect aag l ptr)) f;
      \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects aag l (if aag_can_read_or_affect aag l ptr then P else Q) (f :: (det_state,unit) nondet_monad)"
+   \<Longrightarrow> reads_respects aag l (if aag_can_read_or_affect aag l ptr then P else Q) (f :: (det_state,unit) nondet_monad)"
   apply (case_tac "aag_can_read_or_affect aag l ptr")
    apply clarsimp
   apply (rule_tac L="{pasObjectAbs aag ptr}" in reads_respects_unit_invisible)
@@ -297,7 +297,7 @@ lemma equiv_valid_get_assert:
   done
 
 lemma my_bind_rewrite_lemma:
-  "(f >>= g) =  (f >>= (\<lambda> r. (g r) >>= (\<lambda> x. return ())))"
+  "(f >>= g) = (f >>= (\<lambda>r. (g r) >>= (\<lambda>x. return ())))"
   by simp
 
 lemma delete_objects_reads_respects:
@@ -339,7 +339,7 @@ lemma case_junk:
 (* FIXME: Same here *)
 lemma hoare_add_postE:
   "\<lbrakk> \<lbrace>Q\<rbrace> f \<lbrace>P\<rbrace>, - ; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s) \<longrightarrow> (R rv s)\<rbrace>, - \<rbrakk>
-     \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,-"
+   \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,-"
   unfolding validE_R_def validE_def
   apply (erule hoare_add_post)
    apply simp
@@ -413,55 +413,54 @@ crunch cancel_badged_sends
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps simp: filterM_mapM)
 
-
-locale Arch_IF_1 =
+locale Arch_IF =
   fixes aag :: "'a PAS"
   assumes arch_post_cap_deletion_valid_global_refs:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_state. valid_global_refs s\<rbrace>"
-  and arch_post_cap_deletion_irq_state_of_state[wp]:
+  assumes arch_post_cap_deletion_irq_state_of_state[wp]:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and store_word_offs_irq_state_of_state[wp]:
+  assumes store_word_offs_irq_state_of_state[wp]:
     "store_word_offs ptr offs v \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and set_irq_state_irq_state_of_state[wp]:
+  assumes set_irq_state_irq_state_of_state[wp]:
     "set_irq_state state irq \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and handle_arch_fault_reply_irq_state_of_state[wp]:
+  assumes handle_arch_fault_reply_irq_state_of_state[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_switch_to_idle_thread_irq_state_of_state[wp]:
+  assumes arch_switch_to_idle_thread_irq_state_of_state[wp]:
     "arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_switch_to_thread_irq_state_of_state[wp]:
+  assumes arch_switch_to_thread_irq_state_of_state[wp]:
     "arch_switch_to_thread t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_invoke_irq_handler_irq_state_of_state[wp]:
+  assumes arch_invoke_irq_handler_irq_state_of_state[wp]:
     "arch_invoke_irq_handler hi \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_finalise_cap_irq_state_of_state[wp]:
+  assumes arch_finalise_cap_irq_state_of_state[wp]:
     "arch_finalise_cap acap b \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and prepare_thread_delete_irq_state_of_state[wp]:
+  assumes prepare_thread_delete_irq_state_of_state[wp]:
     "prepare_thread_delete t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and equiv_asid_machine_state_update[simp]:
+  assumes equiv_asid_machine_state_update[simp]:
     "\<And>f. equiv_asid asid (machine_state_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (machine_state_update f s') = equiv_asid asid s s'"
-  and as_user_set_register_reads_respects':
+  assumes as_user_set_register_reads_respects':
     "pas_domains_distinct aag \<Longrightarrow> reads_respects aag l \<top> (as_user t (setRegister r v))"
-  and store_word_offs_reads_respects:
+  assumes store_word_offs_reads_respects:
     "reads_respects aag l \<top> (store_word_offs ptr offs v)"
-  and set_endpoint_globals_equiv:
+  assumes set_endpoint_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_endpoint ptr ep
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and set_thread_state_globals_equiv:
+  assumes set_thread_state_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_thread_state ref ts
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and thread_set_non_idle_globals_equiv:
+  assumes thread_set_non_idle_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
      thread_set f tptr
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_prepare_set_domain_irq_state_of_state[wp]:
+  assumes arch_prepare_set_domain_irq_state_of_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_prepare_next_domain_irq_state_of_state[wp]:
-    "arch_prepare_next_domain  \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and equiv_hyp_machine_state_rest_update[simp]:
+  assumes arch_prepare_next_domain_irq_state_of_state[wp]:
+    "arch_prepare_next_domain \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  assumes equiv_hyp_machine_state_rest_update[simp]:
     "\<And>P. equiv_hyp P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_hyp P st (s\<lparr>machine_state := ms\<rparr>)"
-  and equiv_fpu_machine_state_rest_update[simp]:
+  assumes equiv_fpu_machine_state_rest_update[simp]:
     "\<And>P. equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
 begin
 
@@ -547,11 +546,11 @@ crunch reschedule_required
 lemma cancel_badged_sends_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    cancel_badged_sends epptr badge
-   \<lbrace>\<lambda>_. globals_equiv s\<rbrace> "
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cancel_badged_sends_def
   by (wpsimp wp: set_endpoint_globals_equiv set_thread_state_globals_equiv
                  filterM_preserved get_simple_ko_wp)
 
-end
+end (* Arch_IF *)
 
 end

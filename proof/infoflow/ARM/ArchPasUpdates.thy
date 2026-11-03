@@ -78,10 +78,9 @@ lemma state_asids_to_policy_pasMayEditReadyQueues_update[PasUpdates_assms]:
 declare arch_post_set_flags_inv[PasUpdates_assms]
 declare arch_prepare_set_domain_inv[PasUpdates_assms]
 
-end
+end (* Arch *)
 
-
-global_interpretation PasUpdates_2?: PasUpdates_1
+global_interpretation PasUpdates_2?: PasUpdates
 proof goal_cases
   interpret Arch .
   case 1 show ?case

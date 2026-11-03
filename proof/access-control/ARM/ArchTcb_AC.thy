@@ -95,10 +95,9 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
          | rule conjI | erule pas_refined_refl)+
   done
 
-end
+end (* Arch *)
 
-
-global_interpretation Tcb_AC_1?: Tcb_AC_1
+global_interpretation Tcb_AC?: Tcb_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

@@ -38,7 +38,7 @@ crunch cap_insert
 
 lemma invoke_irq_handler_irq_masks:
   "\<lbrace>domain_sep_inv False st and (\<lambda>s. (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap irq)) ptr' s))\<rbrace>
-   invoke_irq_handler blah
+   invoke_irq_handler ihi
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (clarsimp simp: valid_def domain_sep_inv_def)
 
@@ -52,7 +52,7 @@ lemma empty_slot_irq_masks:
 
 lemma spec_strengthen_errE:
   "\<lbrakk> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E'\<rbrace>; \<And>s r. E' s r \<Longrightarrow> E s r \<rbrakk>
-     \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
+   \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (auto simp: spec_validE_def validE_def valid_def split: sum.splits)
 
 crunch create_cap
@@ -60,42 +60,41 @@ crunch create_cap
 crunch cap_swap_for_delete
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
-
-locale IRQMasks_IF_1 =
+locale IRQMasks_IF =
   fixes state_t :: "'s :: state_ext state"
   assumes resetTimer_irq_masks[wp]:
     "resetTimer \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  and storeWord_irq_masks[wp]:
+  assumes storeWord_irq_masks[wp]:
     "storeWord x y \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  and delete_objects_irq_masks[wp]:
+  assumes delete_objects_irq_masks[wp]:
     "delete_objects ptr bits \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and invoke_untyped_irq_masks[wp]:
+  assumes invoke_untyped_irq_masks[wp]:
     "invoke_untyped ui \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and finalise_cap_irq_masks[wp]:
+  assumes finalise_cap_irq_masks[wp]:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
      finalise_cap cap final
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and send_signal_irq_masks[wp]:
+  assumes send_signal_irq_masks[wp]:
     "send_signal ntfnptr badge \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_vm_fault_irq_masks[wp]:
+  assumes handle_vm_fault_irq_masks[wp]:
     "handle_vm_fault t vmft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_interrupt_irq_masks:
+  assumes handle_interrupt_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and K (irq \<le> maxIRQ)\<rbrace>
      handle_interrupt irq
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_invoke_irq_control_irq_masks:
+  assumes arch_invoke_irq_control_irq_masks:
     "\<lbrace>domain_sep_inv False st and arch_irq_control_inv_valid ivk\<rbrace>
      arch_invoke_irq_control ivk
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and dmo_getActiveIRQ_irq_masks[wp]:
+  assumes dmo_getActiveIRQ_irq_masks[wp]:
     "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and dmo_getActiveIRQ_return_axiom[wp]:
+  assumes dmo_getActiveIRQ_return_axiom[wp]:
     "\<lbrace>\<top>\<rbrace>
      do_machine_op (getActiveIRQ in_kernel)
      \<lbrace>\<lambda>rv s :: det_state. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)\<rbrace>"
-  and activate_thread_irq_masks[wp]:
+  assumes activate_thread_irq_masks[wp]:
     "activate_thread \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_spurious_irq_masks[wp]:
+  assumes handle_spurious_irq_masks[wp]:
     "handle_spurious_irq \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
 begin
 
@@ -179,7 +178,7 @@ lemma rec_del_irq_masks:
 lemma cap_delete_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
     non_kernel_IRQs_masked\<rbrace>
-   cap_delete blah
+   cap_delete slot
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>,\<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (simp add: cap_delete_def) (wpsimp wp: rec_del_irq_masks)
 
@@ -198,8 +197,7 @@ lemma invoke_irq_control_irq_masks:
   apply (clarsimp simp: arch_invoke_irq_control_irq_masks)
   done
 
-end
-
+end (* IRQMasks_IF *)
 
 crunch cancel_ipc
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
@@ -232,8 +230,7 @@ crunch cancel_badged_sends
    simp: filterM_mapM crunch_simps no_irq_clearMemory
    ignore: filterM)
 
-
-context IRQMasks_IF_1 begin
+context IRQMasks_IF begin
 
 lemma cap_revoke_irq_masks':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
@@ -254,7 +251,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
                       cap_delete_irq_masks_R
                       drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                       drop_spec_validE[OF liftE_wp]
-                      drop_spec_validE[OF  hoare_vcg_conj_liftE1]
+                      drop_spec_validE[OF hoare_vcg_conj_liftE1]
                    | simp | wp (once) hoare_drop_imps)+
     apply fastforce
     done
@@ -288,8 +285,7 @@ crunch reply_from_kernel
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (simp: crunch_simps wp: crunch_wps)
 
-end
-
+end (* IRQMasks_IF *)
 
 fun irq_of_handler_inv where
   "irq_of_handler_inv (ACKIrq irq) = irq" |
@@ -298,7 +294,7 @@ fun irq_of_handler_inv where
 
 lemma decode_invocation_IRQHandlerCap:
   "\<lbrace>cte_wp_at ((=) cap) slot\<rbrace>
-   decode_invocation label args cap_index slot cap blah
+   decode_invocation label args cap_index slot cap excaps
    \<lbrace>\<lambda>rv s. \<forall>x. rv = InvokeIRQHandler x
                \<longrightarrow> (\<exists>a b. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv x))) (a, b) s)\<rbrace>, -"
   unfolding decode_invocation_def
@@ -312,39 +308,38 @@ lemma handle_yield_irq_masks_of_state[wp]:
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (wpsimp simp: handle_yield_def)
 
-
-locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
+locale IRQMasks_IF_2 = IRQMasks_IF state_t
   for state_t :: "'s :: state_ext state" +
   assumes do_reply_transfer_irq_masks[wp]:
     "do_reply_transfer sender receiver slot grant \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_perform_invocation_irq_masks:
+  assumes arch_perform_invocation_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
       non_kernel_IRQs_masked\<rbrace>
      arch_perform_invocation i
      \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_prepare_set_domain_irq_masks_of_state[wp]:
+  assumes arch_prepare_set_domain_irq_masks_of_state[wp]:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
      arch_prepare_set_domain t new_dom
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and invoke_tcb_irq_masks:
+  assumes invoke_tcb_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and
       non_kernel_IRQs_masked and tcb_inv_wf tinv\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_hypervisor_fault_irq_masks[wp]:
+  assumes handle_hypervisor_fault_irq_masks[wp]:
     "handle_hypervisor_fault t hvft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_switch_to_idle_thread_irq_masks:
+  assumes arch_switch_to_idle_thread_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
       arch_switch_to_idle_thread \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_switch_to_thread_irq_masks:
+  assumes arch_switch_to_thread_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
      arch_switch_to_thread t
      \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_prepare_next_domain_irq_masks[wp]:
+  assumes arch_prepare_next_domain_irq_masks[wp]:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
      arch_prepare_next_domain
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_prepare_next_domain_valid_irq_states[wp]:
+  assumes arch_prepare_next_domain_valid_irq_states[wp]:
     "arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
 begin
 
@@ -353,8 +348,8 @@ crunch invoke_domain
 
 lemma perform_invocation_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and
-    (\<lambda>s. (\<forall>blah. oper = InvokeIRQHandler blah
-                 \<longrightarrow> (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv blah))) ptr' s))) and
+    (\<lambda>s. (\<forall>ihi. oper = InvokeIRQHandler ihi
+                 \<longrightarrow> (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv ihi))) ptr' s))) and
     domain_sep_inv False (st :: 's state) and non_kernel_IRQs_masked and
     valid_invocation oper\<rbrace>
    perform_invocation blocking calling oper
@@ -469,6 +464,6 @@ lemma schedule_irq_masks:
                  guarded_switch_to_irq_masks[where st=st]
                  hoare_drop_imps gts_wp)
 
-end
+end (* IRQMasks_IF_2 *)
 
 end

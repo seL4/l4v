@@ -28,7 +28,7 @@ lemma pg_index_bits_ge0[simp, intro!]: "0 < pg_index_bits"
 (* FIXME AARCH64: use value_type *)
 typedef pg_index_len = "{n :: nat. n < pg_index_bits}" by auto
 
-end
+end (* Arch *)
 
 instantiation AARCH64.pg_index_len :: len0
 begin
@@ -55,7 +55,7 @@ lemma length_pg_index_len[simp]:
   "LENGTH(pg_index_len) = pg_index_bits"
   by (simp add: len_of_pg_index_len type_definition.card[OF type_definition_pg_index_len])
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 
@@ -433,7 +433,7 @@ lemma page_offs_in_range:
 
 lemma page_offs_range_correct':
   "\<lbrakk> x \<in> page_offs_range ptr; is_aligned ptr 30 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pg_index) << 12)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pg_index) << 12)"
   apply (clarsimp simp: page_offs_range_def s0_ptr_defs bit_simps)
   apply (rule_tac x="ucast ((x - ptr) >> 12)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -613,7 +613,7 @@ lemma is_aligned_pt_bitsD:
 
 lemma pt_offs_range_correct':
   "\<lbrakk> x \<in> pt_offs_range NormalPT_T ptr; is_aligned ptr 12 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pt_index) << 3)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pt_index) << 3)"
   apply (clarsimp simp: pt_offs_range_def s0_ptr_defs bit_simps)
   apply (rule_tac x="ucast ((x - ptr) >> 3)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -649,7 +649,7 @@ lemma pt_offs_range_correct':
 
 lemma vs_offs_range_correct':
   "\<lbrakk> x \<in> pt_offs_range VSRootPT_T ptr; is_aligned ptr 13 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: vs_index) << 3)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: vs_index) << 3)"
   apply (clarsimp simp: pt_offs_range_def s0_ptr_defs)
   apply (rule_tac x="ucast ((x - ptr) >> 3)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -828,7 +828,7 @@ lemma word_div_mult':
 
 lemma cnode_offs_range_correct':
   "\<lbrakk> x \<in> cnode_offs_range ptr; is_aligned ptr 15 \<rbrakk>
-     \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = ptr + of_bl y * 0x20)"
+   \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = ptr + of_bl y * 0x20)"
   apply (clarsimp simp: cnode_offs_range_def s0_ptr_defs)
   apply (rule_tac x="to_bl (ucast ((x - ptr) div 0x20) :: 10 word)" in exI)
   apply (clarsimp simp: to_bl_ucast of_bl_drop)
@@ -911,7 +911,7 @@ lemma tcb_offs_in_range:
 
 lemma tcb_offs_range_correct':
   "\<lbrakk> x \<in> tcb_offs_range ptr; is_aligned ptr 11 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + ucast (y :: 11 word)"
+   \<Longrightarrow> \<exists>y. x = ptr + ucast (y :: 11 word)"
   apply (clarsimp simp: tcb_offs_range_def s0_ptr_defs)
   apply (rule_tac x="ucast (x - ptr)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -1269,12 +1269,12 @@ lemma kh0H_simps[simp]:
   "kh0H Low_tcb_ptr   = Some (KOTCB Low_tcbH)"
   "kh0H High_tcb_ptr  = Some (KOTCB High_tcbH)"
   "kh0H idle_tcb_ptr  = Some (KOTCB idle_tcbH)"
-  "length x = 10 \<Longrightarrow> kh0H (Low_cnode_ptr  + of_bl x * 0x20) = Low_cte  Low_cnode_ptr  (Low_cnode_ptr  + of_bl x * 0x20)"
+  "length x = 10 \<Longrightarrow> kh0H (Low_cnode_ptr  + of_bl x * 0x20) = Low_cte Low_cnode_ptr  (Low_cnode_ptr  + of_bl x * 0x20)"
   "length x = 10 \<Longrightarrow> kh0H (High_cnode_ptr + of_bl x * 0x20) = High_cte High_cnode_ptr (High_cnode_ptr + of_bl x * 0x20)"
   "length x = 10 \<Longrightarrow> kh0H (Silc_cnode_ptr + of_bl x * 0x20) = Silc_cte Silc_cnode_ptr (Silc_cnode_ptr + of_bl x * 0x20)"
-  "kh0H (Low_pd_ptr  + (ucast v << 3)) = Low_pdH  Low_pd_ptr  (Low_pd_ptr  + (ucast v << 3))"
+  "kh0H (Low_pd_ptr  + (ucast v << 3)) = Low_pdH Low_pd_ptr  (Low_pd_ptr  + (ucast v << 3))"
   "kh0H (High_pd_ptr + (ucast v << 3)) = High_pdH High_pd_ptr (High_pd_ptr + (ucast v << 3))"
-  "kh0H (Low_pt_ptr  + (ucast y << 3)) = Low_ptH  Low_pt_ptr  (Low_pt_ptr  + (ucast y << 3))"
+  "kh0H (Low_pt_ptr  + (ucast y << 3)) = Low_ptH Low_pt_ptr  (Low_pt_ptr  + (ucast y << 3))"
   "kh0H (High_pt_ptr + (ucast y << 3)) = High_ptH High_pt_ptr (High_pt_ptr + (ucast y << 3))"
   "kh0H (arm_global_pt_ptr + (ucast v << 3)) = global_ptH arm_global_pt_ptr (arm_global_pt_ptr + (ucast v << 3))"
   "kh0H (shared_page_ptr_virt + (ucast z << 12)) = Some KOUserData"
@@ -1753,7 +1753,7 @@ lemma tcb_offs_in_rangeI:
 method map_to_ctes_tcb for ptr::machine_word and x::machine_word =
   (cut_tac tcb_offs_in_rangeI[where ptr=ptr and x=x],
    (clarsimp simp: not_in_range_cte_None option_update_range_def
-                        map_to_ctes_kh0H  kh0H_dom_distinct kh0H_dom_distinct'
+                        map_to_ctes_kh0H kh0H_dom_distinct kh0H_dom_distinct'
                  split: option.splits),
    (((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
       | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]),
@@ -2034,7 +2034,7 @@ lemma s0H_pspace_distinct':
 
 lemma pspace_distinctD'':
   "\<lbrakk> \<exists>v. ksPSpace s x = Some v \<and> objBitsKO v = n; pspace_distinct' s \<rbrakk>
-     \<Longrightarrow> ps_clear x n s"
+   \<Longrightarrow> ps_clear x n s"
   apply clarsimp
   apply (drule(1) pspace_distinctD')
   apply simp
@@ -2365,7 +2365,7 @@ lemma s0H_valid_objs':
                                        Low_domain_def minBound_word valid_arch_tcb'_def
                                        Low_mcp_def Low_prio_def maxPriority_def numPriorities_def
                                        tcb_cte_cases_def Low_capsH_def kh0H_obj_def)
-                apply (clarsimp simp: valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
+                apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_tcb_state'_def
                                       High_domain_def minBound_word valid_arch_tcb'_def
                                       High_mcp_def High_prio_def maxPriority_def numPriorities_def
                                       tcb_cte_cases_def High_capsH_def obj_at'_def kh0H_obj_def)
@@ -2391,7 +2391,7 @@ lemmas the_nat_to_bl_simps = the_nat_to_bl_def nat_to_bl_def
 lemma ucast_shiftr_13E:
   "\<lbrakk> ucast (p - ptr >> 5) = (0x13E :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5 \<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0x27C0"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x27C0"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2416,7 +2416,7 @@ lemma ucast_shiftr_13E:
 lemma ucast_shiftr_6:
   "\<lbrakk> ucast (p - ptr >> 5) = (0x6 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5\<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0xC0"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0xC0"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2441,7 +2441,7 @@ lemma ucast_shiftr_6:
 lemma ucast_shiftr_5:
   "\<lbrakk> ucast (p - ptr >> 5) = (5 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5\<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0xA0"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0xA0"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2466,7 +2466,7 @@ lemma ucast_shiftr_5:
 lemma ucast_shiftr_4:
   "\<lbrakk> ucast (p - ptr >> 5) = (4 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5\<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0x80"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x80"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2491,7 +2491,7 @@ lemma ucast_shiftr_4:
 lemma ucast_shiftr_3:
   "\<lbrakk>ucast (p - ptr >> 5) = (3 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
     is_aligned ptr 15; is_aligned p 5\<rbrakk>
-    \<Longrightarrow> p = (ptr :: obj_ref) + 0x60"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x60"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2516,7 +2516,7 @@ lemma ucast_shiftr_3:
 lemma ucast_shiftr_2:
   "\<lbrakk>ucast (p - ptr >> 5) = (2 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
     is_aligned ptr 15; is_aligned p 5\<rbrakk>
-    \<Longrightarrow> p = (ptr :: obj_ref) + 0x40"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x40"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2541,7 +2541,7 @@ lemma ucast_shiftr_2:
 lemma ucast_shiftr_1:
   "\<lbrakk>ucast (p - ptr >> 5) = (1 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
     is_aligned ptr 15; is_aligned p 5\<rbrakk>
-    \<Longrightarrow> p = (ptr :: obj_ref) + 0x20"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x20"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2739,20 +2739,20 @@ lemma mdb_next_rtrancl_not_0_s0H:
 lemma sameRegionAs_s0H:
   "\<lbrakk> map_to_ctes kh0H p = Some (CTE cap mdb); map_to_ctes kh0H p' = Some (CTE cap' mdb');
      sameRegionAs cap cap'; p \<noteq> p' \<rbrakk>
-     \<Longrightarrow> (p = Low_cnode_ptr + 0x27C0 \<and> (p' = Silc_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
-          p = Silc_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
-          p = High_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = Silc_cnode_ptr + 0x27C0) \<or>
-          p = Low_cnode_ptr + 0xA0 \<and> (p' = Silc_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
-          p = Silc_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
-          p = High_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = Silc_cnode_ptr + 0xA0) \<or>
-          p = Low_tcb_ptr \<and> p' = Low_cnode_ptr + 0x40 \<or>
-          p = Low_cnode_ptr + 0x40 \<and> p' = Low_tcb_ptr \<or>
-          p = Low_tcb_ptr + 0x20 \<and> p' = Low_cnode_ptr + 0x60 \<or>
-          p = Low_cnode_ptr + 0x60 \<and> p' = Low_tcb_ptr + 0x20 \<or>
-          p = High_tcb_ptr \<and> p' = High_cnode_ptr + 0x40 \<or>
-          p = High_cnode_ptr + 0x40 \<and> p' = High_tcb_ptr \<or>
-          p = High_tcb_ptr + 0x20 \<and> p' = High_cnode_ptr + 0x60 \<or>
-          p = High_cnode_ptr + 0x60 \<and> p' = High_tcb_ptr + 0x20)"
+   \<Longrightarrow> (p = Low_cnode_ptr + 0x27C0 \<and> (p' = Silc_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
+        p = Silc_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
+        p = High_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = Silc_cnode_ptr + 0x27C0) \<or>
+        p = Low_cnode_ptr + 0xA0 \<and> (p' = Silc_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
+        p = Silc_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
+        p = High_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = Silc_cnode_ptr + 0xA0) \<or>
+        p = Low_tcb_ptr \<and> p' = Low_cnode_ptr + 0x40 \<or>
+        p = Low_cnode_ptr + 0x40 \<and> p' = Low_tcb_ptr \<or>
+        p = Low_tcb_ptr + 0x20 \<and> p' = Low_cnode_ptr + 0x60 \<or>
+        p = Low_cnode_ptr + 0x60 \<and> p' = Low_tcb_ptr + 0x20 \<or>
+        p = High_tcb_ptr \<and> p' = High_cnode_ptr + 0x40 \<or>
+        p = High_cnode_ptr + 0x40 \<and> p' = High_tcb_ptr \<or>
+        p = High_tcb_ptr + 0x20 \<and> p' = High_cnode_ptr + 0x60 \<or>
+        p = High_cnode_ptr + 0x60 \<and> p' = High_tcb_ptr + 0x20)"
   supply option.case_cong[cong] if_cong[cong] s0_ptrs_aligned[simp]
   apply (frule_tac x=p in map_to_ctes_kh0H_SomeD)
   apply (elim disjE, simp_all)
@@ -3136,7 +3136,7 @@ end
 
 (* Instantiate the current, abstract domain scheduler into the
    concrete scheduler required for this example *)
-axiomatization  where
+axiomatization where
   newKSDomSched: "newKSDomSchedule = [(0,0xA), (1, 0xA)]"
 
 axiomatization where
@@ -3145,7 +3145,7 @@ axiomatization where
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
    We use an axiomatization for the moment. *)
-axiomatization  where
+axiomatization where
   kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
   kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
 
@@ -3390,7 +3390,7 @@ lemma s0H_invs:
    apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
     apply (clarsimp simp: s0H_internal_def cteCaps_of_def untyped_ranges_zero_inv_def
                           dschDomain_def dschLength_def valid_dom_schedule'_def maxDomainDuration_def mask_def)
-  apply (clarsimp simp: cur_tcb'_def obj_at'_def  s0H_internal_def objBitsKO_def s0_ptrs_aligned)
+  apply (clarsimp simp: cur_tcb'_def obj_at'_def s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
   apply (simp add: objBitsKO_def)
   done
@@ -3411,7 +3411,7 @@ lemma less_0x200_exists_ucast:
   done
 
 lemma less_0x40000_exists_ucast:
-  "\<lbrakk> p < 0x40000;  \<not> config_ARM_PA_SIZE_BITS_40 \<rbrakk> \<Longrightarrow> \<exists>p'. p = UCAST(pg_index_len \<rightarrow> 64) p'"
+  "\<lbrakk> p < 0x40000; \<not> config_ARM_PA_SIZE_BITS_40 \<rbrakk> \<Longrightarrow> \<exists>p'. p = UCAST(pg_index_len \<rightarrow> 64) p'"
   apply (rule_tac x="UCAST(64 \<rightarrow> pg_index_len) p" in exI)
   apply (rule sym)
   apply (rule ucast_ucast_le_mask)
@@ -3639,7 +3639,7 @@ lemma s0_pspace_rel:
               prefer 12
               apply (clarsimp simp: kh0_obj_def mask_def)
               apply (drule less_VSRootBits_exists_ucast)
-              apply ((auto simp: kh0_obj_def kh0H_all_obj_def  add.commute pte_bits_def
+              apply ((auto simp: kh0_obj_def kh0H_all_obj_def add.commute pte_bits_def
                                  pt_offs_max pt_offs_min pte_relation_def mask_def bit_simps))[1]
                apply (insert pt_offs_max(5)[simplified mask_2pm1])[2]
                apply (erule_tac x=p' in meta_allE)
@@ -3656,7 +3656,7 @@ lemma s0_pspace_rel:
            apply (clarsimp simp: kh0_obj_def mask_def)
            apply (drule less_VSRootBits_exists_ucast)
            apply (clarsimp simp: pte_bits_def word_size_bits_def kh0H_all_obj_def)
-           apply (((clarsimp simp: kh0_obj_def kh0H_all_obj_def  add.commute
+           apply (((clarsimp simp: kh0_obj_def kh0H_all_obj_def add.commute
                                   pt_offs_max pt_offs_min pte_relation_def mask_def
                                   vm_read_only_def vmrights_map_def ucast_ucast_id vm_read_write_def
                                     pte_bits_def word_size_bits_def
@@ -3670,13 +3670,13 @@ lemma s0_pspace_rel:
           apply (clarsimp simp: kh0_obj_def mask_def)
           apply (drule less_VSRootBits_exists_ucast)
           apply (clarsimp simp: pte_bits_def word_size_bits_def kh0H_all_obj_def)
-          apply (((clarsimp simp: kh0_obj_def kh0H_all_obj_def  add.commute
+          apply (((clarsimp simp: kh0_obj_def kh0H_all_obj_def add.commute
                                  pt_offs_max pt_offs_min pte_relation_def mask_def
                                  vm_read_only_def vmrights_map_def ucast_ucast_id vm_read_write_def
                                    pte_bits_def word_size_bits_def
                           dest!: less_eq_VSRootBits_exists_ucast)))
           apply (auto simp: ppn_from_pptr_def)[1]
-           apply (clarsimp simp:  bit_simps s0_ptr_defs is_aligned_def addrFromPPtr_def ppn_from_pptr_def pageBits_def pptrBaseOffset_def pptrBase_def paddrBase_def)
+           apply (clarsimp simp: bit_simps s0_ptr_defs is_aligned_def addrFromPPtr_def ppn_from_pptr_def pageBits_def pptrBaseOffset_def pptrBase_def paddrBase_def)
           apply (insert pt_offs_max(1)[simplified mask_2pm1])[1]
           apply (erule_tac x=p' in meta_allE)
           apply (clarsimp simp: bit_simps add_diff_eq)

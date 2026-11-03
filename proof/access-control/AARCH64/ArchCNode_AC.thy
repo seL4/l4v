@@ -39,7 +39,7 @@ lemma sata_update[CNode_AC_assms]:
   "\<lbrakk> pas_wellformed aag;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                  elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -50,7 +50,7 @@ lemma sata_update2[CNode_AC_assms]:
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr')) cap';
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                 elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -79,7 +79,7 @@ lemma state_vrefs_tcb_upd[CNode_AC_assms]:
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
   "\<lbrakk> ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
+   \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (case_tac ko; case_tac "f val"; clarsimp)
   by (fastforce intro!: state_vrefs_eqI simp: opt_map_def obj_at_def is_obj_defs valid_arch_state_def)+
 
@@ -98,8 +98,7 @@ lemma set_irq_state_respects[CNode_AC_assms,wp]:
   unfolding set_irq_state_def maskInterrupt_def
   by (wpsimp wp: dmo_no_mem_respects simp: integrity_subjects_def integrity_interrupts_def)
 
-end
-
+end (* Arch *)
 
 context is_extended begin interpretation Arch .
 
@@ -107,7 +106,7 @@ lemma list_integ_lift[CNode_AC_assms]:
   assumes li:
     "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
      f
-     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag}  (cdt st) (tcb_states_of_state st)) st\<rbrace>"
+     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
    apply (unfold integrity_def[abs_def] integrity_asids_def integrity_hyp_def integrity_fpu_def)
@@ -118,16 +117,14 @@ lemma list_integ_lift[CNode_AC_assms]:
   apply (auto simp: tcb_states_of_state_def get_tcb_def)
   done
 
-end
+end (* is_extended *)
 
-
-global_interpretation CNode_AC_1?: CNode_AC_1
+global_interpretation CNode_AC?: CNode_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -157,8 +154,7 @@ crunch set_cdt_list, update_cdt_list
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
 
-end
-
+end (* Arch *)
 
 global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
@@ -166,7 +162,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -181,14 +176,13 @@ lemma aobj_ref'_same_aobject[CNode_AC_assms]:
 lemma thread_set_arch_trivT[CNode_AC_assms]:
   assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
   shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: thread_set_def wp: set_object_wp )
+  apply (wpsimp simp: thread_set_def wp: set_object_wp)
   apply (erule_tac P=P in back_subst)
   apply (rule ext)
   apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
   done
 
-end
-
+end (* Arch *)
 
 context is_extended begin interpretation Arch .
 
@@ -201,8 +195,7 @@ lemma pas_refined_tcb_domain_map_wellformed[CNode_AC_assms, wp]:
    apply simp+
   done
 
-end
-
+end (* is_extended *)
 
 global_interpretation CNode_AC_3?: CNode_AC_3
 proof goal_cases
@@ -210,7 +203,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -323,8 +315,7 @@ lemma arch_update_cap_cap_auth_conferred_subset[CNode_AC_assms]:
                 is_cap_simps
            split: if_splits)
 
-end
-
+end (* Arch *)
 
 global_interpretation CNode_AC_4?: CNode_AC_4
 proof goal_cases
@@ -332,6 +323,5 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 end

@@ -51,7 +51,7 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
          | simp add: Let_def)+
   apply safe
        apply simp+
-    apply (blast intro: aag_Control_into_owns_irq )
+    apply (blast intro: aag_Control_into_owns_irq)
    apply (drule_tac x="caps ! 0" in bspec)
     apply (fastforce intro: bang_0_in_set)
    apply (drule (1) is_cnode_into_is_subject; blast dest: prop_of_obj_ref_of_cnode_cap)
@@ -60,23 +60,21 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
 
 requalify_facts check_valid_ipc_buffer_inv
 
-end
+end (* Arch *)
 
-
-global_interpretation Decode_IF_1?: Decode_IF_1
+global_interpretation Decode_IF?: Decode_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Decode_IF_assms)?)
 qed
 
-
 context Arch begin global_naming RISCV64
 
 lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq'':
   "\<lbrakk> \<forall>asid. is_subject_asid aag asid; reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
-         riscv_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
+       riscv_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply (case_tac "base = 0")
     apply (subgoal_tac "is_subject_asid aag 1")
@@ -86,7 +84,7 @@ lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq'':
 
 lemma pas_cap_cur_auth_ASIDControlCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap ASIDControlCap); reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) = riscv_asid_table (arch_state t)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) = riscv_asid_table (arch_state t)"
   apply (rule ext)
   apply (subst asid_high_bits_of_shift[symmetric])
   apply (subst (3) asid_high_bits_of_shift[symmetric])
@@ -141,7 +139,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
         (decode_asid_control_invocation label args slot cap excaps)"
   unfolding decode_asid_control_invocation_def
   apply (rule equiv_valid_guard_imp)
-   apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply (wp check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
              reads_respects_f_inv'[OF ensure_no_children_rev]
@@ -189,7 +187,7 @@ lemma decode_frame_invocation_reads_respects_f:
             check_slot_def check_vp_alignment_def gets_the_def
   supply gets_the_ev[wp del]
   apply (rule equiv_valid_guard_imp)
-   apply ((wp gets_ev' check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply ((wp gets_ev' check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
@@ -320,8 +318,7 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
                  decode_frame_invocation_reads_respects_f
                  decode_page_table_invocation_reads_respects_f | fastforce)+
 
-end
-
+end (* Arch *)
 
 global_interpretation Decode_IF_2?: Decode_IF_2
 proof goal_cases

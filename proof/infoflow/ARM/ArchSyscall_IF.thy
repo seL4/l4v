@@ -182,10 +182,9 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
 
 declare arch_prepare_set_domain_inv[Syscall_IF_assms]
 
-end
+end (* Arch *)
 
-
-global_interpretation Syscall_IF_1?: Syscall_IF_1
+global_interpretation Syscall_IF?: Syscall_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

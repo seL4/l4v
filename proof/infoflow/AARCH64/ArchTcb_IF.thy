@@ -23,7 +23,7 @@ crunch as_user, restart
 
 lemma cap_ne_global_pt:
   "\<lbrakk> ex_nonz_cap_to word s; valid_global_refs s; valid_global_arch_objs s \<rbrakk>
-     \<Longrightarrow> word \<noteq> arm_us_global_vspace (arch_state s)"
+   \<Longrightarrow> word \<noteq> arm_us_global_vspace (arch_state s)"
   unfolding ex_nonz_cap_to_def
   apply (simp only: cte_wp_at_caps_of_state zobj_refs_to_obj_refs)
   apply (elim exE conjE)
@@ -81,16 +81,14 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
   unfolding arch_get_sanitise_register_info_def
   by (wpsimp wp: reads_equiv_valid_inv_f)
 
-end
+end (* Arch *)
 
-
-global_interpretation Tcb_IF_1?: Tcb_IF_1
+global_interpretation Tcb_IF?: Tcb_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Tcb_IF_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -166,7 +164,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
 
 lemma tc_reads_respects_f[Tcb_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  and tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
+  assumes tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
   notes validE_valid[wp del] hoare_weak_lift_imp [wp]
   shows
     "reads_respects_f aag l
@@ -176,7 +174,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
        (invoke_tcb ti)"
   apply (simp add: split_def cong: option.case_cong)
-  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where  st=st and Q=\<top>]])
+  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where st=st and Q=\<top>]])
                     apply (wpsimp wp: hoare_vcg_const_imp_liftE_R simp: when_def | wpc)+
                     apply (rule conjI)
                      apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
@@ -279,7 +277,7 @@ crunch lazy_fpu_restore
 
 lemma equiv_but_for_labels_guard_imp:
   "\<lbrakk> equiv_but_for_labels aag L' st s; L' \<subseteq> L \<rbrakk>
-     \<Longrightarrow> equiv_but_for_labels aag L st s"
+   \<Longrightarrow> equiv_but_for_labels aag L st s"
   by (auto simp: equiv_but_for_labels_def elim!: states_equiv_for_guard_imp)
 
 definition is_subject_cur_fpu_2 where
@@ -313,7 +311,7 @@ lemma dmo_disableFpu_reads_respects[wp]:
 (* FIXME AARCH64 IF: consolidate cur_fpu_of and is_arch_cur_fpu *)
 lemma equiv_kheap_equiv_cur_fpu_of:
   "\<lbrakk> equiv_for P kheap s s'; P t; valid_cur_fpu s; valid_cur_fpu s' \<rbrakk>
-     \<Longrightarrow> cur_fpu_of s t = cur_fpu_of s' t"
+   \<Longrightarrow> cur_fpu_of s t = cur_fpu_of s' t"
   by (clarsimp simp: valid_cur_fpu_def equiv_for_def is_tcb_cur_fpu_def obj_at_def)
 
 lemma lazy_fpu_restore_reads_respects:
@@ -354,7 +352,7 @@ lemma arch_tcb_context_get_cur_fpu_update[simp]:
   by (simp add: arch_tcb_context_get_def)
 
 lemma globals_equiv_fpu_owner_update[simp]:
-  "globals_equiv st (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>)  =
+  "globals_equiv st (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>) =
    globals_equiv st s"
   by (auto simp add: globals_equiv_def idle_equiv_def)
 
@@ -438,8 +436,7 @@ crunch arch_post_set_flags
   for globals_equiv[Tcb_IF_assms]: "globals_equiv st"
   (simp: crunch_simps)
 
-end
-
+end (* Arch *)
 
 global_interpretation Tcb_IF_2?: Tcb_IF_2
 proof goal_cases

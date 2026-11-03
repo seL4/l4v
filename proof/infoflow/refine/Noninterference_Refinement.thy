@@ -22,7 +22,7 @@ lemma internal_R_ADT_A_if:
 
 lemma LI_trans:
   "\<lbrakk>LI A H R (Ia \<times> Ih); LI H C S (Ih \<times> Ic); H \<Turnstile> Ih\<rbrakk>
-    \<Longrightarrow> LI A C (R O (S \<inter> {(h, c). h \<in> Ih})) (Ia \<times> Ic)"
+   \<Longrightarrow> LI A C (R O (S \<inter> {(h, c). h \<in> Ih})) (Ia \<times> Ic)"
   apply (clarsimp simp: LI_def)
   apply safe
     apply (clarsimp simp: Image_def)
@@ -51,7 +51,7 @@ definition big_step_ADT_C_if where
 
 (*Note: Might be able to generalise big_step_adt_refines for fw_sim*)
 lemma big_step_ADT_C_if_big_step_ADT_A_if_refines:
-  "uop_nonempty utf \<Longrightarrow> refines (big_step_ADT_C_if utf) (big_step_ADT_A_if utf) "
+  "uop_nonempty utf \<Longrightarrow> refines (big_step_ADT_C_if utf) (big_step_ADT_A_if utf)"
   apply (simp add: big_step_ADT_A_if_def big_step_ADT_C_if_def)
   apply (rule big_step_adt_refines[where A="ADT_A_if utf", simplified internal_R_ADT_A_if])
     apply (rule LI_trans)
@@ -62,13 +62,13 @@ lemma big_step_ADT_C_if_big_step_ADT_A_if_refines:
   apply simp
   done
 
-end
+end (* kernel_m *)
 
 lemma LI_sub_big_steps':
   "\<lbrakk>(s',as) \<in> sub_big_steps C (internal_R C R) s;
     LI A C S (Ia \<times> Ic); A [> Ia; C [> Ic;
     (t, s) \<in> S; s \<in> Ic; t \<in> Ia\<rbrakk>
-  \<Longrightarrow> \<exists>t'. (t',as) \<in> sub_big_steps A (internal_R A R) t \<and> (t', s') \<in> S \<and> t' \<in> Ia"
+   \<Longrightarrow> \<exists>t'. (t',as) \<in> sub_big_steps A (internal_R A R) t \<and> (t', s') \<in> S \<and> t' \<in> Ia"
   apply (induct rule: sub_big_steps.induct)
    apply(clarsimp simp: LI_def)
    apply (rule_tac x=t in exI)
@@ -267,11 +267,9 @@ lemma Fin_Init_s0_ADT_C_if:
   by (clarsimp simp: ADT_C_if_def s0_def)
 
 lemma big_step_R_tranclp_abs':
-        "\<lbrakk>(s, s')
-        \<in> lift_fst_rel (lift_snd_rel state_relation) O
-          lift_fst_rel (lift_snd_rel rf_sr);
-        big_step_R\<^sup>+\<^sup>+ s0 s''\<rbrakk> \<Longrightarrow> s'' = (Fin (ADT_C_if fp utf) s')
-       \<longrightarrow> big_step_R\<^sup>+\<^sup>+ s0 s"
+  "\<lbrakk> (s, s') \<in> lift_fst_rel (lift_snd_rel state_relation) O lift_fst_rel (lift_snd_rel rf_sr);
+     big_step_R\<^sup>+\<^sup>+ s0 s'' \<rbrakk>
+   \<Longrightarrow> s'' = (Fin (ADT_C_if fp utf) s') \<longrightarrow> big_step_R\<^sup>+\<^sup>+ s0 s"
   apply (erule tranclp_induct)
    apply (clarsimp simp: Fin_ADT_C_if lift_fst_rel_def)
    apply (rule tranclp.r_into_trancl)
@@ -380,7 +378,7 @@ lemma big_step_ADT_C_if_enabled_system:
   apply (rule ADT_C_if_big_step_R_terminate)
   done
 
-end
+end (* valid_initial_state_C *)
 
 sublocale valid_initial_state_C \<subseteq>
      abstract_to_C: noninterference_refinement
@@ -407,6 +405,6 @@ lemma xnonleakage_C:
   apply(rule xnonleakage)
   done
 
-end
+end (* valid_initial_state_C *)
 
 end

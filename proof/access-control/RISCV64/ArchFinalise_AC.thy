@@ -20,17 +20,17 @@ lemma state_vrefs_clear_asid_table:
   by (fastforce simp: state_vrefs_def dest: vs_lookup_clear_asid_table[simplified fun_upd_def])
 
 lemma vs_lookup_table_subseteq:
-    "\<lbrakk> vs_lookup_table bot_level asid vref s' = Some (lvl,ptr);
-       \<forall>pptr. pool_for_asid asid s' = Some pptr \<longrightarrow> pool_for_asid asid s = Some pptr;
-       \<forall>pptr vref. vspace_for_pool pptr asid (asid_pools_of s') = Some vref
-               \<longrightarrow> vspace_for_pool pptr asid (asid_pools_of s) = Some vref;
-       ptes_of s' = ptes_of s \<rbrakk>
+  "\<lbrakk> vs_lookup_table bot_level asid vref s' = Some (lvl,ptr);
+     \<forall>pptr. pool_for_asid asid s' = Some pptr \<longrightarrow> pool_for_asid asid s = Some pptr;
+     \<forall>pptr vref. vspace_for_pool pptr asid (asid_pools_of s') = Some vref
+                 \<longrightarrow> vspace_for_pool pptr asid (asid_pools_of s) = Some vref;
+     ptes_of s' = ptes_of s \<rbrakk>
    \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (lvl,ptr)"
    by (auto simp: vs_lookup_table_def in_obind_eq split: if_splits)
 
 lemma state_vrefs_clear_asid_pool:
   assumes "asid_table s (asid_high_bits_of asid) = Some pool_ptr"
-  and "ako_at (ASIDPool pool) pool_ptr s"
+  assumes "ako_at (ASIDPool pool) pool_ptr s"
   shows "state_vrefs (s\<lparr>kheap := \<lambda>a. if a = pool_ptr
                                      then Some (ArchObj (ASIDPool (\<lambda>a. if a = asid_low_bits_of asid
                                                                        then None
@@ -144,11 +144,11 @@ lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
 
 lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
   "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
-     \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
+   \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   by simp
 
 lemma set_vm_root_integrity[wp]:
-  "set_vm_root param_a \<lbrace>integrity aag X st\<rbrace> "
+  "set_vm_root param_a \<lbrace>integrity aag X st\<rbrace>"
   unfolding set_vm_root_def
   by (wpsimp wp: dmo_wp mol_respects get_cap_wp simp: setVSpaceRoot_def)
 
@@ -179,7 +179,7 @@ crunch set_asid_pool
 
 lemma set_asid_pool_tcb_states_of_state[wp]:
   "set_asid_pool p pool \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
-  apply (wpsimp wp: set_object_wp_strong simp: obj_at_def  set_asid_pool_def)
+  apply (wpsimp wp: set_object_wp_strong simp: obj_at_def set_asid_pool_def)
   apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
    apply (auto simp: tcb_states_of_state_def get_tcb_def)
   done
@@ -257,16 +257,14 @@ declare prepare_thread_delete_pas_refined[Finalise_AC_assms]
 declare finalise_cap_replaceable[Finalise_AC_assms]
 declare valid_cur_fpu_lift_arch[Finalise_AC_assms]
 
-end
+end (* Arch *)
 
-
-global_interpretation Finalise_AC_1?: Finalise_AC_1
+global_interpretation Finalise_AC?: Finalise_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Finalise_AC_assms | solves \<open>wp only: Finalise_AC_assms; simp\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -312,8 +310,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   apply (wp | simp | (rule hoare_pre, wpc))+
   done
 
-end
-
+end (* Arch *)
 
 global_interpretation Finalise_AC_2?: Finalise_AC_2
 proof goal_cases

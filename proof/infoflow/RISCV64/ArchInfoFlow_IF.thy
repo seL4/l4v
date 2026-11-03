@@ -36,14 +36,14 @@ lemma equiv_asids_trans[InfoFlow_IF_assms]:
 
 lemma equiv_asids_non_asid_pool_kheap_update[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; non_asid_pool_kheap_update s kh; non_asid_pool_kheap_update s' kh' \<rbrakk>
-     \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
+   \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid non_asid_pool_kheap_update_def)
   apply (fastforce simp: equiv_asid'_def split: option.splits)
   done
 
 lemma equiv_asids_identical_kheap_updates[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
-     \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
+   \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid_def opt_map_def
                         asid_pool_at_kheap identical_kheap_updates_def)
   apply (case_tac "kh pool_ptr = kh' pool_ptr"; fastforce)
@@ -57,13 +57,13 @@ lemma equiv_asids_triv':
   "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
      riscv_asid_table (arch_state t) = riscv_asid_table (arch_state s);
      riscv_asid_table (arch_state t') = riscv_asid_table (arch_state s') \<rbrakk>
-     \<Longrightarrow> equiv_asids R t t'"
+   \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_def equiv_asid equiv_asid'_def)
 
 lemma equiv_asids_triv[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
      arch_state t = arch_state s; arch_state t' = arch_state s' \<rbrakk>
-     \<Longrightarrow> equiv_asids R t t'"
+   \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_triv')
 
 lemma globals_equiv_refl[InfoFlow_IF_assms]:
@@ -130,7 +130,7 @@ lemmas equiv_arch_taut =
   no_hyp_taut
   no_fpu_taut
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   identical_hyp_state_updates
@@ -138,14 +138,12 @@ arch_requalify_consts
   no_hyp
   no_fpu
 
-
-global_interpretation InfoFlow_IF_1?: InfoFlow_IF_1 identical_hyp_state_updates identical_fpu_state_updates
+global_interpretation InfoFlow_IF?: InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -181,8 +179,8 @@ lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
                     (equiv_machine_state (aag_can_affect aag l)) Q f"
   assumes guard:
     "\<And>s. P s \<Longrightarrow> Q (machine_state s)"
-  and no_hyp: "no_hyp f"
-  and no_fpu: "no_fpu f"
+  assumes no_hyp: "no_hyp f"
+  assumes no_fpu: "no_fpu f"
   shows
   "reads_respects aag l P (do_machine_op f)"
   apply (rule use_spec_ev)
@@ -212,10 +210,9 @@ lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
      apply (wp | simp add: guard)+
   done
 
-end
+end (* Arch *)
 
-
-global_interpretation InfoFlow_IF_1?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
+global_interpretation InfoFlow_IF?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
 proof goal_cases
   interpret Arch .
   case 1 show ?case

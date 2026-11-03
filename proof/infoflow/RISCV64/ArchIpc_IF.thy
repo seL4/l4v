@@ -119,7 +119,7 @@ lemma cptrs_in_ipc_buffer[Ipc_IF_assms]:
   "\<lbrakk> n \<in> set [buffer_cptr_index ..< buffer_cptr_index + unat (mi_extra_caps mi)];
      is_aligned (p :: obj_ref) msg_align_bits;
      buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
+   \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
     apply (simp add: msg_align_bits')
@@ -130,9 +130,9 @@ lemma cptrs_in_ipc_buffer[Ipc_IF_assms]:
   done
 
 lemma msg_in_ipc_buffer[Ipc_IF_assms]:
-  "\<lbrakk> n = msg_max_length \<or> n < msg_max_length;  is_aligned p msg_align_bits;
+  "\<lbrakk> n = msg_max_length \<or> n < msg_max_length; is_aligned p msg_align_bits;
      unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits
+   \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits
          \<subseteq> ptr_range (p :: obj_ref) msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
@@ -165,9 +165,9 @@ lemma arch_derive_cap_rev[Ipc_IF_assms]:
 
 lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
   "\<lbrakk> is_aligned (buf :: obj_ref) msg_align_bits; n \<in> {0..2} \<rbrakk>
-     \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps)) * word_size
-                                                                                    + n * word_size)
-                   word_size_bits
+   \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps)) * word_size
+                                                                                  + n * word_size)
+                 word_size_bits
          \<subseteq> ptr_range buf msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
@@ -177,7 +177,7 @@ lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
   apply (subst upto_enum_step_shift_red[where us=3, simplified])
      apply (simp add: msg_align_bits word_bits_def)+
   apply (simp add: image_def msg_max_length_def msg_max_extra_caps_def)
-  apply (rule_tac x="(125::nat) + unat n"  in bexI)
+  apply (rule_tac x="(125::nat) + unat n" in bexI)
    apply simp+
   apply (fastforce intro: unat_less_helper word_leq_minus_one_le)
   done
@@ -185,7 +185,7 @@ lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
 lemma mrs_in_ipc_buffer[Ipc_IF_assms]:
   "\<lbrakk> n \<in> set [length msg_registers + 1 ..< Suc n'];
      is_aligned (buf :: obj_ref) msg_align_bits; n' < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range buf msg_align_bits"
+   \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range buf msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
     apply (simp add: msg_align_bits')
@@ -279,16 +279,14 @@ lemma transfer_caps_loop_valid_arch[Ipc_IF_assms]:
   "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
   by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
 
-end
+end (* Arch *)
 
-
-global_interpretation Ipc_IF_1?: Ipc_IF_1
+global_interpretation Ipc_IF?: Ipc_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Ipc_IF_assms | solves \<open>wp only: Ipc_IF_assms; simp\<close>)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 
@@ -321,7 +319,7 @@ lemma copy_mrs_reads_respects[Ipc_IF_assms]:
    apply (simp add: msg_align_bits word_bits_def)
   apply (simp add: word_size_def word_size_bits_def)
   apply (subst upto_enum_step_shift_red[where us=3, simplified])
-     apply (simp add: msg_align_bits word_bits_def aag_can_read_or_affect_ipc_buffer_def )+
+     apply (simp add: msg_align_bits word_bits_def aag_can_read_or_affect_ipc_buffer_def)+
   apply (fastforce simp: image_def)
   done
 
@@ -385,7 +383,7 @@ lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
   unfolding set_mrs_def
   apply (wp | wpc)+
         apply (subst zipWithM_x_mapM_x)
-        apply (rule_tac Q'="\<lambda>_. equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L  \<and>
+        apply (rule_tac Q'="\<lambda>_. equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L \<and>
                                (case buf of (Some buf') \<Rightarrow> is_aligned buf' msg_align_bits \<and>
                                                            (\<forall>x \<in> ptr_range buf' msg_align_bits.
                                                               pasObjectAbs aag x \<in> L)
@@ -458,8 +456,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
    apply (rule set_mrs_ret_eq)
   by simp
 
-end
-
+end (* Arch *)
 
 global_interpretation Ipc_IF_2?: Ipc_IF_2
 proof goal_cases
