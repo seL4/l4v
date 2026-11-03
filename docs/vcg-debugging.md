@@ -105,7 +105,7 @@ potential reasons for this.
   as for avoiding instantiation to `False`:
 
   ```isabelle
-  apply (rule conseqPre, vgc, rule subset_refl)
+  apply (rule conseqPre, vcg, rule subset_refl)
   ```
 
 * `vcg` might be trying to inline multiple function definitions and the goal is

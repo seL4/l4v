@@ -102,6 +102,9 @@ lemma triv_refinement_alternative2:
   "triv_refinement (a \<sqinter> b) b"
   by (clarsimp simp: triv_refinement_def alternative_def)
 
+lemma triv_refinement_chaos:
+  "triv_refinement chaos f"
+  by (clarsimp simp: triv_refinement_def chaos_def)
 
 lemma validI_triv_refinement:
   "\<lbrakk>triv_refinement f g; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; prefix_closed g\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"

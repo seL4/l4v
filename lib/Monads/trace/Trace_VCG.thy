@@ -788,6 +788,10 @@ lemma fail_wp:
   "\<lbrace>\<top>\<rbrace> fail \<lbrace>Q\<rbrace>"
   by (simp add: valid_def fail_def mres_def vimage_def)
 
+lemma chaos_wp:
+  "\<lbrace>\<lambda>_. \<forall>rv s. Q rv s\<rbrace> chaos \<lbrace>Q\<rbrace>"
+  by (simp add: valid_def chaos_def mres_def)
+
 lemma return_wp:
   "\<lbrace>P x\<rbrace> return x \<lbrace>P\<rbrace>"
   by(simp add: valid_def return_def mres_def)
@@ -812,6 +816,11 @@ lemma modify_wp:
 lemma failE_wp:
   "\<lbrace>\<top>\<rbrace> fail \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (simp add: validE_def fail_wp)
+
+lemma chaosE_wp:
+  "\<lbrace>\<lambda>_. (\<forall>rv s. Q rv s) \<and> (\<forall>e s. E e s)\<rbrace> chaos \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
+  unfolding validE_def
+  by (wp chaos_wp) (simp split: sum.split)
 
 lemma returnOk_wp:
   "\<lbrace>P x\<rbrace> returnOk x \<lbrace>P\<rbrace>,\<lbrace>E\<rbrace>"
@@ -1130,6 +1139,8 @@ lemmas [wp] = wp_post_tauts
               throwError_wp
               fail_wp
               failE_wp
+              chaos_wp
+              chaosE_wp
               assert_wp
               state_assert_wp
               assert_opt_wp
