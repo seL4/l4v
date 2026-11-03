@@ -42,6 +42,34 @@ lemma integrity_cdt_list_as_list_integ:
 crunch set_untyped_cap_as_full
   for integrity_autarch: "integrity aag X st"
 
+context is_extended begin
+
+lemma list_integ_lift:
+  assumes li:
+    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
+     f
+     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag}  (cdt st) (tcb_states_of_state st)) st\<rbrace>"
+  shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (rule hoare_pre)
+   apply (unfold integrity_def[abs_def])
+   apply (simp only: integrity_cdt_list_as_list_integ)
+   apply (simp add: tcb_states_of_state_def get_tcb_def)
+   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
+  apply (simp only: integrity_cdt_list_as_list_integ)
+  apply (auto simp: tcb_states_of_state_def get_tcb_def)
+  done
+
+lemma pas_refined_tcb_domain_map_wellformed[wp]:
+  assumes tdmw: "f \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
+  shows "f \<lbrace>pas_refined aag\<rbrace>"
+  apply (simp add: pas_refined_def)
+  apply (wp tdmw)
+   apply (wp lift_inv)
+   apply simp+
+  done
+
+end (* is_extended *)
+
 locale CNode_AC =
   fixes aag :: "'a PAS"
   and val_t :: "'b"
@@ -81,35 +109,10 @@ locale CNode_AC =
     "\<And>P. maskInterrupt m irq \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
   assumes maskInterrupt_device_state[wp]:
     "\<And>P. maskInterrupt m irq \<lbrace>\<lambda>s. P (device_state s)\<rbrace>"
-  assumes cap_insert_ext_extended_list_integ_lift:
-    "\<And>Q a b c d e.
-     \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-       cap_insert_ext a b c d e
-       \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_insert_ext a b c d e \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  assumes cap_move_ext_list_integ_lift:
-    "\<And>Q a b c d.
-     \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-       cap_move_ext a b c d
-       \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_move_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  assumes cap_swap_ext_extended_list_integ_lift:
-    "\<And>Q a b c d.
-     \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-       cap_swap_ext a b c d
-       \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_swap_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  assumes empty_slot_extended_list_integ_lift:
-    "\<And>Q a b.
-     \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-       empty_slot_ext a b
-       \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> empty_slot_ext a b \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   assumes set_irq_state_respects[wp]:
     "\<lbrace>integrity aag X st and K (is_subject_irq aag irq)\<rbrace>
      set_irq_state irqst irq
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-
 begin
 
 lemma set_original_integrity_autarch:
@@ -141,7 +144,7 @@ lemma cap_insert_integrity_autarch:
    cap_insert cap src_slot dest_slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cap_insert_def)
-  apply (wp set_original_integrity_autarch cap_insert_ext_extended_list_integ_lift
+  apply (wp set_original_integrity_autarch cap_insert_ext_extended.list_integ_lift
             cap_insert_list_integrity update_cdt_fun_upd_integrity_autarch gets_inv
             set_cap_integrity_autarch set_untyped_cap_as_full_integrity_autarch assert_inv)
   apply fastforce
@@ -339,7 +342,7 @@ lemma cap_move_respects[wp]:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: cap_move_def)
    apply (wpsimp wp: get_cap_wp set_cap_integrity_autarch set_original_integrity_autarch
-                     cap_move_ext_list_integ_lift[where Q="\<top>"] cap_move_list_integrity
+                     cap_move_ext.list_integ_lift[where Q="\<top>"] cap_move_list_integrity
                simp: set_cdt_def | blast)+
     apply (rule wp_integrity_clean')
      apply (simp add: integrity_def integrity_cdt_def)
@@ -355,7 +358,7 @@ lemma cap_swap_respects[wp]:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: cap_swap_def)
   apply (wp get_cap_wp set_cap_integrity_autarch cap_swap_list_integrity
-            cap_swap_ext_extended_list_integ_lift[where Q="\<top>"]
+            cap_swap_ext_extended.list_integ_lift[where Q="\<top>"]
             set_original_integrity_autarch[unfolded pred_conj_def K_def]
          | simp add: set_cdt_def split del: if_split | blast)+
     apply (rule wp_integrity_clean')
@@ -406,7 +409,7 @@ lemma empty_slot_integrity_spec:
   apply (simp add: spec_valid_def)
   apply (simp add: empty_slot_def)
   apply (wp add: get_cap_wp set_cap_integrity_autarch set_original_integrity_autarch
-                 empty_slot_extended_list_integ_lift empty_slot_list_integrity[where m="cdt s"]
+                 empty_slot_extended.list_integ_lift empty_slot_list_integrity[where m="cdt s"]
          | simp add: set_cdt_def | wpc)+
   apply (safe; \<comment> \<open>for speedup\<close>
          (clarsimp simp add: integrity_def)?,
@@ -832,7 +835,7 @@ lemma empty_slot_integrity_transferable[wp_transferable]:
                        in hoare_post_imp)
         apply (clarsimp simp add: integrity_def)
         apply (frule all_childrenD[OF cdt_change_allowed_all_children];fastforce)
-       apply (wp empty_slot_extended_list_integ_lift)
+       apply (wp empty_slot_extended.list_integ_lift)
           apply (rule hoare_pre)
            apply (rule_tac m = "cdt s" in empty_slot_list_integrity)
           apply simp
@@ -937,18 +940,6 @@ crunch set_cdt
 
 
 locale CNode_AC_3 = CNode_AC_2 +
-  assumes cap_move_ext_pas_refined_tcb_domain_map_wellformed[wp]:
-    "\<And>a b c d. cap_move_ext a b c d \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
-                \<Longrightarrow> cap_move_ext a b c d \<lbrace>pas_refined aag\<rbrace>"
-  assumes cap_insert_ext_pas_refined_tcb_domain_map_wellformed[wp]:
-    "\<And>a b c d e. cap_insert_ext a b c d e \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
-                  \<Longrightarrow> cap_insert_ext a b c d e \<lbrace>pas_refined aag\<rbrace>"
-  assumes cap_swap_ext_extended_pas_refined_tcb_domain_map_wellformed[wp]:
-    "\<And>a b c d. cap_swap_ext a b c d \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
-                \<Longrightarrow> cap_swap_ext a b c d \<lbrace>pas_refined aag\<rbrace>"
-  assumes empty_slot_ext_pas_refined_tcb_domain_map_wellformed[wp]:
-    "\<And>a b. empty_slot_ext a b \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
-            \<Longrightarrow> empty_slot_ext a b \<lbrace>pas_refined aag\<rbrace>"
   assumes arch_ost_cap_deletion_pas_refined[wp]:
     "arch_post_cap_deletion irqopt \<lbrace>pas_refined aag\<rbrace>"
   assumes aobj_ref'_same_aobject:

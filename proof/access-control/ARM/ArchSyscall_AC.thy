@@ -11,14 +11,14 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Syscall_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Syscall_AC locale *)
 
-declare prepare_thread_delete_idle_thread[Syscall_AC_assms]
-declare arch_finalise_cap_idle_thread[Syscall_AC_assms]
-declare cap_move_idle_thread[Syscall_AC_assms]
-declare cancel_badged_sends_idle_thread[Syscall_AC_assms]
+declare prepare_thread_delete_idle_thread[Arch_assms]
+declare arch_finalise_cap_idle_thread[Arch_assms]
+declare cap_move_idle_thread[Arch_assms]
+declare cancel_badged_sends_idle_thread[Arch_assms]
 
-lemma invs_irq_state_update[Syscall_AC_assms, simp]:
+lemma invs_irq_state_update[Arch_assms, simp]:
   "invs (s\<lparr>machine_state := irq_state_update f sa\<rparr>) = invs (s\<lparr>machine_state := sa\<rparr>)"
   apply (rule iffI)
    apply (subst invs_irq_state_independent[symmetric])
@@ -28,42 +28,37 @@ lemma invs_irq_state_update[Syscall_AC_assms, simp]:
   done
 
 crunch prepare_thread_delete, arch_finalise_cap
-  for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
+  for cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch set_original
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
-lemma cap_move_cur_thread[Syscall_AC_assms, wp]:
+lemma cap_move_cur_thread[Arch_assms, wp]:
   "cap_move new_cap src_slot dest_slot \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
   unfolding cap_move_def
   by (wpsimp wp: dxo_wp_weak)
 
-lemma cancel_badged_sends_cur_thread[Syscall_AC_assms, wp]:
+lemma cancel_badged_sends_cur_thread[Arch_assms, wp]:
   "cancel_badged_sends epptr badge \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
   unfolding cancel_badged_sends_def
   by (wpsimp wp: dxo_wp_weak filterM_preserved crunch_wps)
 
-lemma state_vrefs_cur_thread_update[Syscall_AC_assms, simp]:
+lemma state_vrefs_cur_thread_update[Arch_assms, simp]:
   "state_vrefs (cur_thread_update f s) = state_vrefs s"
   by (simp add: state_vrefs_def)
 
-crunch arch_mask_irq_signal, handle_reserved_irq
-  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
-
-crunch handle_hypervisor_fault
-  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
-  and cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
-  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+crunch arch_mask_irq_signal
+  for pas_refined[Arch_assms, wp]: "pas_refined aag"
 
 crunch handle_vm_fault
-  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
-  and cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
-  and state_refs_of[Syscall_AC_assms, wp]: "\<lambda>s. P (state_refs_of s)"
+  for pas_refined[Arch_assms, wp]: "pas_refined aag"
+  and cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
+  and state_refs_of[Arch_assms, wp]: "\<lambda>s. P (state_refs_of s)"
   (wp: as_user_getRestart_inv ignore: as_user)
 
-lemma handle_vm_fault_integrity[Syscall_AC_assms]:
+lemma handle_vm_fault_integrity[Arch_assms]:
   "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
    handle_vm_fault thread vmfault_type
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
@@ -73,14 +68,14 @@ lemma handle_vm_fault_integrity[Syscall_AC_assms]:
   done
 
 crunch ackInterrupt, resetTimer
-  for underlying_memory_inv[Syscall_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
+  for underlying_memory_inv[Arch_assms, wp]: "\<lambda>s. P (underlying_memory s)"
   (simp: maskInterrupt_def)
 
-crunch arch_mask_irq_signal, handle_reserved_irq
-  for integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+crunch arch_mask_irq_signal
+  for integrity[Arch_assms, wp]: "integrity aag X st"
   (wp: dmo_no_mem_respects)
 
-lemma set_thread_state_restart_to_running_respects[Syscall_AC_assms]:
+lemma set_thread_state_restart_to_running_respects[Arch_assms]:
   "\<lbrace>integrity aag X st and st_tcb_at ((=) Restart) thread and K (pasMayActivate aag)\<rbrace>
    do pc \<leftarrow> as_user thread getRestartPC;
             as_user thread $ setNextPC pc;
@@ -100,107 +95,116 @@ lemma set_thread_state_restart_to_running_respects[Syscall_AC_assms]:
   by (auto simp: tcb_bound_notification_reset_integrity_def arch_tcb_get_registers_def
                  arch_tcb_set_registers_def arch_tcb_context_get_def arch_tcb_context_set_def)
 
-lemma getActiveIRQ_inv[Syscall_AC_assms]:
+lemma getActiveIRQ_inv[Arch_assms]:
   "\<forall>f s. P s \<longrightarrow> P (irq_state_update f s) \<Longrightarrow>
    \<lbrace>P\<rbrace> getActiveIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>"
   by (wpsimp simp: irq_state_independent_def)
 
-lemma getActiveIRQ_rv_None[Syscall_AC_assms]:
+lemma getActiveIRQ_rv_None[Arch_assms]:
   "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)\<rbrace>"
   by (wpsimp simp: getActiveIRQ_def)
 
-lemma arch_activate_idle_thread_respects[Syscall_AC_assms, wp]:
+lemma arch_activate_idle_thread_respects[Arch_assms, wp]:
   "arch_activate_idle_thread t \<lbrace>integrity aag X st\<rbrace>"
   unfolding arch_activate_idle_thread_def by wpsimp
 
-lemma arch_activate_idle_thread_pas_refined[Syscall_AC_assms, wp]:
+lemma arch_activate_idle_thread_pas_refined[Arch_assms, wp]:
   "arch_activate_idle_thread t \<lbrace>pas_refined aag\<rbrace>"
   unfolding arch_activate_idle_thread_def by wpsimp
 
-lemma integrity_exclusive_state_update[Syscall_AC_assms, simp]:
+lemma integrity_exclusive_state_update[Arch_assms, simp]:
   "integrity aag X st (s\<lparr>machine_state := exclusive_state_update f (machine_state s)\<rparr>) =
    integrity aag X st s"
   unfolding integrity_def by simp
 
-lemma dmo_clearExMonitor_respects_globals[Syscall_AC_assms, wp]:
+lemma dmo_clearExMonitor_respects_globals[Arch_assms, wp]:
   "do_machine_op clearExMonitor \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_wp simp: clearExMonitor_def)
 
-lemma arch_switch_to_thread_respects[Syscall_AC_assms, wp]:
+lemma arch_switch_to_thread_respects[Arch_assms, wp]:
   "arch_switch_to_thread t \<lbrace>integrity aag X st\<rbrace>"
   unfolding arch_switch_to_thread_def by wpsimp
 
-lemma arch_switch_to_thread_pas_refined[Syscall_AC_assms, wp]:
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>integrity aag X st and valid_arch_state and valid_cur_fpu\<rbrace>
+   arch_switch_to_thread t
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp
+
+lemma arch_switch_to_thread_pas_refined[Arch_assms, wp]:
   "arch_switch_to_thread t \<lbrace>pas_refined aag\<rbrace>"
   unfolding arch_switch_to_thread_def by wpsimp
 
-lemma arch_switch_to_idle_thread_respects[Syscall_AC_assms, wp]:
+lemma arch_switch_to_idle_thread_respects[Arch_assms, wp]:
   "arch_switch_to_idle_thread \<lbrace>integrity aag X st\<rbrace>"
   unfolding arch_switch_to_idle_thread_def by wpsimp
 
-lemma arch_switch_to_idle_thread_pas_refined[Syscall_AC_assms, wp]:
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>integrity aag X st and valid_arch_state\<rbrace>
+   arch_switch_to_idle_thread
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp
+
+lemma arch_switch_to_idle_thread_pas_refined[Arch_assms, wp]:
   "arch_switch_to_idle_thread \<lbrace>pas_refined aag\<rbrace>"
   unfolding arch_switch_to_idle_thread_def by wpsimp
 
-lemma arch_mask_irq_signal_arch_state[Syscall_AC_assms, wp]:
+lemma arch_mask_irq_signal_arch_state[Arch_assms, wp]:
   "arch_mask_irq_signal irq \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
   by wpsimp
 
-lemma handle_reserved_irq_arch_state[Syscall_AC_assms, wp]:
-  "handle_reserved_irq irq \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
-  unfolding handle_reserved_irq_def by wpsimp
-
 crunch init_arch_objects
-  for arch_state[Syscall_AC_assms, wp]: "\<lambda>s. P (arch_state s)"
+  for arch_state[Arch_assms, wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps)
 
 crunch arch_post_cap_deletion
-  for ct_active[Syscall_AC_assms, wp]: "ct_active"
+  for ct_active[Arch_assms, wp]: "ct_active"
   (wp: crunch_wps filterM_preserved unless_wp
    simp: crunch_simps ignore: do_extended_op)
 
 crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
-  handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
-  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq
-  for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
-  and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
-  and cur_domain[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  handle_vm_fault, handle_arch_fault_reply,
+  arch_prepare_set_domain, arch_post_set_flags, handle_spurious_irq
+  for cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
+  and idle_thread[Arch_assms, wp]: "\<lambda>s. P (idle_thread s)"
+  and cur_domain[Arch_assms, wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps)
 
 \<comment> \<open>These aren't proved in the previous crunch, and hence need to be declared\<close>
-declare handle_arch_fault_reply_cur_thread[Syscall_AC_assms]
-declare handle_arch_fault_reply_it[Syscall_AC_assms]
-declare arch_prepare_set_domain_idle_thread[Syscall_AC_assms]
-declare arch_post_set_flags_inv[Syscall_AC_assms]
+declare handle_arch_fault_reply_cur_thread[Arch_assms]
+declare handle_arch_fault_reply_it[Arch_assms]
+declare arch_prepare_set_domain_idle_thread[Arch_assms]
+declare arch_post_set_flags_inv[Arch_assms]
 
-lemma ackInterrupt_integrity[Syscall_AC_assms,wp]:
+lemma ackInterrupt_integrity[Arch_assms,wp]:
   "do_machine_op (ackInterrupt irq) \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_no_mem_respects)
 
-lemma maskInterrupt_integrity[Syscall_AC_assms,wp]:
+lemma maskInterrupt_integrity[Arch_assms,wp]:
   "do_machine_op (maskInterrupt m irq) \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_no_mem_respects)
 
-lemma resetTimer_integrity[Syscall_AC_assms,wp]:
+lemma resetTimer_integrity[Arch_assms,wp]:
   "do_machine_op resetTimer \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_no_mem_respects)
 
-lemma valid_cur_hyp_triv[Syscall_AC_assms]:
-  "f \<lbrace>\<lambda>s. P (valid_cur_hyp s)\<rbrace>"
+lemma valid_cur_hyp_post_taut[Arch_assms]:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. valid_cur_hyp\<rbrace>"
   by (wpsimp simp: valid_cur_hyp_def)
 
-lemma valid_cur_hyp_machine_state[Syscall_AC_assms]:
+lemmas [wp] = valid_cur_hyp_post_taut[where P=\<top>]
+
+lemma arch_prepare_next_domain_inv[Arch_assms,wp]:
+  "arch_prepare_next_domain \<lbrace>P\<rbrace>"
+  by (wpsimp simp: arch_prepare_next_domain_def)
+
+lemma valid_cur_hyp_machine_state[Arch_assms]:
   "valid_cur_hyp (machine_state_update f s) = valid_cur_hyp s"
   by (simp add: valid_cur_hyp_def)
-
-crunch arch_prepare_next_domain
-  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
-  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
-  and ct_not_in_q[Syscall_AC_assms, wp]: ct_not_in_q
-  and valid_sched_action[Syscall_AC_assms, wp]: valid_sched_action
-  and ct_in_cur_domain[Syscall_AC_assms, wp]: ct_in_cur_domain
 
 lemma handleSpuriousIRQ_mop_integrity[wp]:
   "do_machine_op handleSpuriousIRQ_mop \<lbrace>integrity aag X st\<rbrace>"
@@ -208,32 +212,68 @@ lemma handleSpuriousIRQ_mop_integrity[wp]:
   by (wpsimp wp: dmo_no_mem_respects)
 
 crunch handle_spurious_irq
-  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
-  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+  for pas_refined[Arch_assms, wp]: "pas_refined aag"
+  and integrity[Arch_assms, wp]: "integrity aag X st"
   (ignore: do_machine_op)
 
 crunch arch_post_cap_deletion, prepare_thread_delete
-  for scheduler_action[Syscall_AC_assms, wp]: "\<lambda>s. P (scheduler_action s)"
+  for scheduler_action[Arch_assms, wp]: "\<lambda>s. P (scheduler_action s)"
 
-lemma arch_invoke_irq_control_in_cur_domainE[Syscall_AC_assms, wp]:
+lemma arch_invoke_irq_control_in_cur_domainE[Arch_assms, wp]:
   "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
    arch_invoke_irq_control ivk
    -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
   by (cases ivk; simp; (solves \<open>wpsimp\<close>)?)
 
-lemma arch_perform_invocation_in_cur_domainE[Syscall_AC_assms, wp]:
+lemma arch_perform_invocation_in_cur_domainE[Arch_assms, wp]:
   "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
    arch_perform_invocation ai
    -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
   by (wpsimp simp: arch_perform_invocation_def)
 
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows handle_reserved_irq_integrity_autarch:
+    "\<lbrace>integrity aag X st and pas_refined aag and invs and valid_cur_hyp and is_subject aag \<circ> cur_thread
+      and (\<lambda>s. in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s)\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and handle_reserved_irq_integrity_idle:
+    "\<lbrace>integrity aag X st and invs and valid_cur_hyp and ct_idle\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and handle_reserved_irq_pas_refined:
+    "\<lbrace>\<lambda>s. pas_refined aag s \<and> invs s \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  and handle_hypervisor_fault_integrity_autarch:
+    "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> invs s \<and> is_subject aag thread
+                               \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+     handle_hypervisor_fault thread fault
+     \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  and handle_hypervisor_fault_pas_refined:
+    "\<lbrace>\<lambda>s. pas_refined aag s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread \<and> invs s\<rbrace>
+     handle_hypervisor_fault thread fault
+     \<lbrace>\<lambda>_ s. pas_refined aag s\<rbrace>"
+  and arch_prepare_next_domain_respects:
+    "\<lbrace>integrity aag X st and valid_arch_state and valid_cur_fpu\<rbrace>
+     arch_prepare_next_domain
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp+
+
+lemmas [Arch_assms] =
+  handle_reserved_irq_inv
+  handle_hypervisor_fault_inv
+  prepare_thread_delete_inv
+
+lemmas Syscall_AC_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Syscall_AC?: Syscall_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Syscall_AC_assms | solves \<open>wp only: Syscall_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Syscall_AC_assms)?)
 qed
 
 end

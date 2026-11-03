@@ -76,14 +76,4 @@ definition equiv_fpu :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<
 
 end (* Arch *)
 
-context begin interpretation Arch .
-
-requalify_consts
-  equiv_asid
-  equiv_asid'
-  arch_globals_equiv
-  non_asid_pool_kheap_update
-
-end
-
 end

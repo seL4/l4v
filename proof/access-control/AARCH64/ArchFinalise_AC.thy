@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Finalise_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_AC locale *)
 
 lemma state_vrefs_clear_asid_table:
   "state_vrefs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := \<lambda>a. if a = asid_high_bits_of base
@@ -132,7 +132,7 @@ lemma vcpu_finalise_cap_pas_refined[wp]:
   unfolding vcpu_finalise_def
   by (wpsimp wp: get_vcpu_wp)
 
-lemma arch_finalise_cap_pas_refined[Finalise_AC_assms, wp]:
+lemma arch_finalise_cap_pas_refined[Arch_assms, wp]:
   "\<lbrace>pas_refined aag and invs and valid_arch_cap c\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding arch_finalise_cap_def
   apply (wpsimp wp: unmap_page_pas_refined unmap_page_table_pas_refined)
@@ -148,7 +148,7 @@ lemma set_arm_current_fpu_owner_pas_refined[wp]:
   by (wpsimp wp: hoare_drop_imps simp: set_arm_current_fpu_owner_def)
 
 crunch prepare_thread_delete
-  for pas_refined[Finalise_AC_assms, wp]: "pas_refined aag"
+  for pas_refined[Arch_assms, wp]: "pas_refined aag"
   (wp: crunch_wps)
 
 
@@ -341,7 +341,7 @@ crunch fpu_release, lazy_fpu_restore
   and tcb_vcpus_of[wp]: "\<lambda>s. P (tcb_vcpu_of s)"
   (simp: crunch_simps wp: dmo_no_mem_respects wp: hoare_drop_imps)
 
-lemma prepare_thread_delete_integrity[Finalise_AC_assms, wp]:
+lemma prepare_thread_delete_integrity[Arch_assms, wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_cur_fpu and K (is_subject aag t)\<rbrace>
    prepare_thread_delete t
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -349,7 +349,7 @@ lemma prepare_thread_delete_integrity[Finalise_AC_assms, wp]:
   by (wpsimp wp: dissociate_vcpu_tcb_respects arch_thread_get_wp
            simp: associated_vcpu_is_subject get_tcb_ko_at)
 
-lemma sbn_st_vrefs[Finalise_AC_assms]:
+lemma sbn_st_vrefs[Arch_assms]:
   "set_bound_notification t st \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_wp dxo_wp_weak)
@@ -357,23 +357,23 @@ lemma sbn_st_vrefs[Finalise_AC_assms]:
    apply (auto simp: tcb_at_def valid_arch_state_def)
   done
 
-lemma arch_finalise_cap_auth'[Finalise_AC_assms]:
+lemma arch_finalise_cap_auth'[Arch_assms]:
   "\<lbrace>pas_refined aag\<rbrace> arch_finalise_cap x12 final \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag (fst rv)\<rbrace>"
   unfolding arch_finalise_cap_def
   by (wp | wpc | simp add: comp_def hoare_TrueI[where P = \<top>] split del: if_split)+
 
-lemma arch_finalise_cap_obj_refs[Finalise_AC_assms]:
+lemma arch_finalise_cap_obj_refs[Arch_assms]:
   "\<lbrace>\<lambda>s. \<forall>x \<in> aobj_ref' acap. P x\<rbrace>
    arch_finalise_cap acap slot
    \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac (fst rv). P x\<rbrace>"
   by (wpsimp simp: arch_finalise_cap_def)
 
-lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
+lemma arch_finalise_cap_makes_halted[Arch_assms]:
   "\<lbrace>\<top>\<rbrace> arch_finalise_cap arch_cap ex \<lbrace>\<lambda>rv s. \<forall>t\<in>obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
   by (wpsimp simp: valid_cap_def split: option.split bool.split)+
 
-lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
+lemma arch_cap_cleanup_wf[Arch_assms]:
   "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
    \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   by simp
@@ -477,7 +477,7 @@ lemma vcpu_finalise_integrity_autarch:
   apply (erule (3) associated_tcb_is_subject)
   done
 
-lemma arch_finalise_cap_respects[Finalise_AC_assms, wp]:
+lemma arch_finalise_cap_respects[Arch_assms, wp]:
   "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap (ArchObjectCap cap)
                        and K (pas_cap_cur_auth aag (ArchObjectCap cap))\<rbrace>
    arch_finalise_cap cap final
@@ -491,24 +491,27 @@ lemma arch_finalise_cap_respects[Finalise_AC_assms, wp]:
              intro: pas_refined_Control_into_is_subject_asid)
   done
 
-declare prepare_thread_delete_st_tcb_at_halted[Finalise_AC_assms]
-declare suspend_valid_cur_fpu[Finalise_AC_assms]
-declare unbind_notification_valid_cur_fpu[Finalise_AC_assms]
-declare finalise_cap_valid_list[Finalise_AC_assms]
-declare finalise_cap_replaceable[Finalise_AC_assms]
+declare prepare_thread_delete_st_tcb_at_halted[Arch_assms]
+declare suspend_valid_cur_fpu[Arch_assms]
+declare unbind_notification_valid_cur_fpu[Arch_assms]
+declare finalise_cap_valid_list[Arch_assms]
+declare finalise_cap_replaceable[Arch_assms]
+
+lemmas Finalise_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Finalise_AC?: Finalise_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Finalise_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Finalise_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma cap_revoke_respects'[Finalise_AC_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_AC_2 locale *)
+
+lemma cap_revoke_respects'[Arch_assms]:
   "s \<turnstile> \<lbrace>(\<lambda>s. trp \<longrightarrow> integrity aag X st s) and K (is_subject aag (fst slot))
                                            and pas_refined aag and einvs and simple_sched_action\<rbrace>
        cap_revoke slot
@@ -528,7 +531,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
             intro: cca_owned)
 qed
 
-lemma finalise_cap_caps_of_state_nullinv[Finalise_AC_assms]:
+lemma finalise_cap_caps_of_state_nullinv[Arch_assms]:
   "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -539,7 +542,7 @@ lemma finalise_cap_caps_of_state_nullinv[Finalise_AC_assms]:
                  deleting_irq_handler_caps_of_state_nullinv
            simp: fun_upd_def[symmetric] if_apply_def2 split_del: if_split)
 
-lemma finalise_cap_fst_ret[Finalise_AC_assms]:
+lemma finalise_cap_fst_ret[Arch_assms]:
   "\<lbrace>\<lambda>_. P NullCap \<and> (\<forall>a b c. P (Zombie a b c))\<rbrace>
    finalise_cap cap is_final
    \<lbrace>\<lambda>rv _. P (fst rv)\<rbrace>"
@@ -550,13 +553,14 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   apply (wp | simp | (rule hoare_pre, wpc))+
   done
 
+lemmas Finalise_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Finalise_AC_2?: Finalise_AC_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Finalise_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Finalise_AC_2_assms)?)
 qed
 
 end

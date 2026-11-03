@@ -602,6 +602,13 @@ lemma fun_noteqD:
 locale Noninterference =
   fixes current_aag :: "det_state \<Rightarrow> 'a subject_label PAS"
   and arch_globals_equiv_strengthener :: "machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
+  assumes do_user_op_reads_respects_g:
+    "\<And>P. ((\<forall>pl pr pxn tc ms s. P tc s \<and> context_matches_state pl pr pxn ms s
+                          \<longrightarrow> (\<exists>x. uop (cur_thread s) pl pr pxn (tc, ms) = {x}))
+          \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and valid_vspace_objs_if
+                                      and is_subject aag \<circ> cur_thread
+                                      and (\<lambda>s. cur_thread s \<noteq> idle_thread s) and P tc)
+                               (do_user_op_if uop tc))"
   assumes do_user_op_if_integrity:
     "\<lbrace>invs and integrity aag X st and is_subject aag \<circ> cur_thread and pas_refined aag\<rbrace>
      do_user_op_if uop tc
@@ -723,6 +730,9 @@ locale Noninterference =
        pas_refined aag s'; pas_cur_domain aag s; pas_cur_domain aag s';
        cur_fpu_in_cur_domain s; cur_fpu_in_cur_domain s'; invs s; invs s' \<rbrakk>
      \<Longrightarrow> subject_can_affect_label_directly aag (pasObjectAbs aag x)"
+  assumes auth_ipc_buffers_mem_Write':
+    "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s \<rbrakk>
+     \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
 begin
 
 lemma integrity_update_reference_state:
@@ -1007,15 +1017,8 @@ proof -
   qed
 qed
 
-end
-
-
-lemma kheap_ep_tcb_states_of_state_eq:
-  "kheap s x = kheap s' x \<Longrightarrow> tcb_states_of_state s x = tcb_states_of_state s' x"
-  unfolding tcb_states_of_state_def get_tcb_def by simp
-
 lemma partitionIntegrity_subjectAffects_mem:
-  assumes par_inte: "partitionIntegrity aag s s'"
+  assumes par_inte: "partitionIntegrity (aag :: 'a subject_label PAS) s s'"
   assumes pas_ref: "pas_refined aag s"
   assumes invs: "invs s"
   assumes um_diff:
@@ -1096,6 +1099,8 @@ lemma partitionIntegrity_subjectAffects_mem:
                      intro!: auth_ipc_buffers_mem_Write')
     qed (insert hyps, force elim: tcb_states_of_state_kheapE)+
   qed
+
+end
 
 lemma partitionIntegrity_subjectAffects_cdt:
   "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s;
@@ -2459,20 +2464,6 @@ lemma flow_then_affect:
 
 context valid_initial_state begin
 
-lemma do_user_op_if_reads_respects_g:
-  "reads_respects_g aag l (pas_refined aag and valid_vspace_objs_if and einvs and
-                           is_subject aag \<circ> cur_thread and det_inv InUserMode tc and ct_running)
-                    (do_user_op_if utf tc)"
-  apply (rule equiv_valid_guard_imp)
-   apply (rule do_user_op_reads_respects_g[where P="\<lambda>tc. einvs and
-               det_inv InUserMode tc and ct_running"])
-   using utf_det apply fastforce
-  apply simp
-  apply (rule ct_running_not_idle)
-   apply simp
-  apply (simp add: invs_valid_idle)
-  done
-
 lemma uwr_part_sys_mode_of_eq:
   "\<lbrakk> (s,t) \<in> uwr (part s); part t = part s; part s \<noteq> PSched \<rbrakk>
    \<Longrightarrow> sys_mode_of s = sys_mode_of t"
@@ -2684,6 +2675,21 @@ lemma check_active_irq_A_if_retval_eq:
   apply (drule_tac s'="(s',undefined)" and t'="(t',undefined)" and u=u
                 in check_active_irq_A_if_confidentiality, simp+)
   apply (elim conjE, assumption)
+  done
+
+lemma do_user_op_if_reads_respects_g:
+  "reads_respects_g aag (l :: 'a subject_label)
+                    (pas_refined aag and valid_vspace_objs_if and einvs
+                     and is_subject aag \<circ> cur_thread and det_inv InUserMode tc and ct_running)
+                    (do_user_op_if utf tc)"
+  apply (rule equiv_valid_guard_imp)
+   apply (rule do_user_op_reads_respects_g[where P="\<lambda>tc. einvs and
+               det_inv InUserMode tc and ct_running"])
+   using utf_det apply fastforce
+  apply simp
+  apply (rule ct_running_not_idle)
+   apply simp
+  apply (simp add: invs_valid_idle)
   done
 
 lemmas do_user_op_if_reads_respects_f_g =

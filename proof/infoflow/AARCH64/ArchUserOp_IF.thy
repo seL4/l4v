@@ -10,6 +10,8 @@ begin
 
 context Arch begin arch_global_naming
 
+clear_named_theorems Arch_assms (* accumulate assumptions for UserOp_IF locale *)
+
 definition ptable_lift_s where
   "ptable_lift_s s \<equiv> ptable_lift (cur_thread s) s"
 
@@ -90,33 +92,33 @@ definition do_user_op_if ::
    od"
 
 
-named_theorems UserOp_IF_assms
-
-lemma arch_globals_equiv_underlying_memory_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_underlying_memory_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (underlying_memory_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (underlying_memory_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_device_state_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (device_state_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (device_state_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-lemma no_hyp_modify[UserOp_IF_assms]:
+lemma no_hyp_modify[Arch_assms]:
   "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>underlying_memory := f ms\<rparr>))"
   "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>device_state := f ms\<rparr>))"
   "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
   by wpsimp+
 
-lemma no_fpu_modify[UserOp_IF_assms]:
+lemma no_fpu_modify[Arch_assms]:
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>underlying_memory := f ms\<rparr>))"
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>device_state := f ms\<rparr>))"
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
   by wpsimp+
+
+lemmas UserOp_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -124,9 +126,8 @@ arch_requalify_types user_transition_if
 
 global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact UserOp_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.UserOp_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -782,12 +783,18 @@ definition context_matches_state where
           {y. \<exists>x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not>pxn x)}"
 
 
+definition valid_vspace_objs_if where
+  "valid_vspace_objs_if \<equiv> \<top>"
+
+declare valid_vspace_objs_if_def[simp]
+
 lemma do_user_op_reads_respects_g:
   notes split_paired_All[simp del]
   shows
     "(\<forall>pl pr pxn tc ms s. P tc s \<and> context_matches_state pl pr pxn ms s
                           \<longrightarrow> (\<exists>x. uop (cur_thread s) pl pr pxn (tc, ms) = {x}))
-     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and is_subject aag \<circ> cur_thread
+     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and valid_vspace_objs_if
+                                                 and is_subject aag \<circ> cur_thread
                                                  and (\<lambda>s. cur_thread s \<noteq> idle_thread s) and P tc)
                           (do_user_op_if uop tc)"
   apply (simp add: do_user_op_if_def)
@@ -839,22 +846,6 @@ lemma do_user_op_reads_respects_g:
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 
-definition valid_vspace_objs_if where
-  "valid_vspace_objs_if \<equiv> \<top>"
-
-declare valid_vspace_objs_if_def[simp]
-
 end (* Arch *)
-
-arch_requalify_consts
-  do_user_op_if
-  valid_vspace_objs_if
-  context_matches_state
-
-(* FIXME AARCH64 IF: this is currently used in do_user_op_if_reads_respects_g
-   where aag contains a free type variable, so this can't be a locale assumption.
-   Investigate whether we can tweak the interface, or otherwise add a comment. *)
-arch_requalify_facts
-  do_user_op_reads_respects_g
 
 end

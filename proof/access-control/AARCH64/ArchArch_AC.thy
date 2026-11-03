@@ -16,9 +16,9 @@ Arch-specific access control.
 
 context Arch begin arch_global_naming
 
-named_theorems Arch_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_AC locale *)
 
-lemma set_mrs_state_vrefs[Arch_AC_assms, wp]:
+lemma set_mrs_state_vrefs[Arch_assms, wp]:
   "set_mrs thread buf msgs \<lbrace>\<lambda>s :: det_state. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
   apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
@@ -28,7 +28,7 @@ lemma set_mrs_state_vrefs[Arch_AC_assms, wp]:
    apply (auto simp: fun_upd_def get_tcb_def tcb_at_def)
   done
 
-lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
+lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_assms]:
   "\<lbrakk> p < 2 ^ (msg_align_bits - word_size_bits); k < word_size \<rbrakk>
    \<Longrightarrow> of_nat p * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
   apply (rule is_aligned_add_less_t2n[where n=word_size_bits])
@@ -37,23 +37,26 @@ lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
   apply (erule word_less_power_trans_ofnat[where k=3 and m=10, simplified], simp)
   done
 
-lemma zero_less_word_size[Arch_AC_assms, simp]:
+lemma zero_less_word_size[Arch_assms, simp]:
   "0 < (word_size :: obj_ref)"
   by (simp add: word_size_def)
 
-declare set_mrs_state_hyp_refs_of[Arch_AC_assms]
-declare storeWord_respects[Arch_AC_assms]
+declare set_mrs_state_hyp_refs_of[Arch_assms]
+declare storeWord_respects[Arch_assms]
+
+lemmas Arch_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Arch_AC?: Arch_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Arch_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Arch_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming
+
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_AC_2 locale *)
 
 definition level_of_table :: "obj_ref \<Rightarrow> 'z :: state_ext state \<Rightarrow> vm_level"
   where
@@ -2666,7 +2669,7 @@ lemma perform_vcpu_invocation_pas_refined[wp]:
   unfolding perform_vcpu_invocation_def authorised_vcpu_inv_def
   by (wpsimp wp: associate_vcpu_tcb_pas_refined)
 
-lemma invoke_arch_respects[Arch_AC_assms]:
+lemma invoke_arch_respects[Arch_assms]:
   "\<lbrace>integrity aag X st and authorised_arch_inv aag ai and pas_refined aag and invs
                        and valid_arch_inv ai and is_subject aag \<circ> cur_thread\<rbrace>
    arch_perform_invocation ai
@@ -2678,7 +2681,7 @@ lemma invoke_arch_respects[Arch_AC_assms]:
   apply (auto simp: authorised_arch_inv_def valid_arch_inv_def)
   done
 
-lemma invoke_arch_pas_refined[Arch_AC_assms]:
+lemma invoke_arch_pas_refined[Arch_assms]:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and invs and ct_active
                     and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
    arch_perform_invocation ai
@@ -2909,7 +2912,7 @@ lemma decode_smc_invocation_authorised[wp]:
   unfolding decode_smc_invocation_def authorised_arch_inv_def
   by wpsimp
 
-lemma decode_arch_invocation_authorised[Arch_AC_assms]:
+lemma decode_arch_invocation_authorised[Arch_assms]:
   "\<lbrace>invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
          and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
          and K (\<forall>(cap, slot) \<in> {(ArchObjectCap cap, slot)} \<union> set excaps.
@@ -2926,7 +2929,7 @@ lemma decode_arch_invocation_authorised[Arch_AC_assms]:
   apply auto
   done
 
-lemma authorised_arch_inv_sa_update[Arch_AC_assms]:
+lemma authorised_arch_inv_sa_update[Arch_assms]:
   "authorised_arch_inv aag i (scheduler_action_update (\<lambda>_. act) s) =
    authorised_arch_inv aag i s"
   by (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
@@ -2936,7 +2939,7 @@ crunch set_thread_state_act
   for authorised_arch_inv[wp]: "authorised_arch_inv aag i"
   (simp: authorised_arch_inv_sa_update)
 
-lemma set_thread_state_authorised_arch_inv[Arch_AC_assms,wp]:
+lemma set_thread_state_authorised_arch_inv[Arch_assms,wp]:
   "set_thread_state ref ts \<lbrace>authorised_arch_inv aag i\<rbrace>"
   unfolding set_thread_state_def
   apply (wpsimp wp: set_object_wp)
@@ -2952,15 +2955,16 @@ lemma set_thread_state_authorised_arch_inv[Arch_AC_assms,wp]:
                    split: option.splits kernel_object.splits if_splits)+
   done
 
+lemmas Arch_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts authorised_arch_inv
 
 global_interpretation Arch_AC_2?: Arch_AC_2 aag authorised_arch_inv for aag
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Arch_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Arch_AC_2_assms)?)
 qed
 
 end

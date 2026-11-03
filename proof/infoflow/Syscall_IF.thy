@@ -12,13 +12,6 @@ imports
     "ArchDecode_IF"
 begin
 
-definition authorised_for_globals_inv :: "invocation \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
-  "authorised_for_globals_inv oper \<equiv>
-     \<lambda>s. case oper of
-           InvokeArchObject ai \<Rightarrow> authorised_for_globals_arch_inv ai s
-         | InvokeDomain di \<Rightarrow> False
-         | _ \<Rightarrow> True"
-
 definition authorised_invocation_extra where
   "authorised_invocation_extra aag invo \<equiv>
      case invo of InvokeTCB ti \<Rightarrow> authorised_tcb_inv_extra aag ti | _ \<Rightarrow> True"
@@ -41,6 +34,7 @@ crunch cap_move
 
 locale Syscall_IF =
   fixes aag :: "'a subject_label PAS"
+  and authorised_for_globals_arch_inv :: "arch_invocation \<Rightarrow> det_state \<Rightarrow> bool"
   assumes globals_equiv_irq_state_update[simp]:
     "\<And>f. globals_equiv st (s\<lparr>machine_state :=
                               machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
@@ -49,8 +43,8 @@ locale Syscall_IF =
     "\<And>f. \<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
           thread_set f tptr
           \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  assumes sts_authorised_for_globals_inv:
-    "\<And>f. set_thread_state d f \<lbrace>\<lambda>s :: det_state. authorised_for_globals_inv oper s\<rbrace>"
+  assumes sts_authorised_for_globals_arch_inv:
+    "\<And>f. set_thread_state d f \<lbrace>\<lambda>s :: det_state. authorised_for_globals_arch_inv oper s\<rbrace>"
   assumes dmo_maskInterrupt_globals_equiv[wp]:
     "do_machine_op (maskInterrupt b irq) \<lbrace>globals_equiv s\<rbrace>"
   assumes dmo_ackInterrupt_globals_equiv[wp]:
@@ -96,7 +90,34 @@ locale Syscall_IF =
            and (\<lambda>s :: det_state. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)\<rbrace>
      arch_decode_invocation label msg x_slot slot acap excaps
      \<lbrace>\<lambda>rv. authorised_for_globals_arch_inv rv\<rbrace>, -"
+  assumes invoke_untyped_globals_equiv:
+    "\<lbrace>globals_equiv st and invs and valid_untyped_inv ui and ct_active\<rbrace>
+     invoke_untyped ui
+     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  assumes arch_perform_invocation_reads_respects_g:
+    "pas_domains_distinct aag
+     \<Longrightarrow> reads_respects_g aag l (ct_active and authorised_arch_inv aag ai and valid_arch_inv ai
+                                           and authorised_for_globals_arch_inv ai and invs
+                                           and pas_refined aag and is_subject aag \<circ> cur_thread)
+                          (arch_perform_invocation ai)"
+  assumes arch_perform_invocation_globals_equiv:
+    "\<lbrace>globals_equiv s and invs and ct_active and valid_arch_inv ai
+                      and authorised_for_globals_arch_inv ai\<rbrace>
+     arch_perform_invocation ai
+     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
 begin
+
+definition authorised_for_globals_inv :: "invocation \<Rightarrow> det_state \<Rightarrow> bool" where
+  "authorised_for_globals_inv oper \<equiv>
+     \<lambda>s. case oper of
+           InvokeArchObject ai \<Rightarrow> authorised_for_globals_arch_inv ai s
+         | InvokeDomain di \<Rightarrow> False
+         | _ \<Rightarrow> True"
+
+lemma sts_authorised_for_globals_inv:
+  "set_thread_state d f \<lbrace>authorised_for_globals_inv oper\<rbrace>"
+  unfolding authorised_for_globals_inv_def
+  by (case_tac oper; wpsimp wp: sts_authorised_for_globals_arch_inv)
 
 lemma cap_revoke_globals_equiv:
   "\<lbrace>globals_equiv st and invs\<rbrace>
@@ -490,13 +511,6 @@ lemma lookup_cap_and_slot_reads_respects_g':
   apply simp
   done
 
-lemma authorised_for_globals_triv:
-  "\<lbrace>\<lambda>s. \<forall>x ai di. f x \<noteq> InvokeArchObject ai \<and> f x \<noteq> InvokeDomain di\<rbrace>
-   m
-   \<lbrace>authorised_for_globals_inv \<circ> f\<rbrace>, -"
-  by (clarsimp simp: validE_R_def validE_def valid_def authorised_for_globals_inv_def
-              split: invocation.splits sum.splits)
-
 lemma no_domains_inv_triv:
   "\<lbrace>\<lambda>s. \<forall>x di. f x \<noteq> InvokeDomain di\<rbrace>
    m
@@ -568,6 +582,13 @@ lemma ct_active_not_idle:
   by (clarsimp simp: ct_active_cur_thread_not_idle_thread invs_valid_idle)
 
 context Syscall_IF begin
+
+lemma authorised_for_globals_triv:
+  "\<lbrace>\<lambda>s. \<forall>x ai di. f x \<noteq> InvokeArchObject ai \<and> f x \<noteq> InvokeDomain di\<rbrace>
+   m
+   \<lbrace>authorised_for_globals_inv \<circ> f\<rbrace>, -"
+  by (clarsimp simp: validE_R_def validE_def valid_def authorised_for_globals_inv_def
+              split: invocation.splits sum.splits)
 
 lemma decode_invocation_authorised_globals_inv:
   "\<lbrace>invs and domain_sep_inv irqs st and cte_wp_at ((=) cap) slot

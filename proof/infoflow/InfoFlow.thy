@@ -196,6 +196,9 @@ where
 
 subsection \<open>ASID equivalence\<close>
 
+arch_requalify_consts
+  equiv_asid
+
 definition equiv_asids :: "(asid \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
   "equiv_asids R s s' \<equiv> \<forall>asid. asid \<noteq> 0 \<and> R asid \<longrightarrow> equiv_asid asid s s'"
 
@@ -257,6 +260,9 @@ definition idle_equiv :: "('z :: state_ext) state \<Rightarrow> ('z :: state_ext
 
 
 subsection \<open>Global (Kernel) VSpace equivalence\<close>
+
+arch_requalify_consts
+  arch_globals_equiv
 
 (* cur_thread is included here also to enforce this being an equivalence relation *)
 definition globals_equiv :: "det_state \<Rightarrow> det_state \<Rightarrow> bool" where

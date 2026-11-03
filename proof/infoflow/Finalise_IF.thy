@@ -70,6 +70,9 @@ locale Finalise_IF =
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and prepare_thread_delete_globals_equiv[wp]:
     "\<lbrace>globals_equiv s and invs\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  and thread_set_globals_equiv:
+    "(\<And>tcb. arch_tcb_context_get (tcb_arch (f tcb)) = arch_tcb_context_get (tcb_arch tcb))
+     \<Longrightarrow> \<lbrace>globals_equiv s and valid_arch_state\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
 begin
 
 lemma set_irq_state_reads_respects:
@@ -1395,6 +1398,10 @@ end (* Finalise_IF *)
 lemma globals_equiv_interrupt_states_update:
   "globals_equiv st (s\<lparr>interrupt_states := x\<rparr>) = globals_equiv st s"
   by (auto simp: globals_equiv_def idle_equiv_def)
+
+(* can't be added to the locale since set_simple_ko is polymorphic *)
+arch_requalify_facts
+  set_simple_ko_globals_equiv
 
 lemma cancel_all_ipc_globals_equiv':
   "cancel_all_ipc epptr \<lbrace>globals_equiv st and valid_arch_state\<rbrace>"
