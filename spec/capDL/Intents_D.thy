@@ -12,10 +12,11 @@
  * operation is actually encoded within their message registers.
  *
  * There is a one-to-one mapping between the following intents and the
- * invocations made available to userspace. There is not quite
- * a one-to-one mapping between these intents and the invocations listed
- * in Invocations_D, as some of these intents are multiplexed onto
- * a single invocation when being validated.
+ * invocations available to userspace that are needed for system
+ * initialisation. All other invocations are covered by OtherIntent.
+ * There is not quite a one-to-one mapping between these intents and the
+ * invocations listed in Invocations_D, as some of these intents are
+ * multiplexed onto a single invocation when being validated.
  *
  * Caps required by the intents are not stored in the intent themselves,
  * but passed separately in when required. In some sense, the Intent
@@ -107,29 +108,14 @@ datatype cdl_cnode_intent =
   | CNodeMoveIntent machine_word machine_word machine_word machine_word
     (* Mutate: (target), dest_index, dest_depth, (src_root), src_index, src_depth, badge *)
   | CNodeMutateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
-    (* Revoke: (target), index, depth *)
-  | CNodeRevokeIntent machine_word machine_word
     (* Delete: (target), index, depth *)
   | CNodeDeleteIntent machine_word machine_word
-    (* SaveCaller: (target), index, depth *)
-  | CNodeSaveCallerIntent machine_word machine_word
-    (* CancelBadgedSends: (target), index, depth *)
-  | CNodeCancelBadgedSendsIntent machine_word machine_word
-    (* Rotate: (target), dest_index, dest_depth, (pivot_root), pivot_index, pivot_depth, pivot_badge,
-               (src_root), src_index, src_depth, src_badge *)
-  | CNodeRotateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
-                      machine_word machine_word cdl_raw_capdata
 
-type_synonym arch_flags = word8 (* FIXME arch-split: check if used *)
+type_synonym arch_flags = word8
 
 datatype cdl_tcb_intent =
-    (* ReadRegisters: (target), suspend_source, arch_flags, count *)
-    TcbReadRegistersIntent bool arch_flags machine_word
     (* WriteRegisters: (target), resume_target, arch_flags, count, regs *)
-  | TcbWriteRegistersIntent bool arch_flags machine_word cdl_raw_usercontext
-    (* CopyRegisters: (target), (source), suspend_source, resume_target, transfer_frame,
-                      transfer_integer, arch_flags *)
-  | TcbCopyRegistersIntent bool bool bool bool arch_flags
+    TcbWriteRegistersIntent bool arch_flags machine_word cdl_raw_usercontext
     (* Suspend: (target) *)
   | TcbSuspendIntent
     (* Resume: (target) *)
@@ -137,22 +123,12 @@ datatype cdl_tcb_intent =
     (* Configure: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root),
                   vspace_root_data, buffer, (bufferFrame) *)
   | TcbConfigureIntent cdl_cptr cdl_raw_capdata cdl_raw_capdata machine_word
-    (* SetMCPriority: (target), mcp *)
-  | TcbSetMCPriorityIntent prio
-    (* SetPriority: (target), priority *)
-  | TcbSetPriorityIntent prio
     (* SetSchedParams: (target), mcp, priority *)
   | TcbSetSchedParamsIntent prio prio
     (* SetIPCBuffer: (target), buffer, (bufferFrame) *)
   | TcbSetIPCBufferIntent machine_word
-    (* SetSpace: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root), vspace_root_data *)
-  | TcbSetSpaceIntent machine_word cdl_raw_capdata cdl_raw_capdata
     (* BindNTFN: (target), (ntfn) *)
   | TcbBindNTFNIntent
-    (* UnbindNTFN: (target) *)
-  | TcbUnbindNTFNIntent
-    (* SetTLSBase: (target) *)
-  | TcbSetTLSBaseIntent
     (* SetFlags: (target) set_flags clear_flags *)
   | TcbSetFlagsIntent machine_word machine_word
 
@@ -163,12 +139,8 @@ datatype cdl_untyped_intent =
                         machine_word
 
 datatype cdl_irq_handler_intent =
-    (* Ack: (target) *)
-    IrqHandlerAckIntent
     (* SetEndpoint: (target), (endpoint) *)
-  | IrqHandlerSetEndpointIntent
-    (* Clear: (target) *)
-  | IrqHandlerClearIntent
+    IrqHandlerSetEndpointIntent
 
 datatype cdl_arch_irq_control_intent =
     (* ArchIssueIrqHandler: (target), irq, (root), index, depth *)
@@ -185,7 +157,6 @@ datatype cdl_irq_control_intent =
 datatype cdl_page_table_intent =
     (* Map: (target), (pd), vaddr, attr *)
     PageTableMapIntent machine_word cdl_raw_vmattrs
-  | PageTableUnmapIntent
 
 datatype cdl_page_intent =
     (* Map: (target), (pd), vaddr, rights, attr *)
@@ -197,11 +168,6 @@ datatype cdl_page_intent =
     (* GetAddress *)
   | PageGetAddressIntent
 
-
-datatype cdl_page_directory_intent =
-    PageDirectoryFlushIntent
-  | PageDirectoryNothingIntent
-
 datatype cdl_asid_control_intent =
     (* MakePool: (target), (untyped), (root), index, depth *)
     AsidControlMakePoolIntent machine_word machine_word
@@ -209,13 +175,6 @@ datatype cdl_asid_control_intent =
 datatype cdl_asid_pool_intent =
     (* Assign: (target), (vroot) *)
     AsidPoolAssignIntent
-
-datatype cdl_notification_intent =
-    SendSignalIntent machine_word
-
-(* Also used with reply caps *)
-datatype cdl_endpoint_intent =
-    SendMessageIntent "cdl_cptr list"
 
 datatype cdl_domain_intent =
     DomainSetIntent (domint_domain : domain)
@@ -232,19 +191,17 @@ datatype cdl_intent =
   | IrqControlIntent cdl_irq_control_intent
   | PageTableIntent cdl_page_table_intent
   | PageIntent cdl_page_intent
-  | PageDirectoryIntent cdl_page_directory_intent
   | AsidControlIntent cdl_asid_control_intent
   | AsidPoolIntent cdl_asid_pool_intent
-  | NotificationIntent cdl_notification_intent
-  | EndpointIntent cdl_endpoint_intent
   | DomainIntent cdl_domain_intent
   | VCPUIntent
+    (* Any invocation that is not needed for system initialisation *)
+  | OtherIntent
 
 record cdl_full_intent =
   cdl_intent_op        :: "cdl_intent option"
   cdl_intent_error     :: bool
   cdl_intent_cap       :: cdl_cptr
   cdl_intent_extras    :: "cdl_cptr list"
-  cdl_intent_recv_slot :: "(cdl_cptr \<times> machine_word \<times> nat) option"
 
 end

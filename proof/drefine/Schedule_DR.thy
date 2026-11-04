@@ -10,7 +10,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-crunch switch_to_idle_thread
+crunch arch_switch_to_idle_thread
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
 
 lemma dcorres_arch_switch_to_idle_thread_return: "dcorres dc \<top> \<top> (return ()) arch_switch_to_idle_thread"
@@ -77,37 +77,6 @@ crunch arch_switch_to_thread
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps wp: crunch_wps ignore: ARM.clearExMonitor)
 
-(*
- * Setting the current thread.
- *)
-lemma switch_to_thread_corres:
-  "dcorres dc \<top> (invs and (\<lambda>s. idle_thread s \<noteq> x))
-           (Schedule_D.switch_to_thread (Some x)) (Schedule_A.switch_to_thread x)"
-  apply (clarsimp simp: Schedule_D.switch_to_thread_def Schedule_A.switch_to_thread_def)
-  apply (rule corres_dummy_return_pl)
-  apply (rule corres_symb_exec_r)
-     apply (rule corres_symb_exec_r)
-        apply (rule corres_guard_imp)
-          apply (rule corres_split[OF arch_switch_to_thread_dcorres])
-            apply simp
-            apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
-              apply (rule corres_modify [where P=\<top> and P'="\<lambda>s. idle_thread s \<noteq> x"])
-              apply (clarsimp simp: transform_def)
-              apply (simp add: transform_current_thread_def transform_asid_table_def)
-             apply (wp+)[4]
-         apply simp
-        apply assumption
-       apply (clarsimp|wp)+
-  done
-
-lemma corrupt_intents_current_thread:
-  "cdl_current_thread (corrupt_intents x p s) = cdl_current_thread s"
-  by (simp add: corrupt_intents_def)
-
-crunch corrupt_frame
-  for cdl_cur: "\<lambda>s. cdl_current_thread s = x"
-  (simp: corrupt_intents_current_thread)
-
 (* Switching to the active thread has no effect. *)
 lemma switch_to_thread_idempotent_corres:
   "dcorres dc (\<lambda>s. cdl_current_thread s = x) \<top> (Schedule_D.switch_to_thread x) (return ())"
@@ -155,17 +124,6 @@ lemma switch_to_thread_None_dcorres_L:
                     change_current_domain_def gets_def select_def transform_def)
   done
 
-
-lemma switch_to_thread_None_dcorres:
-  "dcorres dc \<top> (\<lambda>s. cur_thread s = idle_thread s)
-                (do _ \<leftarrow> change_current_domain;
-                    Schedule_D.switch_to_thread None
-                 od)
-               (return ())"
-  apply (rule_tac Q="\<lambda>s. cdl_current_thread s = None" and Q'="\<top>" in stronger_corres_guard_imp)
-    apply (rule switch_to_thread_None_dcorres_L)
-   apply (clarsimp simp: transform_def transform_current_thread_def)+
-  done
 
 lemma schedule_resume_cur_thread_dcorres_L:
     "\<And>cur cur_ts. dcorres dc ((\<lambda>s. \<exists>t tcb. cdl_current_thread s = Some t \<and>
@@ -603,25 +561,6 @@ lemma as_user_setNextPC_corres:
                         arch_tcb_update_aux3)
   done
 
-crunch set_thread_state_act
-  for transform_inv[wp]: "\<lambda>s. transform s = cs"
-
-lemma dcorres_dummy_set_thread_state_runnable:
-  "dcorres dc \<top>
-  (not_idle_thread ptr and st_tcb_at (\<lambda>t. (infer_tcb_pending_op ptr t) = (infer_tcb_pending_op ptr st)) ptr)
-  (return ())
-  (set_thread_state ptr st)"
-  supply option.case_cong[cong] if_cong[cong]
-  apply (rule wp_to_dcorres)
-  apply (clarsimp simp:set_thread_state_def not_idle_thread_def set_object_def get_object_def | wp)+
-  apply (clarsimp simp:transform_def transform_current_thread_def st_tcb_at_def obj_at_def
-       | rule ext)+
-  apply (clarsimp simp:transform_objects_def not_idle_thread_def dest!:get_tcb_SomeD)
-  apply (case_tac "x = ptr")
-   apply (clarsimp simp:transform_tcb_def)
-  apply (clarsimp simp:restrict_map_def Map.map_add_def)
-  done
-
 (*
  * Activating threads is not observable on the capDL level.
  *)
@@ -666,8 +605,7 @@ lemma activate_thread_corres:
              apply (rule set_thread_state_corres[unfolded tcb_pending_op_slot_def])
             apply simp
             apply (wpsimp wp: dcorres_to_wp[OF as_user_setNextPC_corres,simplified])+
-       apply (simp add:invs_mdb pred_tcb_at_def obj_at_def invs_valid_idle
-         generates_pending_def not_idle_thread_def)
+       apply (simp add:invs_mdb pred_tcb_at_def obj_at_def invs_valid_idle not_idle_thread_def)
       apply (clarsimp simp:infer_tcb_pending_op_def arch_activate_idle_thread_def
              when_def pred_tcb_at_def ct_in_state_def obj_at_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
              dest!:get_tcb_SomeD)+
