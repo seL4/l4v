@@ -18,15 +18,6 @@ begin
 lemma map_upd_nonempty' [simp]: "Map.empty \<noteq> t(k\<mapsto>x)"
   by (rule not_sym, simp)
 
-lemma insert_unit_set [simp]:
-  "insert () A = UNIV"
-  by auto
-
-lemma restrict_map_not_empty [simp]:
-  "f p = Some v \<Longrightarrow> f |` {p} \<noteq> Map.empty"
-  "f p = Some v \<Longrightarrow> Map.empty \<noteq> f |` {p}"
-  by (clarsimp simp: restrict_map_def fun_eq_iff split: if_split_asm)+
-
 (* This lets us compose a total and a partial function in the obvious manner. *)
 definition
   map_comp' :: "('b \<Rightarrow> 'c) \<Rightarrow> ('a \<rightharpoonup> 'b) \<Rightarrow> 'a \<rightharpoonup> 'c"  (infixl "o'_M" 55) where
@@ -46,19 +37,6 @@ lemma dom_map_comp' [simp]:
   "dom (f \<circ>\<^sub>M m) = dom m"
   by (clarsimp simp: dom_def split: option.splits)
 
-lemma restrict_map_comp' [simp]:
-  "f \<circ>\<^sub>M g |` S = (f \<circ>\<^sub>M g) |` S"
-  by (rule ext, clarsimp simp: map_comp'_def restrict_map_def)
-
-
-(**************************
- * Rules about intervals. *
- **************************)
-
-lemma nat_list_not_UNIV [simp]:
-  "set (xs::nat list) \<noteq> UNIV"
-  by (metis UNIV_I gt_ex leD maximum_ge)
-
 (***********************************
  * End of generic Isabelle lemmas. *
  ***********************************)
@@ -68,48 +46,9 @@ lemma nat_list_not_UNIV [simp]:
  * Rules that should go in MapExtra. *
  *************************************)
 
-lemma map_add_self:
-  "m ++ m = m"
-  by (auto simp add:map_add_def split:option.splits)
-
-(* This lemma is strictly weaker than restrict_map_disj. *)
-lemma restrict_map_disj':
-  "S \<inter> T = {} \<Longrightarrow> h |` S \<bottom> h' |` T"
-  by (auto simp: map_disj_def restrict_map_def dom_def)
-
-lemma map_add_restrict_comm:
-  "S \<inter> T = {} \<Longrightarrow> h |` S ++ h' |` T = h' |` T ++ h |` S"
-  apply (drule restrict_map_disj')
-  apply (erule map_add_com)
-  done
-
 lemma restrict_map_not_self_UNIV [simp]:
   "h |` (UNIV - dom h) = Map.empty"
   by (rule ext, clarsimp simp: restrict_map_def)
-
-lemma map_add_emptyE [elim!]:
-  "\<lbrakk>a ++ b = Map.empty; \<lbrakk>a = Map.empty; b = Map.empty\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  by (metis map_add_None)
-
-lemma restrict_map_sub_singleton [simp]:
-  "s \<noteq> t \<Longrightarrow> h `- {t} |` {s} = h |` {s}"
-  by (rule ext)(clarsimp simp: restrict_map_def sub_restrict_map_def)
-
-lemma restrict_map_sub_add': "h `- S ++ h |` S = h"
-  by (fastforce simp: sub_restrict_map_def map_add_def
-               split: option.splits)
-
-lemma map_add_restrict_singleton:
-  "s \<noteq> t \<Longrightarrow> (m |` {s} ++ m' |` {t}) |` {s} = m |` {s}"
-  apply (rule ext)
-  apply (clarsimp simp: map_add_def restrict_map_def split: option.splits)
-  done
-
-lemma map_add_restrict_singleton':
-  "s \<noteq> t \<Longrightarrow> (m |` {s} ++ m' |` {t}) |` {t} = m' |` {t}"
-  apply (rule ext)
-  apply (clarsimp simp: map_add_def restrict_map_def split: option.splits)
-  done
 
 (********************************************
  * End of rules that should go in MapExtra. *
@@ -144,11 +83,6 @@ lemma default_tcb_slots:
   by (clarsimp simp: tcb_pending_op_slot_def upt_rec)+
 
 definition "update_tcb_fault_endpoint fault_ep = cdl_tcb_fault_endpoint_update (\<lambda>_. fault_ep)"
-
-lemma update_tcb_fault_endpoint_id [simp]:
-  "cdl_tcb_fault_endpoint tcb = fault_ep
-  \<Longrightarrow> update_tcb_fault_endpoint fault_ep tcb = tcb"
-  by (clarsimp simp: update_tcb_fault_endpoint_def)
 
 definition tcb_has_fault :: "cdl_object \<Rightarrow> bool"
 where
@@ -245,25 +179,6 @@ where
     UntypedCap _ cover_ids available_ids \<Rightarrow> available_ids \<subseteq> cover_ids
   | _ \<Rightarrow> True"
 
-lemma cap_free_ids_simps:
-  "cap_free_ids (UntypedCap d cover_ids available_ids) = available_ids"
-  by (clarsimp simp: cap_free_ids_def)
-
-
-lemma cap_objects_remove_free_ids [simp]:
-  "cap_objects (remove_free_ids cap obj_ids) = cap_objects cap"
-  by (clarsimp simp: remove_free_ids_def split: cdl_cap.splits)
-
-lemma cap_free_ids_remove_free_ids:
-  "cap_free_ids (remove_free_ids cap obj_ids) = cap_free_ids cap - obj_ids"
-  by (clarsimp simp: remove_free_ids_def cap_free_ids_def
-              split: cdl_cap.splits)
-
-lemma cap_type_remove_free_ids [simp]:
-  "cap_type (remove_free_ids cap obj_ids) = cap_type cap"
-  by (clarsimp simp: cap_type_def remove_free_ids_def
-              split: cdl_cap.splits)
-
 definition
   is_device_cap :: "cdl_cap \<Rightarrow> bool"
 where  "is_device_cap cap \<equiv> case cap of
@@ -272,13 +187,6 @@ where  "is_device_cap cap \<equiv> case cap of
    | _ \<Rightarrow> False"
 
 lemmas is_device_cap_simps[simp] = is_device_cap_def[split_simps cdl_cap.split]
-
-lemma remove_free_ids_simps:
-  "\<lbrakk>is_untyped_cap cap; available_ids \<subseteq> cap_free_ids cap\<rbrakk>
-  \<Longrightarrow> remove_free_ids cap (cap_free_ids cap - available_ids)
-    = UntypedCap (is_device_cap cap) (cap_objects cap) available_ids"
-  by (auto simp: remove_free_ids_def cap_free_ids_def cap_type_def
-          split: cdl_cap.splits)
 
 definition
   is_full_untyped_cap :: "cdl_cap \<Rightarrow> bool"
@@ -290,43 +198,6 @@ where
 lemma is_full_untyped_cap_is_untyped_cap:
   "is_full_untyped_cap cap \<Longrightarrow> is_untyped_cap cap"
   by (clarsimp simp: is_full_untyped_cap_def split: cdl_cap.splits)
-
-lemma is_full_untyped_cap_simps:
-  "is_full_untyped_cap cap \<Longrightarrow> cap_objects cap = cap_free_ids cap"
-  by (auto simp: is_full_untyped_cap_def cap_free_ids_def
-          split: cdl_cap.splits)
-
-lemma is_full_untyped_cap_eq:
-  "is_untyped_cap cap
-  \<Longrightarrow> is_full_untyped_cap cap = (cap_objects cap = cap_free_ids cap)"
-  by (auto simp: is_full_untyped_cap_def cap_free_ids_def cap_type_def
-          split: cdl_cap.splits)
-
-lemma well_formed_untyped_cap_remove_free_ids:
-  "well_formed_untyped_cap cap
-  \<Longrightarrow> well_formed_untyped_cap (remove_free_ids cap obj_ids)"
-  by (auto simp: well_formed_untyped_cap_def remove_free_ids_def
-          split: cdl_cap.splits)
-
-lemma well_formed_untyped_cap_simps:
-  "is_untyped_cap cap
-  \<Longrightarrow> well_formed_untyped_cap cap = (cap_free_ids cap \<subseteq> cap_objects cap)"
-  by (clarsimp simp: well_formed_untyped_cap_def cap_free_ids_def cap_type_def
-              split: cdl_cap.splits)
-
-
-definition
-  some_nat :: "nat option \<Rightarrow> nat"
-where
-  "some_nat n \<equiv> case n of Some n \<Rightarrow> n | None \<Rightarrow> 0"
-
-lemma some_nat_Some [simp]:
-  "some_nat (Some n) = n"
-  by (simp add: some_nat_def)
-
-lemma some_nat_None [simp]:
-  "some_nat None = 0"
-  by (simp add: some_nat_def)
 
 definition (* FIXME: use datatype package discriminators *)
   is_untyped :: "cdl_object \<Rightarrow> bool" where
@@ -449,17 +320,6 @@ lemma is_pd_pd_size[simp]:
                split: cdl_object.splits)
 
 definition
-  object_at_pointer_size_bits :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_size_bits"
-where
-  "object_at_pointer_size_bits spec obj_id \<equiv>
-   some_nat (option_map object_size_bits (cdl_objects spec obj_id))"
-
-lemma object_at_pointer_size_bits_simp [simp]:
-  "cdl_objects spec obj_id = Some object
-  \<Longrightarrow> object_at_pointer_size_bits spec obj_id = object_size_bits object"
-  by (simp add: object_at_pointer_size_bits_def)
-
-definition
   object_at :: "(cdl_object \<Rightarrow> bool) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> bool"
 where
   "object_at P obj_id s \<equiv> \<exists>object. cdl_objects s obj_id = Some object \<and> P object"
@@ -563,19 +423,8 @@ abbreviation
 abbreviation
   "memory_object_at \<equiv> \<lambda>obj_id spec. pt_at obj_id spec \<or> pd_at obj_id spec \<or> frame_at obj_id spec"
 
-lemma capless_at_def2:
-  "capless_at p s = object_at (\<lambda>obj. \<not> (has_slots obj)) p s"
-  apply (clarsimp simp: has_slots_def object_at_def)
-  apply (fastforce simp: is_untyped_def is_ep_def is_ntfn_def is_frame_def is_vcpu_def
-                 split: cdl_object.splits)
-  done
-
 abbreviation
   "ko_at k \<equiv> object_at ((=) k)"
-
-lemma ko_at_tcb_at:
-  "ko_at (Tcb t) p s \<Longrightarrow> tcb_at p s"
-  by (simp add: object_at_def is_tcb_def)
 
 abbreviation
   "type_at T \<equiv> object_at (\<lambda>ob. object_type ob = T)"
@@ -694,13 +543,6 @@ where "is_fake_pt_cap cap \<equiv> case cap of
     PageTableCap PT _ (Fake _) _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-definition is_real_vm_cap :: "cdl_cap \<Rightarrow> bool" where
-  "is_real_vm_cap cap \<equiv>
-     case cap of
-       FrameCap _ _ _ _ Real _ \<Rightarrow> True
-     | PageTableCap _ _ Real _ \<Rightarrow> True
-     | _                       \<Rightarrow> False"
-
 definition is_fake_vm_cap :: "cdl_cap \<Rightarrow> bool" where
   "is_fake_vm_cap cap \<equiv>
      case cap of
@@ -727,27 +569,6 @@ abbreviation "pt_cap_at \<equiv> cap_at is_pt_cap"
 abbreviation "fake_pt_cap_at \<equiv> cap_at is_fake_pt_cap"
 abbreviation "irqhandler_cap_at \<equiv> cap_at is_irqhandler_cap"
 
-lemma is_cnode_cap_simps:
-  "is_cnode_cap (UntypedCap dev ids ids') = False"
-  "is_cnode_cap (IOPageTableCap x) = False"
-  "is_cnode_cap (IOSpaceCap x) = False"
-  "is_cnode_cap (IOPortsCap x a) = False"
-  "is_cnode_cap (AsidPoolCap x b) = False"
-  "is_cnode_cap (PageTableCap pt_t x e f) = False"
-  "is_cnode_cap (FrameCap dev x g h i j) = False"
-  "is_cnode_cap (TcbCap x) = False"
-  "is_cnode_cap (MasterReplyCap x) = False"
-  "is_cnode_cap (ReplyCap x q) = False"
-  "is_cnode_cap (NotificationCap x m n) = False"
-  "is_cnode_cap (EndpointCap x p q) = False"
-  "is_cnode_cap (ZombieCap x) = False"
-  "is_cnode_cap (PendingSyncSendCap x s t u v w) = False"
-  "is_cnode_cap (PendingSyncRecvCap x t w) = False"
-  "is_cnode_cap (PendingNtfnRecvCap x) = False"
-
-  "is_cnode_cap (CNodeCap x k l sz) = True"
-  by (unfold cap_type_def, simp_all split: cdl_object_type.splits)
-
 (* This is to be rarely used. original_cap_at is what you probably want. *)
 definition cap_at_has_no_parents_in_cdt :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> bool"
 where
@@ -771,16 +592,6 @@ where
    cap = default_cap type (cap_objects cap) (cnode_cap_size cap) dev) \<or>
    is_irqhandler_cap cap"
 
-lemma default_cap_eq:
-  "\<lbrakk>is_default_cap cap; is_default_cap cap';
-    cap_type cap = cap_type cap'; cap_objects cap = cap_objects cap';
-    cnode_cap_size cap = cnode_cap_size cap';
-    cap_irq cap = cap_irq cap'; is_device_cap cap = is_device_cap cap'\<rbrakk>
-  \<Longrightarrow> cap = cap'"
-  by (auto simp: is_default_cap_def cap_type_def cap_irq_def default_cap_def
-          split: cdl_cap.splits )
-
-
 lemma cnode_cap_size_non_cnode [simp]:
   "\<not> is_cnode_cap cap \<Longrightarrow> cnode_cap_size cap = 0"
   by (clarsimp simp: cap_type_def cnode_cap_size_def split: cdl_cap.splits)
@@ -788,16 +599,6 @@ lemma cnode_cap_size_non_cnode [simp]:
 lemma irqhandler_cap_irq_non_irqhandler [simp]:
   "\<not> is_irqhandler_cap cap \<Longrightarrow> cap_irq cap = undefined"
   by (clarsimp simp: cap_irq_def split: cdl_cap.splits)
-
-lemma default_cap_eq_non_cnode:
-  "\<lbrakk>is_default_cap cap; is_default_cap cap';
-   \<not> is_cnode_cap cap; \<not> is_irqhandler_cap cap;
-    cap_type cap = cap_type cap'; cap_objects cap = cap_objects cap';
-    is_device_cap cap = is_device_cap cap'\<rbrakk>
-  \<Longrightarrow> cap = cap'"
-  apply (rule default_cap_eq)
-   apply simp+
-  done
 
 lemma cap_type_default_cap [simp]:
   "cap_type (default_cap type {obj_id} sz dev) = Some type"
@@ -807,25 +608,9 @@ lemma is_tcb_update_slots [simp]:
   "is_tcb (update_slots slots obj) = is_tcb obj"
   by (clarsimp simp: is_tcb_def update_slots_def split: cdl_object.splits)
 
-lemma tcb_has_slots [elim!]:
-  "is_tcb obj \<Longrightarrow> has_slots obj"
-  by (clarsimp simp: is_tcb_def has_slots_def split: cdl_object.splits)
-
-lemma cnode_has_slots [elim!]:
-  "is_cnode obj \<Longrightarrow> has_slots obj"
-  by (clarsimp simp: is_cnode_def has_slots_def split: cdl_object.splits)
-
 lemma pt_has_slots [elim!]:
   "is_pt obj \<Longrightarrow> has_slots obj"
   by (clarsimp simp: is_pt_def has_slots_def split: cdl_object.splits)
-
-lemma pd_has_slots [elim!]:
-  "is_pd obj \<Longrightarrow> has_slots obj"
-  by (clarsimp simp: is_pd_def has_slots_def split: cdl_object.splits)
-
-lemma asidpool_has_slots [elim!]:
-  "is_asidpool obj \<Longrightarrow> has_slots obj"
-  by (clarsimp simp: is_asidpool_def has_slots_def split: cdl_object.splits)
 
 lemma object_type_has_slots [elim!]:
   "object_type obj = TcbType \<Longrightarrow> has_slots obj"
@@ -858,22 +643,6 @@ lemma cap_has_object_update_cap_object [simp]:
   by (clarsimp simp: update_cap_object_def cap_has_object_def
               split: cdl_cap.splits)
 
-lemma cap_object_default_cap' [simp]:
-  "\<lbrakk>\<not>is_untyped obj; \<not>is_irq_node obj\<rbrakk>
-  \<Longrightarrow> cap_object (default_cap (object_type obj) {obj_id} sz dev) = obj_id"
-  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def is_irq_node_def
-              split: cdl_object_type.splits cdl_object.splits)
-
-lemma cap_object_default_cap [simp]:
-  "\<lbrakk>type \<noteq> UntypedType; type \<noteq> IRQNodeType\<rbrakk>
-  \<Longrightarrow> cap_object (default_cap type {obj_id} sz dev) = obj_id"
-  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def
-              split: cdl_object_type.splits cdl_object.splits)
-
-lemma cap_object_default_cap_frame:
-  "is_frame_cap cap \<Longrightarrow> cap_object (default_cap (the (cap_type cap)) {obj_id} sz dev) = obj_id"
-  by clarsimp
-
 lemma is_pd_default_cap[simp]:
   "is_pd obj \<Longrightarrow>
    cdl_objects spec ptr = Some obj \<Longrightarrow>
@@ -891,21 +660,6 @@ lemma pt_at_default_cap[simp]:
    cdl_objects spec ptr = Some obj \<Longrightarrow>
    default_cap (object_type obj) {ptr'} n b = PageTableCap PT ptr' Real None"
   by (clarsimp simp: object_type_is_object default_cap_def object_at_def)
-
-lemma default_cap_not_null [elim!]:
-  "default_cap type obj_ids sz dev = NullCap \<Longrightarrow> False"
-  "NullCap = default_cap type obj_ids sz dev\<Longrightarrow> False"
-  by (simp add: default_cap_def split: cdl_object_type.splits)+
-
-lemma cap_objects_update_cap_object [simp]:
-  "\<lbrakk>cap_has_object cap; \<not>is_untyped_cap cap\<rbrakk>
-  \<Longrightarrow> cap_objects (update_cap_object obj_id cap) = {obj_id}"
-  by (clarsimp simp: cap_has_object_def update_cap_object_def
-              split: cdl_cap.splits)
-
-lemma cap_has_object_default_cap [simp]:
-  "type \<noteq> IRQNodeType \<Longrightarrow> cap_has_object (default_cap type ids sz dev)"
-  by (clarsimp simp: default_cap_def cap_has_object_def split: cdl_object_type.splits)
 
 lemma all_cdl_rights_UNIV [simp]:
   "all_cdl_rights = UNIV"
@@ -1045,14 +799,6 @@ where "derived_cap cap \<equiv> case cap of
         | ZombieCap _ \<Rightarrow> NullCap
         | _ \<Rightarrow> cap "
 
-lemma derive_cap_wp:
-  "\<lbrace> P (derived_cap cap) \<rbrace> derive_cap slot cap \<lbrace>P\<rbrace>, -"
-  apply (clarsimp simp: derive_cap_def derived_cap_def)
-  apply (clarsimp simp: validE_R_def derive_cap_def split:cdl_cap.splits)
-  apply (safe, (wp whenE_wp |
-                clarsimp simp: ensure_no_children_def)+ )
-  done
-
 definition safe_for_derive :: "cdl_cap \<Rightarrow> bool"
 where "safe_for_derive cap \<equiv> case cap of
     NullCap \<Rightarrow> False
@@ -1063,33 +809,6 @@ where "safe_for_derive cap \<equiv> case cap of
   | IrqControlCap \<Rightarrow> False
   | ZombieCap _ \<Rightarrow> False
   | _ \<Rightarrow> True"
-
-lemma is_exclusive_cap_update_cap_rights [simp]:
-  "safe_for_derive (update_cap_rights rights cap) = safe_for_derive cap"
-  by (clarsimp simp: update_cap_rights_def safe_for_derive_def
-              split: cdl_cap.splits)
-
-lemma derive_cap_non_exclusive:
-  "\<lbrace> P (derived_cap cap) and K (safe_for_derive cap) \<rbrace> derive_cap slot cap \<lbrace>P\<rbrace>, \<lbrace>Q\<rbrace>"
-  apply (clarsimp simp: derive_cap_def derived_cap_def)
-  apply (clarsimp simp: validE_R_def derive_cap_def
-    safe_for_derive_def
-    split:cdl_cap.splits)
-  apply (intro conjI allI impI, wp+)
-  done
-
-lemma derived_cap_safe_for_derive[simp]:
-  "safe_for_derive (derived_cap cap) = safe_for_derive cap"
-  apply (case_tac cap)
-  apply (simp_all add:derived_cap_def safe_for_derive_def)
-  done
-
-lemma safe_for_derive_not_non:
-  "safe_for_derive cap \<Longrightarrow> cap \<noteq> NullCap"
-  by (simp add:safe_for_derive_def split:cdl_cap.splits)
-
-
-
 
 (* Given an object, this returns what the default state is for the object.
  * This should be the same as what is created by a retype operation.
@@ -1137,11 +856,6 @@ lemma object_slots_update_slots [simp]:
   by (clarsimp simp: object_slots_def update_slots_def has_slots_def
               split: cdl_object.splits)
 
-lemma object_slots_update_slots_empty [simp]:
-  "\<not>has_slots obj \<Longrightarrow> object_slots (update_slots slots obj) = Map.empty"
-  by (clarsimp simp: object_slots_def update_slots_def has_slots_def
-                 split: cdl_object.splits)
-
 lemma update_slots_no_slots [simp]:
   "\<not>has_slots obj \<Longrightarrow> update_slots slots obj = obj"
   by (clarsimp simp: update_slots_def has_slots_def split: cdl_object.splits)
@@ -1150,41 +864,13 @@ lemma update_slots_update_slots [simp]:
   "update_slots slots (update_slots slots' obj) = update_slots slots obj"
   by (clarsimp simp: update_slots_def split: cdl_object.splits)
 
-lemma update_slots_same_object:
-  "a = b \<Longrightarrow> update_slots a obj = update_slots b obj"
-  by (erule arg_cong)
-
-lemma update_slots_eq_slots:
-  "\<lbrakk>has_slots obj; update_slots slots obj = update_slots slots' obj'\<rbrakk> \<Longrightarrow> slots = slots'"
-  by (clarsimp simp: update_slots_def has_slots_def cdl_tcb.splits cdl_cnode.splits
-                     cdl_asid_pool.splits cdl_irq_node.splits
-              split: cdl_object.splits)
-
-lemma has_slots_object_type_has_slots:
-  "\<lbrakk>has_slots x; object_type x = object_type y\<rbrakk> \<Longrightarrow> has_slots y"
-  by (clarsimp simp: object_type_def has_slots_def split: cdl_object.splits)
-
-lemma object_type_has_slots_eq:
-  "object_type y = object_type x \<Longrightarrow> has_slots x = has_slots y"
-  by (clarsimp simp: object_type_def has_slots_def split: cdl_object.splits)
-
-
 lemma object_type_object_default_state [simp]:
   "object_type (object_default_state obj) = object_type obj"
   by (clarsimp simp: object_default_state_def2 object_type_def split: cdl_object.splits)
 
-lemma is_cnode_object_default_state [simp]:
-  "is_cnode (object_default_state obj) = is_cnode obj"
-  by (clarsimp simp: object_default_state_def2 is_cnode_def split: cdl_object.splits)
-
-
 lemma update_slots_same [simp]:
   "object_slots obj = cap_map \<Longrightarrow> update_slots cap_map obj = obj"
   by (clarsimp simp: update_slots_def object_slots_def split: cdl_object.splits)
-
-lemma dom_sub_restrict [simp]:
-  "dom (m `- A) = dom m \<inter> -A"
-  by (auto simp: sub_restrict_map_def dom_def split: if_split_asm)
 
 lemma inter_empty_not_both:
 "\<lbrakk>x \<in> A; A \<inter> B = {}\<rbrakk> \<Longrightarrow> x \<notin> B"
@@ -1231,11 +917,6 @@ lemma object_at_cdl_objects:
 lemma opt_cap_object_slot_simp:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
    opt_cap (obj_id, slot) spec = object_slots obj slot"
-   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
-
-lemma slots_of_object_slot_simp:
-  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
-   slots_of obj_id spec slot = object_slots obj slot"
    by (fastforce simp: object_at_def opt_cap_def slots_of_def)
 
 lemma is_fake_pt_cap_cap_has_object:

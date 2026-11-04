@@ -14,35 +14,7 @@ theory Corres_D
 imports StateTranslationProofs_DR Lib.Corres_Method
 begin
 
-lemma truncate_state_unit[simp]: "truncate_state s = s" by simp
-
 declare dxo_noop[simp]
-
-lemma select_ext_select[simp]: "select_ext a S = (select S :: ('b, unit) s_monad)"
-  by (rule ext)
-     (auto simp: select_ext_def select_switch_unit_def assert_def get_def select_def
-                 return_def bind_def fail_def image_def
-          split: if_split_asm)
-
-lemma OR_choice_OR[simp]: "(OR_choice c (f :: ('a,unit) s_monad) g) = (f \<sqinter> g)"
-  apply (rule ext, rename_tac s)
-  apply (clarsimp simp: OR_choice_def alternative_def get_def select_def return_def bind_def
-                        select_f_def mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def
-                 split: if_split_asm)
-  apply (case_tac "f s")
-  apply (case_tac "g s")
-  by (intro conjI set_eqI; clarsimp?; blast)
-
-lemma OR_choiceE_OR[simp]: "(OR_choiceE c (f :: ('a + 'b,unit) s_monad) g) = (f \<sqinter> g)"
-  apply (clarsimp simp: OR_choiceE_def bindE_def liftE_def)
-  apply (clarsimp simp: alternative_def get_def select_def return_def bind_def select_f_def
-                            mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def
-                 split: if_split_asm)
-  apply (rule ext, rename_tac s)
-  apply (case_tac "f s")
-  apply (case_tac "g s")
-  apply clarsimp
-  by (intro conjI set_eqI; clarsimp?; blast)
 
 (* state relation as set, in (simp split_def) normal form *)
 abbreviation
@@ -58,17 +30,6 @@ dcorres ::
 where
   "dcorres \<equiv> corres_underlying {ss'. transform (snd ss') = fst ss'} False False"
 
-(* Some obvious corres lemmas *)
-lemma corres_group_bind_rhs:
-  "corres_underlying sr nf nf' rvr P P' a (do y\<leftarrow>(do f; g od); h y od)
-    \<Longrightarrow> corres_underlying sr nf nf' rvr P P' a (do x \<leftarrow> f; y \<leftarrow> g; h y od)"
-  by (simp add: bind_assoc)
-
-lemma corres_expand_bind_rhs:
-  "dcorres rvr P P' a (do z \<leftarrow> f; y \<leftarrow> g z; h y od)
-    \<Longrightarrow> dcorres rvr P P' a (do y\<leftarrow> do z\<leftarrow>f; g z od; h y od)"
-  by (simp add: bind_assoc)
-
 lemma corres_bind_ignore_ret_rhs:
   "corres_underlying sr nf nf' rvr P P' a (do f; g od)
     \<Longrightarrow> corres_underlying sr nf nf' rvr P P' a (do y\<leftarrow> f;g od)"
@@ -81,6 +42,30 @@ lemma corres_free_fail:
 lemma corres_free_return:
   "dcorres dc P P' (return a) (return b)"
   by (clarsimp simp:return_def bind_def corres_underlying_def)
+
+lemma dcorres_chaos:
+  "(\<And>rv'. \<exists>rv. r rv rv') \<Longrightarrow> dcorres r P P' chaos m"
+  by (rule corres_guard_imp[OF corres_chaos_nf'])
+     auto
+
+lemma dcorres_chaos_dc:
+  "dcorres dc P P' chaos m"
+  by (rule dcorres_chaos)
+     simp
+
+lemma dcorres_chaos_dc_dc:
+  "dcorres (dc \<oplus> dc) P P' chaos m"
+  by (rule dcorres_chaos)
+     (case_tac rv'; auto)
+
+lemma dcorres_other_invocation:
+  "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>; \<And>y. R OtherInvocation y \<rbrakk> \<Longrightarrow>
+   dcorres (dc \<oplus> R) P P' other_invocation m"
+  apply (clarsimp simp: corres_underlying_def)
+  apply (rename_tac s' rv t')
+  apply (drule_tac P="(=) s'" in use_valid, assumption, rule refl)
+  apply (case_tac rv; force simp: alternative_def returnOk_def throwError_def return_def)
+  done
 
 lemma corres_free_set_object:
   "\<lbrakk> \<forall> s s'. s = transform s' \<and> P s \<and> P' s' \<longrightarrow>
@@ -115,14 +100,6 @@ lemma corres_dummy_returnOk_r:
 lemma corres_dummy_returnOk_pl:
   "dcorres c P P' (returnOk b >>=E (\<lambda>_. f)) g \<Longrightarrow> dcorres c P P' f g"
   by (fastforce simp: corres_underlying_def bindE_def returnOk_def)
-
-lemma corres_dummy_get_pr:
-  "dcorres c P P' f (do s\<leftarrow>get;g od)\<Longrightarrow> dcorres c P P' f g"
-  by (fastforce simp: corres_underlying_def bind_def get_def)
-
-lemma corres_dummy_get_pl:
-  "dcorres c P P' (do s\<leftarrow>get;g od) f \<Longrightarrow> dcorres c P P' g f"
-  by (fastforce simp: corres_underlying_def bind_def get_def)
 
 lemma dcorres_free_throw:
   assumes "\<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. (=) s\<rbrace>"
@@ -171,13 +148,6 @@ lemma dcorres_absorb_get_l:
   apply (clarsimp simp: valid_def exs_valid_def get_def)+
   done
 
-lemma dcorres_expand_get_l:
-  assumes "dcorres rv P P' (do t\<leftarrow>get; f t od) g"
-  shows "\<lbrakk> P (transform s'); P' s'\<rbrakk> \<Longrightarrow>
-         dcorres rv ((=) (transform s')) ((=) s') (f (transform s')) g"
-  using assms
-  by (simp add:get_def corres_underlying_def bind_def)
-
 lemma dcorres_absorb_get_r:
   assumes "!!s'. \<lbrakk>P (transform s'); P' s'\<rbrakk> \<Longrightarrow> dcorres rv ((=) (transform s')) ((=) s') f (g s')"
   shows "dcorres rv P P' f (do t\<leftarrow> get; g t od)"
@@ -187,12 +157,6 @@ lemma dcorres_absorb_get_r:
     apply (rule assms)
   apply (clarsimp simp: valid_def exs_valid_def get_def)+
   done
-
-lemma dcorres_expand_get_r:
-  assumes "dcorres rv P P' f (do t\<leftarrow> get; g t od)"
-  shows "!!s'. \<lbrakk>P (transform s'); P' s'\<rbrakk> \<Longrightarrow> dcorres rv ((=) (transform s')) ((=) s') f (g s')"
-  using assms
-  by (clarsimp simp:get_def corres_underlying_def bind_def)
 
 lemma dcorres_absorb_gets_the:
   assumes A: "\<And>s' obj'. \<lbrakk>P' s';  g' s' = Some obj'; P (transform s')\<rbrakk>
@@ -240,58 +204,6 @@ lemma dcorres_gets_the:
        apply (simp add: A)+
     using B
     apply (wp|clarsimp)+
-  done
-
-lemma wpc_helper_dcorres:
-  "dcorres r Q Q' f f'
-   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (dcorres r P P' f f')"
-  apply (clarsimp simp: wpc_helper_def)
-  apply (erule corres_guard_imp)
-   apply simp
-  apply auto
-  done
-
-wpc_setup "\<lambda>m. dcorres r P P' a m" wpc_helper_dcorres
-wpc_setup "\<lambda>m. dcorres r P P' a (m >>= c)" wpc_helper_dcorres
-
-(* Shorthand to say that a TCB is at the given location in the given state. *)
-definition "cdl_tcb_at x \<equiv> \<lambda>s. \<exists>tcb . cdl_objects s x = Some (Tcb tcb)"
-
-(*
- * We can strengthen the LHS precondition by using the RHS
- * precondition if the state relation preserves it.
- *)
-lemma dcorres_strengthen_lhs_guard:
-  "\<lbrakk> dcorres rr P P' g g'; \<And>s. P' s \<Longrightarrow> P (transform s) \<rbrakk> \<Longrightarrow> dcorres rr \<top> P' g g'"
-  by (rule stronger_corres_guard_imp [where Q=P and Q'=P']) auto
-
-(* A call to "mapM" is idempotent if its input monad is idempotent. *)
-lemma hoare_mapM_idempotent: "\<lbrakk> \<And> a R. \<lbrace> R \<rbrace> x a \<lbrace> \<lambda>_. R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> R \<rbrace> mapM x y \<lbrace> \<lambda>_. R \<rbrace>"
-  apply (induct_tac y)
-   apply (clarsimp simp: mapM_def sequence_def)
-  apply (clarsimp simp: mapM_def sequence_def)
-  apply atomize
-  apply (erule_tac x=a in allE)
-  apply (erule_tac x=R in allE)
-  apply (rule bind_wp)
-   apply wp
-  apply assumption
-  done
-
-(* A call to "mapM" corresponds to "return foo" if the mapM is idempotent. *)
-lemma dcorres_idempotent_mapM_rhs:
-  "\<lbrakk> \<And> a R. \<lbrace> R \<rbrace> x a \<lbrace> \<lambda>_. R \<rbrace> \<rbrakk> \<Longrightarrow>
-     dcorres dc P P' (return q) (mapM x y)"
-  apply (induct_tac y)
-   apply (clarsimp simp: mapM_def sequence_def)
-  apply (clarsimp simp: mapM_def sequence_def)
-  apply atomize
-  apply (erule_tac x=a in allE)
-  apply (rule corres_symb_exec_r [where Q'="\<lambda>_. P'"])
-     apply (clarsimp simp: corres_underlying_def bind_def return_def split_def)
-    apply (erule_tac x=P' in allE, assumption)
-   apply (erule_tac x="(=) s" in allE, assumption)
-  apply simp
   done
 
 (* rules used to get rid of the error branchs of decode proof *)
@@ -359,17 +271,6 @@ lemma corres_return_throw_thingy:
   apply simp
   done
 
-lemma dcorres_throw_wp:
-assumes "\<forall>s. \<lbrace>(=) s\<rbrace>g\<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=) s\<rbrace>"
-shows "dcorres (dc\<oplus>anyrel) \<top> P (Monads_D.throw) g"
-  using assms
-  apply (clarsimp simp:throwError_def corres_underlying_def return_def validE_def valid_def)
-  apply (drule spec)
-  apply (drule (1) bspec)
-  apply (clarsimp split:sum.split_asm)
-  done
-
-
 (*
  * We can consider correspondence of a function starting with
  * a conditional "throw" in two parts: when the error occurs
@@ -394,24 +295,6 @@ lemma dcorres_whenE_throwError_abstract':
     apply (rule dcorres_whenE_throwError_abstract, assumption, assumption)
    apply simp
   apply simp
-  done
-
-lemma dcorres_symb_exec_r_catch:
-  "\<lbrakk>
-    \<And>rv. dcorres r P (Q1 rv) f (h rv);
-    \<And>rv'. dcorres r P (Q2 rv') f (i rv'<catch> h);
-   \<lbrace>P'\<rbrace> g \<lbrace>Q2\<rbrace>, \<lbrace>Q1\<rbrace>; \<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>r. (=) s\<rbrace>
-   \<rbrakk>
-  \<Longrightarrow> dcorres r P P' f (g >>=E i <catch> h)"
-  apply (subst catch_def)
-  apply (clarsimp simp:lift_def bindE_def bind_assoc)
-  apply (rule corres_symb_exec_r)
-    prefer 2
-    apply (clarsimp simp:lift_def validE_def bind_def)
-    apply (simp)
-      apply (case_tac x)
-        apply (simp add:throwError_def)+
-        apply (simp add:catch_def)+
   done
 
 lemma dcorres_symb_exec_r:
@@ -440,25 +323,6 @@ lemma dcorres_symb_exec_r_strong:
      apply wp
     apply simp+
    apply (clarsimp simp:valid_def corres_underlying_def return_def)
-  done
-
-lemma dcorres_symb_exec_r_catch':
-  "\<lbrakk>
-    \<And>rv. dcorres r P (Q1 rv) f (h rv);
-    \<And>rv'. dcorres r P (Q2 rv') f (i rv'<catch> h);
-   \<lbrace>P'\<rbrace> g \<lbrace>Q2\<rbrace>, \<lbrace>Q1\<rbrace>; \<And>cs. \<lbrace>\<lambda>s. transform s = cs\<rbrace> g \<lbrace>\<lambda>r s. transform s = cs\<rbrace>
-   \<rbrakk>
-  \<Longrightarrow> dcorres r P P' f (g >>=E i <catch> h)"
-  apply (subst catch_def)
-  apply (clarsimp simp:lift_def bindE_def bind_assoc)
-  apply (subst dcorres_symb_exec_r)
-    prefer 2
-    apply (clarsimp simp:lift_def validE_def bind_def)
-    apply (simp)
-      apply (case_tac rv)
-        apply (simp add:throwError_def)+
-        apply (simp add:catch_def)
-      apply simp+
   done
 
 lemma dcorres_to_wp:
@@ -635,43 +499,7 @@ lemma dcorres_rhs_noop_above: "\<lbrakk> dcorres anyrel P P' (return ()) m; dcor
   done
 
 lemmas dcorres_rhs_noop_below_True = dcorres_rhs_noop_below[OF _ _ hoare_TrueI hoare_TrueI]
-lemmas dcorres_rhs_noop_above_True = dcorres_rhs_noop_above[OF _ _ hoare_TrueI hoare_TrueI]
-
 \<comment> \<open>FIXME: remove\<close>
 declare hoare_TrueI[simp]
-
-lemma dcorres_dc_rhs_noop_below_gen:
-  "\<lbrakk> \<forall>rv'. dcorres dc (Q ()) (Q' rv') (return ()) (m rv');
-              dcorres dc P P' f g;
-     \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>; \<lbrace> P' \<rbrace> g \<lbrace> Q' \<rbrace> \<rbrakk>
-   \<Longrightarrow> dcorres dc P P' f (g >>= m)"
-  apply (rule corres_add_noop_lhs2)
-  apply (rule corres_split_forwards')
-  apply (assumption | clarsimp)+
-  done
-
-lemma dcorres_dc_rhs_noop_below_2: "\<lbrakk> \<forall>rv'. dcorres dc (Q ()) (Q' rv') (return ()) m;
-         dcorres dc P P' f (g >>= h);
-         \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>;
-         \<lbrace> P' \<rbrace> g \<lbrace> R'\<rbrace>;
-         (\<And>y. \<lbrace> R' y \<rbrace> h y \<lbrace> Q' \<rbrace>)
-          \<rbrakk>
-       \<Longrightarrow> dcorres dc P P' f (do x \<leftarrow> g;
-                                   _ \<leftarrow> h x;
-                                   m
-                                 od)"
-  apply (simp add: bind_assoc[symmetric])
-  apply (rule dcorres_dc_rhs_noop_below_gen)
-  apply (wp | simp | assumption)+
-  done
-
-lemmas dcorres_dc_rhs_noop_below_2_True = dcorres_dc_rhs_noop_below_2[OF _ _ hoare_TrueI hoare_TrueI hoare_TrueI]
-
-lemma dcorres_assert_opt_assume:
-  assumes "\<And>x. m = Some x \<Longrightarrow> dcorres R P P' a (c x)"
-  shows "dcorres R P P' a (assert_opt m >>= c)"
-  using assms
-  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def
-                 corres_underlying_def split: option.splits)
 
 end

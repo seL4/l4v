@@ -41,17 +41,7 @@ lemma dcorres_call_kernel:
             apply (rule schedule_dcorres)
            apply (rule activate_thread_corres[unfolded fun_app_def])
           apply (wp schedule_valid_sched)+
-        apply (simp add: handle_pending_interrupts_def maybe_handle_interrupt_def)
-        apply (rule corres_split[OF get_active_irq_corres])
-          apply corres_cases_both
-           apply (rule dcorres_handle_spurious_irq)
-          apply simp
-          apply (rule handle_interrupt_corres[simplified dc_def])
-         apply wpsimp
-        apply wpsimp
-        apply (rule hoare_drop_imps) (* getActiveIRQ invs *)
-        apply wpsimp
-       apply clarsimp (* needs to come before the wp, because goal has schematic post conditions *)
+        apply (rule corres_liftE_rel_sum[THEN iffD2, OF handle_pending_interrupts_corres])
        apply wp
       apply (rule hoare_post_impE_E_dc, rule handle_event_invs_and_valid_sched)
       apply (clarsimp simp: invs_def valid_state_def)

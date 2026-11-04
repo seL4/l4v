@@ -28,12 +28,6 @@ lemma asid_bits [simp]:
   "Types_D.asid_bits = asid_bits"
   by (simp add:Types_D.asid_bits_def asid_bits_def asid_high_bits_def asid_low_bits_def)
 
-lemma get_obj_simps [simp]:
-  "get_obj (s\<lparr>cur_thread := a\<rparr>) = get_obj s"
-  apply (rule ext)
-  apply (clarsimp simp: get_obj_def)
-  done
-
 lemma transform_objects_simps [simp]:
   "transform_objects (s\<lparr>cur_thread := a\<rparr>) = transform_objects s"
   apply (rule ext)
@@ -54,24 +48,10 @@ abbreviation
 "update_kheap kh s \<equiv> kheap_update (\<lambda>_. kh) s"
 
 abbreviation
-"tcb_set_mi tcb msg \<equiv>
-  tcb \<lparr>tcb_context := modify_registers (\<lambda>rs. rs(msg_info_register := msg)) (tcb_context tcb)\<rparr>"
-
-abbreviation
-"update_tcb_cxt_badge msg tcb\<equiv>
-  tcb \<lparr>tcb_context := modify_registers (\<lambda>rs. rs(badge_register := msg)) (tcb_context tcb)\<rparr>"
-
-abbreviation
 "update_tcb_state state tcb \<equiv> tcb \<lparr>tcb_state := state\<rparr>"
 
 abbreviation
 "update_tcb_boundntfn ntfn_opt tcb \<equiv> tcb \<lparr>tcb_bound_notification := ntfn_opt\<rparr>"
-
-abbreviation
-"dupdate_cdl_object ptr obj s \<equiv>  cdl_objects_update (\<lambda>_. (cdl_objects s)(ptr \<mapsto> obj)) s"
-
-abbreviation
-"dupdate_tcb_intent intent tcb\<equiv> tcb \<lparr>cdl_tcb_intent := intent\<rparr>"
 
 lemma update_kheap_triv[simp]:
   "kheap s y = Some obj\<Longrightarrow> update_kheap ((kheap s)(y \<mapsto> obj)) s = s"
@@ -83,50 +63,6 @@ lemma msg_registers_lt_msg_max_length [simp]:
   "length msg_registers < msg_max_length"
   by (simp add: msg_registers_def msgRegisters_def upto_enum_def
                 fromEnum_def enum_register msg_max_length_def)
-
-lemma get_tcb_mrs_update_state :
-  "get_tcb_mrs ms (tcb_state_update f tcb) = get_tcb_mrs ms tcb"
-  by (clarsimp simp:get_tcb_mrs_def Suc_le_eq get_tcb_message_info_def get_ipc_buffer_words_def)
-
-lemma msg_info_badge_register_no_overlap:
-  "badge_register \<noteq> msg_info_register"
-  by (clarsimp simp:badge_register_def msg_info_register_def
-    ARM.badgeRegister_def
-                  ARM.msgInfoRegister_def)
-
-lemma badge_cap_register_overlap:
-  "badge_register = cap_register"
-by (clarsimp simp:badge_register_def cap_register_def
-                  ARM.badgeRegister_def
-                  ARM.capRegister_def)
-
-lemma cap_msg_info_register_no_overlap:
-  "cap_register \<noteq> msg_info_register"
-by (clarsimp simp:msg_info_register_def cap_register_def
-                  ARM.msgInfoRegister_def
-                  ARM.capRegister_def)
-
-lemmas register_overlap_check = msg_info_badge_register_no_overlap
-                                cap_msg_info_register_no_overlap
-                                badge_cap_register_overlap
-
-lemma transform_full_intent_cong:
-  "\<lbrakk>ms = ms'; ptr = ptr';
-    arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb');
-    tcb_ipc_buffer tcb = tcb_ipc_buffer tcb'; tcb_ipcframe tcb = tcb_ipcframe tcb'\<rbrakk>
-  \<Longrightarrow> transform_full_intent ms ptr tcb = transform_full_intent ms' ptr' tcb'"
-  by (simp add: transform_full_intent_def get_tcb_message_info_def get_tcb_mrs_def Suc_le_eq get_ipc_buffer_words_def)
-
-lemma caps_of_state_eq_lift:
-  "\<forall>cap. cte_wp_at ((=) cap) p s = cte_wp_at ((=) cap) p s' \<Longrightarrow>  caps_of_state s p = caps_of_state s' p"
-  apply (simp add:cte_wp_at_def caps_of_state_def)
-  done
-
-lemma caps_of_state_irrelavent_simp:
-  "ref \<noteq> epptr \<Longrightarrow> caps_of_state (update_kheap (kh(epptr \<mapsto> obj)) s) (ref, cref) = caps_of_state (update_kheap kh s) (ref, cref)"
-  apply (rule caps_of_state_eq_lift)
-  apply (clarsimp simp: cte_wp_at_cases)
-  done
 
 (* This doesn't satisfy the obvious transformation into capDL because of
    pagetables etc. *)
@@ -147,33 +83,6 @@ lemma caps_of_state_def2:
   apply (case_tac y, simp_all add: bind_def assert_def return_def assert_opt_def fail_def tcb_cap_cases_def
                               split: option.splits)
   done
-
-lemma caps_of_state_update_same_caps:
-  assumes kh: "kh ptr = Some ko"
-  and    coo: "caps_of_object ko' = caps_of_object ko"
-  shows  "caps_of_state (update_kheap (kh(ptr \<mapsto> ko')) s) = caps_of_state (update_kheap kh s)"
-  using kh coo
-  apply -
-  apply (rule ext)
-  apply (clarsimp simp add: caps_of_state_def2)
-  done
-
-lemma caps_of_state_update_tcb:
-  "\<lbrakk> kh thread = Some (TCB tcb);
-     (tcb_ctable tcb) =  (tcb_ctable (f tcb));
-     (tcb_vtable tcb) =  (tcb_vtable (f tcb));
-     (tcb_reply tcb) =  (tcb_reply (f tcb));
-     (tcb_caller tcb) =  (tcb_caller (f tcb));
-     (tcb_ipcframe tcb) =  (tcb_ipcframe (f tcb)) \<rbrakk>
-    \<Longrightarrow>
-      caps_of_state (update_kheap (kh(thread \<mapsto> (TCB (f tcb)))) s) =
-      caps_of_state (update_kheap kh s)"
-  apply (erule caps_of_state_update_same_caps)
-  apply (rule ext)
-  apply (simp add: tcb_cap_cases_def split: if_split)
-  done
-
-lemmas caps_of_state_upds = caps_of_state_update_tcb caps_of_state_update_same_caps
 
 lemma transform_cdt_kheap_update [simp]:
   "transform_cdt (kheap_update f s) = transform_cdt s"
