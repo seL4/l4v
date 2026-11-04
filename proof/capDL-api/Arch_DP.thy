@@ -41,7 +41,8 @@ lemma cdl_lookup_pt_slot_rv:
 
 lemma decode_invocation_invER[wp]:
   "\<lbrace>P and Q\<rbrace> decode_invocation a b c d\<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"
-  apply (simp add:decode_invocation_def)
+  apply (cases "d = OtherIntent"; simp add: decode_invocation_def)
+   apply wpsimp
   apply (case_tac a,simp_all)
   apply (rule hoare_pre, (wp | simp add:throw_opt_def cdl_ARCH_AARCH32 | wpc | intro conjI impI)+)+
   done
@@ -121,17 +122,18 @@ lemma invoke_page_table_wp:
   apply (wp sep_wp: insert_cap_orphan_wp set_cap_wp, sep_solve)
 done
 
-crunch invoke_page
-  for cdl_cur_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
-  (wp: crunch_wps simp: swp_def)
+lemma invoke_page_map_cdl_cur_thread[wp]:
+  "\<lbrace>\<lambda>s. P (cdl_current_thread s)\<rbrace> invoke_page (PageMap a b c d) \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
+  by (wpsimp simp: invoke_page_def)
+
+lemma invoke_page_map_cdl_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (cdl_current_domain s)\<rbrace> invoke_page (PageMap a b c d) \<lbrace>\<lambda>_ s. P (cdl_current_domain s)\<rbrace>"
+  by (wpsimp simp: invoke_page_def)
 
 crunch invoke_page_table
   for cdl_cur_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
+  and cdl_cur_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
   (wp: crunch_wps simp: swp_def)
-
-crunch invoke_page_table, invoke_page
-  for cdl_cur_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
-  (wp: crunch_wps simp: swp_def unless_def)
 
 lemmas cap_asid_simps[simp] = cap_asid_def[split_simps cdl_cap.split]
 lemmas cap_mapped_simps[simp] = cap_mapped_def[split_simps cdl_cap.split]
