@@ -1645,7 +1645,14 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch-sp
   fixes s0_context :: user_context
   defines
     "current_aag t \<equiv> initial_aag\<lparr>pasSubject := the_elem (pasDomainAbs initial_aag (cur_domain t))\<rparr>"
-  (* Run the system from right where we exit the kernel for the first time to user-space.
+  (* The single initial state of the 2013 information-flow proofs (Murray et al., S&P 2013).
+     The information-flow theorems are stated over the set Init0 of initial states (defined
+     below, and see the locale noninterference_system in Noninterference_Base), which contains
+     s0, so they imply the 2013 theorems. s0 still serves as the reference state that the
+     invariants Invs are stated relative to (via s0_internal), so every member of Init0 agrees
+     with it on, e.g., the timer IRQ and the idle thread.
+
+     Run the system from right where we exit the kernel for the first time to user-space.
      It shouldn't matter what the initial machine context is since the first
      thing that should happen on a KernelExit is to restore it from the cur_thread *)
   defines "s0 \<equiv> ((if ct_idle s0_internal then idle_context s0_internal else s0_context,s0_internal),
@@ -1961,6 +1968,13 @@ lemma invs_if_s0[simp]:
                         ct_running_or_ct_idle_s0_internal domain_time_s0_internal
                         det_inv_s0 cur_thread_context_of_def scheduler_action_s0_internal)
   using domain_time_s0_internal by fastforce
+
+text \<open>
+  The initial states: every state satisfying the invariants that is at a big-step boundary. The
+  set is closed under big steps, so every state reachable from it is again a member.
+\<close>
+definition Init0 :: "observable_if set" where
+  "Init0 \<equiv> {s. invs_if s \<and> step_restrict s \<and> (interrupted_modes (snd s) \<or> snd s = KernelExit)}"
 
 lemma only_timer_irq_inv_irq_state_update[simp]:
   "only_timer_irq_inv timer_irq s0_internal
@@ -2395,21 +2409,6 @@ lemma Step_ADT_A_if:
   apply (frule invs_if_full_invs_if)
   apply (frule execution_restrict)
   apply (simp add: system.Step_def execution_def steps_def ADT_A_if_def)
-  done
-
-lemma ADT_A_if_reachable_invs_if:
-  "system.reachable (ADT_A_if utf) s0 s \<Longrightarrow> invs_if s"
-  apply (clarsimp simp: system.reachable_def)
-  apply (erule execution_invs)
-  done
-
-lemma ADT_A_if_reachable_full_invs_if:
-  "system.reachable (ADT_A_if utf) s0 s \<Longrightarrow> s \<in> full_invs_if"
-  apply (clarsimp simp: system.reachable_def)
-  apply (rule invs_if_full_invs_if)
-  apply (rule ADT_A_if_reachable_invs_if)
-  apply (simp add: system.reachable_def)
-  apply force
   done
 
 lemma ADT_A_if_enabled_Step_system:
@@ -3101,18 +3100,24 @@ lemma invs_if_irq_is_recurring[simp]:
   "invs_if s \<Longrightarrow> irq_is_recurring timer_irq (internal_state_if s)"
   by (clarsimp simp: invs_if_def Invs_def only_timer_irq_inv_def only_timer_irq_def)
 
-lemma tranclp_s0:
-  "big_step_R\<^sup>*\<^sup>* s0 s \<Longrightarrow> interrupted_modes (snd s) \<or> (snd s) = KernelExit"
-  apply (simp only: rtranclp_def2)
-  apply (erule disjE)
-   apply (induct rule: tranclp.induct)
-    apply (auto simp: big_step_R_def s0_def)
+text \<open>A big-step boundary: where a big step may start and must end.\<close>
+definition bs_boundary :: "observable_if \<Rightarrow> bool" where
+  "bs_boundary s \<equiv> interrupted_modes (snd s) \<or> snd s = KernelExit"
+
+lemma bs_boundaryD:
+  "bs_boundary s \<Longrightarrow> interrupted_modes (snd s) \<or> snd s = KernelExit"
+  by (simp add: bs_boundary_def)
+
+lemma tranclp_Init0:
+  "\<lbrakk> s0' \<in> Init0; big_step_R\<^sup>*\<^sup>* s0' s \<rbrakk> \<Longrightarrow> bs_boundary s"
+  apply (erule rtranclp.cases)
+   apply (auto simp: big_step_R_def Init0_def bs_boundary_def)
   done
 
 lemma ADT_A_if_sub_big_steps_measuref_if:
-  "\<lbrakk> (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; big_step_R\<^sup>*\<^sup>* s0 s \<rbrakk>
+  "\<lbrakk> (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; bs_boundary s \<rbrakk>
      \<Longrightarrow> measuref_if s s' > 0"
-  apply (drule tranclp_s0)
+  apply (drule bs_boundaryD)
   apply (erule sub_big_steps.induct)
    apply (clarsimp simp: big_step_R_def measuref_if_def)
   apply (clarsimp simp: big_step_R_def measuref_if_def split: if_splits)
@@ -3400,12 +3405,6 @@ lemma Step_ADT_A_if_def_global_automaton_if:
         \<inter> {(s, y). step_restrict y})"
   by (clarsimp simp: ADT_A_if_def)
 
-lemma ADT_A_if_reachable_step_restrict:
-  "system.reachable (ADT_A_if utf) s0 s \<Longrightarrow> step_restrict s"
-  apply (clarsimp simp: system.reachable_def)
-  apply (erule execution_restrict)
-  done
-
 lemma step_restrict_inv_holds_ADT_A_if:
   "ADT_A_if utf [> {s. step_restrict s}"
   apply (rule inv_holdsI)
@@ -3425,7 +3424,7 @@ lemma invs_if_sub_big_steps_ADT_A_if:
 
 lemma small_step_irq_state_next_irq:
   "\<lbrakk> invs_if s1; (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s1;
-     (s', s2) \<in> Step (ADT_A_if utf) a; big_step_R\<^sup>*\<^sup>* s0 s1;
+     (s', s2) \<in> Step (ADT_A_if utf) a; bs_boundary s1;
      snd s1 = KernelExit; interrupted_modes (snd s2) \<rbrakk>
      \<Longrightarrow> next_irq_state_of_state (internal_state_if s1) = irq_state_of_state (internal_state_if s2)"
   apply (subgoal_tac "invs_if s'")
@@ -3459,7 +3458,7 @@ lemma small_step_irq_state_next_irq:
   done
 
 lemma big_step_irq_state_next_irq:
-  "\<lbrakk> invs_if s1; big_step_R\<^sup>*\<^sup>* s0 s1; (s1, s2) \<in> Step (big_step_ADT_A_if utf) a;
+  "\<lbrakk> invs_if s1; bs_boundary s1; (s1, s2) \<in> Step (big_step_ADT_A_if utf) a;
      snd s1 = KernelExit; i_s1 = internal_state_if s1; i_s2 = internal_state_if s2 \<rbrakk>
      \<Longrightarrow> next_irq_state_of_state i_s1 = irq_state_of_state i_s2"
   apply simp
@@ -3474,7 +3473,7 @@ lemmas ADT_A_if_Step_next_irq_state_of_state =
   ADT_A_if_Step_measure_if'[THEN conjunct2, rule_format]
 
 lemma ADT_A_if_big_step_R_terminate:
-  "rel_terminate (ADT_A_if utf) s0 big_step_R {s. invs_if s} measuref_if"
+  "s0' \<in> Init0 \<Longrightarrow> rel_terminate (ADT_A_if utf) s0' big_step_R {s. invs_if s} measuref_if"
   apply (clarsimp simp: rel_terminate_def)
   apply (rule conjI)
    apply (rename_tac uc s mode as uc' s' mode' uc'' s'' mode'')
@@ -3483,20 +3482,41 @@ lemma ADT_A_if_big_step_R_terminate:
     apply (simp add: invs_if_sub_big_steps_ADT_A_if)
    apply (rule ADT_A_if_sub_big_steps_measuref_if)
     apply simp
+   apply (rule tranclp_Init0, assumption)
    apply (simp add: ADT_A_if_def)
   apply (simp add: ADT_A_if_def)
-  apply (drule tranclp_s0)
-  apply (fastforce simp: measuref_if_def big_step_R_def Step_ADT_A_if
+  apply (drule (1) tranclp_Init0)
+  apply (fastforce simp: bs_boundary_def measuref_if_def big_step_R_def Step_ADT_A_if
                          Step_ADT_A_if_def_global_automaton_if global_automaton_if_def
                  split: if_splits)
   done
 
+lemma execution_invs_Init0:
+  "\<lbrakk> s0' \<in> Init0; s \<in> execution (ADT_A_if utf) s0' js \<rbrakk>
+   \<Longrightarrow> invs_if s"
+  apply (induct js arbitrary: s rule: rev_induct)
+   apply (clarsimp simp add: execution_def Fin_ADT_if Init_ADT_if image_def Init0_def)
+   apply (simp add: execution_def Fin_ADT_if Init_ADT_if steps_def)
+  apply (simp add: execution_def steps_def image_def)
+  apply (erule bexE)
+  apply (unfold Image_def)
+  apply (drule CollectD)
+  apply (erule bexE)
+  apply simp
+  apply (rule invs_if_Step_ADT_A_if)
+   apply (drule_tac meta_spec)
+   apply (fastforce)
+  apply simp
+  apply (clarsimp simp: Fin_ADT_if ADT_A_if_def)
+  done
+
 lemma ADT_A_if_Init_inv_Fin:
-  "Init_inv_Fin_system (ADT_A_if utf) s0"
+  "s0' \<in> Init0 \<Longrightarrow> Init_inv_Fin_system (ADT_A_if utf) s0'"
   apply unfold_locales
-    apply (simp add: ADT_A_if_def invs_if_full_invs_if extras_s0)
-   apply (frule ADT_A_if_reachable_invs_if)
-   apply (drule ADT_A_if_reachable_step_restrict)
+    apply (simp add: ADT_A_if_def invs_if_full_invs_if Init0_def)
+   apply (clarsimp simp: system.reachable_def)
+   apply (frule (1) execution_invs_Init0)
+   apply (drule execution_restrict)
    apply (simp add: ADT_A_if_def invs_if_full_invs_if)
   apply (simp add: ADT_A_if_def)
   done
@@ -3505,29 +3525,111 @@ lemma invs_if_inv_holds_ADT_A_if:
   "ADT_A_if utf [> Collect invs_if"
   by (force intro: inv_holdsI invs_if_Step_ADT_A_if)
 
+lemma ADT_A_if_Init_Fin_serial_Init0:
+  "s0' \<in> Init0 \<Longrightarrow> Init_Fin_serial (ADT_A_if utf) s0' (full_invs_if \<inter> {s. step_restrict s})"
+  using ADT_A_if_Init_Fin_serial
+  by (auto simp: Init_Fin_serial_def Init_Fin_serial_axioms_def serial_system_def
+                 ADT_A_if_def)
+
 lemma ADT_A_if_Init_Fin_serial_weak:
-  "Init_Fin_serial_weak (ADT_A_if utf) s0 ({s. invs_if s} \<inter> {s. step_restrict s})"
+  "s0' \<in> Init0 \<Longrightarrow> Init_Fin_serial_weak (ADT_A_if utf) s0' ({s. invs_if s} \<inter> {s. step_restrict s})"
   apply (rule Init_Fin_serial_weak_strengthen)
-     apply (rule Init_Fin_serial.serial_to_weak[OF ADT_A_if_Init_Fin_serial])
+     apply (rule Init_Fin_serial.serial_to_weak[OF ADT_A_if_Init_Fin_serial_Init0], assumption)
     apply (intro inv_holds_conjI invs_if_inv_holds_ADT_A_if step_restrict_inv_holds_ADT_A_if)
    apply (clarsimp simp: invs_if_full_invs_if)
-  apply (simp add: ADT_A_if_def)
-  apply (insert invs_if_s0 extras_s0)
-  apply blast
+  apply (auto simp: ADT_A_if_def Init0_def)
   done
 
 lemma big_step_ADT_A_if_enabled_Step_system:
-  "enabled_Step_system (big_step_ADT_A_if utf) s0"
+  "s0' \<in> Init0 \<Longrightarrow> enabled_Step_system (big_step_ADT_A_if utf) s0'"
   apply (simp add: big_step_ADT_A_if_def)
   apply (rule big_step_adt_enabled_Step_system)
       apply simp
      apply (fastforce simp: big_step_R_def)
-    apply (rule ADT_A_if_Init_Fin_serial_weak)
-   apply (rule ADT_A_if_Init_inv_Fin)
+    apply (erule ADT_A_if_Init_Fin_serial_weak)
+   apply (erule ADT_A_if_Init_inv_Fin)
   apply (rule rel_terminate_weaken)
-   apply (rule ADT_A_if_big_step_R_terminate)
+   apply (erule ADT_A_if_big_step_R_terminate)
   apply simp
   done
+
+
+subsection \<open>The initial states\<close>
+
+text \<open>
+  The single initial state @{term s0} of the 2013 information-flow proofs (Murray et al., S&P 2013)
+  is in @{term Init0}. So the theorems here, which are stated over @{term Init0}, imply those
+  proofs' theorems, which were stated over @{term s0} alone.
+\<close>
+lemma s0_Init0:
+  "s0 \<in> Init0"
+proof -
+  have "snd s0 = KernelExit" by (simp add: s0_def)
+  then show ?thesis by (simp add: Init0_def extras_s0)
+qed
+
+text \<open>They are closed under big steps, with the existing step relation.\<close>
+lemma Init0_big_steps_closed:
+  "\<lbrakk> s \<in> Init0; (s,t) \<in> big_steps (ADT_A_if utf) big_step_R big_step_evmap u \<rbrakk>
+     \<Longrightarrow> t \<in> Init0"
+  apply (erule big_stepsE)
+  apply (clarsimp simp: Init0_def)
+  apply (frule (1) invs_if_sub_big_steps_ADT_A_if)
+  apply (intro conjI)
+    apply (erule (1) invs_if_Step_ADT_A_if)
+   apply (simp add: ADT_A_if_def)
+  apply (auto simp: big_step_R_def)
+  done
+
+lemma Init0_big_step_closed:
+  "\<lbrakk> s \<in> Init0; (s,t) \<in> system.Step (big_step_ADT_A_if utf) u \<rbrakk> \<Longrightarrow> t \<in> Init0"
+  apply (erule Init0_big_steps_closed)
+  apply (simp add: system.Step_def execution_def big_step_ADT_A_if_def big_step_adt_def
+                   ADT_A_if_def steps_def)
+  apply fastforce
+  done
+
+subsection \<open>Small-step reachability from the initial states\<close>
+
+text \<open>
+  Every small step from a state satisfying @{term invs_if} and @{term step_restrict} leads to
+  another such state. So this predicate can stand in for small-step reachability from
+  @{term Init0}.
+\<close>
+definition sreachable :: "observable_if \<Rightarrow> bool" where
+  "sreachable s \<equiv> invs_if s \<and> step_restrict s"
+
+lemma Init0_sreachable:
+  "s \<in> Init0 \<Longrightarrow> sreachable s"
+  by (simp add: Init0_def sreachable_def)
+
+lemma sreachable_invs_if:
+  "sreachable s \<Longrightarrow> invs_if s"
+  by (simp add: sreachable_def)
+
+lemma sreachable_step_restrict:
+  "sreachable s \<Longrightarrow> step_restrict s"
+  by (simp add: sreachable_def)
+
+lemma sreachable_full_invs_if:
+  "sreachable s \<Longrightarrow> s \<in> full_invs_if"
+  by (simp add: sreachable_def invs_if_full_invs_if)
+
+lemma sreachable_Step:
+  "\<lbrakk> sreachable s; (s,t) \<in> data_type.Step (ADT_A_if utf) e \<rbrakk> \<Longrightarrow> sreachable t"
+  by (auto simp: sreachable_def intro: invs_if_Step_ADT_A_if) (simp add: ADT_A_if_def)
+
+lemma Step_ADT_A_if_sreachable:
+  "sreachable s
+   \<Longrightarrow> ((s,s') \<in> system.Step (ADT_A_if utf) u) = ((s,s') \<in> Step (ADT_A_if utf) u)"
+  apply (clarsimp simp: sreachable_def)
+  apply (frule invs_if_full_invs_if)
+  apply (simp add: system.Step_def execution_def steps_def ADT_A_if_def)
+  done
+
+lemma sreachable_system_Step:
+  "\<lbrakk> sreachable s; (s,t) \<in> system.Step (ADT_A_if utf) e \<rbrakk> \<Longrightarrow> sreachable t"
+  by (simp add: Step_ADT_A_if_sreachable sreachable_Step)
 
 end
 

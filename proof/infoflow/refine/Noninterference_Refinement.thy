@@ -262,16 +262,15 @@ lemma Fin_ADT_C_if:
   "Fin (ADT_C_if fp utf) ((uc, s), m) = ((uc, cstate_to_A s), m)"
   by (simp add: ADT_C_if_def)
 
-lemma Fin_Init_s0_ADT_C_if:
-  "s0' \<in> Init (ADT_C_if fp utf) s0 \<Longrightarrow> Fin (ADT_C_if fp utf) s0' = s0"
-  by (clarsimp simp: ADT_C_if_def s0_def)
+lemma Fin_Init_ADT_C_if:
+  "s' \<in> Init (ADT_C_if fp utf) s \<Longrightarrow> Fin (ADT_C_if fp utf) s' = s"
+  by (cases s) (clarsimp simp: ADT_C_if_def user_context_of_def sys_mode_of_def)
 
-lemma big_step_R_tranclp_abs':
-        "\<lbrakk>(s, s')
-        \<in> lift_fst_rel (lift_snd_rel state_relation) O
-          lift_fst_rel (lift_snd_rel rf_sr);
-        big_step_R\<^sup>+\<^sup>+ s0 s''\<rbrakk> \<Longrightarrow> s'' = (Fin (ADT_C_if fp utf) s')
-       \<longrightarrow> big_step_R\<^sup>+\<^sup>+ s0 s"
+lemma big_step_R_tranclp_abs[rule_format]:
+  "\<lbrakk> (s, s') \<in> lift_fst_rel (lift_snd_rel state_relation) O
+               lift_fst_rel (lift_snd_rel rf_sr);
+     big_step_R\<^sup>+\<^sup>+ st s'' \<rbrakk>
+   \<Longrightarrow> s'' = (Fin (ADT_C_if fp utf) s') \<longrightarrow> big_step_R\<^sup>+\<^sup>+ st s"
   apply (erule tranclp_induct)
    apply (clarsimp simp: Fin_ADT_C_if lift_fst_rel_def)
    apply (rule tranclp.r_into_trancl)
@@ -281,8 +280,6 @@ lemma big_step_R_tranclp_abs':
    apply assumption
   apply (simp add: big_step_R_def)
   done
-
-lemmas big_step_R_tranclp_abs = big_step_R_tranclp_abs'[rule_format]
 
 lemma ADT_C_if_inv_holds_transport:
   "ADT_C_if fp utf [>
@@ -306,7 +303,7 @@ lemma ADT_C_if_inv_holds_transport:
   done
 
 lemma ADT_C_if_Init_transport:
-  "Init (ADT_C_if fp utf) s0
+  "s0' \<in> Init0 \<Longrightarrow> Init (ADT_C_if fp utf) s0'
     \<subseteq> {s'.
        \<exists>hs. (hs, s') \<in> lift_fst_rel (lift_snd_rel rf_sr) \<and>
             hs \<in> full_invs_if' \<and>
@@ -322,11 +319,12 @@ lemma ADT_C_if_Init_transport:
   apply (rule conjI)
    apply (force simp: ADT_H_if_def)
   apply (rule_tac x=ba in exI)
-  apply (clarsimp simp: ADT_A_if_def)
+  apply (clarsimp simp: ADT_A_if_def Init0_def)
   done
 
 lemma ADT_C_if_big_step_R_terminate:
-  "rel_terminate (ADT_C_if fp utf) s0
+  assumes i: "s0' \<in> Init0"
+  shows "rel_terminate (ADT_C_if fp utf) s0'
            (internal_R (ADT_C_if fp utf) big_step_R)
            {s'. \<exists>hs. (hs, s') \<in> lift_fst_rel (lift_snd_rel rf_sr) \<and>
                 hs \<in> full_invs_if' \<and> (\<exists>as. (as, hs) \<in>
@@ -338,17 +336,17 @@ lemma ADT_C_if_big_step_R_terminate:
           apply blast
          prefer 8
          apply (simp add: internal_R_ADT_A_if)
-         apply (rule ADT_A_if_big_step_R_terminate)
+         apply (rule ADT_A_if_big_step_R_terminate[OF i])
         apply (simp add: internal_R_ADT_A_if, simp add: ADT_A_if_def)
-        apply (rule_tac x="s0" in bexI)
+        apply (rule_tac x="s0'" in bexI)
          apply (drule internal_R_tranclp)
-         apply (simp add: Fin_Init_s0_ADT_C_if)
+         apply (simp add: Fin_Init_ADT_C_if)
          apply clarsimp
          apply (rule big_step_R_tranclp_abs)
            apply force
           apply assumption
          apply simp
-        apply (clarsimp simp: invs_if_full_invs_if extras_s0)
+        apply (insert i, auto simp: ADT_A_if_def invs_if_full_invs_if Init0_def)[1]
        apply (drule set_mp[OF global_automata_refine.init_refinement[OF c_to_haskell[OF uop_nonempty]]])
        apply (clarsimp simp: Image_def lift_fst_rel_def lift_snd_rel_def)
        apply (frule set_mp[OF global_automata_refine.init_refinement[OF haskell_to_abs[OF uop_nonempty]]])
@@ -359,15 +357,16 @@ lemma ADT_C_if_big_step_R_terminate:
         apply (force simp: ADT_H_if_def)
        apply simp
       apply (rule invs_if_inv_holds_ADT_A_if)
-     apply (simp add: ADT_A_if_def invs_if_full_invs_if extras_s0)
+     apply (insert i, auto simp: ADT_A_if_def Init0_def)[1]
     apply (rule ADT_C_if_inv_holds_transport)
-   apply (rule ADT_C_if_Init_transport)
+   apply (rule ADT_C_if_Init_transport[OF i])
   apply (rule weaken_LI[OF LI_abs_to_c])
   apply (clarsimp simp: invs_if_full_invs_if)
   done
 
 lemma big_step_ADT_C_if_enabled_system:
-  "enabled_system (big_step_ADT_C_if utf) s0"
+  assumes i: "s0' \<in> Init0"
+  shows "enabled_system (big_step_ADT_C_if utf) s0'"
   apply (simp add: big_step_ADT_C_if_def)
   apply (rule_tac measuref="internal_R (ADT_C_if fp utf) measuref_if" in big_step_adt_enabled_system)
      apply simp
@@ -376,8 +375,8 @@ lemma big_step_ADT_C_if_enabled_system:
       apply (rule ADT_C_if_Init_Fin_serial_weak)
      apply (rule ADT_C_if_inv_holds_transport)
     apply force
-   apply (rule ADT_C_if_Init_transport)
-  apply (rule ADT_C_if_big_step_R_terminate)
+   apply (rule ADT_C_if_Init_transport[OF i])
+  apply (rule ADT_C_if_big_step_R_terminate[OF i])
   done
 
 end
@@ -385,7 +384,7 @@ end
 sublocale valid_initial_state_C \<subseteq>
      abstract_to_C: noninterference_refinement
                            "big_step_ADT_A_if utf" (* the ADT that we prove infoflow for *)
-                           s0                      (* initial state *)
+                           Init0                   (* initial states *)
                            "\<lambda>e s. part s"          (* dom function *)
                            "uwr" (* uwr *)
                            "policyFlows (pasPolicy initial_aag)" (* policy *)
@@ -393,8 +392,7 @@ sublocale valid_initial_state_C \<subseteq>
                            PSched                  (* scheduler partition name *)
                            "big_step_ADT_C_if utf"
   apply(unfold_locales)
-   apply(insert big_step_ADT_C_if_enabled_system)[1]
-   apply(fastforce simp: enabled_system_def)
+   apply(fastforce dest: big_step_ADT_C_if_enabled_system simp: enabled_system_def)
   apply(rule big_step_ADT_C_if_big_step_ADT_A_if_refines)
   apply (rule uop_nonempty)
   done
@@ -406,6 +404,14 @@ lemma xnonleakage_C:
   apply(rule abstract_to_C.xNonleakage_gen_refinement_closed)
   apply(rule xnonleakage)
   done
+
+text \<open>
+  Every state the C system can reach is in @{term Init0}, so @{text xnonleakage_C}, like the
+  abstract theorem, relates pairs of initial states only.
+\<close>
+theorem C_reachable_Init0:
+  "abstract_to_C.conc.reachable s \<Longrightarrow> s \<in> Init0"
+  by (rule abstract_to_C.reachable_Init0_refinement) (simp_all add: ni.reachable_Init0_iff)
 
 end
 
