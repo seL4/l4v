@@ -70,46 +70,6 @@ lemma set_vcpu_sc_refill_cfgs_of[wp]:
                    split: kernel_object.splits if_splits)
   done
 
-lemma set_vcpu_sc_replies_of[wp]:
-  "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (sc_replies_of s)\<rbrace>"
-  unfolding set_vcpu_def
-  apply (wpsimp wp: set_object_wp_strong)
-  apply (fastforce elim!: rsubst[where P=P]
-                    simp: vs_all_heap_simps obj_at_kh_kheap_simps map_project_def
-                          opt_map_def scs_of_kh_def sc_of_def sc_replies_of_scs_def
-                   split: kernel_object.splits if_splits)
-  done
-
-lemma set_vcpu_tcb_sts_of[wp]:
-  "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (tcb_sts_of s)\<rbrace>"
-  unfolding set_vcpu_def
-  apply (wpsimp wp: set_object_wp_strong)
-  apply (fastforce elim!: rsubst[where P=P]
-                    simp: vs_all_heap_simps obj_at_kh_kheap_simps map_project_def
-                          tcbs_of_kh_def opt_map_def tcb_of_def tcb_sts_of_tcbs_def
-                   split: kernel_object.splits)
-  done
-
-lemma set_vcpu_tcb_scps_of[wp]:
-  "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (tcb_scps_of s)\<rbrace>"
-  unfolding set_vcpu_def
-  apply (wpsimp wp: set_object_wp_strong)
-  apply (fastforce elim!: rsubst[where P=P]
-                    simp: vs_all_heap_simps obj_at_kh_kheap_simps map_project_def
-                          tcbs_of_kh_def opt_map_def tcb_of_def tcb_scps_of_tcbs_def
-                   split: kernel_object.splits)
-  done
-
-lemma set_vcpu_tcb_faults_of[wp]:
-  "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (tcb_faults_of s)\<rbrace>"
-  unfolding set_vcpu_def
-  apply (wpsimp wp: set_object_wp_strong)
-  apply (fastforce elim!: rsubst[where P=P]
-                    simp: vs_all_heap_simps obj_at_kh_kheap_simps map_project_def
-                          tcbs_of_kh_def opt_map_def tcb_of_def tcb_faults_of_tcbs_def
-                   split: kernel_object.splits)
-  done
-
 crunch set_vcpu, arch_thread_set
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
   and time_state_of[wp]: "\<lambda>s. P (time_state_of s)"
@@ -186,14 +146,12 @@ lemma arch_thread_set_sc_refill_cfgs_of[wp]:
                    split: kernel_object.splits if_splits)
   done
 
-lemma arch_thread_set_sc_replies_of[wp]:
-  "arch_thread_set f tptr \<lbrace>\<lambda>s. P (sc_replies_of s)\<rbrace>"
+lemma arch_thread_set_scs_of[wp]:
+  "arch_thread_set f tptr \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
   unfolding arch_thread_set_def
   apply (wpsimp wp: set_object_wp_strong)
   apply (fastforce elim!: rsubst[where P=P]
-                    simp: vs_all_heap_simps obj_at_kh_kheap_simps map_project_def
-                          opt_map_def scs_of_kh_def sc_of_def sc_replies_of_scs_def
-                   split: kernel_object.splits if_splits)
+                    simp: vs_all_heap_simps obj_at_kh_kheap_simps opt_map_def scs_of_kh_def )
   done
 
 lemma arch_thread_set_tcb_sts_of[wp]:

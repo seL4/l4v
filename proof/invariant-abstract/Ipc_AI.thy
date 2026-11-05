@@ -2736,7 +2736,7 @@ lemma schedule_tcb_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
 
-crunch complete_signal, do_nbrecv_failed_transfer, reply_push, receive_signal
+crunch complete_signal, do_nbrecv_failed_transfer, reply_link_caller, receive_signal
   for cap_to[wp]: "ex_nonz_cap_to p"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: set_object set_tcb_obj_ref

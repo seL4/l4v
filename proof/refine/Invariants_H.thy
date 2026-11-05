@@ -145,51 +145,6 @@ definition cte_wp_at' :: "(cte \<Rightarrow> bool) \<Rightarrow> obj_ref \<Right
 abbreviation cte_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "cte_at' \<equiv> cte_wp_at' \<top>"
 
-text \<open>replyNext aliases\<close>
-
-abbreviation replySC :: "reply \<Rightarrow> obj_ref option" where
-  "replySC \<equiv> \<lambda>r. getHeadScPtr (replyNext r)"
-
-abbreviation replyNext_of :: "reply \<Rightarrow> obj_ref option" where
-  "replyNext_of \<equiv> \<lambda>r. getReplyNextPtr (replyNext r)"
-
-lemmas getReplyNextPr_simps[simp] = getReplyNextPtr_def[split_simps option.split reply_next.split]
-
-lemmas getHeadScPtr_simps[simp] = getHeadScPtr_def[split_simps option.split reply_next.split]
-
-lemma theReplyNextPtr_Some_Next[simp]:
-  "theReplyNextPtr (Some (Next rn)) = rn" by (simp add: theReplyNextPtr_def)
-
-lemma theHeadScPtr_Some_Head[simp]:
-  "theHeadScPtr (Some (Head sc)) = sc" by (simp add: theHeadScPtr_def)
-
-lemma getReplyNextPtr_Some_iff[iff]:
-  "(getReplyNextPtr x) = (Some rn) \<longleftrightarrow> x = Some (Next rn)"
-  by (cases x; clarsimp simp: getReplyNextPtr_def split: reply_next.split)
-
-lemma getHeadScPtr_Some_iff[iff]:
-  "(getHeadScPtr x) = (Some rn) \<longleftrightarrow> x = Some (Head rn)"
-  by (cases x; clarsimp simp: getHeadScPtr_def split: reply_next.split)
-
-lemma getReplyNextPtr_None_iff:
-  "(getReplyNextPtr x) = None \<longleftrightarrow> (\<forall>rn. x \<noteq> Some (Next rn))"
-  by (cases x; clarsimp simp: getReplyNextPtr_def split: reply_next.split)
-
-lemma getHeadScPtr_None_iff:
-  "(getHeadScPtr x) = None \<longleftrightarrow> (\<forall>rn. x \<noteq> Some (Head rn))"
-  by (cases x; clarsimp simp: getHeadScPtr_def split: reply_next.split)
-
-lemma replyNext_None_iff:
-  "replyNext r = None \<longleftrightarrow> replyNext_of r = None \<and> replySC r = None"
-  apply (cases "replyNext r"; clarsimp)
-  apply (case_tac a; clarsimp)
-  done
-
-lemma getReplyNextPtr_Head_None[simp]:
-  "getReplyNextPtr (Some (Head rn)) = None" by (simp add: getReplyNextPtr_def)
-
-lemma getHeadScPtr_Next_None[simp]:
-  "getHeadScPtr (Some (Next sc)) = None" by (simp add: getHeadScPtr_def)
 
 text \<open>Heap projections:\<close>
 abbreviation reply_of' :: "kernel_object \<Rightarrow> reply option" where
@@ -199,7 +154,7 @@ abbreviation replies_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> re
   "replies_of' s \<equiv> ksPSpace s |> reply_of'"
 
 abbreviation replyNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "replyNexts_of s \<equiv> replies_of' s |> replyNext_of"
+  "replyNexts_of s \<equiv> replies_of' s |> replyNext"
 
 abbreviation replyPrevs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "replyPrevs_of s \<equiv> replies_of' s |> replyPrev"
@@ -370,16 +325,8 @@ definition refs_of_reply' :: "reply \<Rightarrow> ref_set" where
   "refs_of_reply' r \<equiv> get_refs ReplySchedContext (replySC r)
                           \<union> get_refs ReplyTCB (replyTCB r)"
 
-definition list_refs_of_reply' :: "reply \<Rightarrow> ref_set" where
-  "list_refs_of_reply' r = get_refs ReplyNext (replyNext_of r) \<union> get_refs ReplyPrev (replyPrev r)"
-
-abbreviation list_refs_of_replies_opt' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set option" where
-  "list_refs_of_replies_opt' s \<equiv> replies_of' s ||> list_refs_of_reply'"
-
-abbreviation list_refs_of_replies' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set" where
-  "list_refs_of_replies' s \<equiv> map_set (list_refs_of_replies_opt' s)"
-
-lemmas list_refs_of_replies'_def = map_set_def
+abbreviation sym_heap_reply_pointers :: "global.kernel_state \<Rightarrow> bool" where
+  "sym_heap_reply_pointers s \<equiv> sym_heap (replyPrevs_of s) (replyNexts_of s)"
 
 lemmas refs_of'_defs[simp] = refs_of_tcb'_def refs_of_ntfn'_def refs_of_sc'_def refs_of_reply'_def
 
@@ -413,7 +360,9 @@ definition live_ntfn' :: "notification \<Rightarrow> bool" where
   "live_ntfn' ntfn \<equiv> bound (ntfnBoundTCB ntfn) \<or> bound (ntfnSc ntfn) \<or> (ntfnState ntfn = Waiting)"
 
 definition live_reply' :: "reply \<Rightarrow> bool" where
-  "live_reply' reply \<equiv> bound (replyTCB reply) \<or> bound (replyNext reply) \<or> bound (replyPrev reply)"
+  "live_reply' reply \<equiv>
+     replyTCB reply \<noteq> None \<or> replyNext reply \<noteq> None \<or> replyPrev reply \<noteq> None
+     \<or> replySC reply \<noteq> None"
 
 (* the non-hyp, non-arch part of live' *)
 primrec live0' :: "Structures_H.kernel_object \<Rightarrow> bool" where
@@ -668,7 +617,7 @@ definition valid_reply' :: "reply \<Rightarrow> kernel_state \<Rightarrow> bool"
      valid_bound_tcb' (replyTCB reply) s
      \<and> valid_bound_sc' (replySC reply) s
      \<and> valid_bound_reply' (replyPrev reply) s
-     \<and> valid_bound_reply' (replyNext_of reply) s"
+     \<and> valid_bound_reply' (replyNext reply) s"
 
 definition sc_size_bounds :: "nat \<Rightarrow> bool" where
   "sc_size_bounds us \<equiv> minSchedContextBits \<le> us \<and> us \<le> maxUntypedSizeBits"
@@ -981,11 +930,13 @@ definition valid_replies'_except :: "obj_ref set \<Rightarrow> kernel_state \<Ri
 definition [simplified empty_iff simp_thms valid_replies'_except_def]:
   "valid_replies' s \<equiv> valid_replies'_except {} s"
 
+abbreviation is_replyObject where
+  "is_replyObject replyPtr s \<equiv>
+     \<exists>tcbPtr. replyTCBs_of s replyPtr = Some tcbPtr
+              \<and> st_tcb_at' ((=) (BlockedOnReply (Some replyPtr))) tcbPtr s"
+
 defs valid_replies'_sc_asrt_def:
-  "valid_replies'_sc_asrt \<equiv> \<lambda>rptr s.
-     replySCs_of s rptr \<noteq> None
-       \<longrightarrow> (\<exists>tptr. replyTCBs_of s rptr = Some tptr
-                   \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s)"
+  "valid_replies'_sc_asrt \<equiv> \<lambda>rptr s. replySCs_of s rptr \<noteq> None \<longrightarrow> is_replyObject rptr s"
 
 definition
   valid_pspace' :: "kernel_state \<Rightarrow> bool"
@@ -1343,7 +1294,7 @@ definition invs' :: "kernel_state \<Rightarrow> bool" where
 \<comment> \<open>FIXME arch-split RT: state_hyp_refs_of' not needed until other architectures are being proven.
                         It might end up being easiest to cross over from ainvs via assertions.
                       \<and> sym_refs (state_hyp_refs_of' s)\<close>
-                      \<and> sym_refs (list_refs_of_replies' s)
+                      \<and> sym_heap_reply_pointers s
                       \<and> sym_heap_sched_pointers s
                       \<and> valid_sched_pointers s
                       \<and> if_unsafe_then_cap' s
@@ -3578,8 +3529,8 @@ lemma invs_valid_sched_pointers[elim!]:
   "invs' s \<Longrightarrow> valid_sched_pointers s"
   by (simp add: invs'_def)
 
-lemma invs_sym_list_refs_of_replies'[elim!]:
-  "invs' s \<Longrightarrow> sym_refs (list_refs_of_replies' s)"
+lemma invs_sym_heap_reply_pointers[elim!]:
+  "invs' s \<Longrightarrow> sym_heap_reply_pointers s"
   by (simp add: invs'_def)
 
 lemma invs_valid_global'[elim!]:
@@ -3643,7 +3594,7 @@ lemmas invs'_implies =
   invs_valid_objs_size'
   invs_valid_pspace'
   invs_valid_bitmaps
-  invs_sym_list_refs_of_replies'
+  invs_sym_heap_reply_pointers
   invs_sym_heap_sched_pointers
   invs_valid_sched_pointers
   invs_valid_replies'
@@ -3768,26 +3719,11 @@ lemma valid_replies'_other_state:
   apply (fastforce simp: pred_tcb_at'_def obj_at'_def)+
   done
 
-lemma valid_replies'_sc_asrtD:
-  "valid_replies'_sc_asrt rptr s \<Longrightarrow> replySCs_of s rptr \<noteq> None
-   \<Longrightarrow> (\<exists>tptr. replyTCBs_of s rptr = Some tptr
-               \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s)"
-  by (clarsimp simp: valid_replies'_sc_asrt_def)
-
 lemma valid_replies'_sc_asrt_replySC_None:
   "\<lbrakk>valid_replies'_sc_asrt rptr s; replyTCBs_of s rptr = Some tptr;
     st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr))\<rbrakk>
    \<Longrightarrow> replySCs_of s rptr = None"
   by (force simp: valid_replies'_sc_asrt_def pred_tcb_at'_def obj_at'_def)
-
-lemma valid_replies'_no_tcb_not_linked:
-  "\<lbrakk>replyTCBs_of s replyPtr = None;
-    valid_replies' s; valid_replies'_sc_asrt replyPtr s\<rbrakk>
-    \<Longrightarrow> \<not> is_reply_linked replyPtr s \<and> replySCs_of s replyPtr = None"
-  apply (clarsimp simp: valid_replies'_def valid_replies'_sc_asrt_def)
-  apply (drule_tac x=replyPtr in spec)
-  apply clarsimp
-  done
 
 lemma valid_replies'_sc_asrt_lift:
   assumes x: "\<And>P. f \<lbrace>\<lambda>s. P (replySCs_of s)\<rbrace>"
@@ -3812,78 +3748,9 @@ lemma cteCaps_of_ctes_of_lift:
 
 lemmas ctes_of_cteCaps_of_lift = cteCaps_of_ctes_of_lift
 
-(* sym_heap *)
-
-lemma sym_refs_replyNext_replyPrev_sym:
-  "sym_refs (list_refs_of_replies' s') \<Longrightarrow>
-    replyNexts_of s' rp = Some rp' \<longleftrightarrow> replyPrevs_of s' rp' = Some rp"
-  supply opt_mapE[elim!]
-  apply (rule iffI; clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
-   apply (drule_tac tp=ReplyNext and y=rp' and x=rp in sym_refsD[rotated])
-    apply (clarsimp simp: map_set_def opt_map_red list_refs_of_reply'_def projectKO_opt_reply)
-   apply (clarsimp simp: opt_map_red map_set_def get_refs_def2 list_refs_of_reply'_def
-                  split: option.split_asm)
-  apply (drule_tac tp=ReplyPrev and y=rp and x=rp' in sym_refsD[rotated])
-   apply (clarsimp simp: map_set_def opt_map_red list_refs_of_reply'_def projectKO_opt_reply)
-  by (clarsimp simp: opt_map_red map_set_def get_refs_def2 list_refs_of_reply'_def
-              split: option.split_asm)
-
-lemma reply_sym_heap_Next_Prev:
-  "sym_refs (list_refs_of_replies' s') \<Longrightarrow> sym_heap (replyNexts_of s') (replyPrevs_of s')"
-  using sym_refs_replyNext_replyPrev_sym by (clarsimp simp: sym_heap_def)
-
-lemmas reply_sym_heap_Prev_Next
-  = sym_heap_symmetric[THEN iffD1, OF reply_sym_heap_Next_Prev]
-
-lemmas sym_refs_replyNext_None
-  = sym_heap_None[OF reply_sym_heap_Next_Prev]
-
-lemmas sym_refs_replyPrev_None
-  = sym_heap_None[OF reply_sym_heap_Prev_Next]
-
-lemmas sym_refs_reply_heap_path_doubly_linked_Prevs_rev
-  = sym_heap_path_reverse[OF reply_sym_heap_Next_Prev]
-
-lemmas sym_refs_reply_heap_path_doubly_linked_Nexts_rev
-  = sym_heap_path_reverse[OF reply_sym_heap_Prev_Next]
-
-lemmas sym_refs_replyNext_heap_ls_Cons
-  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Next_Prev]
-
-lemmas sym_refs_replyPrev_heap_ls_Cons
-  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Prev_Next]
-
-lemmas sym_refs_replyNext_heap_ls
-  = sym_heap_ls_rev[OF reply_sym_heap_Next_Prev]
-
-lemmas sym_refs_replyPrev_heap_ls
-  = sym_heap_ls_rev[OF reply_sym_heap_Prev_Next]
-
-(* end: sym_heap *)
-
 lemma no_replySC_valid_replies'_sc_asrt:
   "replySCs_of s r = None \<Longrightarrow> valid_replies'_sc_asrt r s"
-  unfolding valid_replies'_sc_asrt_def
-  by (simp)
-
-(** sc_with_reply' **)
-
-definition sc_with_reply' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> obj_ref option" where
-  "sc_with_reply' rp s'
-     \<equiv> the_pred_option (\<lambda>sc_ptr. \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' sc_ptr) xs
-                                       \<and> rp \<in> set xs)"
-
-lemma sc_with_reply'_SomeD:
-  "sc_with_reply' rp s' = Some scp \<Longrightarrow>
-     \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' scp) xs
-                     \<and> rp \<in> set xs"
-  by (clarsimp simp: sc_with_reply'_def dest!: the_pred_option_SomeD)
-
-lemma sc_with_reply'_NoneD:
-  "sc_with_reply' rp s' = None \<Longrightarrow>
-     \<nexists>!scp. \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' scp) xs
-                     \<and> rp \<in> set xs"
-  by (clarsimp simp: sc_with_reply'_def the_pred_option_def split: if_split_asm)
+  by (clarsimp simp: valid_replies'_sc_asrt_def)
 
 definition "updateTimeStamp_independent (P :: kernel_state \<Rightarrow> bool)
   \<equiv> \<forall>f g s. P s \<longrightarrow> P (s\<lparr>ksCurTime := f (ksCurTime s), ksConsumedTime := g (ksConsumedTime s)\<rparr>)"

@@ -1326,13 +1326,13 @@ crunch cancelIPC
   for obj_at'_tcbSchedContext_Q[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbSchedContext tcb)) t' s)"
   (wp: threadSet_obj_at'_no_state gts_wp' crunch_wps simp: crunch_simps)
 
-crunch replyUnlink, cleanReply
+crunch replyUnlink
   for obj_at'_sc[wp]: "\<lambda>s. Q (obj_at' (P :: sched_context \<Rightarrow> bool) scPtr s)"
   (wp: crunch_wps)
 
 crunch replyRemoveTCB, cancelIPC
   for obj_at'_scSporadic[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scSporadic sc)) scPtr s)"
-  (wp: updateSchedContext_sc_obj_at'_inv crunch_wps)
+  (wp: updateSchedContext_sc_obj_at'_inv crunch_wps simp: crunch_simps)
 
 crunch schedContextResume
   for no_0_obj'[wp]: no_0_obj'

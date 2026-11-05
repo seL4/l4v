@@ -416,7 +416,7 @@ lemma  valid_objs: "valid_objs' s'"
   and         vbm: "valid_bitmaps s'"
   and   sym_sched: "sym_heap_sched_pointers s'"
   and         vsp: "valid_sched_pointers s'"
-  and   list_refs: "sym_refs (list_refs_of_replies' s')"
+  and   sym_reply: "sym_heap_reply_pointers s'"
   and    ifunsafe: "if_unsafe_then_cap' s'"
   and       dlist: "valid_dlist (ctes_of s')"
   and        no_0: "no_0 (ctes_of s')"
@@ -649,6 +649,38 @@ lemma tcbSchedPrevs_of_pspace':
   apply (clarsimp simp: opt_map_def split: option.splits)
   done
 
+lemma replyPrevs_of_pspace':
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'; pspace_distinct' state'\<rbrakk>
+   \<Longrightarrow> (pspace' |> reply_of' |> replyPrev) = replyPrevs_of s'"
+  apply (rule ext)
+  apply (rename_tac p)
+  apply (case_tac "p \<in> base_bits")
+   apply (frule untyped_range_live_idle')
+   apply (clarsimp simp: opt_map_def)
+   apply (case_tac "ksPSpace s' p"; clarsimp)
+   apply (rename_tac obj)
+   apply (case_tac "reply_of' obj"; clarsimp)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def live_reply'_def)
+   apply (fastforce simp: pspace_alignedD' pspace_boundedD' pspace_distinctD')
+  apply (clarsimp simp: opt_map_def split: option.splits)
+  done
+
+lemma replyNexts_of_pspace':
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'; pspace_distinct' state'\<rbrakk>
+   \<Longrightarrow> (pspace' |> reply_of' |> replyNext) = replyNexts_of s'"
+  apply (rule ext)
+  apply (rename_tac p)
+  apply (case_tac "p \<in> base_bits")
+   apply (frule untyped_range_live_idle')
+   apply (clarsimp simp: opt_map_def)
+   apply (case_tac "ksPSpace s' p"; clarsimp)
+   apply (rename_tac obj)
+   apply (case_tac "reply_of' obj"; clarsimp)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def live_reply'_def)
+   apply (fastforce simp: pspace_alignedD' pspace_boundedD' pspace_distinctD')
+  apply (clarsimp simp: opt_map_def split: option.splits)
+  done
+
 lemma cte_refs_notRange:
   assumes asms: "ctes_of s' p = Some c"
   shows "cte_refs' (cteCap c) (irq_node' s') \<inter> base_bits = {}"
@@ -873,32 +905,9 @@ lemma refs_of':
    apply (fastforce intro: refs_of_live' dest!: live_notRange)+
   done
 
-lemma list_refs_of_replies_live':
-  "\<lbrakk> (x, tp) \<in> list_refs_of_replies' s' p; pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s' \<rbrakk>
-   \<Longrightarrow> ko_wp_at' live' p s'"
-  apply (clarsimp simp: ko_wp_at'_def list_refs_of_replies'_def list_refs_of_reply'_def pspace_bounded'_def
-                        pspace_aligned'_def pspace_distinct'_def get_refs_def
-                 elim!: opt_mapE
-                 split: option.splits)
-    by (intro conjI impI allI | force simp: live'_def live_reply'_def)+
-
-lemma replyPrev_list_refs_of_replies:
-  "\<lbrakk>ko_at' reply p s'; replyPrev reply = Some reply_ptr\<rbrakk>
-   \<Longrightarrow> (reply_ptr, ReplyPrev) \<in> list_refs_of_replies' s' p"
-  by (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def opt_map_def
-                     obj_at'_def
-              split: option.splits)
-
-lemma replyNext_list_refs_of_replies:
-  "\<lbrakk>ko_at' reply p s'; replyNext reply = Some next_ptr; next_ptr = Next reply_ptr\<rbrakk>
-   \<Longrightarrow> (reply_ptr, ReplyNext) \<in> list_refs_of_replies' s' p"
-  by (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def opt_map_def
-                     obj_at'_def
-              split: option.splits)
-
 lemma valid_obj':
   "\<lbrakk>valid_obj' obj s'; ko_wp_at' ((=) obj) p s'; sym_refs (state_refs_of' s');
-    sym_refs (list_refs_of_replies' s'); sym_heap_sched_pointers s';
+    sym_heap_reply_pointers s'; sym_heap_sched_pointers s';
     pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'\<rbrakk>
    \<Longrightarrow> valid_obj' obj state'"
   apply (case_tac obj, simp_all add: valid_obj'_def)
@@ -942,15 +951,16 @@ lemma valid_obj':
   apply (clarsimp simp: ko_wp_at'_def valid_reply'_def valid_bound_tcb'_def)
   apply (rule conjI; (solves \<open>clarsimp split: option.splits\<close>)?)+
    apply (case_tac "replyPrev reply = None"; clarsimp?)
-   apply (frule replyPrev_list_refs_of_replies[rotated])
-    apply (simp add: obj_at'_def)
-   using sym_refs_def live_notRange list_refs_of_replies_live' subgoal by fastforce
+   apply (rename_tac prev)
+   apply (cut_tac P=live' and p=prev in live_notRange; fastforce?)
+   apply (fastforce dest!: sym_heapD1[where p=p]
+                     simp: opt_map_def ko_wp_at'_def obj_at'_def live'_def live_reply'_def)
   apply (case_tac "replyNext reply = None"; clarsimp?)
-  apply (rename_tac reply_next)
-  apply (case_tac reply_next; clarsimp)
-  apply (frule replyNext_list_refs_of_replies[rotated], simp)
-   apply (simp add: obj_at'_def)
-  using sym_refs_def live_notRange list_refs_of_replies_live' by fastforce
+  apply (rename_tac "next")
+  apply (cut_tac P=live' and p="next" in live_notRange; fastforce?)
+  apply (force dest!: sym_heapD2[where p'=p]
+                simp: opt_map_def ko_wp_at'_def obj_at'_def live'_def live_reply'_def)
+  done
 
 lemma state_refs_for_state':
   "\<lbrakk> pspace_aligned' s'; pspace_distinct' s'; pspace_distinct' state' \<rbrakk>
@@ -1030,19 +1040,6 @@ lemma state_refs:
   apply (clarsimp simp: ko_wp_at'_def live'_def live_reply'_def)
   done
 
-lemma list_refs_of_reply'_state':
-  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'; pspace_distinct' state'\<rbrakk>
-   \<Longrightarrow> (map_set (replies' ||> list_refs_of_reply')) = (list_refs_of_replies' s')"
-  apply (rule ext)
-  apply (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def opt_map_def
-                 split: option.splits)
-  apply (rename_tac x reply_ptr)
-  apply (prop_tac "x \<in> base_bits", simp)
-  apply (frule untyped_range_live_idle')
-  apply (clarsimp simp: ko_wp_at'_def live'_def live_reply'_def)
-  using pspace_alignedD' pspace_distinctD' pspace_boundedD' apply clarsimp
-  done
-
 lemma delete_invs':
   assumes "sym_refs (state_refs_of' s')"
   shows "invs' (ksMachineState_update
@@ -1072,9 +1069,14 @@ proof (simp add: invs'_def valid_pspace'_def
   show "pspace_bounded' ?s" using bd
     by (simp add: pspace_bounded'_def dom_def)
 
+  from sym_sched
+  show "sym_heap (pspace' |> tcb_of' |> tcbSchedNext) (pspace' |> tcb_of' |> tcbSchedPrev)"
+    using pa pd bd pspace_distinct'_state'
+    by (fastforce simp: tcbSchedNexts_of_pspace' tcbSchedPrevs_of_pspace')
+
   show "valid_objs' ?s" using valid_objs sym_sched assms
     apply (clarsimp simp: valid_objs'_def ran_def)
-    apply (insert list_refs pa pd bd)
+    apply (insert sym_reply pa pd bd)
     apply (rule_tac p=a in valid_obj'; fastforce?)
     apply (frule pspace_alignedD'[OF _ pa])
     apply (frule pspace_distinctD'[OF _ pd])
@@ -1094,10 +1096,6 @@ proof (simp add: invs'_def valid_pspace'_def
      apply (fastforce simp: ko_wp_at'_def pred_tcb_at'_def obj_at'_def live'_def)
     apply (clarsimp simp: pred_tcb_at'_def opt_map_def)
     done
-
-  show "sym_refs (map_set (replies' ||> list_refs_of_reply'))"
-    apply (insert pa pd bd pspace_distinct'_state' list_refs)
-    by (subst list_refs_of_reply'_state'; blast?)
 
   from ifunsafe show "if_unsafe_then_cap' ?s"
     by (clarsimp simp: if_unsafe_then_cap'_def
@@ -1237,11 +1235,6 @@ proof (simp add: invs'_def valid_pspace'_def
   thus "pspace_domain_valid state'"
     by (simp add: pspace_domain_valid_def)
 
-  from sym_sched
-  show "sym_heap (pspace' |> tcb_of' |> tcbSchedNext) (pspace' |> tcb_of' |> tcbSchedPrev)"
-    using pa pd bd pspace_distinct'_state'
-    by (fastforce simp: tcbSchedNexts_of_pspace' tcbSchedPrevs_of_pspace')
-
   from invs
   have "valid_machine_state' s'" by (simp add: invs'_def)
   thus "valid_machine_state' ?state''"
@@ -1279,6 +1272,11 @@ proof (simp add: invs'_def valid_pspace'_def
      apply (clarsimp simp: untypedZeroRange_def)
     apply simp
     done
+
+  from sym_reply
+  show "sym_heap (pspace' |> reply_of' |> replyPrev) (pspace' |> reply_of' |> replyNext)"
+    using pa pd bd pspace_distinct'_state'
+    by (fastforce simp: replyPrevs_of_pspace' replyNexts_of_pspace')
 
   from vsp show "valid_sched_pointers_2
                    (pspace' |> tcb_of' |> tcbSchedPrev)
@@ -1392,10 +1390,12 @@ lemma detype_sc_replies_relation:
                          ((\<lambda>x. if lower \<le> x \<and> x \<le> upper
                                then None else ksPSpace s' x) |> sc_of' |> scReply)
                          ((\<lambda>x. if lower \<le> x \<and> x \<le> upper
-                               then None else ksPSpace s' x) |> reply_of' |> replyPrev)"
+                               then None else ksPSpace s' x) |> reply_of' |> replyPrev)
+                         ((\<lambda>x. if lower \<le> x \<and> x \<le> upper
+                               then None else ksPSpace s' x) |> reply_of' |> replyNext)"
   apply (clarsimp simp: sc_replies_relation_def detype_def)
   apply (frule detype_ReplyPrevs_of[where S="{lower..upper}"]; simp)
-  apply (clarsimp simp: vs_all_heap_simps opt_map_def in_opt_map_eq
+  apply (clarsimp simp: scs_of_kh_def vs_all_heap_simps opt_map_def in_opt_map_eq prev_list_head_def
                  split: if_splits Structures_A.kernel_object.splits)
   done
 

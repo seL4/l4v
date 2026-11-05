@@ -32,6 +32,10 @@ lemma set_cap_prios_of[wp]:
   "set_cap c p \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
   by (set_object_easy_cases def: set_cap_def)
 
+lemma set_cap_scs_of[wp]:
+  "set_cap c p \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_cap_def)
+
 lemma set_cap_valid_sched_pred[wp]:
   "set_cap cap slot \<lbrace>valid_sched_pred_strong P\<rbrace>"
   apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
@@ -39,6 +43,7 @@ lemma set_cap_valid_sched_pred[wp]:
   apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=sc_replies_of, rotated], wpsimp)
   by (wpsimp simp: set_cap_def obj_at_kh_kheap_simps vs_all_heap_simps
                wp: set_object_wp get_object_wp)
 
@@ -49,6 +54,7 @@ crunch cap_insert
 crunch create_cap
   for eps_of[wp]: "\<lambda>s. P (eps_of s)"
   and ntfns_of[wp]: "\<lambda>s. P (ntfns_of s)"
+  and scs_of[wp]: "\<lambda>s. P (scs_of s)"
   and cur_time[wp]: "\<lambda>s. P (cur_time s)"
   (wp: dxo_wp_weak crunch_wps)
 
@@ -86,6 +92,13 @@ lemma set_mrs_prios_of[wp]:
  "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
   by (set_object_easy_cases def: set_mrs_def store_word_offs_def final: get_tcb_def)
 
+crunch store_word_offs
+  for scs_of[wp]: "\<lambda>s. P (scs_of s)"
+
+lemma set_mrs_scs_of[wp]:
+ "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_mrs_def store_word_offs_def final: get_tcb_def)
+
 lemma set_mrs_valid_sched_pred[wp]:
   "set_mrs thread buf msgs \<lbrace>valid_sched_pred_strong P\<rbrace>"
   apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
@@ -93,6 +106,7 @@ lemma set_mrs_valid_sched_pred[wp]:
   apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=scs_of, rotated], wpsimp)
   apply (wpsimp simp: set_mrs_def wp: zipWithM_x_inv' set_object_wp)
   apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
   done
@@ -666,11 +680,11 @@ lemma tcb_ready_times_of_eq_bound_sc_obj_tcb_at_lift:
                split: option.splits)
 
 lemma non_empty_sc_replies_nonz_cap:
-  assumes "if_live_then_nonz_cap s"
-  assumes "sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s"
-  shows "ex_nonz_cap_to scp s"
-  by (rule if_live_then_nonz_capD[OF assms(1) assms(2)[unfolded sc_at_pred_n_def]]
-      ; clarsimp simp: live_def live_sc_def)
+  "\<lbrakk>if_live_then_nonz_cap s; ((\<lambda>rs. rs \<noteq> []) |< sc_replies_of s) scp\<rbrakk>
+   \<Longrightarrow> ex_nonz_cap_to scp s"
+  by (force elim!: if_live_then_nonz_capD2
+             simp: in_opt_pred opt_map_def scs_of_kh_def live_def live_sc_def
+            split: option.splits)
 
 lemma released_sc_cur_time_increasing:
   "\<lbrakk>sc_refill_cfg_sc_at (released_sc (cur_time s)) scp s'; cur_time s \<le> cur_time s';
@@ -766,8 +780,8 @@ lemma valid_sched_tcb_state_preservation_gen:
           f \<lbrace>\<lambda>_ s. \<not> ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) \<noteq> []) t s\<rbrace>"
   assumes not_ipc_queued: "\<And>t. \<lbrace>\<lambda>s. \<not> st_tcb_at ipc_queued_thread_state t s \<and> I s\<rbrace>
                                 f \<lbrace>\<lambda>_ s. \<not> st_tcb_at ipc_queued_thread_state t s\<rbrace>"
-  assumes non_empty_sc_replies: "\<And>scp. \<lbrace>\<lambda>s. \<not> sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s \<and> I s\<rbrace>
-                                        f \<lbrace>\<lambda>_ s. \<not> sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s\<rbrace>"
+  assumes non_empty_sc_replies: "\<And>scp. \<lbrace>\<lambda>s. \<not> ((\<lambda>rs. rs \<noteq> []) |< sc_replies_of s) scp \<and> I s\<rbrace>
+                                        f \<lbrace>\<lambda>_ s. \<not> ((\<lambda>rs. rs \<noteq> []) |< sc_replies_of s) scp\<rbrace>"
   assumes etcb_at:
     "\<And>P t. \<lbrace>etcb_at P t and I\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   assumes bound_sc:
@@ -965,12 +979,13 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (simp add: active_reply_scs_2_def active_if_reply_sc_at_2_def)
    apply (erule allEI, rule impI)
    apply (simp add: sc_at_kh_simps[symmetric])
-   apply (prop_tac "sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s"
-          , rule ccontr, frule use_valid, rule_tac scp=scp in non_empty_sc_replies
-          , erule (1) conjI, erule (1) notE, drule (1) mp)
+   apply (prop_tac "((\<lambda>rs. rs \<noteq> []) |< sc_replies_of s) scp",
+          rule ccontr, frule use_valid, rule_tac scp=scp in non_empty_sc_replies,
+          erule (1) conjI, erule (1) notE, drule (1) mp)
    apply (frule (1) non_empty_sc_replies_nonz_cap)
    apply (rule use_valid, assumption, rule sc_refill_cfg)
-   by (intro conjI; assumption)
+   apply (intro conjI; assumption)
+   done
   apply (prop_tac "sorted_ipc_queues s'")
    subgoal for s r s'
      apply (clarsimp simp: sorted_ipc_queues_def)
@@ -1380,6 +1395,11 @@ lemma ntfn_queue_nonempty_live:
   apply (case_tac ntfn_obj; clarsimp)
   done
 
+lemma non_empty_sc_replies_at_alt:
+  "non_empty_sc_replies_at scp s = sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s"
+  by (fastforce simp: sc_at_ppred_def obj_at_def in_opt_pred opt_map_def scs_of_kh_def
+               split: option.splits)
+
 lemma invoke_untyped_valid_sched:
   "\<lbrace>valid_sched and valid_machine_time and invs and ct_active and valid_untyped_inv ui and
     (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
@@ -1403,7 +1423,7 @@ lemma invoke_untyped_valid_sched:
                                            invoke_untyped_ntfn_at_pred_live
                                            hoare_vcg_all_lift
                                      simp: ipc_queued_thread_state_live live_sc_def
-                                           ntfn_queue_nonempty_live)+
+                                           ntfn_queue_nonempty_live non_empty_sc_replies_at_alt)+
   done
 
 lemma cur_sc_active_rewrite:

@@ -201,11 +201,11 @@ lemma valid_sched_init[Arch_assms, simp]:
                         idle_sc_ptr_def valid_blocked_defs default_domain_def minBound_word
                         released_ipc_queues_defs active_reply_scs_def active_if_reply_sc_at_def
                         active_sc_def MIN_REFILLS_def
-                        sorted_ipc_queues_def eps_of_kh_def opt_map_def)
+                        sorted_ipc_queues_def eps_of_kh_def in_opt_pred opt_map_def)
   by (auto simp: vs_all_heap_simps active_scs_valid_def cfg_valid_refills_def
                  rr_valid_refills_def MIN_REFILLS_def bounded_release_time_def
                  default_sched_context_def MAX_PERIOD_def active_sc_def
-          intro: order_trans[OF mult_left_mono, OF us_to_ticks_helper])
+          intro: order_trans[OF mult_left_mono, OF us_to_ticks_helper] split: option.splits)
 
 lemma valid_domain_list_init[Arch_assms, simp]:
   "valid_domain_list init_A_st"

@@ -362,14 +362,15 @@ lemma receive_ipc_preamble_st_tcb_at:
 
 global_interpretation reply_unlink_tcb: non_reply_sc_op "reply_unlink_tcb t r"
   apply unfold_locales
-  apply (wpsimp simp: reply_unlink_tcb_def wp: get_simple_ko_wp update_sk_obj_ref_wps gts_wp)
-  by (auto simp: reply_sc_reply_at_def obj_at_def)
+  apply (wpsimp simp: reply_unlink_tcb_def wp: get_simple_ko_wp update_reply_wp gts_wp)
+  apply (auto simp: reply_sc_reply_at_def obj_at_def)
+  done
 
 lemma reply_unlink_tcb_reply_tcb_reply_at:
-  "\<lbrace> \<lambda>s. P (P' None) \<and> (p \<noteq> r \<longrightarrow> P (reply_tcb_reply_at P' p s)) \<rbrace>
-    reply_unlink_tcb t r
-   \<lbrace> \<lambda>rv s. P (reply_tcb_reply_at P' p s) \<rbrace>"
-  by (wpsimp simp: reply_unlink_tcb_def wp: update_sk_obj_ref_wps get_simple_ko_wp gts_wp)
+  "\<lbrace>\<lambda>s. P (P' None) \<and> (p \<noteq> r \<longrightarrow> P (reply_tcb_reply_at P' p s))\<rbrace>
+   reply_unlink_tcb t r
+   \<lbrace>\<lambda>rv s. P (reply_tcb_reply_at P' p s)\<rbrace>"
+  by (wpsimp simp: reply_unlink_tcb_def wp: update_reply_wp get_simple_ko_wp gts_wp)
      (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
 
 lemma reply_remove_reply_tcb_reply_at:
@@ -453,10 +454,11 @@ lemma ordered_insert_singleton_rewrite:
       apply (wpsimp wp: mapM_gets_the_wp[simplified comp_def] no_fail_mapM_wp)+
   done
 
-lemma set_reply_obj_ref_ko_at_Endpoint[wp]:
-  "set_reply_obj_ref update r sc \<lbrace>\<lambda>s. P (ko_at (Endpoint ep) p s)\<rbrace>"
-  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp simp: update_sk_obj_ref_def)
-  by (clarsimp simp: ep_at_pred_def obj_at_def)
+lemma update_reply_ko_at_Endpoint[wp]:
+  "update_reply f reply_ptr \<lbrace>\<lambda>s. P (ko_at (Endpoint ep) p s)\<rbrace>"
+  apply (wpsimp wp: update_reply_wp)
+  apply (clarsimp simp: ep_at_pred_def obj_at_def)
+  done
 
 primrec receive_ipc_preamble_rv ::
   "cap \<Rightarrow> obj_ref option \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
@@ -503,13 +505,17 @@ lemma st_tcb_at_TCBReply_in_state_refs_of:
   by (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2 tcb_st_refs_of_def
               split: thread_state.splits if_splits)
 
-global_interpretation set_reply_tcb_obj_ref:
-  non_reply_sc_op "set_reply_obj_ref reply_tcb_update ref new"
-  by unfold_locales (wpsimp wp: update_sk_obj_ref_wp  simp: reply_sc_reply_at_def obj_at_def)
+global_interpretation update_reply:
+  non_reply_sc_op "update_reply (\<lambda>reply. reply\<lparr>reply_tcb := new\<rparr>) reply_ptr"
+  by unfold_locales (wpsimp wp: update_reply_wp  simp: reply_sc_reply_at_def obj_at_def)
 
 lemma ep_queue_update_ep_q[simp]:
   "ep_queue (update_ep_queue ep q is_recv) = q"
   by (cases ep; simp add: ep_queue_def)
+
+crunch update_reply
+  for valid_ep[wp]: "valid_ep ep"
+  (wp: crunch_wps)
 
 lemma receive_ipc_blocked_invs:
   assumes ep: "case ep of IdleEP \<Rightarrow> queue = [] | RecvEP q \<Rightarrow> queue = q | SendEP _ \<Rightarrow> False"
@@ -762,16 +768,12 @@ lemma grt_sp:
   apply (auto simp: reply_tcb_reply_at_def obj_at_def)
   done
 
-lemma no_reply_in_ts_inv[wp]:
-  "\<lbrace>P\<rbrace> no_reply_in_ts t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (wpsimp simp: no_reply_in_ts_def get_thread_state_def thread_get_def)
-
 lemmas tcb_agnostic_predE' = tcb_agnostic_predE[of "\<lambda>b. b" P for P, rotated]
 
 lemma set_reply_tcb_valid_tcb_state:
   "\<lbrace>reply_at reply_ptr'\<rbrace>
-   set_reply_obj_ref reply_tcb_update reply_ptr t
-   \<lbrace>\<lambda>rv. valid_tcb_state (BlockedOnReply reply_ptr')\<rbrace>"
+   update_reply (\<lambda>reply. reply\<lparr>reply_tcb := t\<rparr>) reply_ptr
+   \<lbrace>\<lambda>_. valid_tcb_state (BlockedOnReply reply_ptr')\<rbrace>"
   unfolding valid_tcb_state_def by wpsimp
 
 lemma reply_unlink_tcb_sym_refs_BlockedOnReceive:
@@ -837,9 +839,9 @@ crunch do_ipc_transfer
  for bound_sc_tcb_at[wp]: "\<lambda>s. Q (bound_sc_tcb_at P t s)"
   (wp: crunch_wps)
 
-lemma set_reply_tcb_rv[wp]:
-  "\<lbrace> \<lambda>s. P t \<rbrace> set_reply_obj_ref reply_tcb_update r t \<lbrace> \<lambda>rv s. reply_tcb_reply_at P r s \<rbrace>"
-  by (wpsimp wp: update_sk_obj_ref_wp simp: sk_obj_at_pred_def obj_at_def)+
+lemma update_reply_tcb_rv[wp]:
+  "\<lbrace>\<lambda>s. P t\<rbrace> update_reply (\<lambda>reply. reply\<lparr>reply_tcb := t \<rparr>) r \<lbrace>\<lambda>_. reply_tcb_reply_at P r\<rbrace>"
+  by (wpsimp wp: update_reply_wp simp: sk_obj_at_pred_def obj_at_def)
 
 lemma sc_at_pred_n_sc_at:
   "valid_objs s \<Longrightarrow> sc_at_pred_n N proj P sc s \<Longrightarrow> sc_at sc s"
@@ -922,17 +924,11 @@ crunch do_ipc_transfer
  for valid_replies[wp]: "valid_replies_pred P"
   (simp: crunch_simps wp: crunch_wps )
 
-lemma set_reply_sc_valid_replies_already_BlockedOnReply:
-  "\<lbrace> \<lambda>s. valid_replies s \<and> r \<in> fst ` replies_blocked s \<rbrace>
-    set_reply_obj_ref reply_sc_update r (Some sc)
-   \<lbrace> \<lambda>rv. valid_replies \<rbrace>"
-  by wpsimp
-
 lemma reply_sc_update_None_reply_sc_reply_at_None[wp]:
   "\<lbrace>\<lambda>s. rp \<noteq> reply_ptr \<longrightarrow> reply_sc_reply_at ((=) None) reply_ptr s\<rbrace>
-   set_reply_obj_ref reply_sc_update rp None
+   update_reply (\<lambda>reply. reply\<lparr>reply_sc := None\<rparr>) rp
    \<lbrace>\<lambda>_. reply_sc_reply_at ((=) None) reply_ptr\<rbrace>"
-  apply (wpsimp wp: update_sk_obj_ref_wp)
+  apply (wpsimp wp: update_reply_wp)
   apply (clarsimp simp: reply_sc_reply_at_def obj_at_def)
   done
 
@@ -945,8 +941,8 @@ lemma reply_sc_update_Some_invs:
              \<and> sym_refs (state_hyp_refs_of s))
     and sc_at sc_caller
     and ex_nonz_cap_to reply_ptr\<rbrace>
-   set_reply_obj_ref reply_sc_update reply_ptr (Some sc_caller)
-   \<lbrace>\<lambda>r. invs\<rbrace>"
+   update_reply (\<lambda>reply. reply\<lparr>reply_sc := Some sc_caller\<rparr>) reply_ptr
+   \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by wpsimp
 
@@ -1023,7 +1019,7 @@ lemma SCReply_ref_replies_with_sc:
                split: option.splits)
 
 (* FIXME RT: rule should not generate unbound schematics in precondition (reply) *)
-lemma reply_push_sender_sc_Some_invs:
+lemma reply_link_caller_sender_sc_Some_invs:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) sender_sc) sender s \<and>
         st_tcb_at active thread s \<and>
         ex_nonz_cap_to thread s \<and> reply_ptr \<notin> fst ` replies_with_sc s \<and>
@@ -1046,11 +1042,11 @@ lemma reply_push_sender_sc_Some_invs:
         pspace_respects_device_region s \<and> cap_refs_respects_device_region s \<and>
         valid_replies_2 (replies_with_sc s) (replies_blocked s) \<and>
         fault_tcbs_valid_states s \<and> cur_tcb s \<and> cur_sc_tcb s \<and> valid_cur_fpu s\<rbrace>
-   reply_push sender thread reply_ptr ((\<exists>y. sender_sc = Some y) \<and>
+   reply_link_caller sender thread reply_ptr ((\<exists>y. sender_sc = Some y) \<and>
              \<not> (case fault of None \<Rightarrow> False
                  | Some x \<Rightarrow> is_timeout_fault x))
    \<lbrace>\<lambda>r. invs\<rbrace>"
-  apply (clarsimp simp: reply_push_def bind_sc_reply_def bind_assoc)
+  apply (clarsimp simp: reply_link_caller_def reply_push_def bind_assoc)
   apply (rule bind_wp[OF _ gsc_sp])
   apply (rule bind_wp[OF _ gsc_sp])
   apply (rule_tac S="sender_sc = sc_caller \<and> sender \<noteq> thread \<and> sender \<noteq> reply_ptr \<and> thread \<noteq> reply_ptr"
@@ -1563,11 +1559,11 @@ lemma ri_invs[wp]:
   apply (rule hoare_if[rotated]
          , wpsimp wp: set_thread_state_invs cong: if_cong
          , fastforce simp: replies_blocked_def st_tcb_at_def obj_at_def)
-       (* otherwise (grant and reply and (call or fault)): reply_push *)
+       (* otherwise (grant and reply and (call or fault)): reply_link_caller *)
   apply (rule bind_wp[OF _ gsc_sp])
   apply (clarsimp)
   apply (rename_tac rply)
-  apply (wp reply_push_sender_sc_Some_invs)
+  apply (wp reply_link_caller_sender_sc_Some_invs)
   apply (clarsimp)
   apply (intro conjI)
      prefer 3
@@ -1641,20 +1637,20 @@ lemma get_tcb_obj_ref_wp: (* FIXME: move up *)
   "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) ptr s \<longrightarrow>  P (f tcb) s\<rbrace> get_tcb_obj_ref f ptr \<lbrace>P\<rbrace>"
   by (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp')
 
-lemma reply_push_st_tcb_at_Inactive:
+lemma reply_link_caller_st_tcb_at_Inactive:
   "\<lbrace>st_tcb_at ((=) Inactive) callee and K (callee \<noteq> caller)\<rbrace>
-   reply_push caller callee reply_ptr can_donate
+   reply_link_caller caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) callee\<rbrace>"
-  unfolding reply_push_def bind_sc_reply_def update_sk_obj_ref_def comp_def
+  unfolding reply_link_caller_def reply_push_def update_sk_obj_ref_def comp_def
   by (wpsimp wp: get_simple_ko_wp get_tcb_obj_ref_wp hoare_vcg_if_lift hoare_vcg_all_lift
                  sts_st_tcb_at_cases
-     | wp (once) hoare_drop_imp)+
+      | wp (once) hoare_drop_imp)+
 
 lemma valid_replies_2_inj_onD:
   "valid_replies_2 S T \<Longrightarrow> \<forall>x y a. (a,x) \<in> S \<longrightarrow> (a,y) \<in> S \<longrightarrow> x=y"
   by (fastforce simp: valid_replies_2_def inj_on_def)
 
-lemma reply_push_invs_helper:
+lemma reply_link_caller_invs_helper:
   "\<lbrace> \<lambda>s. invs s
          \<and> reply_at reply_ptr s
          \<and> bound_sc_tcb_at ((=) sc_callee) callee s
@@ -1667,10 +1663,10 @@ lemma reply_push_invs_helper:
          \<and> reply_ptr \<notin> fst ` replies_with_sc s \<rbrace>
     when (sc_callee = None \<and> donate) (do
       sc_replies <- liftM sc_replies (get_sched_context sc_ptr);
-      y <- case sc_replies of [] \<Rightarrow> return ()
-              | r # x \<Rightarrow> set_reply_obj_ref reply_sc_update r None;
-      y <- set_sc_obj_ref sc_replies_update sc_ptr (reply_ptr # sc_replies);
-      y <- set_reply_obj_ref reply_sc_update reply_ptr (Some sc_ptr);
+      y \<leftarrow> case sc_replies of [] \<Rightarrow> return ()
+              | r # _ \<Rightarrow> update_reply (\<lambda>reply. reply \<lparr>reply_sc := None\<rparr>) r;
+      y \<leftarrow> set_sc_obj_ref sc_replies_update sc_ptr (reply_ptr # sc_replies);
+      y \<leftarrow> update_reply (\<lambda>reply. reply\<lparr>reply_sc := Some sc_ptr\<rparr>) reply_ptr;
       sched_context_donate sc_ptr callee
     od)
    \<lbrace> \<lambda>rv. invs \<rbrace>"
@@ -1681,7 +1677,7 @@ lemma reply_push_invs_helper:
   apply (case_tac sc_replies'; simp)
    apply (wpsimp wp: sched_context_donate_invs)
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply)
+                     wp: valid_irq_node_typ)
     apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply clarsimp
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
@@ -1706,8 +1702,7 @@ lemma reply_push_invs_helper:
    apply (clarsimp simp: idle_sc_no_ex_cap)
   apply (wpsimp wp: sched_context_donate_invs)
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
-                         valid_sc_typ_list_all_reply)
+                     wp: valid_irq_node_typ valid_sc_typ_list_all_reply)
     apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply (wpsimp simp: get_simple_ko_def get_object_def
                    wp: valid_sc_typ_list_all_reply)
@@ -1762,23 +1757,15 @@ lemma active_st_tcb_at_not_in_replies_blocked:
   " st_tcb_at active caller s \<Longrightarrow> (a, caller) \<notin> replies_blocked s"
   by (clarsimp simp: st_tcb_at_def replies_blocked_def obj_at_def)
 
-lemma no_reply_in_ts_rv_False:
-  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>y. reply_object st = Some y)) caller\<rbrace>
-   no_reply_in_ts caller
-   \<lbrace>\<lambda>ts_reply s. \<not> ts_reply\<rbrace>"
-  apply (wpsimp simp: no_reply_in_ts_def get_thread_state_def wp: thread_get_wp)
-  apply (fastforce simp: obj_at_def is_tcb st_tcb_at_def)
-  done
-
-lemma reply_push_invs':
+lemma reply_link_caller_invs':
   "\<lbrace>all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {caller} and
     ex_nonz_cap_to callee and ex_nonz_cap_to caller and ex_nonz_cap_to reply_ptr and
     st_tcb_at active caller and st_tcb_at ((=) Inactive) callee and
     reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr and reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr\<rbrace>
-   reply_push caller callee reply_ptr can_donate
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+   reply_link_caller caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>_. invs\<rbrace>"
   supply if_weak_cong[cong del]
-  apply (simp add: reply_push_def bind_sc_reply_def bind_assoc)
+  apply (simp add: reply_link_caller_def reply_push_def bind_assoc)
   apply (rule bind_wp[OF _ gsc_sp])
   apply (rule bind_wp[OF _ gsc_sp])
   apply (case_tac sc_caller; simp)
@@ -1801,7 +1788,7 @@ lemma reply_push_invs':
                           tcb_st_refs_of_def reply_tcb_reply_at_def
                    split: if_splits thread_state.splits)
    apply (clarsimp simp: idle_no_ex_cap)
-  apply (wpsimp wp: reply_push_invs_helper)
+  apply (wpsimp wp: reply_link_caller_invs_helper)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                     wp: sts_only_idle valid_irq_node_typ sts_valid_replies
                         sts_in_replies_blocked
@@ -1843,16 +1830,16 @@ lemma reply_push_invs':
                  split: option.splits)
   done
 
-lemma reply_push_invs:
+lemma reply_link_caller_invs:
   "\<lbrace>invs and ex_nonz_cap_to callee and ex_nonz_cap_to caller and ex_nonz_cap_to reply_ptr and
     st_tcb_at active caller and st_tcb_at ((=) Inactive) callee and
     reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr and
     reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr\<rbrace>
-   reply_push caller callee reply_ptr can_donate
+   reply_link_caller caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp wp: reply_push_invs' simp: invs_def valid_state_def valid_pspace_def) auto
+  by (wpsimp wp: reply_link_caller_invs' simp: invs_def valid_state_def valid_pspace_def) auto
 
-crunch reply_push
+crunch reply_link_caller
   for fault_tcb_at[wp]: "fault_tcb_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1917,7 +1904,7 @@ lemma si_invs'_helper_no_reply:
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]:
     "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_link_caller_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_link_caller a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2050,7 +2037,7 @@ lemma si_invs'_helper_some_reply:
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]:
     "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_link_caller_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_link_caller a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2066,7 +2053,7 @@ lemma si_invs'_helper_some_reply:
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
            then if cg \<and> (\<exists>y. reply = Some y)
-                then reply_push tptr dest (the reply) can_donate
+                then reply_link_caller tptr dest (the reply) can_donate
                 else set_thread_state tptr Inactive
            else when (can_donate \<and> sc_opt = None)
                   (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
@@ -2085,14 +2072,14 @@ lemma si_invs'_helper_some_reply:
       apply (wp hoare_vcg_all_lift hoare_drop_imps)
         apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
         apply (wpsimp wp: sts_invs_minor2)
-    apply (wpsimp wp: hoare_vcg_conj_lift wp_del: reply_push_st_tcb_at)
+    apply (wpsimp wp: hoare_vcg_conj_lift wp_del: reply_link_caller_st_tcb_at)
      apply (rule_tac Q'="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
-      apply (wpsimp wp: reply_push_st_tcb_at_Inactive)
+      apply (wpsimp wp: reply_link_caller_st_tcb_at_Inactive)
            apply (clarsimp simp: pred_tcb_at_def obj_at_def)
           apply (rule_tac Q'="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
            apply (wpsimp wp: sts_st_tcb_at_other)
           apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-         apply (wpsimp wp: reply_push_invs' sts_invs_minor2')+
+         apply (wpsimp wp: reply_link_caller_invs' sts_invs_minor2')+
    apply (frule active_st_tcb_at_state_refs_ofD)
    apply (frule st_tcb_weakenE[where P'="\<lambda>st. \<not> awaiting_reply st"], fastforce)
    apply (rule conjI; clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -2164,7 +2151,7 @@ lemma si_invs'_helper_fault:
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]:
     "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_link_caller_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_link_caller a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2191,7 +2178,7 @@ lemma si_invs'_helper_fault:
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
            then if (cg \<or> cgr) \<and> (\<exists>y. reply = Some y)
-                then reply_push tptr dest (the reply) can_donate
+                then reply_link_caller tptr dest (the reply) can_donate
                 else set_thread_state tptr Inactive
            else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
                                                        sched_context_donate (the thread_sc) dest
@@ -2283,7 +2270,7 @@ lemma si_invs'_helper:
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]:
     "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_link_caller_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_link_caller a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"  shows
@@ -2309,7 +2296,7 @@ lemma si_invs'_helper:
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
            then if (cg \<or> cgr) \<and> (\<exists>y. reply = Some y)
-                then reply_push tptr dest (the reply) can_donate
+                then reply_link_caller tptr dest (the reply) can_donate
                 else set_thread_state tptr Inactive
            else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
                                                        sched_context_donate (the thread_sc) dest
@@ -2382,7 +2369,7 @@ lemma si_invs':
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]:
     "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_link_caller_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_link_caller a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2504,7 +2491,7 @@ lemma si_invs'_fault:
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]:
     "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_link_caller_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_link_caller a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2568,7 +2555,7 @@ lemma hf_invs':
   assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace>
                                                do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes thread_set_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> thread_set a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_link_caller_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_link_caller a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"

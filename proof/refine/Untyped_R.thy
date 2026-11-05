@@ -5200,14 +5200,6 @@ lemma (in Untyped_R_2) insertNewCap_valid_pspace':
 crunch updateNewFreeIndex
   for if_unsafe_then_cap'[wp]: "if_unsafe_then_cap'"
 
-lemma insertNewCap_list_refs_of_replies'[wp]:
-  "insertNewCap parent slot cap \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
-  apply (clarsimp simp: insertNewCap_def)
-  apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (wpsimp wp: getCTE_wp)
-  done
-
 lemma insertNewCap_ifunsafe'[wp]:
   "\<lbrace>if_unsafe_then_cap' and ex_cte_cap_to' slot\<rbrace>
      insertNewCap parent slot cap

@@ -780,15 +780,8 @@ global_interpretation sc_tcbs:
 
 \<comment> \<open>Project sc_replies field\<close>
 
-definition sc_replies_of_scs :: "('obj_ref \<rightharpoonup> sched_context) \<Rightarrow> 'obj_ref \<rightharpoonup> obj_ref list" where
-  "sc_replies_of_scs \<equiv> map_project sc_replies"
-
-abbreviation "sc_replies_of_kh kh \<equiv> sc_replies_of_scs (scs_of_kh kh)"
-abbreviation "sc_replies_of s \<equiv> sc_replies_of_kh (kheap s)"
-
-global_interpretation sc_replies:
-  map_project_opt_map_cons2_def_locale _ sc_of scs_of_kh SchedContext sc_replies sc_replies_of_scs
-  using sc_replies_of_scs_def by unfold_locales
+abbreviation sc_replies_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
+  "sc_replies_of s \<equiv> scs_of s ||> sc_replies"
 
 \<comment> \<open>Endpoints\<close>
 
@@ -816,7 +809,6 @@ lemmas vs_pred_map_simps =
   sc_heap.pred_map_simps
   sc_refill_cfgs.pred_map_simps
   sc_tcbs.pred_map_simps
-  sc_replies.pred_map_simps
   ep_heap.pred_map_simps
   ep_send_qs.pred_map_simps
   ep_recv_qs.pred_map_simps
@@ -828,7 +820,6 @@ lemmas vs_pred_map_simps =
   sc_heap.pred_map_upds
   sc_refill_cfgs.pred_map_upds
   sc_tcbs.pred_map_upds
-  sc_replies.pred_map_upds
   ep_heap.pred_map_upds
   ep_send_qs.pred_map_upds
   ep_recv_qs.pred_map_upds
@@ -844,7 +835,6 @@ lemmas vs_heap_simps =
   sc_heap.simps
   sc_refill_cfgs.simps
   sc_tcbs.simps
-  sc_replies.simps
   ep_heap.simps
   ep_send_qs.simps
   ep_recv_qs.simps
@@ -858,7 +848,6 @@ lemmas vs_proj_defs =
   sc_heap.proj_def
   sc_refill_cfgs.proj_def
   sc_tcbs.proj_def
-  sc_replies.proj_def
   ep_heap.proj_def
   ep_send_qs.proj_def
   ep_recv_qs.proj_def
@@ -872,7 +861,6 @@ lemmas vs_upds =
   etcbs.upd
   sc_refill_cfgs.upd
   sc_tcbs.upd
-  sc_replies.upd
   ep_send_qs.upd
   ep_recv_qs.upd
 
@@ -883,7 +871,6 @@ lemmas vs_upd_idems =
   etcbs.upd_idem
   sc_refill_cfgs.upd_idem
   sc_tcbs.upd_idem
-  sc_replies.upd_idem
   ep_send_qs.upd_idem
   ep_recv_qs.upd_idem
 
@@ -2813,10 +2800,10 @@ definition active_if_reply_sc_at_2 ::
   "(obj_ref \<Rightarrow> obj_ref list option) \<Rightarrow> (obj_ref \<Rightarrow> sc_refill_cfg option) \<Rightarrow> obj_ref \<Rightarrow> bool"
   where
   "active_if_reply_sc_at_2 sc_reps sc_refill_cfgs scp
-   \<equiv> pred_map (\<lambda>rs. rs \<noteq> []) sc_reps scp \<longrightarrow> pred_map active_scrc sc_refill_cfgs scp"
+   \<equiv> ((\<lambda>rs. rs \<noteq> []) |< sc_reps) scp \<longrightarrow> pred_map active_scrc sc_refill_cfgs scp"
 
 abbreviation non_empty_sc_replies_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "non_empty_sc_replies_at scp s \<equiv> pred_map (\<lambda>rs. rs \<noteq> []) (sc_replies_of s) scp"
+  "non_empty_sc_replies_at scp s \<equiv> ((\<lambda>rs. rs \<noteq> []) |< sc_replies_of s) scp"
 
 abbreviation active_if_reply_sc_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "active_if_reply_sc_at scp s \<equiv> active_if_reply_sc_at_2 (sc_replies_of s) (sc_refill_cfgs_of s) scp"
@@ -2836,8 +2823,8 @@ lemmas active_reply_scs_defs = active_if_reply_sc_at_def active_reply_scs_def
 
 lemma active_reply_scsE:
   assumes "active_reply_scs_2 replies refill_cfgs"
-  assumes "\<And>scp. pred_map (\<lambda>rs. rs \<noteq> []) replies' scp
-                 \<longrightarrow> (pred_map (\<lambda>rs. rs \<noteq> []) replies scp \<longrightarrow> pred_map active_scrc refill_cfgs scp)
+  assumes "\<And>scp. ((\<lambda>rs. rs \<noteq> []) |< replies') scp
+                 \<longrightarrow> (((\<lambda>rs. rs \<noteq> []) |< replies) scp \<longrightarrow> pred_map active_scrc refill_cfgs scp)
                  \<longrightarrow> pred_map active_scrc refill_cfgs' scp"
   shows "active_reply_scs_2 replies' refill_cfgs'"
   using assms by (simp add: active_reply_scs_2_def active_if_reply_sc_at_2_def)

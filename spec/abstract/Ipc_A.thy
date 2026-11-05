@@ -292,7 +292,7 @@ where
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if call \<or> fault \<noteq> None then
                   if (can_grant \<or> can_grant_reply) \<and> reply \<noteq> None then
-                    reply_push thread dest (the reply) can_donate
+                    reply_link_caller thread dest (the reply) can_donate
                   else
                     set_thread_state thread Inactive
                 else when (can_donate \<and> sc_opt = None) $ do
@@ -358,7 +358,7 @@ definition receive_ipc_blocked ::
   "receive_ipc_blocked is_blocking thread epptr reply \<equiv>
      if is_blocking
      then do set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = False\<rparr>);
-             maybeM (\<lambda>r. set_reply_obj_ref reply_tcb_update r (Some thread)) reply;
+             maybeM (\<lambda>r. update_reply (\<lambda>reply. reply\<lparr>reply_tcb := Some thread\<rparr>) r) reply;
              tcb_ep_append thread epptr True
           od
      else do_nbrecv_failed_transfer thread"
@@ -405,7 +405,7 @@ definition receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Righta
                 then do
                   sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
                   donate \<leftarrow> return $ (sender_sc \<noteq> None) \<and> \<not>(case_option False is_timeout_fault fault);
-                  reply_push sender thread (the reply) donate
+                  reply_link_caller sender thread (the reply) donate
                 od
                 else set_thread_state sender Inactive
               else do

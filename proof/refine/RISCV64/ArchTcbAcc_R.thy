@@ -103,13 +103,15 @@ lemma setObject_update_TCB_corres'[Arch_assms]:
    apply (frule_tac ko'="kernel_object.TCB tcb" and x'=ptr in obj_relation_cut_same_type)
       apply (simp add: tcb_relation_cut_def)+
    apply clarsimp
-  apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _" \<Rightarrow> -\<close>)
-   apply (simp add: sc_replies_relation_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
+  apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _ _" \<Rightarrow> -\<close>)
+   apply (simp add: sc_replies_relation_def scs_of_kh_def)
    apply (prop_tac "typ_at' (koTypeOf (injectKO new_tcb')) ptr s'")
     subgoal by (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def)
-   apply (drule replyPrevs_of_non_reply_update[simplified])
+   apply (frule replyPrevs_of_non_reply_update[simplified])
+      apply fastforce
+   apply (drule replyNexts_of_non_reply_update[simplified])
     apply fastforce
-   apply (clarsimp simp: opt_map_def)
+   apply (clarsimp simp: opt_map_def split: option.splits)
   apply (insert sched_pointers flags)
   apply (clarsimp simp: ready_queues_relation_def Let_def release_queue_relation_def)
   apply (prop_tac "(tcbSchedNexts_of s')(ptr := tcbSchedNext new_tcb') = tcbSchedNexts_of s'")
@@ -762,7 +764,7 @@ lemma asUser_invs[wp]:
 
 (* interface lemma, but can't be done via locale *)
 crunch storeWordUser
-  for pred_tcb_at'[wp]: "\<lambda>s. pred_tcb_at' proj P p s"
+  for pred_tcb_at'[wp]: "\<lambda>s. Q (pred_tcb_at' proj P p s)"
 
 lemma set_mrs_invs'[Arch_assms, wp]:
   "setMRs receiver recv_buf mrs \<lbrace>invs'\<rbrace>"

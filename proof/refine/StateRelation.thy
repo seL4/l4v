@@ -321,15 +321,25 @@ definition pspace_relation ::
      (pspace_dom ab = dom con) \<and>
      (\<forall>x \<in> dom ab. \<forall>(y, P) \<in> obj_relation_cuts (the (ab x)) x. P (the (ab x)) (the (con y)))"
 
-definition sc_replies_relation_2 ::
-  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool"
+definition prev_list_head :: "'a option \<Rightarrow> ('a \<rightharpoonup> 'a) \<Rightarrow> bool" where
+  "prev_list_head st prevs \<equiv> \<forall>ptr. st = Some ptr \<longrightarrow> prevs ptr = None"
+
+abbreviation list_linked_list_relation :: "'a list \<Rightarrow> 'a option \<Rightarrow> ('a \<rightharpoonup> 'a) \<Rightarrow> ('a \<rightharpoonup> 'a) \<Rightarrow> bool"
   where
-  "sc_replies_relation_2 sc_repls scRepl replPrevs \<equiv>
-     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_ls replPrevs (scRepl p) replies"
+  "list_linked_list_relation ls st nexts prevs \<equiv> heap_ls nexts st ls \<and> prev_list_head st prevs"
+
+definition sc_replies_relation_2 ::
+  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
+   \<Rightarrow> bool"
+  where
+  "sc_replies_relation_2 sc_repls scRepl replPrevs replyNexts \<equiv>
+     \<forall>p replies st.
+       sc_repls p = Some replies \<longrightarrow> scRepl p = st
+       \<longrightarrow> list_linked_list_relation replies st replPrevs replyNexts"
 
 abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "sc_replies_relation s s' \<equiv>
-    sc_replies_relation_2 (sc_replies_of s) (scReplies_of s') (replyPrevs_of s')"
+     sc_replies_relation_2 (sc_replies_of s) (scReplies_of s') (replyPrevs_of s') (replyNexts_of s')"
 
 lemmas sc_replies_relation_def = sc_replies_relation_2_def
 
@@ -687,97 +697,22 @@ lemma pspace_dom_relatedE:
 
 (* more replyNext/replyPrev related lemmas *)
 
-lemma sc_replies_relation_replyNext_None:
-  "\<lbrakk>sc_replies_relation s s'; reply_at rp s; replies_of' s' rp \<noteq> None;
-    \<forall>p'. replyPrevs_of s' p' \<noteq> Some rp; \<forall>p'. scReplies_of s' p' \<noteq> Some rp\<rbrakk>
-     \<Longrightarrow> sc_replies_relation s (s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto> KOReply r)\<rparr>)"
-  apply (clarsimp simp: sc_replies_relation_def)
-  apply (rename_tac scp replies)
-  apply (drule_tac x=scp and y=replies in spec2)
-  apply simp
-  apply (clarsimp simp: projectKO_opts_defs obj_at'_def opt_map_red obj_at_def is_reply vs_all_heap_simps)
-  apply (rename_tac ko scp sc reply n)
-  apply (case_tac ko; clarsimp)
-  apply (intro conjI; clarsimp)
-  apply (rename_tac sc reply n)
-  apply (rule heap_path_heap_upd_not_in, simp)
-  apply clarsimp
-  apply (frule split_list)
-  apply (elim exE)
-  apply (simp only:)
-  apply (case_tac ys; simp only:)
-   apply (clarsimp simp: opt_map_red)
-  apply (prop_tac "\<exists>ls x. a # list = ls @ [x]")
-   using append_butlast_last_id apply fastforce
-  apply (elim exE conjE, simp only:)
-  apply (prop_tac "(ls @ [x]) @ rp # zs = ls @ x # rp # zs", simp)
-  apply (simp only:)
-  apply (frule_tac z=x in heap_path_non_nil_lookup_next)
-  apply (clarsimp simp: opt_map_red)
-  done
-
 lemma sc_replies_relation_scReplies_of:
   "\<lbrakk>sc_replies_relation s s'; sc_at sc_ptr s; bound (scs_of' s' sc_ptr)\<rbrakk>
    \<Longrightarrow> (sc_replies_of s |> hd_opt) sc_ptr = scReplies_of s' sc_ptr"
-  by (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def
-                      hd_opt_def obj_at_def is_sc_obj_def opt_map_def
+  by (fastforce simp: sc_replies_relation_def scs_of_kh_def hd_opt_def obj_at_def is_sc_obj_def
+                      opt_map_def
                split: option.splits Structures_A.kernel_object.splits list.splits)
 
 lemma sc_replies_prevs_walk:
-  "\<lbrakk> sc_replies_relation s s';
-     ksPSpace s' p = Some (KOSchedContext sc'); kheap s p = Some (kernel_object.SchedContext sc n) \<rbrakk>
+  "\<lbrakk>sc_replies_relation s s';
+    ksPSpace s' p = Some (KOSchedContext sc'); kheap s p = Some (kernel_object.SchedContext sc n)\<rbrakk>
    \<Longrightarrow> heap_walk (replyPrevs_of s') (scReply sc') [] = sc_replies sc"
   unfolding sc_replies_relation_def
-  apply (erule_tac x=p in allE)
-  apply (erule_tac x="sc_replies sc" in allE)
-  apply (clarsimp simp: sc_replies.all_simps)
+  apply (drule_tac x=p in spec)
   apply (rule heap_ls_is_walk)
-  apply (subgoal_tac "scReplies_of s' p = scReply sc'", simp)
-  apply (clarsimp simp: opt_map_def projectKO_opt_sc)
+  apply (clarsimp simp: scs_of_kh_def opt_map_def projectKO_opt_sc)
   done
-
-lemma sc_replies_relation_prevs_list:
-  "\<lbrakk> sc_replies_relation s s';
-     kheap s x = Some (kernel_object.SchedContext sc n);
-     ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
-    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)"
-  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (drule_tac x=x and y="sc_replies sc" in spec2)
-  apply (clarsimp simp: opt_map_def projectKO_opt_sc split: option.splits)
-  done
-
-lemma list_refs_of_replies'_reftype[simp]:
-  "(p, reftype) \<in> list_refs_of_replies' s' p' \<Longrightarrow> reftype \<in> {ReplyPrev, ReplyNext}"
-  by (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def get_refs_def2 opt_map_def
-              split: option.split_asm)
-
-lemma replyNext_replyNexts_of_opt_map:
-  "\<lbrakk>ksPSpace s' p = Some (KOReply reply); replyNext reply = Some (Next p')\<rbrakk>
-    \<Longrightarrow> (replyNexts_of s' |> f s') p = f s' p'"
-  by (clarsimp simp: opt_map_red projectKO_opt_reply split: option.split)
-
-lemma replyPrevs_of_refs:
-  "replyPrevs_of s' p = Some p' \<longleftrightarrow> (p', ReplyPrev) \<in> list_refs_of_replies' s' p"
-  by (fastforce simp: map_set_def list_refs_of_reply'_def opt_map_def get_refs_def
-               split: option.splits)
-
-lemma replyNexts_of_refs:
-  "replyNexts_of s' p = Some p' \<longleftrightarrow> (p', ReplyNext) \<in> list_refs_of_replies' s' p"
-  by (fastforce simp: map_set_def list_refs_of_reply'_def opt_map_def get_refs_def
-               split: option.splits)
-
-lemma sym_replies_prev_then_next_id_p:
-  "\<lbrakk>sym_refs (list_refs_of_replies' s'); replyPrevs_of s' p = Some p'\<rbrakk>
-   \<Longrightarrow> (replyPrevs_of s' |> replyNexts_of s') p = Some p"
-  apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs opt_map_red)
-  by (drule (1) sym_refsD[rotated], simp)
-
-lemma sym_replies_next_then_prev_id_p:
-  "\<lbrakk>sym_refs (list_refs_of_replies' s'); replyNexts_of s' p = Some p'\<rbrakk>
-   \<Longrightarrow> (replyNexts_of s' |> replyPrevs_of s') p = Some p"
-  supply opt_map_red[simp]
-  apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs)
-  by (drule (1) sym_refsD[rotated], simp)
 
 (* for handling refill buffer *)
 

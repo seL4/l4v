@@ -1467,9 +1467,9 @@ lemma set_reply_valid_replies[wp]:
   "set_reply r reply \<lbrace> valid_replies_pred P \<rbrace>"
   by (wp valid_replies_lift)
 
-lemma set_reply_obj_ref_valid_replies[wp]:
-  "set_reply_obj_ref f r v \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: update_sk_obj_ref_def wp: set_reply_valid_replies)
+lemma update_reply_valid_replies[wp]:
+  "update_reply f reply_ptr \<lbrace>valid_replies_pred P\<rbrace>"
+  by (wpsimp simp: update_reply_def wp: set_reply_valid_replies)
 
 lemma replies_with_sc_upd_replies_subset:
   assumes "set rs \<subseteq> {r. (r, sc_ptr) \<in> rs_with_sc}"
@@ -1524,12 +1524,11 @@ lemma set_sc_replies_nil_valid_replies[wp]:
   by (wpsimp wp: update_sched_context_valid_replies
            simp: replies_with_sc_upd_replies_subset_valid_replies)
 
-lemma set_reply_obj_ref_cur_sc_tcb[wp]:
-  "\<lbrace>cur_sc_tcb\<rbrace> set_reply_obj_ref update r sc \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: update_sk_obj_ref_def)
+crunch update_reply
+  for cur_sc_tcb[wp]: cur_sc_tcb
 
 lemma sched_context_unbind_reply_invs[wp]:
-  "\<lbrace>invs\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "sched_context_unbind_reply sc_ptr \<lbrace>invs\<rbrace>"
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: valid_irq_node_typ hoare_vcg_conj_lift update_sched_context_valid_idle
               simp: sched_context_unbind_reply_def invs_def valid_state_def valid_pspace_def)

@@ -662,6 +662,10 @@ lemma set_pt_tcbs_of[wp]:
   "set_pt ptr pt \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_pt_def)
 
+lemma set_pt_scs_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
 lemma set_asid_pool_pred_tcb_atP[wp]:
   "set_asid_pool ptr val \<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace>"
   unfolding set_asid_pool_def set_object_def
@@ -679,6 +683,10 @@ lemma set_asid_pool_tcbs_of[wp]:
   "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_asid_pool_def)
 
+lemma set_asid_pool_scs_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
+
 lemma set_vcpu_eps_of[wp]:
   "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
   by (set_object_easy_cases def: set_vcpu_def)
@@ -689,6 +697,10 @@ lemma set_vcpu_ntfns_of[wp]:
 
 lemma set_vcpu_tcbs_of[wp]:
   "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_vcpu_def)
+
+lemma set_vcpu_scs_of[wp]:
+  "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_vcpu_def)
 
 lemma table_base_index_eq:
