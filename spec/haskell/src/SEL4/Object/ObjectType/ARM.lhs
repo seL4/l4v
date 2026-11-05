@@ -119,6 +119,16 @@ Page capabilities have read and write permission bits, which are used to restric
 > postCapDeletion :: ArchCapability -> Kernel ()
 > postCapDeletion _ = return ()
 
+Flush the instruction cache for Untypeds that could be turned into non-device frames.
+
+> postResetUntyped :: Bool -> Int -> Kernel ()
+> postResetUntyped isDevice sizeBits =
+>     when (not isDevice && sizeBits >= pageBits) $ doMachineOp $ do
+>         dsb
+>         invalidate_I_PoU
+>         dsb
+>         isb
+
 > finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
 Deletion of a final capability to an ASID pool requires that the pool is removed from the global ASID table.
@@ -364,7 +374,7 @@ Create an architecture-specific object.
 #endif
 > capUntypedPtr (SGISignalCap {}) = error "SGISignalCap has no pointer"
 #ifdef CONFIG_ARM_SMMU
-> capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP_SMMU"
+> capUntypedPtr (IOSpaceCap {}) = error "IOSpaceCap has no pointer"
 > capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
 #endif
 
@@ -379,7 +389,7 @@ Create an architecture-specific object.
 #endif
 > capUntypedSize (SGISignalCap {}) = 0 -- invalid case, use C default
 #ifdef CONFIG_ARM_SMMU
-> capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default FIXME ARMHYP
+> capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default
 > capUntypedSize (IOPageTableCap {}) = bit ioptBits
 #endif
 

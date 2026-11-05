@@ -27,7 +27,7 @@ import SEL4.Object.Instances()
 import SEL4.API.InvocationLabels.AARCH64
 import SEL4.API.Invocation
 import SEL4.API.Invocation.AARCH64 as ArchInv
-import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..), vcpuRegNum, vcpuRegSavedWhenDisabled)
+import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..), vcpuRegSaveRangeStart, vcpuRegSaveRangeEnd, vcpuRegNum, vcpuRegSavedWhenDisabled)
 import SEL4.API.Types
 import SEL4.API.InvocationLabels
 import SEL4.API.Failures.TARGET
@@ -228,10 +228,6 @@ makeVIRQ grp prio irq =
 virqType :: Word -> Int
 virqType virq = fromIntegral $ (virq `shiftR` virqTypeShift) .&. 3
 
--- combination of virq_get_virqType and virq_virq_active
-isVIRQActive :: VIRQ -> Bool
-isVIRQActive virq = virqType virq == 2
-
 -- identical for pending/active/invalid VIRQs
 -- there is no virq type == 3, so do nothing, as per VGICMaintenance in C
 virqSetEOIIRQEN :: VIRQ -> Word -> VIRQ
@@ -258,11 +254,6 @@ decodeVCPUInjectIRQ (mr0:_) cap@(VCPUCap {}) = do
 
     when (index >= fromIntegral gic_vcpu_num_list_regs) $
        (throw $ RangeError 0 (fromIntegral gic_vcpu_num_list_regs - 1))
-
-    vcpuLR <- withoutFailure $ liftM (vgicLR . vcpuVGIC) $ getObject vcpuPtr
-
-    when (isVIRQActive (vcpuLR ! (fromIntegral index))) $
-        throw DeleteFirst
 
     let virq = makeVIRQ (fromIntegral grp) (fromIntegral priority) (fromIntegral vid)
     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
@@ -340,13 +331,17 @@ vcpuFinalise vcpuPtr = do
 
 {- VCPU State Control -}
 
-saveVirtTimer :: PPtr VCPU -> Kernel ()
-saveVirtTimer vcpuPtr = do
-    vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+disableVirtTimer :: Maybe (PPtr VCPU) -> Kernel ()
+disableVirtTimer vcpuPtrOpt = do
+    case vcpuPtrOpt of
+        Just vcpuPtr -> do
+            vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+            vcpuSaveReg vcpuPtr VCPURegCNTV_CVAL
+            vcpuSaveReg vcpuPtr VCPURegCNTVOFF
+            vcpuSaveReg vcpuPtr VCPURegCNTKCTL_EL1
+        Nothing -> return ()
+    -- with or without VCPU, turn off the timer and return to user-mode timer config
     doMachineOp $ writeVCPUHardwareReg VCPURegCNTV_CTL 0
-    vcpuSaveReg vcpuPtr VCPURegCNTV_CVAL
-    vcpuSaveReg vcpuPtr VCPURegCNTVOFF
-    vcpuSaveReg vcpuPtr VCPURegCNTKCTL_EL1
     doMachineOp check_export_arch_timer
 
 restoreVirtTimer :: PPtr VCPU -> Kernel ()
@@ -364,6 +359,7 @@ restoreVirtTimer vcpuPtr = do
 
 vcpuEnable :: PPtr VCPU -> Kernel ()
 vcpuEnable vcpuPtr = do
+    vcpuRestoreReg vcpuPtr VCPURegTCR
     vcpuRestoreReg vcpuPtr VCPURegSCTLR
     vcpu <- getObject vcpuPtr
     doMachineOp $ do
@@ -383,29 +379,28 @@ vcpuDisable vcpuPtrOpt = do
            vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
            vcpuSaveReg vcpuPtr VCPURegSCTLR
            vcpuSaveReg vcpuPtr VCPURegCPACR -- since FPU enabled
-           doMachineOp isb
+           vcpuSaveReg vcpuPtr VCPURegTCR
         Nothing -> return ()
 
     doMachineOp $ do
         set_gic_vcpu_ctrl_hcr 0 -- VGIC off
-        isb
+        dsb -- for GIC memory-mapped register
         setSCTLR sctlrDefault -- S1 MMU off
-        isb
+        writeTCR tcrEL1Native
         setHCR hcrNative
         isb
         -- allow FPU instructions in EL0 and EL1 for native threads
         enableFpuEL01
 
-    case vcpuPtrOpt of
-        Just vcpuPtr -> do
-            saveVirtTimer vcpuPtr
-            doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
-        Nothing -> return ()
+    disableVirtTimer vcpuPtrOpt
+    doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
 
 armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 armvVCPUSave vcpuPtr active = do
-    when active $ vcpuSaveReg vcpuPtr VCPURegCPACR
-    vcpuSaveRegRange vcpuPtr VCPURegTTBR0 VCPURegSPSR_EL1
+    when active $ do
+        vcpuSaveReg vcpuPtr VCPURegCPACR
+        vcpuSaveReg vcpuPtr VCPURegTCR
+    vcpuSaveRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 
 vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 vcpuSave (Just (vcpuPtr, active)) = do
@@ -416,7 +411,7 @@ vcpuSave (Just (vcpuPtr, active)) = do
           vcpuSaveReg vcpuPtr VCPURegSCTLR
           hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
           vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
-          saveVirtTimer vcpuPtr
+          disableVirtTimer (Just vcpuPtr)
 
     vmcr <- doMachineOp get_gic_vcpu_ctrl_vmcr
     vgicUpdate vcpuPtr (\vgic -> vgic { vgicVMCR = vmcr })
@@ -453,7 +448,7 @@ vcpuRestore vcpuPtr = do
         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 
     -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
-    vcpuRestoreRegRange vcpuPtr VCPURegTTBR0 VCPURegSPSR_EL1
+    vcpuRestoreRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 
     vcpuEnable vcpuPtr
 

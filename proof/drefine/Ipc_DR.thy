@@ -1423,11 +1423,6 @@ lemma get_ipc_buffer_words_receive_slots:
   apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric])
 done
 
-(* FIXME: MOVE *)
-lemma dcorres_return:
-  "r a b \<Longrightarrow> dcorres (r) (\<lambda>_. True) (\<lambda>_. True) (return a) (return b)"
-  by (clarsimp simp:return_def corres_underlying_def)
-
 lemma get_receive_slot_dcorres:
   "dcorres (\<lambda>d d'. d = dest_of d') \<top>
            ((\<lambda>s. evalMonad (lookup_ipc_buffer True t) s = Some buffer) and not_idle_thread t and valid_objs

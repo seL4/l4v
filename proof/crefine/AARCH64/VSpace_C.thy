@@ -1192,6 +1192,34 @@ crunch invalidateVMIDEntry, invalidateASID
   for nextVMID[wp]: "\<lambda>s. P (armKSNextVMID (ksArchState s))"
   (wp: crunch_wps getASID_wp)
 
+lemma vmid_full_wrapped_list:
+  "nextVMID \<noteq> vmid_reserved \<Longrightarrow>
+   [nextVMID .e. maxBound] @ vmid_reserved # init [vmid_min .e. nextVMID] =
+   map (\<lambda>x. nextVMID + (of_nat x)) [0 ..< 2 ^ LENGTH(vmid_len)]"
+  apply (prop_tac "Suc 0 \<le> unat nextVMID")
+   apply (cases "unat nextVMID"; simp add: unat_eq_0 vmid_reserved_def)
+  apply (simp add: maxBound_word vmid_min_def vmid_reserved_def init_eq_butlast)
+  apply (subst butlast_enum_Cons[where x=0, simplified])
+    apply (clarsimp simp: word_le_nat_alt)
+   apply simp
+  apply (cut_tac unat_lt2p[where 'a=vmid_len and x=nextVMID])
+  apply (simp add: upto_enum_def unat_max_word split: if_split)
+  apply (rule nth_equalityI)
+   apply clarsimp
+  apply (clarsimp simp: nth_append not_less split: if_split)
+  done
+
+lemma find_nextVMID_without_reserved_eq:
+  "nextVMID \<noteq> vmid_reserved \<Longrightarrow>
+   find P ([nextVMID .e. maxBound] @ init [vmid_min .e. nextVMID]) =
+   find (\<lambda>a. P a \<and> a \<noteq> vmid_reserved)
+        (map (\<lambda>x. nextVMID + (of_nat x)) [0 ..< 2 ^ LENGTH(vmid_len)])"
+  apply (subst find_drop_elem[symmetric, where y=vmid_reserved])
+  apply (simp add: vmid_full_wrapped_list)
+   apply (clarsimp simp: distinct_conv_nth of_nat_inj)
+  apply (simp add: vmid_full_wrapped_list)
+  done
+
 lemma findFreeHWASID_ccorres:
   "ccorres (=) ret__unsigned_char_'
        (valid_arch_state') UNIV []
@@ -1200,63 +1228,52 @@ lemma findFreeHWASID_ccorres:
    apply csymbr
    apply (rule ccorres_pre_gets_armKSVMIDTable_ksArchState)
    apply (rule ccorres_pre_gets_armKSNextVMID_ksArchState)
+   apply (rule ccorres_assert)
+   apply (subst find_nextVMID_without_reserved_eq, simp)
    apply (simp add: whileAnno_def case_option_find_give_me_a_map
-                    mapME_def
+                    mapME_def init_eq_butlast
                del: Collect_const map_append)
    apply (rule ccorres_splitE_novcg)
-       apply (subgoal_tac "[nextVMID .e. maxBound] @ init [minBound .e. nextVMID]
-                               = map (\<lambda>x. nextVMID + (of_nat x)) [0 ..< 256]") (* FIXME AARCH64: vmid array size *)
-        apply clarsimp
-        apply (rule_tac xf=hw_asid_offset_' and i=0
-                     and xf_update=hw_asid_offset_'_update
-                     and r'=dc and xf'=xfdc and Q=UNIV
-                     and F="\<lambda>n s. vmidTable = armKSVMIDTable (ksArchState s)
-                                  \<and> nextVMID = armKSNextVMID (ksArchState s)
-                                  \<and> valid_arch_state' s"
+       apply (rule_tac xf=hw_asid_offset_' and i=0
+                   and xf_update=hw_asid_offset_'_update
+                   and r'=dc and xf'=xfdc and Q=UNIV
+                   and F="\<lambda>n s. vmidTable = armKSVMIDTable (ksArchState s)
+                                \<and> nextVMID = armKSNextVMID (ksArchState s)
+                                \<and> valid_arch_state' s"
                    in ccorres_sequenceE_while_gen')
-              apply (rule ccorres_from_vcg_might_throw)
-              apply (rule allI, rule conseqPre, vcg)
-              apply clarsimp
-              apply (rename_tac ys \<sigma> s)
-              apply (subst down_cast_same [symmetric, where 'b=8], (* FIXME AARCH64: vmid_len, but vmid just word8 *)
-                     simp add: is_down_def target_size_def source_size_def word_size)+
-              apply (simp add: ucast_ucast_mask
-                               ucast_ucast_add ucast_and_mask
-                               ucast_of_nat_small asidInvalid_def
-                               word_sless_msb_less ucast_less[THEN order_less_le_trans]
-                               word_0_sle_from_less)
-              apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
-                               trans[OF msb_nth nth_ucast] bang_big word_size
-                               uint_up_ucast is_up_def source_size_def
-                               target_size_def rf_sr_armKSNextVMID)
-              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
-              apply (simp add: throwError_def return_def split: if_split)
-              apply (clarsimp simp: returnOk_def return_def inr_rrel_def rf_sr_armKSNextVMID)
-              apply (drule rf_sr_armKSVMIDTable_rel')
-              apply (clarsimp simp: array_relation_def vmid_bits_val mask_def)
-              apply (erule_tac x="armKSNextASID_' (globals s) + word_of_nat (length ys)" in allE)
-              apply (clarsimp simp: valid_arch_state'_def ran_def)
-              apply ((rule conjI, uint_arith, simp add: take_bit_nat_def unsigned_of_nat, clarsimp)+)[1]
-             apply (simp add: mask_def)
-             apply unat_arith
-            apply (rule conseqPre, vcg)
-            apply clarsimp
-           apply simp
-           apply (rule hoare_pre, wp)
-           apply simp
+             apply (rule ccorres_from_vcg_might_throw)
+             apply (rule allI, rule conseqPre, vcg)
+             apply clarsimp
+             apply (rename_tac ys \<sigma> s)
+             apply (subst down_cast_same [symmetric, where 'b=vmid_len],
+                    simp add: is_down_def target_size_def source_size_def word_size)+
+             apply (simp add: ucast_ucast_mask
+                              ucast_ucast_add ucast_and_mask
+                              ucast_of_nat_small asidInvalid_def
+                              word_sless_msb_less ucast_less[THEN order_less_le_trans]
+                              word_0_sle_from_less)
+             apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
+                              trans[OF msb_nth nth_ucast] bang_big word_size
+                              uint_up_ucast is_up_def source_size_def
+                              target_size_def rf_sr_armKSNextVMID)
+             apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
+             apply (simp add: throwError_def return_def split: if_split)
+             apply (clarsimp simp: returnOk_def return_def inr_rrel_def rf_sr_armKSNextVMID)
+             apply (drule rf_sr_armKSVMIDTable_rel')
+             apply (clarsimp simp: array_relation_def vmid_bits_val mask_def)
+             apply (erule_tac x="armKSNextASID_' (globals s) + word_of_nat (length ys)" in allE)
+             apply (clarsimp simp: valid_arch_state'_def ran_def vmid_reserved_def hwASIDReserved_def)
+             apply (cut_tac x="armKSNextASID_' (globals s)" in uint_lt2p)
+             apply (fastforce simp: uint_of_nat ucast_eq_0 is_up)
+            apply (simp add: mask_def)
+            apply unat_arith
+           apply (rule conseqPre, vcg)
+           apply clarsimp
           apply simp
+          apply wpsimp
          apply simp
         apply simp
-
-       apply (cut_tac x=nextVMID in leq_maxBound[unfolded word_le_nat_alt])
-       apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
-       apply (simp add: upto_enum_word)
-       apply (rule nth_equalityI)
-        apply (simp del: upt.simps)
-       apply (simp del: upt.simps)
-       apply (simp add: nth_append
-                 split: if_split)
-
+       apply simp
       apply ceqv
      apply (rule ccorres_assert)
      apply (rule_tac A="\<lambda>s. nextVMID = armKSNextVMID (ksArchState s)
@@ -1294,9 +1311,11 @@ lemma findFreeHWASID_ccorres:
                            split: if_split)
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
-                             target_size_def)
-            apply uint_arith
-            subgoal by simp
+                             target_size_def vmid_min_def hwASIDMin_def hwASIDReserved_def)
+            apply clarsimp
+            apply (rename_tac s)
+            apply (cut_tac x="armKSNextASID_' (globals s)" in uint_lt2p)
+            apply (clarsimp simp: ucast_eq_0 is_up word_wrap_eq_max_word)
            apply wp
           apply vcg
          apply simp
@@ -1306,9 +1325,9 @@ lemma findFreeHWASID_ccorres:
        apply vcg
       apply (rule conseqPre, vcg)
       apply clarsimp
-     apply (drule_tac x=nextVMID in bspec, simp)
+     apply (drule_tac x="0" in bspec, simp)
      apply clarsimp
-     apply (clarsimp simp: rf_sr_armKSNextVMID
+     apply (clarsimp simp: rf_sr_armKSNextVMID vmid_reserved_def
                            valid_arch_state'_def
                            Collect_const_mem word_sless_msb_less
                            ucast_less[THEN order_less_le_trans]
@@ -1320,8 +1339,7 @@ lemma findFreeHWASID_ccorres:
      apply simp
     apply (fold mapME_def)
     apply (wp mapME_wp')
-    apply (rule hoare_pre, wp)
-    apply simp
+    apply wpsimp
    apply (clarsimp simp: guard_is_UNIV_def)
   apply simp
   done
@@ -1516,7 +1534,8 @@ lemma setVMRoot_ccorres:
   apply (frule valid_arch_state_armKSGlobalUserVSpace)
   apply (frule rf_sr_armKSGlobalUserVSpace)
   apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def)
-  apply (clarsimp simp: isCap_simps isValidVTableRoot_def2 canonical_address_and_maskD)
+  apply (clarsimp simp: isCap_simps isValidVTableRoot_def2 canonical_address_and_maskD
+                        vmid_reserved_def hwASIDReserved_def)
   apply (erule allE, erule (1) impE)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2)
   by (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
@@ -1975,11 +1994,19 @@ lemma makeUserPagePTE_spec_helper:
   apply (subst add_diff_inverse_nat; fastforce)
   done
 
+lemma discinct_vmrights:
+  "distinct [Kernel_C.VMReadWrite, Kernel_C.VMReadOnly, Kernel_C.VMKernelOnly]"
+  by (simp add: vmrights_defs)
+
+lemmas discinct_vmrights_simps[simp] =
+  discinct_vmrights[simplified] distinct_rev[THEN iffD2, OF discinct_vmrights, simplified]
+
 lemma makeUserPagePTE_spec:
   "\<forall>s. \<Gamma> \<turnstile>
    \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 2 \<and> canonical_address \<acute>paddr \<and> is_aligned \<acute>paddr pageBits \<rbrace>
    Call makeUserPagePTE_'proc
-   \<lbrace> let uxn = uxn_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes);
+   \<lbrace> let uxn = uxn_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes) ||
+               from_bool (\<^bsup>s\<^esup>cap_read = 0);
          ap = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights);
          attridx = attridx_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes);
          nG = 0 \<comment> \<open>hyp 0, non-hyp 1\<close>
@@ -2011,9 +2038,10 @@ lemma makeUserPagePTE_spec:
   apply (clarsimp simp: pte_pte_page_lift pte_pte_4k_page_lift makeUserPagePTE_spec_helper)
   apply (clarsimp simp: uxn_from_vmattributes_def vm_attributes_to_H_def Let_def vm_attributes_helpers
                          attridx_from_vmattributes_def S2_NORMAL_def S2_DEVICE_nGnRnE_def mask_def
-                         ap_from_vm_rights_def vmrights_to_H_def
+                         ap_from_vm_rights_def vmrights_to_H_def up_scast_inj_eq
                   split: if_split vmrights.split)
-  apply (simp add: to_bool_def)
+  apply (clarsimp simp: from_bool_def true_def false_def vm_attributes_lift_def
+                  split: bool.splits if_splits)
   done
 
 lemma cap_to_H_PTCap:
@@ -2588,23 +2616,37 @@ lemma restore_virt_timer_ccorres:
                  split: if_split)
   done
 
-lemma save_virt_timer_ccorres:
+lemma disable_virt_timer_ccorres:
   "ccorres dc xfdc
-     (vcpu_at' vcpuptr)
-     (\<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
-     (saveVirtTimer vcpuptr) (Call save_virt_timer_'proc)"
-  apply (cinit lift: vcpu_')
-   apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+     (no_0_obj' and none_top vcpu_at' vcpu_ptr_opt)
+     \<lbrace>\<acute>vcpu = option_to_ptr vcpu_ptr_opt\<rbrace> hs
+     (disableVirtTimer vcpu_ptr_opt) (Call disable_virt_timer_'proc)"
+  apply (cases vcpu_ptr_opt; clarsimp)
+   (* vcpu_ptr_opt = None *)
+   apply (cinit lift: vcpu_')
+    apply ccorres_rewrite
     apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
+     apply (ctac (no_vcg) add: check_export_arch_timer_ccorres)
+    apply wpsimp
+   apply (clarsimp simp: vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric])
+  (* vcpu_ptr_opt = Some vcpuptr *)
+  apply (rename_tac vcpuptr)
+  apply (cinit lift: vcpu_')
+   apply (rule ccorres_cond_true_seq)
+   apply (rule ccorres_rhs_assoc)+
+   apply (simp only: bind_assoc)
+   apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+    apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
      apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
       apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
-       apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+       apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
         apply (ctac (no_vcg) add: check_export_arch_timer_ccorres)
        apply wpsimp+
-  apply (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVAL, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTVOFF, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTKCTL_EL1, simplified, symmetric])
+  apply (clarsimp simp: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVAL, simplified, symmetric]
+                        vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric]
+                        vcpureg_eq_use_types[where reg=VCPURegCNTVOFF, simplified, symmetric]
+                        vcpureg_eq_use_types[where reg=VCPURegCNTKCTL_EL1, simplified, symmetric]
+                 dest!: typ_at'_no_0_objD)
   done
 
 lemma armv_vcpu_save_ccorres:
@@ -2617,10 +2659,13 @@ lemma armv_vcpu_save_ccorres:
        apply (rule ccorres_when[where R=\<top>])
         apply (clarsimp split: if_splits)
        apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+        apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+       apply wpsimp
       apply ceqv
      apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
     apply wpsimp
-   apply (auto simp: guard_is_UNIV_def seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
+   apply (auto simp: guard_is_UNIV_def seL4_VCPUReg_defs fromEnum_def enum_vcpureg
+                     vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
   done
 
 lemma vcpu_disable_ccorres:
@@ -2649,30 +2694,28 @@ lemma vcpu_disable_ccorres:
             apply ceqv
            apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
             apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
-             apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc] add: isb_ccorres)
-               apply (wpsimp simp: guard_is_UNIV_def)+
-         apply (clarsimp split: if_splits simp: seL4_VCPUReg_CPACR_def fromEnum_def enum_vcpureg)
+             apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc]
+                                  add: vcpu_save_reg_ccorres)
+              apply (wpsimp simp: guard_is_UNIV_def)+
+         apply (clarsimp split: if_splits simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
         apply wpsimp
        apply ceqv
       apply (clarsimp simp: doMachineOp_bind bind_assoc)
       apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_hcr_ccorres)
-       apply (ctac (no_vcg) add: isb_ccorres)
+       apply (ctac (no_vcg) add: dsb_ccorres)
         apply (ctac (no_vcg) add: setSCTLR_ccorres)
-         apply (ctac (no_vcg) add: isb_ccorres)
+         apply (ctac (no_vcg) add: writeTCR_ccorres)
           apply (ctac (no_vcg) add: setHCR_ccorres)
            apply (ctac (no_vcg) add: isb_ccorres)
             apply (ctac (no_vcg) add: enableFpuEL01_ccorres)
-             apply (wpc; ccorres_rewrite)
-              apply (rule ccorres_return_Skip)
-             apply (rename_tac vcpu_ptr)
-             apply (rule_tac P="the v \<noteq> 0" in ccorres_gen_asm)
-             apply ccorres_rewrite
-             apply (ctac (no_vcg) add: save_virt_timer_ccorres)
+             apply (ctac (no_vcg) add: disable_virt_timer_ccorres)
               apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-             apply (wpsimp wp: hoare_vcg_all_lift)+
-    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def sctlrDefault_def
-                          irqVTimerEvent_def IRQ_def)
-   apply (wpsimp wp: hoare_vcg_all_lift)+
+             apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                           simp: none_top_fun_all[abs_def])+
+    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def hcrCommon_def
+                          sctlrDefault_def tcrEL1Native_def irqVTimerEvent_def IRQ_def)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                 simp: none_top_fun_all[abs_def])+
   apply (clarsimp simp: Collect_const_mem ko_at'_not_NULL dest!: vcpu_at_ko split: option.splits)
   done
 
@@ -2685,28 +2728,31 @@ lemma vcpu_enable_ccorres:
   supply empty_fail_cond[simp]
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)+
-    apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (clarsimp simp: doMachineOp_bind bind_assoc)
-    apply (ctac (no_vcg) add: setHCR_ccorres)
-     apply (ctac  (no_vcg) add: isb_ccorres)
-      apply (rule_tac P="ko_at' vcpu v" in ccorres_cross_over_guard)
-      apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres)
-        apply wpsimp+
-        apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
-         apply (ctac (no_vcg) add: restore_virt_timer_ccorres)
+     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+     apply (clarsimp simp: doMachineOp_bind bind_assoc)
+     apply (ctac (no_vcg) add: setHCR_ccorres)
+      apply (ctac (no_vcg) add: isb_ccorres)
+       apply (rule_tac P="ko_at' vcpu v" in ccorres_cross_over_guard)
+       apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres)
+         apply wpsimp+
+         apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
+          apply (ctac (no_vcg) add: restore_virt_timer_ccorres)
+         apply wpsimp
+        apply simp
         apply wpsimp
-       apply simp
-       apply wpsimp
-      apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
-     apply wpsimp+
-   apply (rule_tac Q'="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
+       apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
+      apply wpsimp+
+    apply (rule_tac Q'="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
+    apply wpsimp
    apply wpsimp
   apply (clarsimp simp: typ_heap_simps' Collect_const_mem cvcpu_relation_def
                         cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_val
          | rule conjI | simp)+
-   apply (drule (1) vcpu_at_rf_sr)
-   apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
-  apply (clarsimp split: if_splits simp: seL4_VCPUReg_CPACR_def fromEnum_def enum_vcpureg)
+   apply (clarsimp simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
+  apply clarsimp
+  apply (drule (1) vcpu_at_rf_sr)
+  apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
+  apply (clarsimp simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
   done
 
 lemma vcpu_restore_ccorres:
@@ -2772,13 +2818,14 @@ lemma vcpu_restore_ccorres:
         apply (wpsimp simp: guard_is_UNIV_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv
                | rule UNIV_I
                | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
-        apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_defs)
+        apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_defs
+                               vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
        apply (clarsimp simp: guard_is_UNIV_def)
       apply (wpsimp simp: vcpu_at_ko'_eq wp: hoare_vcg_imp_lift')+
   apply (rule conjI)
    apply (fastforce simp: invs_no_cicd'_def valid_arch_state'_def)
   apply (rule conjI)
-   apply (fastforce simp: fromEnum_def enum_vcpureg)
+   apply (fastforce simp: fromEnum_def enum_vcpureg vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
   apply (fastforce dest!: vcpu_at_rf_sr
                    simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
   done
@@ -2836,7 +2883,7 @@ lemma vcpu_save_ccorres:
           apply (rule ccorres_move_c_guard_vcpu)
           apply (clarsimp)
           apply (ctac (no_vcg) add: vgicUpdate_HCR_ccorres)
-            apply (rule ccorres_call[where xf'=xfdc], rule save_virt_timer_ccorres)
+            apply (rule ccorres_call[where xf'=xfdc], rule disable_virt_timer_ccorres)
               apply wpsimp+
        apply ceqv
       apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_vmcr_ccorres)
@@ -2880,7 +2927,7 @@ lemma vcpu_save_ccorres:
                   apply (fastforce simp: word_bits_def)
                  apply ceqv
                 apply (ctac (no_vcg) add: armv_vcpu_save_ccorres)
-               apply (wpsimp simp: guard_is_UNIV_def wp: mapM_x_wp_inv)+
+               apply (wpsimp simp: guard_is_UNIV_def wp: mapM_x_wp_inv hoare_vcg_const_imp_lift)+
   apply (simp add: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   done
 
@@ -3060,59 +3107,48 @@ lemma armHSCurVCPU_update_curv_Null_ccorres:
                  split: bool.split option.splits)
   done
 
+(* Reorder vcpuInvalidateActive to better line up with C *)
+lemma vcpuInvalidateActive_def2:
+  "vcpuInvalidateActive = do
+     hsCurVCPU \<leftarrow> gets (armHSCurVCPU \<circ> ksArchState);
+     when (hsCurVCPU \<noteq> None \<and> snd (the hsCurVCPU)) (do
+       vcpuDisable None;
+       modifyArchState (armHSCurVCPU_update (case_option None (\<lambda>(a, _). Some (a, False))))
+     od);
+     modifyArchState (armHSCurVCPU_update (\<lambda>_. None))
+   od"
+  unfolding vcpuInvalidateActive_def
+  apply (rule bind_cong[OF refl])
+  apply (rename_tac cur s s')
+  apply (case_tac cur; clarsimp simp: when_def bind_assoc split: bool.splits)
+  apply (rule bind_apply_cong[OF refl])+
+  apply (subst modify_armHSCurVCPU_split[where f="case_option None (\<lambda>(a, _). Some (a, False))"])
+  apply simp
+  done
+
 lemma vcpuInvalidateActive_ccorres:
   "ccorres dc xfdc invs' UNIV hs
-           vcpuInvalidateActive
-           (Call vcpu_invalidate_active_'proc)"
-  apply cinit
-   apply (rule ccorres_pre_getCurVCPU)
-        apply (subst modify_armHSCurVCPU_when_split)
-   apply (subst bind_assoc[symmetric])
-   apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-    apply (rule_tac Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = hsCurVCPU"
-                and Q'=UNIV
-                and C'="{s. \<exists> t. hsCurVCPU =  Some t \<and> snd t}"
-                 in ccorres_rewrite_cond_sr)
-        apply clarsimp
-        apply (frule rf_sr_ksArchState_armHSCurVCPU)
-        apply (case_tac "\<exists> t. (armHSCurVCPU \<circ> ksArchState) s =  Some t \<and> snd t")
-         apply (clarsimp simp: cur_vcpu_relation_def)
-        apply (clarsimp simp: cur_vcpu_relation_def)
-        apply (case_tac "(armHSCurVCPU \<circ> ksArchState) s"; clarsimp)
-       apply (rule_tac a=" _ >>= (\<lambda>_. when (hsCurVCPU \<noteq> None \<and> snd (the hsCurVCPU))
-                                          (modifyArchState(armHSCurVCPU_update
-                                             (\<lambda>a. case a of None \<Rightarrow> None
-                                                                  | Some (a,_) \<Rightarrow> Some (a, False)))))"
-                    in match_ccorres)
-       apply (wpc; clarsimp ; ccorres_rewrite)
-        apply (rule ccorres_return_Skip)
-       apply (rule_tac Q="\<lambda>s. (b \<longrightarrow> _ s) \<and> (\<not> b \<longrightarrow> _ s)" in  ccorres_guard_imp)
-        apply (case_tac b)
-        apply clarsimp
-        apply ccorres_rewrite
-          apply (rule ccorres_guard_imp)
-          apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-            apply (ctac add: vcpu_disable_ccorres)
-           apply ceqv
-              apply (rule armHSCurVCPU_update_active_false_ccorres)
-             apply wp
-            apply (vcg exspec=vcpu_disable_modifies)
-           apply clarsimp
-           apply assumption
-          apply simp
-         apply simp
-         apply ccorres_rewrite
-         apply (rule ccorres_return_Skip)
-        apply clarsimp
-        apply assumption
-        apply simp
+     vcpuInvalidateActive (Call vcpu_invalidate_active_'proc)"
+  apply (subst vcpuInvalidateActive_def2)
+  apply cinit'
+   apply (rule ccorres_pre_getCurVCPU, rename_tac curVCPU)
+   apply (rule_tac Q="\<lambda>s. invs' s \<and> armHSCurVCPU (ksArchState s) = curVCPU" and Q'=UNIV
+               and C'="{s. curVCPU \<noteq> None \<and> snd (the curVCPU)}"
+                in ccorres_rewrite_cond_sr_Seq)
+    apply (fastforce simp: cur_vcpu_relation_def Collect_const_mem split: option.splits
+                     dest!: rf_sr_ksArchState_armHSCurVCPU)
+   apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
+       apply (rule ccorres_when[where R=\<top>])
+        apply (clarsimp simp: Collect_const_mem)
+       apply (ctac (no_vcg) add: vcpu_disable_ccorres)
+        apply (rule armHSCurVCPU_update_active_false_ccorres)
+       apply wp
       apply ceqv
-     apply clarsimp
      apply (rule armHSCurVCPU_update_curv_Null_ccorres)
-    apply (wpsimp simp: modifyArchState_def if_apply_def2)
-   apply (vcg exspec=vcpu_disable_modifies)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-  apply (rule UNIV_I)
+    apply (wpsimp simp: modifyArchState_def)
+   apply (clarsimp simp: guard_is_UNIV_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def if_apply_def2
+                 split: option.splits)
   done
 
 lemma vcpu_flush_ccorres:

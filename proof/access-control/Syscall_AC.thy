@@ -1027,7 +1027,8 @@ lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
 
 crunch invoke_untyped
   for arch_state[wp]: "\<lambda>s :: det_state. P (arch_state s)"
-  (wp: crunch_wps preemption_point_inv mapME_x_inv_wp simp: crunch_simps sequence_x_mapM_x)
+  (wp: crunch_wps preemption_point_inv mapME_x_inv_wp arch_post_reset_untyped_inv
+   simp: crunch_simps sequence_x_mapM_x)
 
 lemma zet_zip_contrapos:
   "fst t \<notin> set xs  \<Longrightarrow> t \<notin> set (zip xs ys)"

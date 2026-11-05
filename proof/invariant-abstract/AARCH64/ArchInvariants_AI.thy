@@ -676,6 +676,23 @@ locale_abbrev
 definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
   "vmid_inv s \<equiv> is_inv (vmid_table s) (asid_map s)"
 
+(* The next vmID index never is the reserved vmID *)
+definition valid_next_vmid_2 :: "vmid \<Rightarrow> bool" where
+  "valid_next_vmid_2 vmid \<equiv> vmid \<noteq> vmid_reserved"
+
+locale_abbrev valid_next_vmid :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_next_vmid s \<equiv> valid_next_vmid_2 (arm_next_vmid (arch_state s))"
+
+lemmas valid_next_vmid_def = valid_next_vmid_2_def
+
+lemma vmid_min_not_reserved[simp]:
+  "vmid_min \<noteq> vmid_reserved"
+  by (simp add: vmid_min_def vmid_reserved_def)
+
+lemma valid_next_vmid_min[simp, intro!]:
+  "valid_next_vmid_2 vmid_min"
+  by (simp add: valid_next_vmid_2_def)
+
 (* The vmID table never stores ASID 0 *)
 definition valid_vmid_table_2 :: "(vmid \<rightharpoonup> asid) \<Rightarrow> bool" where
   "valid_vmid_table_2 table \<equiv> \<forall>vmid. table vmid \<noteq> Some 0"
@@ -711,8 +728,8 @@ lemmas valid_numlistregs_def = valid_numlistregs_2_def
 
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_arch_state \<equiv>
-     valid_asid_table and valid_uses and vmid_inv and valid_vmid_table and cur_vcpu and
-     valid_global_arch_objs and valid_global_tables and valid_numlistregs"
+     valid_asid_table and valid_uses and vmid_inv and valid_next_vmid and valid_vmid_table and
+     cur_vcpu and valid_global_arch_objs and valid_global_tables and valid_numlistregs"
 
 (* ---------------------------------------------------------------------------------------------- *)
 

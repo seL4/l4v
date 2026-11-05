@@ -113,6 +113,16 @@ maskCapRights _ c = ArchObjectCap c
 postCapDeletion :: ArchCapability -> Kernel ()
 postCapDeletion c = return ()
 
+-- Flush the instruction cache for Untypeds that could be turned into non-device
+-- frames.
+postResetUntyped :: Bool -> Int -> Kernel ()
+postResetUntyped isDevice sizeBits =
+    when (not isDevice && sizeBits >= pageBits) $ doMachineOp $ do
+        dsb
+        invalidate_I_PoU
+        dsb
+        isb
+
 finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
 finaliseCap (ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }) True = do

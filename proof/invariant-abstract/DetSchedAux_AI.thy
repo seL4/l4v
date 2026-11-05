@@ -147,7 +147,7 @@ crunch invoke_untyped
       "\<lambda>s::'state_ext state. P (cur_domain s) (cur_thread s) (idle_thread s)
                                (ready_queues s) (release_queue s) (scheduler_action s)
                                (cur_sc s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv
    simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym crunch_simps
    ignore: do_machine_op)
 
@@ -182,7 +182,7 @@ declare delete_objects_st_tcb_at[wp]
 
 crunch reset_untyped_cap
   for etcb_at[wp]: "etcb_at P t :: 'z::state_ext state \<Rightarrow> _"
-  (wp: preemption_point_inv mapME_x_inv_wp crunch_wps
+  (wp: preemption_point_inv arch_post_reset_untyped_inv mapME_x_inv_wp crunch_wps
    simp: unless_def)
 
 lemma foldr_kh_eq:
@@ -576,7 +576,8 @@ lemma delete_objects_valid_blocked[wp]:
 
 crunch reset_untyped_cap
  for valid_blocked[wp]: "valid_blocked::'z::state_ext state \<Rightarrow> _"
-  (wp: preemption_point_inv mapME_x_inv_wp crunch_wps simp: unless_def)
+  (wp: preemption_point_inv arch_post_reset_untyped_inv mapME_x_inv_wp crunch_wps
+   simp: unless_def)
 
 crunch retype_region, delete_objects
   for cur_sc[wp]: "\<lambda>(s). P (cur_sc s)"

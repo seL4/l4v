@@ -154,7 +154,7 @@ definition "vcpu_sctlr vcpu \<equiv> vcpu_regs vcpu VCPURegSCTLR"
 
 definition default_gic_vcpu_interface :: gic_vcpu_interface where
   "default_gic_vcpu_interface \<equiv> \<lparr>
-      vgic_hcr  = vgicHCREN,
+      vgic_hcr  = vgicHCREN || vgicHCRTALL0,
       vgic_vmcr = 0,
       vgic_apr  = 0,
       vgic_lr   = \<lambda>_. 0

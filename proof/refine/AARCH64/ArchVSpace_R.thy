@@ -47,6 +47,7 @@ lemma dmos_invs_no_cicd'[wp]:
   "doMachineOp isb \<lbrace>invs_no_cicd'\<rbrace>"
   "doMachineOp dsb \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w. doMachineOp (setSCTLR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  "\<And>w. doMachineOp (writeTCR w) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w x. doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs_no_cicd'\<rbrace>"
@@ -70,6 +71,7 @@ lemma dmos_invs'[wp]:
   "doMachineOp isb \<lbrace>invs'\<rbrace>"
   "doMachineOp dsb \<lbrace>invs'\<rbrace>"
   "\<And>w. doMachineOp (setSCTLR w) \<lbrace>invs'\<rbrace>"
+  "\<And>w. doMachineOp (writeTCR w) \<lbrace>invs'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs'\<rbrace>"
   "\<And>w x. doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>invs'\<rbrace>"
   "\<And>w. doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs'\<rbrace>"
@@ -357,11 +359,11 @@ lemma vcpuRestoreRegRange_corres[corres]:
      apply (wpsimp wp: vcpuRestoreReg_corres)+
   done
 
-lemma saveVirtTimer_corres[corres]:
-  "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
-             (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
-  unfolding save_virt_timer_def saveVirtTimer_def
-  by corres
+lemma disableVirtTimer_corres[corres]:
+  "corres dc (none_top vcpu_at vcpu_ptr_opt) (none_top vcpu_at' vcpu_ptr_opt and no_0_obj')
+             (disable_virt_timer vcpu_ptr_opt) (disableVirtTimer vcpu_ptr_opt)"
+  unfolding disable_virt_timer_def disableVirtTimer_def
+  by (cases vcpu_ptr_opt; simp add: bind_assoc; corres)
 
 lemma restoreVirtTimer_corres[corres]:
   "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
@@ -387,7 +389,7 @@ lemma vcpuSave_corres:
               apply (rule corres_Id; wpsimp)
              apply (rule corres_split[OF vgicUpdate_corres])
                 apply (clarsimp simp: vgic_map_def)
-               apply (rule saveVirtTimer_corres)
+               apply (rule disableVirtTimer_corres)
               apply wpsimp+
           apply (rule corres_split_eqr[OF corres_machine_op])
            apply (rule corres_Id; wpsimp)
@@ -407,10 +409,10 @@ lemma vcpuSave_corres:
                           apply (clarsimp, fold dc_def)
                           apply (rule vgicUpdateLR_corres)
                          apply wpsimp+
-                    apply (rule corres_split[OF corres_when[OF refl vcpuSaveReg_corres]])
-                      apply (rule vcpuSaveRegRange_corres)
-                     apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
-                                 simp: if_apply_def2)+
+                    apply (rule corres_split[OF corres_when[OF refl] vcpuSaveRegRange_corres])
+                      apply (rule corres_split_dc[OF vcpuSaveReg_corres vcpuSaveReg_corres])
+                       apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
+                                   simp: if_apply_def2)+
   done
 
 lemma vcpuDisable_corres:
@@ -421,11 +423,12 @@ lemma vcpuDisable_corres:
   apply (cases vcpuopt; clarsimp simp: vcpu_disable_def vcpuDisable_def)
    (* no current VCPU *)
    subgoal
-     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind empty_fail_cond)
+     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc empty_fail_cond IRQ_def)
      apply (rule corres_guard_imp)
        apply (rule corres_split_dc[OF corres_machine_op]
-         | rule corres_machine_op corres_Id
-         | wpsimp)+
+                   corres_split_dc[OF disableVirtTimer_corres]
+              | rule corres_machine_op corres_Id
+              | wpsimp)+
      done
   (* have current VCPU *)
    apply (rename_tac vcpu)
@@ -439,10 +442,11 @@ lemma vcpuDisable_corres:
             apply (clarsimp simp: vgic_map_def)
            apply (rule corres_split_dc[OF vcpuSaveReg_corres])
              apply (rule corres_split_dc[OF vcpuSaveReg_corres])
-               apply (rule corres_split_dc[OF corres_machine_op]
-                           corres_split_dc[OF saveVirtTimer_corres]
-                      | rule corres_machine_op corres_Id
-                      | wpsimp)+
+               apply (rule corres_split_dc[OF vcpuSaveReg_corres])
+                 apply (rule corres_split_dc[OF corres_machine_op]
+                             corres_split_dc[OF disableVirtTimer_corres]
+                        | rule corres_machine_op corres_Id
+                        | wpsimp)+
    done
 
 lemma vcpuEnable_corres:
@@ -856,9 +860,9 @@ crunch vcpuRestoreRegRange, vcpuSaveRegRange, vgicUpdateLR
   for invs_no_cicd'[wp]: invs_no_cicd'
   (wp: mapM_x_wp ignore: loadObject)
 
-lemma saveVirtTimer_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> saveVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  by (wpsimp simp: saveVirtTimer_def)
+lemma disableVirtTimer_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> disableVirtTimer vcpu_ptr_opt \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: disableVirtTimer_def)
 
 lemma restoreVirtTimer_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> restoreVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
@@ -915,9 +919,9 @@ crunch
   for hyp[wp]: "ko_wp_at' (is_vcpu' and hyp_live') v"
   (wp: crunch_wps setVCPU_regs_vcpu_live dmo_vcpu_hyp)
 
-lemma saveVirtTimer_hyp[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
-  by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
+lemma disableVirtTimer_hyp[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: disableVirtTimer_def vcpuUpdate_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
 
 lemma restoreVirtTimer_hyp[wp]:
   "restoreVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
@@ -1079,9 +1083,9 @@ lemma vcpuSaveReg_invs'[wp]:
   "vcpuSaveReg v r \<lbrace>invs'\<rbrace>"
   by (wpsimp simp: vcpuSaveReg_def vcpuUpdate_def wp: setVCPU_regs_invs')
 
-lemma saveVirtTimer_invs'[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>invs'\<rbrace>"
-  unfolding saveVirtTimer_def
+lemma disableVirtTimer_invs'[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>invs'\<rbrace>"
+  unfolding disableVirtTimer_def
   by wpsimp
 
 lemma vcpuDisable_invs'[wp]:
@@ -1461,14 +1465,6 @@ lemma gets_armKSNextVMID_corres[corres]:
           (gets (arm_next_vmid \<circ> arch_state)) (gets (armKSNextVMID \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
-lemma take_vmid_minBound_maxBound:
-  "take (length [minBound .e. maxBound :: vmid])
-        ([next_vmid .e. maxBound] @ [minBound .e. next_vmid])
-   = [next_vmid .e. maxBound] @ init [minBound .e. next_vmid]"
-  for next_vmid :: vmid
-  using leq_maxBound[where x=next_vmid]
-  by (simp add: word_le_nat_alt init_def upto_enum_word minBound_word)
-
 lemma invalidateVMIDEntry_corres[corres]:
   "vmid' = vmid \<Longrightarrow>
    corres dc \<top> \<top> (invalidate_vmid_entry vmid) (invalidateVMIDEntry vmid')"
@@ -1483,38 +1479,51 @@ lemma valid_vmid_tableD:
   apply (fastforce simp: valid_vmid_table_def)
   done
 
+lemma vmidMin_abs[simp]:
+  "vmidMin = vmid_min"
+  by (simp add: vmidMin_def vmid_min_def)
+
+lemma vmidReserved_abs[simp]:
+  "vmidReserved = vmid_reserved"
+  by (simp add: vmidReserved_def vmid_reserved_def)
+
+lemma armKSNextVMID_cross:
+  "(s, s') \<in> state_relation \<Longrightarrow>
+   armKSNextVMID (ksArchState s') = arm_next_vmid (arch_state s)"
+  by (simp add: state_relation_def arch_state_relation_def)
+
 lemma findFreeVMID_corres[corres]:
   "corres (=)
           (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
-           pspace_aligned and pspace_distinct)
+           valid_next_vmid and pspace_aligned and pspace_distinct)
           \<top>
           find_free_vmid findFreeVMID"
   unfolding find_free_vmid_def findFreeVMID_def
-  apply (simp only: take_vmid_minBound_maxBound)
-  apply corres
+  apply (simp only: init_eq_butlast vmidMin_abs)
+  apply (corres corres: corres_assert_assume_r)
         apply corres_cases_both (* case find .. of *)
         (* Only None case left over *)
         apply corres
            apply (clarsimp dest!: findNoneD)
-           apply (drule bspec, rule UnI1, simp, rule order_refl)
+           apply (drule bspec, rule UnI1, simp, rule order_refl)+
            apply clarsimp
-          apply (corres corres: corres_modify_tivial  (* FIXME AARCH64: fix typo *)
-                        simp: state_relation_def arch_state_relation_def maxBound_word minBound_word)
-         apply wpsimp+
+          apply (corres corres: corres_modify_tivial  (* FIXME AARCH64: fix typo tivial *)
+                        simp: state_relation_def arch_state_relation_def)
+         apply (wpsimp split_del: if_split)+
    apply (clarsimp dest!: findNoneD)
    apply (drule bspec, rule UnI1, simp, rule order_refl)
    apply (clarsimp simp: vmid_inv_def)
    apply (frule (1) valid_vmid_tableD)
    apply (drule (1) is_inv_SomeD)
    apply (fastforce simp: valid_asid_map_def)
-  apply simp
+  apply (clarsimp simp: armKSNextVMID_cross valid_next_vmid_def)
   done
 
 lemma getVMID_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres (=)
           (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
-           pspace_aligned and pspace_distinct
+           valid_next_vmid and pspace_aligned and pspace_distinct
            and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
           \<top>
           (get_vmid asid) (getVMID asid')"
@@ -1525,7 +1534,8 @@ lemma armContextSwitch_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres dc
           (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
-           pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
+           valid_next_vmid and pspace_aligned and pspace_distinct and
+           (\<lambda>s. vspace_for_asid asid s \<noteq> None))
           \<top>
           (arm_context_switch pt asid) (armContextSwitch pt asid')"
   unfolding arm_context_switch_def armContextSwitch_def
@@ -1534,8 +1544,9 @@ lemma armContextSwitch_corres[corres]:
 lemma setVMRoot_corres [corres]:
   assumes "t' = t"
   shows "corres dc (tcb_at t and valid_vspace_objs and valid_asid_table and valid_asid_map and
-                    vmid_inv and valid_vmid_table and pspace_aligned and pspace_distinct and
-                    valid_objs and valid_global_arch_objs and pspace_in_kernel_window and valid_uses)
+                    vmid_inv and valid_vmid_table and valid_next_vmid and pspace_aligned and
+                    pspace_distinct and valid_objs and valid_global_arch_objs and
+                    pspace_in_kernel_window and valid_uses)
                    no_0_obj'
                    (set_vm_root t) (setVMRoot t')"
 proof -
@@ -1555,9 +1566,9 @@ proof -
                         tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                         objBitsKO_def tcb_cnode_index_def to_bl_1 assms cteSizeBits_def)
       apply (rule_tac  R="\<lambda>thread_root. valid_vspace_objs and valid_asid_table and vmid_inv and
-                                        valid_vmid_table and pspace_aligned and pspace_distinct and
-                                        valid_objs and valid_global_arch_objs and valid_asid_map and
-                                        pspace_in_kernel_window and valid_uses and
+                                        valid_vmid_table and valid_next_vmid and pspace_aligned and
+                                        pspace_distinct and valid_objs and valid_global_arch_objs and
+                                        valid_asid_map and pspace_in_kernel_window and valid_uses and
                                         cte_wp_at ((=) thread_root) thread_root_slot and
                                         tcb_at (fst thread_root_slot) and
                                         K (snd thread_root_slot = tcb_cnode_index 1)"
@@ -1582,7 +1593,8 @@ proof -
           apply (rule_tac P="valid_vspace_objs and valid_asid_table and pspace_aligned and
                              valid_vmid_table and vmid_inv and pspace_distinct and valid_objs and
                              pspace_in_kernel_window and valid_uses and valid_asid_map and
-                             valid_global_arch_objs and cte_wp_at ((=) cap) thread_root_slot"
+                             valid_global_arch_objs and cte_wp_at ((=) cap) thread_root_slot and
+                             valid_next_vmid"
                           in corres_assert_gen_asm2)
           prefer 3
           apply assumption
@@ -1920,7 +1932,7 @@ lemma deleteASIDPool_corres:
               some manual massaging to avoid massive duplication *)
            apply (simp (no_asm) del: fun_upd_apply)
            apply (strengthen invs_vmid_inv invs_valid_global_arch_objs invs_implies invs_valid_uses
-                             invs_valid_vmid_table valid_asid_table_None_upd)
+                             invs_valid_vmid_table valid_asid_table_None_upd invs_valid_next_vmid)
            (* can't move these into previous strengthen, otherwise will be applied too early *)
            apply (strengthen invs_arm_asid_table_unmap invs_valid_asid_table)
            apply (clarsimp simp: o_def)
@@ -1932,9 +1944,9 @@ lemma deleteASIDPool_corres:
   apply (fastforce simp: is_aligned_asid_low_bits_of_zero valid_asid_table'_def ran_def dom_def)
   done
 
-crunch unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
+crunch unmapPageTable, unmapPage, setVMRoot, performPageTableInvocation,
        performASIDPoolInvocation, performPageInvocation
-  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 sublocale unmapPageTable: typ_at_props' "unmapPageTable asid vaddr pt"
@@ -2084,6 +2096,66 @@ lemma vs_lookup_slot_vspace_for_asidD:
                 simp flip: word_neq_0_conv
                 split: if_split_asm)
 
+lemma paddrTop_H_eq:
+  "AARCH64_H.paddrTop = AARCH64.paddrTop"
+  by (simp add: AARCH64_H.paddrTop_def AARCH64.paddrTop_def AARCH64_H.pptrTop_def AARCH64.pptrTop_def)
+
+definition in_kernel_window :: "machine_word set \<Rightarrow> bool" where
+  "in_kernel_window S \<equiv> S \<subseteq> {pptrBase ..< AARCH64.pptrTop}"
+
+lemma in_kernel_window_subset:
+  "\<lbrakk> in_kernel_window T; S \<subseteq> T \<rbrakk> \<Longrightarrow> in_kernel_window S"
+  by (auto simp: in_kernel_window_def)
+
+lemma kernel_window_in_kernel_window:
+  "\<lbrakk> S \<subseteq> kernel_window s; valid_uses s \<rbrakk> \<Longrightarrow> in_kernel_window S"
+  unfolding in_kernel_window_def
+  by (fastforce dest: kernel_window_bounded simp: kernel_window_range_def pptr_base_def)
+
+(* Sanity check: the machine word window condition of the cache maintenance machine ops
+   is equivalent to [p, p + n] being inside [paddrBase, paddrTop) when computed on nat
+   without overflow. *)
+lemma paddr_window_unat:
+  "(paddrBase \<le> p \<and> p < AARCH64.paddrTop \<and> n < AARCH64.paddrTop - p) =
+   ({unat p .. unat p + unat n} \<subseteq> {unat paddrBase ..< unat AARCH64.paddrTop})"
+  by (auto simp: atLeastAtMost_subseteq_atLeastLessThan_iff word_le_nat_alt word_less_nat_alt
+                 unat_sub)
+
+lemma addrFromPPtr_kernel_window:
+  "\<lbrakk> in_kernel_window {p .. p + n}; p \<le> p + n \<rbrakk> \<Longrightarrow>
+   paddrBase \<le> addrFromPPtr p \<and> addrFromPPtr p < AARCH64.paddrTop \<and>
+   n < AARCH64.paddrTop - addrFromPPtr p"
+  apply (clarsimp simp: in_kernel_window_def atLeastAtMost_subseteq_atLeastLessThan_iff
+                        paddrBase_def addrFromPPtr_def AARCH64.paddrTop_def pptrBaseOffset_def)
+  apply (simp add: word_l_diffs(2) add.commute word_less_minus_mono_left dual_order.strict_trans2)
+  done
+
+lemma pspace_in_kernel_window_obj:
+  "\<lbrakk> kheap s p = Some ko; pspace_in_kernel_window s; valid_uses s \<rbrakk> \<Longrightarrow>
+   in_kernel_window (obj_addrs ko p)"
+  by (fastforce simp: pspace_in_kernel_window_def intro: kernel_window_in_kernel_window)
+
+lemma doFlush_corres:
+  "corres_underlying Id nf nf' dc
+     (\<lambda>_. paddrBase \<le> pstart \<and> pstart < AARCH64.paddrTop \<and> vend - vstart < AARCH64.paddrTop - pstart)
+     \<top>
+     (do_flush type vstart vend pstart) (doFlush type vstart vend pstart)"
+  apply (rule corres_gen_asm[where P=\<top>, simplified])
+  apply (rule corres_Id)
+    apply (clarsimp simp: do_flush_def doFlush_def AARCH64_H.fromPAddr_def paddrTop_H_eq)
+   apply simp
+  apply (cases type; wpsimp simp: doFlush_def AARCH64_H.fromPAddr_def paddrTop_H_eq)
+  done
+
+lemma dmo_doFlush_corres:
+  "corres dc
+     (\<lambda>_. paddrBase \<le> pstart \<and> pstart < AARCH64.paddrTop \<and> vend - vstart < AARCH64.paddrTop - pstart)
+     \<top>
+     (do_machine_op (do_flush type vstart vend pstart))
+     (doMachineOp (doFlush type vstart vend pstart))"
+  using corres_machine_op'[OF doFlush_corres]
+  by (simp add: comp_def)
+
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   shows "corres (=) (invs and valid_page_inv pgi) (no_0_obj' and valid_page_inv' pgi')
@@ -2134,10 +2206,7 @@ lemma performPageInvocation_corres:
     apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
    apply (clarsimp simp: perform_pg_inv_get_addr_def fromPAddr_def)
   apply (clarsimp simp: perform_flush_def)
-  apply (rename_tac type vstart vend pstart vs asid)
-  apply (case_tac type;
-         simp add: do_flush_def doFlush_def;
-         corres simp: doMachineOp_bind do_machine_op_bind empty_fail_bind)
+  apply (corres corres: dmo_doFlush_corres)
   done
 
 definition
@@ -2201,6 +2270,17 @@ lemma clear_page_table_corres:
   apply simp
   done
 
+lemma pt_kernel_window_paddr:
+  "\<lbrakk> kheap s p = Some (ArchObj (PageTable pt)); invs s \<rbrakk> \<Longrightarrow>
+   paddrBase \<le> addrFromPPtr p \<and> addrFromPPtr p < AARCH64.paddrTop \<and>
+   mask (pt_bits (pt_type pt)) < AARCH64.paddrTop - addrFromPPtr p"
+  apply (frule pspace_in_kernel_window_obj; clarsimp)
+  apply (rule addrFromPPtr_kernel_window)
+   apply (simp add: pt_bits_def mask_2pm1 add_diff_eq)
+  apply (drule (1) pspace_alignedD[OF _ invs_psp_aligned])
+  apply (simp add: is_aligned_no_overflow_mask pt_bits_def)
+  done
+
 lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
    corres dc
@@ -2237,17 +2317,24 @@ lemma performPageTableInvocation_corres:
    apply (clarsimp simp: valid_pti_def)
   apply (clarsimp simp: AARCH64_A.is_PageTableCap_def split_def cong: option.case_cong)
   apply (simp add: case_option_If2 split del: if_split)
+  apply (rename_tac p pt_t m)
+  apply (rule_tac F="paddrBase \<le> addrFromPPtr p \<and> addrFromPPtr p < AARCH64.paddrTop \<and>
+                     mask (pt_bits pt_t) < AARCH64.paddrTop - addrFromPPtr p" in corres_req)
+   apply (clarsimp simp: valid_pti_def valid_cap_def valid_arch_cap_def obj_at_def)
+   apply (drule_tac p=p in pt_kernel_window_paddr, assumption, simp)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
        apply (rule corres_if3)
          apply (fastforce simp: acap_map_data_def mdata_map_def is_PageTableCap_def)
-        apply (rule corres_split[OF unmapPageTable_corres])
+        apply (rule corres_assert_assume)
+         apply (rule corres_split[OF unmapPageTable_corres])
+              apply (clarsimp simp: mdata_map_def)
              apply (clarsimp simp: mdata_map_def)
-            apply (clarsimp simp: mdata_map_def)
-           apply (rule refl)
-          apply (simp (no_asm) add: p_assoc_help flip: mask_2pm1)
-          apply (corres corres: clear_page_table_corres)
-         apply wp+
+            apply (rule refl)
+           apply (simp (no_asm) add: p_assoc_help flip: mask_2pm1)
+           apply (corres corres: clear_page_table_corres)
+          apply wp+
+        apply (simp add: AARCH64_H.fromPAddr_def paddrTop_H_eq)
        apply (rule corres_trivial, simp)
       apply (simp add: liftM_def)
       apply (rule corres_split[OF getSlotCap_corres[OF refl]])
@@ -2891,7 +2978,8 @@ lemma unmapPage_invs' [wp]:
 
 lemma dmo_doFlush_invs'[wp]:
   "doMachineOp (doFlush flushOp vstart vend pstart) \<lbrace>invs'\<rbrace>"
-  unfolding doFlush_def cleanCacheRange_RAM_def invalidateCacheRange_RAM_def branchFlushRange_def
+  unfolding doFlush_def haskell_assert_def doMachineOp_assert_bind
+            cleanCacheRange_RAM_def invalidateCacheRange_RAM_def branchFlushRange_def
             cleanInvalidateCacheRange_RAM_def cleanCacheRange_PoU_def invalidateCacheRange_I_def
   by (cases flushOp; wpsimp wp: dmo_machine_op_lift_invs' simp: doMachineOp_bind empty_fail_bind)
 

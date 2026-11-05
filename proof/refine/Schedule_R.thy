@@ -159,9 +159,6 @@ lemma schedule_choose_new_thread_sched_act_rct[wp]:
   unfolding schedule_choose_new_thread_def
   by wp
 
-crunch tcbQueueAppend
-  for ghost_relation_wrapper[wp]: "ghost_relation_wrapper s"
-
 \<comment> \<open>This proof shares many similarities with the proof of @{thm tcbSchedEnqueue_corres}\<close>
 lemma tcbSchedAppend_corres:
   "tcb_ptr = tcbPtr \<Longrightarrow>
@@ -202,7 +199,8 @@ lemma tcbSchedAppend_corres:
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; (solves wpsimp)?)
   apply (rule_tac F="tcbPtr \<in> set (queues domain priority) \<longleftrightarrow> queued" in corres_req)
    subgoal
-     by (fastforce dest!: state_relation_ready_queues_relation
+     by (fastforce   del: state_relation_ready_queues_relation (* suppress elim warning *)
+                   dest!: state_relation_ready_queues_relation
                           in_ready_q_tcbQueued_eq[THEN arg_cong_Not, where t1=tcbPtr]
                     simp: obj_at'_def opt_pred_def opt_map_def in_correct_ready_q_def
                           vs_all_heap_simps obj_at_def in_ready_q_def)
@@ -485,7 +483,7 @@ locale Schedule_R =
     "\<And>t P t'. Arch.switchToThread t \<lbrace> obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace>"
   (* can't interface pred_tcb_at' due to free variable in projection *)
   assumes Arch_switchToThread_st_tcb_at'[wp]:
-    "\<And>t P t'. Arch.switchToThread t \<lbrace> st_tcb_at' P t'\<rbrace>"
+    "\<And>t P P' t'. Arch.switchToThread t \<lbrace>\<lambda>s. P (st_tcb_at' P' t' s)\<rbrace>"
   assumes Arch_switchToThread_it[wp]:
     "\<And>t P. Arch.switchToThread t \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
   assumes Arch_switchToIdleThread_it[wp]:
@@ -1047,6 +1045,10 @@ locale Schedule_R_2 = Schedule_R +
       (P and schedulable t and in_cur_domain t and invs and valid_ready_qs and ready_or_release)
       (P' and invs')
       (guarded_switch_to t) (ThreadDecls_H.switchToThread t)"
+  assumes prepareNextDomain_invs'[wp]:
+    "Arch.prepareNextDomain \<lbrace>invs'\<rbrace>"
+  assumes prepareNextDomain_nosch[wp]:
+    "\<And>P. Arch.prepareNextDomain \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
 begin
 
 lemma lookupBitmapPriority_Max_eqI:
@@ -1263,7 +1265,8 @@ lemma (in Schedule_R_2) isHighestPrio_corres:
            apply (elim conjE)
            apply (clarsimp simp: valid_bitmaps_def)
            apply (subst lookupBitmapPriority_Max_eqI; blast?)
-           apply (fastforce dest: state_relation_ready_queues_relation Max_prio_helper[where d=d]
+           apply (fastforce del: state_relation_ready_queues_relation (* suppress elim warning *)
+                            dest: state_relation_ready_queues_relation Max_prio_helper[where d=d]
                             simp: tcbQueueEmpty_def)
           apply fastforce
          apply (wpsimp simp: if_apply_def2 wp: hoare_drop_imps ksReadyQueuesL1Bitmap_return_wp)+
@@ -1889,6 +1892,10 @@ locale Schedule_R_3 = Schedule_R_2 +
        schedule_choose_new_thread scheduleChooseNewThread"
   assumes scheduleChooseNewThread_invs':
     "scheduleChooseNewThread \<lbrace>invs'\<rbrace>"
+  assumes stt_nosch:
+    "\<And>t P. switchToThread t \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+  assumes stit_nosch[wp]:
+    "\<And>P. switchToIdleThread \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
 begin
 
 lemma schedule_invs':

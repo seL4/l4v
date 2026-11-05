@@ -116,7 +116,7 @@ lemma valid_cur_vcpu_vcpu_update[simp]:
   by (clarsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def pred_tcb_at_def obj_at_def
                      in_cur_domain_def etcb_at_def etcbs_of'_def)
 
-crunch vcpu_save_reg, vcpu_write_reg, save_virt_timer, vgic_update, vcpu_disable
+crunch vcpu_save_reg, vcpu_write_reg, disable_virt_timer, vgic_update, vcpu_disable
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: set_vcpu_wp)
 
@@ -147,8 +147,8 @@ lemma vcpu_save_reg_active_cur_vcpu_of[wp]:
   "vcpu_save_reg vr reg \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>"
   by (wpsimp simp: vcpu_save_reg_def)
 
-crunch vcpu_restore, do_machine_op, vcpu_save_reg, vgic_update, save_virt_timer,
-         vcpu_save_reg_range, vgic_update_lr, vcpu_enable, vcpu_save, set_vcpu
+crunch vcpu_restore, do_machine_op, vcpu_save_reg, vgic_update, disable_virt_timer,
+       vcpu_save_reg_range, vgic_update_lr, vcpu_enable, vcpu_save, set_vcpu
   for in_cur_domain[wp]: "in_cur_domain t"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift in_cur_domain_lift_weak crunch_wps simp: active_cur_vcpu_of_def)
@@ -391,7 +391,8 @@ lemma reset_untyped_cap_etcb_at':
    reset_untyped_cap slot
    \<lbrace>\<lambda>_ s. Q (etcb_at P t s)\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
-   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv get_cap_wp delete_objects_etcb_at')
+   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv get_cap_wp
+                     delete_objects_etcb_at')
   apply (auto simp: cte_wp_at_caps_of_state bits_of_def is_cap_simps)
   done
 

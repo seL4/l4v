@@ -5276,13 +5276,13 @@ where
 lemma monadic_rewrite_setObject_vcpu_as_init:
   defines "vcpu0 \<equiv> fromzeroVCPU"
   defines "vcpu1 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu0)(VCPURegSCTLR := sctlrDefault)) vcpu0)"
-  defines "vcpu2 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu1)(VCPURegACTLR := actlrDefault)) vcpu1)"
+  defines "vcpu2 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu1)(VCPURegCPACR := cpacrDefault)) vcpu1)"
   shows
   "monadic_rewrite True False (K (v \<noteq> 0) and ko_at' fromzeroVCPU v)
      (setObject v makeVCPUObject)
      (do vcpuWriteReg v VCPURegSCTLR sctlrDefault;
-         vcpuWriteReg v VCPURegACTLR actlrDefault;
-         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN))
+         vcpuWriteReg v VCPURegCPACR cpacrDefault;
+         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN || vgicHCRTALL0))
       od)
      "
   supply fun_upd_apply[simp del]
@@ -5299,15 +5299,10 @@ lemma monadic_rewrite_setObject_vcpu_as_init:
        apply (rule monadic_rewrite_bind_tail)
         apply (monadic_rewrite_symb_exec_r_known vcpu2)
          apply (rule monadic_rewrite_refl)
-        apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
-       apply (wp setObject_sets_object_vcpu)
-      apply (wpsimp wp: getObject_vcpu_prop)+
-     apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
-     apply (wp setObject_sets_object_vcpu)
-    apply (wpsimp wp: getObject_vcpu_prop)+
-   (* now we have four setObjects in a row, fold them up using setObject-combining *)
-   apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)
-   apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)
+        apply (wpsimp wp: getObject_vcpu_prop setObject_sets_object_vcpu
+                      simp: vcpu0_def vcpu1_def vcpu2_def)+
+   (* now we have three setObjects in a row, fold them up using setObject-combining *)
+   apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)+
    apply (rule monadic_rewrite_is_refl)
    apply (fastforce simp: vcpu2_def vcpu1_def vcpu0_def makeVCPUObject_def)
   apply (fastforce simp: vcpu0_def ko_at_vcpu_at'D)
@@ -5617,16 +5612,16 @@ proof -
   have armv_vcpu_init_ccorres:
     "\<And>hs. ccorres dc xfdc (vcpu_at' vcpuptr) \<lbrace>\<acute>vcpu = vcpu_Ptr vcpuptr\<rbrace> hs
          (do vcpuWriteReg vcpuptr VCPURegSCTLR sctlrDefault;
-             vcpuWriteReg vcpuptr VCPURegACTLR actlrDefault
+             vcpuWriteReg vcpuptr VCPURegCPACR cpacrDefault
           od) (Call armv_vcpu_init_'proc)"
   apply (cinit')
    apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
     apply clarsimp
     apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-     apply wpsimp
-    apply (clarsimp simp: sctlrDefault_def actlrDefault_def fromEnum_def enum_vcpureg
-                          seL4_VCPUReg_defs)
-    done
+   apply wpsimp+
+  apply (clarsimp simp: sctlrDefault_def cpacrDefault_val fromEnum_def
+                        enum_vcpureg seL4_VCPUReg_defs)
+  done
 
   show ?thesis
     apply (cinit' lift: vcpu_' simp: makeObject_vcpu)
@@ -5635,7 +5630,7 @@ proof -
      apply (subst bind_assoc_rev) (* group vcpuWriteReg together *)
      apply (rule ccorres_split_nothrow_novcg_dc)
         apply (rule ccorres_call[OF armv_vcpu_init_ccorres]; solves simp)
-       apply (clarsimp simp: vgicHCREN_def)
+       apply (clarsimp simp: vgicHCR_init_val)
        apply (ctac (no_vcg) pre: ccorres_move_c_guard_vcpu add: vgicUpdate_HCR_ccorres)
       apply (wpsimp simp: guard_is_UNIV_def)+
     apply (fastforce simp: const_def ko_at_vcpu_at'D)

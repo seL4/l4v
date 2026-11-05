@@ -618,12 +618,6 @@ lemma isFinal_no_descendants[Arch_assms]:
 sublocale cancelIPC: typ_at_props' "cancelIPC tptr"
   by typ_at_props'
 
-sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr"
-  by typ_at_props'
-
-sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr"
-  by typ_at_props'
-
 sublocale suspend: typ_at_props' "suspend target"
   by typ_at_props'
 
@@ -650,9 +644,6 @@ lemma invs_asid_update_strg':
              cong: option.case_cong)
   apply (auto simp add: ran_def split: if_split_asm)
   done
-
-crunch invalidateTLBByASID
-  for asidTable[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
 
 lemma deleteASIDPool_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteASIDPool asid pool \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -915,7 +906,7 @@ lemma vcpuInvalidateActive_inactive[wp]:
 
 lemma vcpuDisableNone_obj_at'[wp]:
   "vcpuDisable None \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"
-  unfolding vcpuDisable_def by wpsimp
+  unfolding vcpuDisable_def disableVirtTimer_def by wpsimp
 
 lemma vcpuInvalidateActive_obj_at'[wp]:
   "vcpuInvalidateActive \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"

@@ -3151,7 +3151,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                   apply (simp add:returnOk_liftE[symmetric])
                   apply (rule ccorres_return_CE,simp+)[1]
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                apply (rule hoareE_TrueI[where P = \<top>])
+                apply (rule hoareE_TrueI[where P=\<top>])
                apply simp
                apply (vcg exspec=performPDFlush_modifies)
               apply (wp sts_invs_minor' sts_Restart_ct_active)

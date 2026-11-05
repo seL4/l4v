@@ -33,14 +33,13 @@ definition set_arm_current_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::
      maybeM (arch_thread_set (tcb_cur_fpu_update \<top>)) new_owner
    od"
 
-\<comment> \<open>FIXME FPU: maybe use an if instead of the case (depends on if wpc or if\_split is easier)\<close>
 definition switch_local_fpu_owner :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_local_fpu_owner new_owner \<equiv> do
      cur_fpu_owner \<leftarrow> gets (arm_current_fpu_owner \<circ> arch_state);
      do_machine_op enableFpu;
      maybeM save_fpu_state cur_fpu_owner;
      case new_owner of
-       None \<Rightarrow> do_machine_op disableFpu
+         None \<Rightarrow> do_machine_op disableFpu
        | Some tcb_ptr \<Rightarrow> load_fpu_state tcb_ptr;
      set_arm_current_fpu_owner new_owner
    od"

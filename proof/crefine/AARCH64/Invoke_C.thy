@@ -1848,7 +1848,7 @@ lemma resetUntypedCap_gsCNodes_at_pt:
    \<lbrace>\<lambda>rv s. P (gsCNodes s ptr)\<rbrace>, -"
   apply (simp add: resetUntypedCap_def unlessE_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_wp' | simp add: unless_def)+
+   apply (wp mapME_x_wp' postResetUntyped_inv | simp add: unless_def)+
     apply (wp hoare_vcg_const_imp_lift
               deleteObjects_gsCNodes_at_pt
               getSlotCap_wp)+
@@ -2012,6 +2012,10 @@ lemma archNoOverlap_retype_have_size:
   apply (erule disjoint_subset2[rotated])
   apply clarsimp
   done
+
+lemma archNoOverlap_kernel_window:
+  "\<not> archOverlap s (\<lambda>x. p \<le> x \<and> x \<le> p') \<Longrightarrow> in_kernel_window {p .. p'}"
+  by (simp add: archOverlap_def flip: atLeastAtMost_iff)
 
 lemma range_cover_compare_bound_word:
   "range_cover ptr sz sbit n
@@ -2231,6 +2235,23 @@ lemma preemptionPoint_hrs_htd:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call preemptionPoint_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
   by (rule allI, rule conseqPre, vcg exspec=isIRQPending_modifies, clarsimp simp: asm_spec_enabled elim!: asm_specE)
 
+lemma Arch_postResetUntyped_ccorres:
+  "sz < 2 ^ word_bits \<Longrightarrow>
+   ccorres dc xfdc
+     \<top> (\<lbrace>\<acute>deviceMemory = from_bool dev\<rbrace> \<inter> \<lbrace>\<acute>sizeBits = of_nat sz\<rbrace>) []
+     (postResetUntyped dev sz) (Call Arch_postResetUntyped_'proc)"
+  apply (cinit lift: deviceMemory_' sizeBits_' simp: doMachineOp_bind_dist)
+   apply (rule ccorres_when[where R=\<top>])
+    apply (clarsimp simp: from_bool_0 word_le_nat_alt unat_of_nat64 pageBits_def)
+   apply (rule ccorres_rhs_assoc)+
+   apply (ctac (no_vcg) add: dsb_ccorres)
+    apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
+     apply (ctac (no_vcg) add: dsb_ccorres)
+      apply (ctac (no_vcg) add: isb_ccorres)
+     apply wp+
+  apply clarsimp
+  done
+
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
   shows
@@ -2280,11 +2301,12 @@ lemma resetUntypedCap_ccorres:
          apply (rule_tac idx="capFreeIndex (cteCap cte)" in deleteObjects_ccorres[where p=slot])
         apply ceqv
        apply clarsimp
-       apply (simp only: ccorres_seq_cond_raise)
+       apply (simp only: ccorres_seq_cond_raise if_to_top_of_bindE)
        apply (rule ccorres_cond[where R="\<top>"])
          apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
          apply (simp add: word_less_nat_alt unat_of_nat64 from_bool_0)
          apply blast
+        apply (simp add: liftE_bindE)
         apply (simp add: liftE_def bind_assoc shiftL_nat unless_def
                          when_def)
         apply (rule ccorres_rhs_assoc)+
@@ -2294,7 +2316,7 @@ lemma resetUntypedCap_ccorres:
              apply (ctac add: clearMemory_untyped_ccorres[where ut_slot=slot])
             apply (rule ccorres_return_Skip)
            apply ceqv
-          apply (rule ccorres_rhs_assoc2)+
+          apply (rule ccorres_rhs_assoc2)
           apply (rule ccorres_split_nothrow_novcg)
               apply (rule_tac cap'="cteCap cte" in updateFreeIndex_ccorres)
               apply (rule allI, rule conseqPre, vcg)
@@ -2305,7 +2327,10 @@ lemma resetUntypedCap_ccorres:
               apply (simp only: t_hrs_update_use_t_hrs mex_def meq_def)
               apply blast
              apply ceqv
-            apply (rule ccorres_return_CE'[unfolded returnOk_def o_apply], simp+)
+            apply (ctac add: Arch_postResetUntyped_ccorres)
+              apply (rule ccorres_return_CE'[unfolded returnOk_def o_apply], simp+)[1]
+             apply wp
+            apply (vcg exspec=Arch_postResetUntyped_modifies)
            apply wp
           apply (simp add: guard_is_UNIV_def)
          apply wp
@@ -2324,7 +2349,6 @@ lemma resetUntypedCap_ccorres:
                         reset_name_seq_bound_helper2[simplified simp_thms]
                         Collect_True)
        apply ((rule ccorres_Guard_Seq[where S=UNIV])+)?
-       apply (rule ccorres_add_returnOk)
        apply (rule ccorres_splitE_novcg)
            apply (rule_tac P="capPtr (cteCap cte) \<le> getFreeRef (capPtr (cteCap cte))
                  (capFreeIndex (cteCap cte)) - 1"
@@ -2543,7 +2567,11 @@ lemma resetUntypedCap_ccorres:
             apply (simp add: word_bits_def Kernel_Config.resetChunkBits_def)
            apply (simp add: field_simps)
           apply ceqv
-         apply (rule ccorres_return_CE, simp+)[1]
+         apply (simp add: liftE_def)
+         apply (ctac add: Arch_postResetUntyped_ccorres[simplified word_bits_def])
+           apply (rule ccorres_return_CE'[unfolded returnOk_def o_apply], simp+)[1]
+          apply wp
+         apply (vcg exspec=Arch_postResetUntyped_modifies)
         apply wp
        apply (simp add: ccHoarePost_def guard_is_UNIV_def)
       apply simp
@@ -2890,7 +2918,8 @@ lemma invokeUntyped_Retype_ccorres:
         apply (frule invokeUntyped_proofs.szw)
         apply (frule invokeUntyped_proofs.descendants_range(2), simp)
         apply (simp add: cNodeNoOverlap_retype_have_size shiftL_nat mult.commute
-                         archNoOverlap_retype_have_size[simplified o_def])
+                         archNoOverlap_retype_have_size[simplified o_def]
+                         archNoOverlap_kernel_window)
         apply (clarsimp simp: getFreeIndex_def conj_comms shiftL_nat
                               is_aligned_weaken[OF range_cover.funky_aligned]
                               invs_valid_pspace' isCap_simps

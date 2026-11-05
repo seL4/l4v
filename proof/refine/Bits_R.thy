@@ -9,11 +9,10 @@ theory Bits_R
 imports Corres ArchStateRelationLemmas
 begin
 
-(* FIXME: clearMemory generates a warning on some architectures *)
 crunch_ignore (add:
   withoutFailure throw catchFailure rethrowFailure capFaultOnFailure lookupErrorOnFailure
   nullCapOnFailure nothingOnFailure withoutPreemption preemptionPoint ignoreFailure
-  emptyOnFailure unifyFailure maskInterrupt clearMemory clearMemoryVM  assertDerived
+  emptyOnFailure unifyFailure maskInterrupt clearMemoryVM assertDerived
   setObject getObject updateObject loadObject
   ifM andM orM whenM whileM haskell_assert) (*FIXME arch-split RT: can these be removed?*)
 

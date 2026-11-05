@@ -309,6 +309,11 @@ locale Untyped_AI_arch =
   "\<And>ptrs ty dev us p ptr n N P.
     \<forall>ko. P ko \<longrightarrow> non_arch_obj ko
     \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
+  assumes arch_post_reset_untyped_inv:
+  "\<And>P dev sz. (\<And>s f. P (machine_state_update f s) = P s) \<Longrightarrow>
+     arch_post_reset_untyped dev sz \<lbrace>P :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes arch_post_reset_untyped_invs[wp]:
+  "\<And>dev sz. arch_post_reset_untyped dev sz \<lbrace>invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
 
 lemmas is_aligned_triv2 = Aligned.is_aligned_triv
 
@@ -2729,6 +2734,12 @@ lemma reset_untyped_cap_invs_etc:
      (simp add: cte_wp_at_caps_of_state descendants_range_def)+)
    apply (drule caps_of_state_valid_cap | clarify)+
    apply (intro conjI; clarify?; blast)[1]
+  (* the final arch step preserves invs and does not touch the rest of the postcondition *)
+  apply (rule bindE_wp_fwd[rotated])
+   apply (rule liftE_wp)
+   apply (simp only: pred_conj_def conj_assoc)
+   apply (rule hoare_vcg_conj_lift[OF arch_post_reset_untyped_invs arch_post_reset_untyped_inv])
+   apply (simp add: ex_cte_cap_wp_to_def ct_in_state_def)
   apply (cases "dev \<or> sz < resetChunkBits")
    apply (simp add: bits_of_def)
    apply (simp add: unless_def)
@@ -2783,31 +2794,33 @@ lemma get_cap_prop_known:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-lemma reset_untyped_cap_obj_at:
+lemma (in Untyped_AI_arch) reset_untyped_cap_obj_at:
   assumes "cspace_agnostic_pred P'"
   shows "\<lbrace>\<lambda>s. P (obj_at P' p s) \<and> cte_wp_at (\<lambda>cp. p \<notin> cap_range cp \<and> is_untyped_cap cp) slot s\<rbrace>
          reset_untyped_cap slot
-         \<lbrace>\<lambda>_ s. P (obj_at P' p s)\<rbrace>"
+         \<lbrace>\<lambda>_ (s :: 'state_ext state). P (obj_at P' p s)\<rbrace>"
   apply (wpsimp wp: set_cap.cspace_agnostic_obj_at[OF assms] mapME_x_inv_wp
-                    preemption_point_inv get_cap_wp
+                    preemption_point_inv arch_post_reset_untyped_inv get_cap_wp
               simp: reset_untyped_cap_def delete_objects_def)
   by (case_tac cap; fastforce simp: cte_wp_at_caps_of_state bits_of_def)
 
-lemma reset_untyped_cap_pred_tcb_at:
+lemma (in Untyped_AI_arch) reset_untyped_cap_pred_tcb_at:
   "\<lbrace>\<lambda>s. P (pred_tcb_at proj P' t s) \<and> cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot s\<rbrace>
    reset_untyped_cap slot
-   \<lbrace>\<lambda>_ s. P (pred_tcb_at proj P' t s)\<rbrace>"
+   \<lbrace>\<lambda>_ (s :: 'state_ext state). P (pred_tcb_at proj P' t s)\<rbrace>"
   by (auto simp: pred_tcb_at_def cspace_agnostic_pred_def tcb_to_itcb_def
           intro: reset_untyped_cap_obj_at)
 
 (* FIXME: remove *)
-lemmas reset_untyped_cap_st_tcb_at = reset_untyped_cap_pred_tcb_at[where proj=itcb_state]
-lemmas reset_untyped_cap_bound_sc_tcb_at = reset_untyped_cap_pred_tcb_at[where proj=itcb_sched_context]
+lemmas (in Untyped_AI_arch) reset_untyped_cap_st_tcb_at =
+  reset_untyped_cap_pred_tcb_at[where proj=itcb_state]
+lemmas (in Untyped_AI_arch) reset_untyped_cap_bound_sc_tcb_at =
+  reset_untyped_cap_pred_tcb_at[where proj=itcb_sched_context]
 
-lemma reset_untyped_cap_sc_at_pred_n:
+lemma (in Untyped_AI_arch) reset_untyped_cap_sc_at_pred_n:
   "\<lbrace>\<lambda>s. P (sc_at_pred_n N proj P' p s) \<and> cte_wp_at (\<lambda>cp. p \<notin> cap_range cp \<and> is_untyped_cap cp) slot s\<rbrace>
    reset_untyped_cap slot
-   \<lbrace>\<lambda>_ s. P (sc_at_pred_n N proj P' p s)\<rbrace>"
+   \<lbrace>\<lambda>_ (s :: 'state_ext state). P (sc_at_pred_n N proj P' p s)\<rbrace>"
   by (auto simp: sc_at_pred_n_def cspace_agnostic_pred_def tcb_to_itcb_def
           intro: reset_untyped_cap_obj_at)
 

@@ -70,9 +70,16 @@ definition arch_decode_irq_control_invocation ::
         else throwError TruncatedMessage
       else throwError IllegalOperation)"
 
-definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
-  "make_user_pte addr attr rights vm_size \<equiv>
-     PagePTE addr (vm_size = ARMSmallPage) (attr - {Global}) rights"
+text \<open>
+  On AArch64, read access is not required to execute code, but executing code effectively confers
+  read access to the page contents. Hence, we force execute-never if the frame cap does not have
+  the Read right. The masked @{text rights} may still be less than the cap's rights, so that
+  execute-only mappings are possible with a cap that has the Read right.\<close>
+definition make_user_pte ::
+  "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
+  "make_user_pte addr attr rights crights vm_size \<equiv>
+     let attrs = attr - {Global} - (if AllowRead \<notin> crights then {Execute} else {})
+     in PagePTE addr (vm_size = ARMSmallPage) attrs rights"
 
 definition check_vspace_root :: "cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
   "check_vspace_root cap arg_no \<equiv>
@@ -113,7 +120,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
            vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
            attribs \<leftarrow> returnOk $ attribs_from_word attr;
-           pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights pgsz;
+           pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights R pgsz;
            returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte
                                            (pte,slot,level)
          odE
@@ -148,7 +155,6 @@ definition decode_fr_inv_flush :: "'z::state_ext arch_decoder" where
           page_size \<leftarrow> returnOk $ 1 << pageBitsForSize pgsz;
           whenE (start \<ge> page_size \<or> end > page_size) $ throwError $ InvalidArgument 0;
           pstart \<leftarrow> returnOk $ addrFromPPtr p + start;
-          \<comment> \<open>flush only inside the kernel window:\<close>
           whenE (pstart < paddrBase \<or> ((end - start) + pstart > paddrTop)) $
             throwError IllegalOperation;
           returnOk $ InvokePage $
@@ -253,6 +259,9 @@ definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
               whenE (base_start \<noteq> base_end) $
                 throwError $ RangeError start (base_start + mask bits_left);
               pstart \<leftarrow> returnOk $ paddr + (start && mask bits_left);
+              \<comment> \<open>flush only inside the kernel window:\<close>
+              whenE (pstart < paddrBase \<or> ((end - start) + pstart > paddrTop)) $
+                throwError IllegalOperation;
               returnOk $ InvokeVSpace $
                 VSpaceFlush (label_to_flush_type label) start (end - 1) pstart vspace asid
             odE

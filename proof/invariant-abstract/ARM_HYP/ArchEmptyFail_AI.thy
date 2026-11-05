@@ -133,7 +133,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin arch_global_naming
 
-crunch vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
+crunch vcpu_update, vcpu_save_reg_range, vgic_update_lr, disable_virt_timer
   for (empty_fail) empty_fail[wp]
   (ignore: set_object get_object simp: check_export_arch_timer_def)
 
@@ -143,7 +143,7 @@ lemma vcpu_save_empty_fail[wp,Arch_assms]: "empty_fail (vcpu_save a)"
   done
 
 crunch maskInterrupt, empty_slot,
-    setHardwareASID, set_current_pd, finalise_cap, preemption_point,
+    setHardwareASID, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
@@ -153,7 +153,7 @@ crunch maskInterrupt, empty_slot,
            writeVCPUHardwareReg_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
            writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
-           set_gic_vcpu_ctrl_lr_impl setCurrentPDPL2_impl)
+           setCPACR_impl set_gic_vcpu_ctrl_lr_impl setHDCR_impl)
 
 crunch setRegister, setNextPC
   for (empty_fail) empty_fail[wp, Arch_assms]

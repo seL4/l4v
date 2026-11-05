@@ -53,7 +53,6 @@ This module defines the ARM register set.
 
 > data VCPUReg =
 >       VCPURegSCTLR
->     | VCPURegACTLR
 >     | VCPURegTTBCR
 >     | VCPURegTTBR0
 >     | VCPURegTTBR1
@@ -68,7 +67,6 @@ This module defines the ARM register set.
 >     | VCPURegNMRR
 >     | VCPURegCIDR
 >     | VCPURegTPIDRPRW
->     | VCPURegFPEXC
 >     | VCPURegLRsvc
 >     | VCPURegSPsvc
 >     | VCPURegLRabt
@@ -92,13 +90,25 @@ This module defines the ARM register set.
 >     | VCPURegSPSRfiq
 >     | VCPURegPARhigh
 >     | VCPURegPARlow
+>     | VCPURegTTBR0high
+>     | VCPURegTTBR1high
+>     | VCPURegCSSELR
+>     | VCPURegVDISR
 >     | VCPURegCNTV_CTL
 >     | VCPURegCNTV_CVALhigh
 >     | VCPURegCNTV_CVALlow
 >     | VCPURegCNTVOFFhigh
 >     | VCPURegCNTVOFFlow
 >     | VCPURegCNTKCTL
+>     | VCPURegCPACR
+>     | VCPURegFPEXC
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
+
+> vcpuRegSaveRangeStart :: VCPUReg
+> vcpuRegSaveRangeStart = VCPURegTTBCR
+
+> vcpuRegSaveRangeEnd :: VCPUReg
+> vcpuRegSaveRangeEnd = VCPURegVDISR
 
 > vcpuRegNum :: Int
 > vcpuRegNum = fromEnum (maxBound :: VCPUReg)
@@ -111,6 +121,8 @@ This module defines the ARM register set.
 > vcpuRegSavedWhenDisabled VCPURegCNTVOFFhigh = True
 > vcpuRegSavedWhenDisabled VCPURegCNTVOFFlow = True
 > vcpuRegSavedWhenDisabled VCPURegCNTKCTL = True
+> vcpuRegSavedWhenDisabled VCPURegCPACR = True
+> vcpuRegSavedWhenDisabled VCPURegFPEXC = True
 > vcpuRegSavedWhenDisabled _ = False
 
 #endif

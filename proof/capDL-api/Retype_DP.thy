@@ -190,37 +190,6 @@ lemma create_cap_wp:
   apply sep_solve
   done
 
-(* FIXME: move to sep-capDL  *)
-lemma sep_lift_generic:
-  "(\<And>R. \<lbrace>g (R)\<rbrace> f \<lbrace>\<lambda>x s. (P x \<and>* R) (sep_lift s)\<rbrace>) \<Longrightarrow>
-   \<lbrace>g (ALLS x. P x \<longrightarrow>* R x)\<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s)\<rbrace>"
-  apply (rule hoare_chain, assumption)
-   apply fastforce
-  apply (clarsimp simp: sep_conj_def)
-  using sep_add_commute sep_disj_commuteI sep_implD
-  apply fastforce
-  done
-
-(* FIXME: move to sep-capDL  *)
-lemma sep_lift_generic_E:
-  "(\<And>R. \<lbrace>g (R)\<rbrace> f \<lbrace>\<lambda>x s. (P x \<and>* R) (sep_lift s)\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow>
-   \<lbrace>g (ALLS x. P x \<longrightarrow>* R x)\<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s)\<rbrace>, \<lbrace>E\<rbrace>"
-  unfolding validE_R_def
-  apply (rule hoare_chainE, assumption)
-    apply fastforce
-   apply (clarsimp simp: sep_conj_def)
-   using sep_add_commute sep_disj_commuteI sep_implD
-   apply fastforce
-  apply simp
-  done
-
-(* FIXME: move to sep-capDL  *)
-lemma sep_lift_generic_R:
-  "(\<And>R. \<lbrace>g (R)\<rbrace> f \<lbrace>\<lambda>x s. (P x \<and>* R) (sep_lift s)\<rbrace>, -) \<Longrightarrow>
-   \<lbrace>g (ALLS x. P x \<longrightarrow>* R x) \<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s) \<rbrace>, -"
-  unfolding validE_R_def
-  by (rule sep_lift_generic_E, simp)
-
 lemma distinct_pick:
   "\<lbrakk>distinct xs; \<forall>S\<in>set xs. \<exists>v. {v} = S\<rbrakk> \<Longrightarrow> distinct (map pick xs)"
   by (induct xs; clarsimp)
@@ -716,12 +685,6 @@ lemma object_at_cdl_cdt[simp]:
 
 crunch set_parent
   for tcb_intent[wp]: "\<lambda>s. tcb_at' (\<lambda>tcb. P (cdl_tcb_intent tcb)) ptr s"
-
-lemma throw_on_none_wp: (* FIXME: move *)
-  "\<lbrace>\<lambda>s. case x of None \<Rightarrow> Q s | Some y \<Rightarrow> P y s\<rbrace> throw_on_none x \<lbrace>P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"
-  unfolding throw_on_none_def
-  by wpsimp
-     auto
 
 lemma throw_opt_wp: (* FIXME: move *)
   "\<lbrace>\<lambda>s. case x of None \<Rightarrow> Q s | Some y \<Rightarrow> P y s\<rbrace> throw_opt err x \<lbrace>P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"

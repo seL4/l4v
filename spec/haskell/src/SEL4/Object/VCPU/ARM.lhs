@@ -4,7 +4,6 @@
 %
 % SPDX-License-Identifier: GPL-2.0-only
 %
-FIXME ARMHYP LICENSE UPDATE?
 
 This module defines the contents of a VCPU object used for management of
 hypervisor extensions on ARM.
@@ -31,7 +30,7 @@ hypervisor extensions on ARM.
 > import SEL4.API.InvocationLabels.ARM
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
-> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..), vcpuRegNum, vcpuRegSavedWhenDisabled)
+> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..), vcpuRegSaveRangeStart, vcpuRegSaveRangeEnd, vcpuRegNum, vcpuRegSavedWhenDisabled)
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
 > import SEL4.API.Failures.TARGET
@@ -51,8 +50,6 @@ hypervisor extensions on ARM.
 \end{impdetails}
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-
-FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will tell what is actually needed for verification. The one thing we definitely need is the thread the VCPU is associated with
 
 \subsection{VCPU: Set TCB}
 
@@ -249,11 +246,6 @@ it is the value that is stored inside of lr in the vgic
 >     when (index >= fromIntegral gic_vcpu_num_list_regs) $
 >        (throw $ RangeError 0 (fromIntegral gic_vcpu_num_list_regs - 1))
 >
->     vcpuLR <- withoutFailure $ liftM (vgicLR . vcpuVGIC) $ getObject vcpuPtr
->
->     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $
->         throw DeleteFirst
->
 >     let virq = makeVIRQ (fromIntegral grp) (fromIntegral priority) (fromIntegral vid)
 >     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
 > decodeVCPUInjectIRQ _ _ = throw TruncatedMessage
@@ -330,17 +322,21 @@ For initialisation, see makeVCPUObject.
 
 \subsection{VCPU State Control}
 
-> saveVirtTimer :: PPtr VCPU -> Kernel ()
-> saveVirtTimer vcpuPtr = do
->     vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+> disableVirtTimer :: Maybe (PPtr VCPU) -> Kernel ()
+> disableVirtTimer vcpuPtrOpt = do
+>     case vcpuPtrOpt of
+>         Just vcpuPtr -> do
+>             vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+>             cval <- doMachineOp get_cntv_cval_64
+>             cntvoff <- doMachineOp get_cntv_off_64
+>             vcpuWriteReg vcpuPtr VCPURegCNTV_CVALhigh (fromIntegral $ cval `shiftR` 32)
+>             vcpuWriteReg vcpuPtr VCPURegCNTV_CVALlow (fromIntegral cval)
+>             vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ cntvoff `shiftR` 32)
+>             vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral cntvoff)
+>             vcpuSaveReg vcpuPtr VCPURegCNTKCTL
+>         Nothing -> return ()
+>     -- with or without VCPU, turn off the timer and return to user-mode timer config
 >     doMachineOp $ writeVCPUHardwareReg VCPURegCNTV_CTL 0
->     cval <- doMachineOp get_cntv_cval_64
->     cntvoff <- doMachineOp get_cntv_off_64
->     vcpuWriteReg vcpuPtr VCPURegCNTV_CVALhigh (fromIntegral $ cval `shiftR` 32)
->     vcpuWriteReg vcpuPtr VCPURegCNTV_CVALlow (fromIntegral cval)
->     vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ cntvoff `shiftR` 32)
->     vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral cntvoff)
->     vcpuSaveReg vcpuPtr VCPURegCNTKCTL
 >     doMachineOp check_export_arch_timer
 
 > restoreVirtTimer :: PPtr VCPU -> Kernel ()
@@ -369,6 +365,8 @@ For initialisation, see makeVCPUObject.
 >         setHCR hcrVCPU
 >         isb
 >         set_gic_vcpu_ctrl_hcr (vgicHCR . vcpuVGIC $ vcpu)
+>         trapDebugExceptions False -- guests handle their own debug exceptions
+>     vcpuRestoreReg vcpuPtr VCPURegCPACR
 >     restoreVirtTimer vcpuPtr
 
 > vcpuDisable :: Maybe (PPtr VCPU) -> Kernel ()
@@ -380,26 +378,25 @@ For initialisation, see makeVCPUObject.
 >            hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
 >            vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
 >            vcpuSaveReg vcpuPtr VCPURegSCTLR
->            doMachineOp isb
+>            vcpuSaveReg vcpuPtr VCPURegCPACR
 >         Nothing -> return ()
 >
 >     doMachineOp $ do
 >         set_gic_vcpu_ctrl_hcr 0 -- VGIC off
->         isb
 >         setSCTLR sctlrDefault -- S1 MMU off
 >         setHCR hcrNative
+>         setCPACR cpacrDefault -- guest may have changed CPACR
+>         trapDebugExceptions True -- native threads always trap debug exceptions
 >         isb
 >
->     case vcpuPtrOpt of
->         Just vcpuPtr -> do
->             saveVirtTimer vcpuPtr
->             doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
->         Nothing -> return ()
+>     disableVirtTimer vcpuPtrOpt
+>     doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
 
 > armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 > armvVCPUSave vcpuPtr active = do
->     vcpuSaveRegRange vcpuPtr VCPURegACTLR VCPURegPARlow
->     doMachineOp isb
+>     -- disabled vcpus already have CPACR stored
+>     when active $ vcpuSaveReg vcpuPtr VCPURegCPACR
+>     vcpuSaveRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 
 > vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 > vcpuSave (Just (vcpuPtr, active)) = do
@@ -410,7 +407,7 @@ For initialisation, see makeVCPUObject.
 >           vcpuSaveReg vcpuPtr VCPURegSCTLR
 >           hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
 >           vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
->           saveVirtTimer vcpuPtr
+>           disableVirtTimer (Just vcpuPtr)
 >
 >     vmcr <- doMachineOp get_gic_vcpu_ctrl_vmcr
 >     vgicUpdate vcpuPtr (\vgic -> vgic { vgicVMCR = vmcr })
@@ -447,7 +444,7 @@ For initialisation, see makeVCPUObject.
 >         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 >
 >     -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
->     vcpuRestoreRegRange vcpuPtr VCPURegACTLR VCPURegPARlow
+>     vcpuRestoreRegRange vcpuPtr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
 >
 >     vcpuEnable vcpuPtr
 

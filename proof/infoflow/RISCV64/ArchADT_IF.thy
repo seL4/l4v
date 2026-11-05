@@ -346,6 +346,11 @@ crunch delete_objects
   for valid_irq_states[wp]: valid_irq_states
   (wp: dmo_machine_state_lift simp: crunch_simps detype_def)
 
+lemma arch_post_reset_untyped_irq_state_of_state[wp]:
+  "arch_post_reset_untyped dev sz \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by (wpsimp wp: dmo_wp simp: ifence_def)
+
 lemma reset_untyped_cap_irq_state_inv[ADT_IF_assms]:
   "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
    reset_untyped_cap slot

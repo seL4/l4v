@@ -3512,7 +3512,8 @@ lemma tcbSchedEnqueue_corres:
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; (solves wpsimp)?)
   apply (rule_tac F="tcbPtr \<in> set (queues domain priority) \<longleftrightarrow> queued" in corres_req)
    subgoal
-     by (fastforce dest!: state_relation_ready_queues_relation
+     by (fastforce   del: state_relation_ready_queues_relation (* suppress elim warning *)
+                   dest!: state_relation_ready_queues_relation
                           in_ready_q_tcbQueued_eq[THEN arg_cong_Not, where t1=tcbPtr]
                     simp: obj_at'_def opt_pred_def opt_map_def in_correct_ready_q_def
                           vs_all_heap_simps obj_at_def in_ready_q_def)
@@ -4840,6 +4841,16 @@ lemma doMachineOp_bind:
  "\<lbrakk> empty_fail a; \<And>x. empty_fail (b x) \<rbrakk> \<Longrightarrow> doMachineOp (a >>= b) = (doMachineOp a >>= (\<lambda>rv. doMachineOp (b rv)))"
   by (blast intro: submonad_bind submonad_doMachineOp)
 
+lemma doMachineOp_bind_dist:
+  "doMachineOp (f >>= g) = (doMachineOp f >>= (\<lambda>x. doMachineOp (g x)))"
+  by (fastforce simp: doMachineOp_def gets_def get_def select_f_def
+                      modify_def put_def return_def bind_def
+               split: prod.splits)
+
+lemma doMachineOp_assert_bind:
+  "doMachineOp (assert P >>= f) = (assert P >>= (\<lambda>_. doMachineOp (f ())))"
+  by (cases P; simp add: doMachineOp_def select_f_def bind_def gets_def get_def fail_def return_def)
+
 lemma zipWithM_x_corres:
   assumes x: "\<And>x x' y y'. ((x, y), (x', y')) \<in> S \<Longrightarrow> corres dc P P' (f x y) (f' x' y')"
   assumes y: "\<And>x x' y y'. ((x, y), (x', y')) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x y \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -4951,10 +4962,6 @@ lemma setSchedulerAction_ct'[wp]:
 
 crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
-  (simp: crunch_simps wp: crunch_wps)
-
-crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
-  for typ_at'[wp]:  "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps wp: crunch_wps)
 
 end (* TcbAcc_R_2 *)

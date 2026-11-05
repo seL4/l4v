@@ -150,9 +150,6 @@ lemma no_fail_dmb: "no_fail \<top> dmb"
 lemma no_fail_writeTTBR0: "no_fail \<top> (writeTTBR0 w)"
   by (simp add: writeTTBR0_def)
 
-lemma no_fail_set_current_pd: "no_fail \<top> (set_current_pd w)"
-  by (simp add: set_current_pd_def setCurrentPDPL2_def)
-
 lemma no_fail_cleanByVA: "no_fail \<top> (cleanByVA w p)"
   by (simp add: cleanByVA_def)
 
@@ -289,12 +286,12 @@ lemma no_fail_branchFlushRange[simp, wp]:
 lemma no_fail_cleanCaches_PoU[simp, wp]:
   "no_fail \<top> cleanCaches_PoU"
   by (simp add: cleanCaches_PoU_def, rule no_fail_pre,
-      wp no_fail_dsb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
+      wp no_fail_dsb no_fail_isb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
 
 lemma no_fail_cleanInvalidateL1Caches[simp, wp]:
   "no_fail \<top> cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def, rule no_fail_pre,
-      wp no_fail_dsb no_fail_cleanInvalidate_D_PoC no_fail_invalidate_I_PoU, simp)
+      wp no_fail_dsb no_fail_isb no_fail_cleanInvalidate_D_PoC no_fail_invalidate_I_PoU, simp)
 
 lemma no_fail_clearMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 2) (clearMemory p b)"
@@ -483,6 +480,15 @@ lemma no_irq_setHCR: "no_irq (setHCR w)"
 lemma no_irq_setSCTLR: "no_irq (setSCTLR w)"
   by (simp add: setSCTLR_def)
 
+lemma no_irq_setCPACR: "no_irq (setCPACR w)"
+  by (simp add: setCPACR_def)
+
+lemma no_irq_getHDCR: "no_irq getHDCR"
+  by (simp add: getHDCR_def)
+
+lemma no_irq_setHDCR: "no_irq (setHDCR w)"
+  by (simp add: setHDCR_def)
+
 lemma no_irq_getSCTLR: "no_irq getSCTLR"
     by (simp add: getSCTLR_def)
 
@@ -596,9 +602,6 @@ lemma no_irq_modify:
   apply (clarsimp simp: in_monad)
   done
 
-lemma no_irq_set_current_pd: "no_irq (set_current_pd pd)"
-  by (clarsimp simp: set_current_pd_def setCurrentPDPL2_def)
-
 lemma no_irq_clearExMonitor: "no_irq clearExMonitor"
   apply (simp add: clearExMonitor_def)
   apply (wp no_irq_modify)
@@ -659,18 +662,22 @@ lemma no_irq_branchFlushRange[simp, wp]:
 lemma no_irq_cleanCaches_PoU[simp, wp]:
   "no_irq cleanCaches_PoU"
   by (simp add: cleanCaches_PoU_def,
-      wp no_irq_dsb no_irq_clean_D_PoU no_irq_invalidate_I_PoU)
+      wp no_irq_dsb no_irq_isb no_irq_clean_D_PoU no_irq_invalidate_I_PoU)
 
 lemma no_irq_cleanInvalidateL1Caches[simp, wp]:
   "no_irq cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def,
-      wp no_irq_dsb no_irq_cleanInvalidate_D_PoC no_irq_invalidate_I_PoU)
+      wp no_irq_dsb no_irq_isb no_irq_cleanInvalidate_D_PoC no_irq_invalidate_I_PoU)
 
 
 lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
   apply (simp add: clearMemory_def)
   apply (wp no_irq_mapM_x no_irq_storeWord no_irq_cleanCacheRange_PoU)
   done
+
+lemma no_irq_trapDebugExceptions: "no_irq (trapDebugExceptions trap)"
+  unfolding trapDebugExceptions_def
+  by (wp no_irq_getHDCR no_irq_setHDCR)
 
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
@@ -705,6 +712,10 @@ lemma empty_fail_dsb: "empty_fail  dsb"
 
 lemma empty_fail_dmb: "empty_fail  dmb"
   by (simp add: dmb_def)
+
+lemma empty_fail_setHardwareASID[simp, intro!]:
+  "empty_fail (setHardwareASID hw_asid)"
+  by (simp add: setHardwareASID_def)
 
 lemma empty_fail_sendSGI:
   "empty_fail (sendSGI irq target)"
@@ -782,6 +793,22 @@ lemma empty_fail_writeContextIDAndPD[simp, intro!]:
 lemma empty_fail_setSCTLR[simp, intro!]:
   "empty_fail (setSCTLR w)"
   by (simp add: setSCTLR_def)
+
+lemma empty_fail_setCPACR[simp, intro!]:
+  "empty_fail (setCPACR w)"
+  by (simp add: setCPACR_def)
+
+lemma empty_fail_getHDCR[simp, intro!]:
+  "empty_fail getHDCR"
+  by (simp add: getHDCR_def)
+
+lemma empty_fail_setHDCR[simp, intro!]:
+  "empty_fail (setHDCR w)"
+  by (simp add: setHDCR_def)
+
+lemma empty_fail_trapDebugExceptions[simp, intro!]:
+  "empty_fail (trapDebugExceptions trap)"
+  by (wpsimp simp: trapDebugExceptions_def)
 
 lemma empty_fail_getSCTLR[simp, intro!]:
   "empty_fail getSCTLR"
@@ -864,12 +891,13 @@ lemma empty_fail_branchFlushRange[simp, intro!]:
 
 lemma empty_fail_cleanCaches_PoU[simp, intro!]:
   "empty_fail cleanCaches_PoU"
-  by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_isb empty_fail_clean_D_PoU
+                      empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
   "empty_fail cleanInvalidateL1Caches"
-  by (fastforce simp: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_cleanInvalidate_D_PoC
-                     empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_isb
+                      empty_fail_cleanInvalidate_D_PoC empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
@@ -882,6 +910,27 @@ crunch handleSpuriousIRQ_mop
   (wp: no_fail_machine_state_rest_T ignore: handleSpuriousIRQ_impl)
 
 end
+
+text \<open>Lifting rules\<close>
+
+lemma dmo_machine_state_lift:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
+  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
+
+crunch do_machine_op
+  for user_frame[wp]: "\<lambda>s. P (in_user_frame p s)"
+
+lemma dmo_valid_machine_state:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
+  shows "do_machine_op f \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift assms)
+
+lemma dmo_valid_irq_states:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
+  unfolding valid_irq_states_def do_machine_op_def
+  by (wpsimp, erule use_valid; assumption)
+
 end
 
 end

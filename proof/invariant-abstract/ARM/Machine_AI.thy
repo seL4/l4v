@@ -150,10 +150,8 @@ lemma no_fail_dmb: "no_fail \<top> dmb"
 lemma no_fail_writeTTBR0: "no_fail \<top> (writeTTBR0 w)"
   by (simp add: writeTTBR0_def)
 
-lemma no_fail_set_current_pd: "no_fail \<top> (set_current_pd w)"
-  apply (simp add: set_current_pd_def)
-  apply (rule no_fail_pre, wp no_fail_dsb no_fail_writeTTBR0 no_fail_isb, simp)
-  done
+lemma no_fail_write_ttbr0_ptr: "no_fail \<top> (write_ttbr0_ptr w)"
+  by (simp add: write_ttbr0_ptr_def no_fail_writeTTBR0)
 
 lemma no_fail_cleanByVA: "no_fail \<top> (cleanByVA w p)"
   by (simp add: cleanByVA_def)
@@ -280,12 +278,12 @@ lemma no_fail_branchFlushRange[simp, wp]:
 lemma no_fail_cleanCaches_PoU[simp, wp]:
   "no_fail \<top> cleanCaches_PoU"
   by (simp add: cleanCaches_PoU_def, rule no_fail_pre,
-      wp no_fail_dsb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
+      wp no_fail_dsb no_fail_isb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
 
 lemma no_fail_cleanInvalidateL1Caches[simp, wp]:
   "no_fail \<top> cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def, rule no_fail_pre,
-      wp no_fail_dsb no_fail_cleanInvalidate_D_PoC no_fail_invalidate_I_PoU, simp)
+      wp no_fail_dsb no_fail_isb no_fail_cleanInvalidate_D_PoC no_fail_invalidate_I_PoU, simp)
 
 lemma no_fail_clearMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 2) (clearMemory p b)"
@@ -546,10 +544,8 @@ lemma no_irq_modify:
   apply (clarsimp simp: in_monad)
   done
 
-lemma no_irq_set_current_pd: "no_irq (set_current_pd pd)"
-  apply (clarsimp simp: set_current_pd_def)
-  apply (wp no_irq_dsb no_irq_writeTTBR0 no_irq_isb)
-  done
+lemma no_irq_write_ttbr0_ptr: "no_irq (write_ttbr0_ptr pd)"
+  by (simp add: write_ttbr0_ptr_def no_irq_writeTTBR0)
 
 lemma no_irq_clearExMonitor: "no_irq clearExMonitor"
   apply (simp add: clearExMonitor_def)
@@ -611,12 +607,12 @@ lemma no_irq_branchFlushRange[simp, wp]:
 lemma no_irq_cleanCaches_PoU[simp, wp]:
   "no_irq cleanCaches_PoU"
   by (simp add: cleanCaches_PoU_def,
-      wp no_irq_dsb no_irq_clean_D_PoU no_irq_invalidate_I_PoU)
+      wp no_irq_dsb no_irq_isb no_irq_clean_D_PoU no_irq_invalidate_I_PoU)
 
 lemma no_irq_cleanInvalidateL1Caches[simp, wp]:
   "no_irq cleanInvalidateL1Caches"
   by (simp add: cleanInvalidateL1Caches_def,
-      wp no_irq_dsb no_irq_cleanInvalidate_D_PoC no_irq_invalidate_I_PoU)
+      wp no_irq_dsb no_irq_isb no_irq_cleanInvalidate_D_PoC no_irq_invalidate_I_PoU)
 
 
 lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
@@ -657,6 +653,10 @@ lemma empty_fail_dsb: "empty_fail  dsb"
 
 lemma empty_fail_dmb: "empty_fail  dmb"
   by (simp add: dmb_def)
+
+lemma empty_fail_setHardwareASID[simp, intro!]:
+  "empty_fail (setHardwareASID hw_asid)"
+  by (simp add: setHardwareASID_def)
 
 lemma empty_fail_sendSGI:
   "empty_fail (sendSGI irq target)"
@@ -756,12 +756,13 @@ lemma empty_fail_branchFlushRange[simp, intro!]:
 
 lemma empty_fail_cleanCaches_PoU[simp, intro!]:
   "empty_fail cleanCaches_PoU"
-  by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_isb empty_fail_clean_D_PoU
+                      empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
   "empty_fail cleanInvalidateL1Caches"
-  by (fastforce simp: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_cleanInvalidate_D_PoC
-                     empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_isb
+                      empty_fail_cleanInvalidate_D_PoC empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
@@ -774,6 +775,26 @@ crunch handleSpuriousIRQ_mop
   (wp: no_fail_machine_state_rest_T ignore: handleSpuriousIRQ_impl)
 
 end
+
+text \<open>Lifting rules\<close>
+
+lemma dmo_machine_state_lift:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
+  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
+
+crunch do_machine_op
+  for user_frame[wp]: "\<lambda>s. P (in_user_frame p s)"
+
+lemma dmo_valid_machine_state[wp]:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
+  shows "do_machine_op f \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift assms)
+
+lemma dmo_valid_irq_states[wp]:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
+  unfolding valid_irq_states_def do_machine_op_def
+  by (wpsimp, erule use_valid; assumption)
 
 lemmas msgRegisters_A_unfold
   = msg_registers_def

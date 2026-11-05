@@ -244,10 +244,10 @@ lemma cap_revoke_only_timer_irq_inv:
   "\<lbrace>only_timer_irq_inv irq (st :: det_state)\<rbrace>
    cap_revoke slot
    \<lbrace>\<lambda>_. only_timer_irq_inv irq st\<rbrace>"
-  apply (simp add: only_timer_irq_inv_def)
-  apply (rule hoare_wp_simps)
-  apply (rule hoare_conjI)
-   apply (wp only_timer_irq_pres[where P="\<top>"] cap_revoke_irq_masks | force)+
+  apply (rule hoare_pre)
+   apply (rule only_timer_irq_inv_pres[where Q="domain_sep_inv False st and non_kernel_IRQs_masked"
+                                         and P=\<top>])
+    apply (wpsimp wp: cap_revoke_irq_masks[where st=st] simp: only_timer_irq_inv_def)+
   done
 
 lemma invoke_cnode_reads_respects_f:

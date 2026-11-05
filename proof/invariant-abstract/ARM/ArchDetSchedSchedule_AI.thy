@@ -21,7 +21,7 @@ crunch arch_post_cap_deletion,
   for inv[wp]: P
 
 (* effects on last_machine_time *)
-crunch setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, invalidateByVA,
+crunch setHardwareASID, write_ttbr0_ptr, invalidateLocalTLB_ASID, cleanByVA, invalidateByVA,
   invalidateL2Range, cleanInvalByVA, cleanInvalidateL2Range, isb, branchFlush, invalidateByVA_I,
   cleanByVA_PoU, cleanL2Range, cleanCacheRange_PoC, branchFlushRange, invalidateCacheRange_I,
   cleanCacheRange_PoU, cleanInvalidateCacheRange_RAM, cleanInvalidateCacheRange_RAM,
@@ -38,7 +38,7 @@ lemma misc_dmo_valid_sched_pred_strong[wp]:
   "do_machine_op cleanCaches_PoU \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "do_machine_op ackDeadlineIRQ  \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "do_machine_op clearExMonitor \<lbrace>valid_sched_pred_strong Q\<rbrace>"
-  "\<And>a. do_machine_op (set_current_pd a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
+  "\<And>a. do_machine_op (write_ttbr0_ptr a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a. do_machine_op (invalidateLocalTLB_ASID a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a. do_machine_op (invalidateLocalTLB_VAASID a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a. do_machine_op (setHardwareASID a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
@@ -51,7 +51,7 @@ lemma misc_dmo_valid_sched_pred_strong[wp]:
   "\<And>a b. do_machine_op (storeWord a b) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a b c. do_machine_op (cleanCacheRange_PoU a b c) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a b c d. do_machine_op (do_flush a b c d) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
-  "\<And>a b. do_machine_op (do set_current_pd (addrFromPPtr a);
+  "\<And>a b. do_machine_op (do write_ttbr0_ptr (addrFromPPtr a);
                             setHardwareASID b
                          od) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a. do_machine_op (deactivateInterrupt a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
@@ -352,11 +352,11 @@ lemmas DetSchedSchedule_AI_assms = Arch_assms (* extract accumulated assumptions
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
-  proof goal_cases
+proof goal_cases
   (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact ARM.DetSchedSchedule_AI_assms)?; wpsimp)
-  qed
+qed
 
 global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
   proof goal_cases
@@ -383,17 +383,17 @@ lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
-  proof goal_cases
+proof goal_cases
   (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
-  qed
+qed
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault_det_ext?: DetSchedSchedule_AI_handle_hypervisor_fault_det_ext
-  proof goal_cases
+proof goal_cases
   (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
-  qed
+qed
 
 end

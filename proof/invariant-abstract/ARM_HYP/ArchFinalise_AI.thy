@@ -446,7 +446,8 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
 lemma vcpu_invalidate_tcbs_inv[wp]:
   "\<lbrace>obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>
     vcpu_invalidate_active \<lbrace>\<lambda>rv. obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>"
-  unfolding vcpu_invalidate_active_def vcpu_disable_def by wpsimp
+  unfolding vcpu_invalidate_active_def vcpu_disable_def disable_virt_timer_def
+  by wpsimp
 
 lemma sym_refs_vcpu_None:
   assumes sym_refs: "sym_refs (state_hyp_refs_of s)"
@@ -605,7 +606,8 @@ crunch dissociate_vcpu_tcb
 
 crunch dissociate_vcpu_tcb
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
-  (wp: crunch_wps)
+  (wp: crunch_wps device_region_dmos
+   ignore: do_machine_op)
 
 crunch dissociate_vcpu_tcb
   for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
@@ -654,19 +656,6 @@ crunch dissociate_vcpu_tcb
   for valid_irq_node[wp]: "valid_irq_node"
   (wp: crunch_wps)
 
-lemma dmo_valid_irq_states:
-  "(\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>) \<Longrightarrow>
-    \<lbrace>valid_irq_states\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  unfolding valid_irq_states_def do_machine_op_def
-  apply (rule hoare_lift_Pf [where f="\<lambda>s. irq_masks (machine_state s)"])
-   apply wpsimp+
-  apply (erule use_valid; assumption)
-  done
-
-lemma dmo_machine_state_lift:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
-  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
-
 lemma dmo_maskInterrupt_True_valid_irq_states[wp]:
   "do_machine_op (maskInterrupt True irq) \<lbrace>valid_irq_states\<rbrace>"
   unfolding valid_irq_states_def do_machine_op_def maskInterrupt_def
@@ -681,7 +670,7 @@ crunch vcpu_save_reg, vgic_update, vcpu_disable
   (wp: dmo_maskInterrupt_True_valid_irq_states dmo_valid_irq_states
    simp: get_cntv_off_64_def get_cntv_cval_64_def set_gic_vcpu_ctrl_hcr_def get_gic_vcpu_ctrl_hcr_def
          readVCPUHardwareReg_def writeVCPUHardwareReg_def setHCR_def setSCTLR_def getSCTLR_def
-         isb_def dsb_def maskInterrupt_def check_export_arch_timer_def)
+         setCPACR_def isb_def dsb_def check_export_arch_timer_def)
 
 lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
   "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>valid_machine_state\<rbrace>"
@@ -695,7 +684,7 @@ lemma dmo_check_export_arch_timer_valid_machine_state[wp]:
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift
                  check_export_arch_timer_underlying_memory)
 
-crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, save_virt_timer
+crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, disable_virt_timer
   for in_user_frame[wp]: "in_user_frame p"
   and valid_machine_state[wp]: valid_machine_state
   and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
@@ -708,8 +697,9 @@ lemma vcpu_disable_valid_machine_state[wp]:
   "\<lbrace>valid_machine_state\<rbrace> vcpu_disable vcpu_opt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   unfolding vcpu_disable_def valid_machine_state_def
   by (wpsimp wp: dmo_machine_state_lift hoare_vcg_all_lift hoare_vcg_disj_lift
-             simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-                   get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def maskInterrupt_def)
+             simp: isb_def setHCR_def setSCTLR_def setCPACR_def set_gic_vcpu_ctrl_hcr_def
+                   getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def
+                   maskInterrupt_def)
 
 lemma valid_arch_state_vcpu_update_str:
   "valid_arch_state s \<Longrightarrow> valid_arch_state (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>)"
@@ -749,14 +739,16 @@ lemma as_user_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> as_user t f \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
   unfolding valid_ioc_def by (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
 
-lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>_. invs\<rbrace>"
+lemma dissociate_vcpu_tcb_invs[wp]:
+  "dissociate_vcpu_tcb vr t \<lbrace>invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: pred_conj_def)
   apply (rule hoare_vcg_conj_lift[rotated])+
-  apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle
+  apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle dmo_valid_irq_states
          | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def arch_get_sanitise_register_info_def
          | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
-         | simp add: vcpu_disable_def valid_global_vspace_mappings_def valid_global_objs_def
+         | simp add: vcpu_disable_def disable_virt_timer_def valid_global_vspace_mappings_def
+                     valid_global_objs_def
          | wp (once) hoare_drop_imps)+
   done
 
@@ -1054,9 +1046,9 @@ lemmas Finalise_AI_assms = Arch_assms (* extract accumulated assumptions *)
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; fact ARM_HYP.Finalise_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -1181,7 +1173,7 @@ lemma flush_table_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table {}) word s\<rbrace>
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table {}) word s\<rbrace>"
-  apply (clarsimp simp: flush_table_def set_vm_root_def)
+  apply (clarsimp simp: flush_table_def set_vm_root_def set_global_pd_def)
   apply (wp do_machine_op_obj_at arm_context_switch_P_obj_at whenE_wp hoare_drop_imp
     | wpc
     | simp
@@ -1358,7 +1350,7 @@ crunch arch_finalise_cap
 
 lemma set_vm_root_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) p s) \<rbrace>"
-  apply (simp add: set_vm_root_def)
+  apply (simp add: set_vm_root_def set_global_pd_def)
   apply wpsimp+
      apply (clarsimp simp: if_apply_def2)
      apply (wpsimp+ | rule hoare_conjI[rotated] hoare_drop_imp hoare_allI)+

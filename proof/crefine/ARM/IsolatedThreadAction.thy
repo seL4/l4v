@@ -667,6 +667,7 @@ lemma setVMRoot_isolatable:
                    whenE_def liftE_def
                    checkPDNotInASIDMap_def stateAssert_def2
                    checkPDASIDMapMembership_def armv_contextSwitch_def
+                   setGlobalPD_def
              cong: if_cong)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_bindE[OF _ _ hoare_weaken_pre]
@@ -870,7 +871,7 @@ lemma oblivious_setVMRoot_schact:
                              checkPDASIDMapMembership_def
                              findFreeHWASID_def invalidateASID_def
                              invalidateHWASIDEntry_def storeHWASID_def
-                             checkPDNotInASIDMap_def armv_contextSwitch_def
+                             checkPDNotInASIDMap_def armv_contextSwitch_def setGlobalPD_def
                       split: capability.split arch_capability.split option.split)+
 
 lemma oblivious_switchToThread_schact:

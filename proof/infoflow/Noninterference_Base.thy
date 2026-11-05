@@ -465,16 +465,53 @@ end
 
 subsection \<open>Non interference system\<close>
 
+text \<open>
+  The relational properties are stated for a \<^emph>\<open>set\<close> @{term Init0} of initial states. A state is
+  reachable if it is reachable from some member of @{term Init0}, so two reachable states may
+  come from different initial states. With a single fixed initial state the secrets it holds
+  can never be compared against a counterfactual, and their leakage goes undetected.
+\<close>
 locale noninterference_system =
-  enabled_system A s0 + noninterference_policy dom uwr policy out schedDomain
+  noninterference_policy dom uwr policy out schedDomain
   for A :: "('a,'s,'e) data_type"
-  and s0 :: "'s"
+  and Init0 :: "'s set"
   and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
   and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
   and policy :: "('d \<times> 'd) set"
   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"
-  and schedDomain :: "'d"
+  and schedDomain :: "'d" +
+  assumes Init0_enabled_system: "s0 \<in> Init0 \<Longrightarrow> enabled_system A s0"
 begin
+
+definition reachable :: "'s \<Rightarrow> bool" where
+  "reachable s \<equiv> \<exists>s0 \<in> Init0. system.reachable A s0 s"
+
+definition Step :: "'e \<Rightarrow> ('s \<times> 's) set" where
+  "Step a \<equiv> {(s,s') . s' \<in> execution A s [a]}"
+
+lemma Step_system_Step:
+  "system.Step A = Step"
+  by (rule ext) (simp add: system.Step_def Step_def)
+
+lemma reachable_fixed:
+  "\<lbrakk> s0 \<in> Init0; system.reachable A s0 s \<rbrakk> \<Longrightarrow> reachable s"
+  by (auto simp: reachable_def)
+
+lemma reachableE:
+  assumes "reachable s"
+  obtains s0 where "s0 \<in> Init0" "system.reachable A s0 s"
+  using assms
+  by (auto simp: reachable_def)
+
+lemma reachable_enabled:
+  "reachable s \<Longrightarrow> \<exists>s'. s' \<in> execution A s js"
+  by (erule reachableE)
+     (rule enabled_system.reachable_enabled[OF Init0_enabled_system])
+
+lemma enabled_Step:
+  "reachable s \<Longrightarrow> \<exists>s'. (s,s') \<in> Step a"
+  by (simp add: Step_def, blast intro: reachable_enabled)
+
 
 (* The set of domains (which carry out actions in the list "as") which
  * may influence "u", assuming we start in state "s". *)
@@ -821,18 +858,41 @@ locale enabled_Step_system = enabled_system A s0 + Step_system A s0
 
 (* we define the unwinding conditions for any system *)
 locale unwinding_system =
-  enabled_Step_system A s0 + noninterference_policy dom uwr policy out schedDomain
+  noninterference_system A Init0 dom uwr policy out schedDomain
   for A :: "('a,'s,'e) data_type"
-  and s0 :: "'s"
+  and Init0 :: "'s set"
   and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
   and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
   and policy :: "('d \<times> 'd) set"
   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"
-  and schedDomain :: "'d"
-
-sublocale unwinding_system \<subseteq> noninterference_system by unfold_locales
+  and schedDomain :: "'d" +
+  assumes Init0_Step_system: "s0 \<in> Init0 \<Longrightarrow> Step_system A s0"
 
 context unwinding_system begin
+
+lemma reachable_Init0:
+  "s0 \<in> Init0 \<Longrightarrow> reachable s0"
+  by (rule reachable_fixed, assumption)
+     (rule Step_system.reachable_s0[OF Init0_Step_system])
+
+lemma execution_Run:
+  "reachable s \<Longrightarrow> execution A s as = {s'. (s,s') \<in> Run Step as}"
+  by (erule reachableE)
+     (simp add: Step_system.execution_Run[OF Init0_Step_system] Step_system_Step)
+
+lemma reachable_execution:
+  "\<lbrakk> reachable s; s' \<in> execution A s js \<rbrakk> \<Longrightarrow> reachable s'"
+  by (erule reachableE)
+     (blast intro: reachable_fixed Step_system.reachable_execution[OF Init0_Step_system])
+
+lemma reachable_Step:
+  "\<lbrakk> reachable s; (s,s') \<in> Step a \<rbrakk> \<Longrightarrow> reachable s'"
+  apply (erule reachableE)
+  apply (rule reachable_fixed, assumption)
+  apply (erule Step_system.reachable_Step[OF Init0_Step_system], assumption)
+  apply (simp add: Step_system_Step)
+  done
+
 
 lemma sources_refl:
   "reachable s \<Longrightarrow> u \<in> sources as s u"
@@ -1320,6 +1380,94 @@ lemma Noninfluence_gen_equiv_Noninfluence_strong_uwr:
     apply (erule Noninfluence_strong_uwr_confidentiality_u_weak)
    apply (erule Noninfluence_strong_uwr_integrity_u)+
   done
+
+end
+
+
+subsection \<open>Nonleakage from initial states, and step-closed systems\<close>
+
+context unwinding_system begin
+
+text \<open>
+  @{term Nonleakage_gen} relates any two reachable states. Two variants relate fewer pairs: states
+  reached by the same events from two initial states, and pairs of initial states only, as in
+  knowledge-based definitions. Each is implied by the previous one.
+\<close>
+definition Nonleakage_lockstep :: bool where
+  "Nonleakage_lockstep \<equiv>
+     \<forall>ps as s0 t0 s t u. s0 \<in> Init0 \<and> t0 \<in> Init0
+        \<longrightarrow> s \<in> execution A s0 ps \<longrightarrow> t \<in> execution A t0 ps
+        \<longrightarrow> s \<sim>schedDomain\<sim> t
+        \<longrightarrow> s \<approx>(sources as s u)\<approx> t
+        \<longrightarrow> uwr_equiv s as t as u"
+
+definition Nonleakage_init :: bool where
+  "Nonleakage_init \<equiv>
+     \<forall>as s0 t0 u. s0 \<in> Init0 \<and> t0 \<in> Init0
+        \<longrightarrow> s0 \<sim>schedDomain\<sim> t0
+        \<longrightarrow> s0 \<approx>(sources as s0 u)\<approx> t0
+        \<longrightarrow> uwr_equiv s0 as t0 as u"
+
+lemma reachable_execution_Init0:
+  "\<lbrakk> s0 \<in> Init0; s \<in> execution A s0 ps \<rbrakk> \<Longrightarrow> reachable s"
+  unfolding reachable_def system.reachable_def by blast
+
+lemma Nonleakage_gen_lockstep:
+  "Nonleakage_gen \<Longrightarrow> Nonleakage_lockstep"
+  unfolding Nonleakage_gen_def Nonleakage_lockstep_def
+  by (blast intro: reachable_execution_Init0)
+
+lemma Nonleakage_lockstep_init:
+  "Nonleakage_lockstep \<Longrightarrow> Nonleakage_init"
+  unfolding Nonleakage_lockstep_def Nonleakage_init_def
+  apply clarify
+  apply (drule_tac x="[]" in spec, drule_tac x=as in spec, drule_tac x=s0 in spec,
+         drule_tac x=t0 in spec, drule_tac x=s0 in spec, drule_tac x=t0 in spec)
+  apply (simp add: execution_Nil reachable_Init0)
+  done
+
+end
+
+text \<open>
+  A system whose initial (wrt non-interference) states are closed under its steps.
+  In such a system, every reachable state is an initial state for non-interference
+  purposes, and the three forms of nonleakage coincide.
+\<close>
+locale closed_unwinding_system = unwinding_system +
+  assumes Init0_closed: "\<lbrakk> s \<in> Init0; (s,s') \<in> Step a \<rbrakk> \<Longrightarrow> s' \<in> Init0"
+begin
+
+lemma reachable_Init0_iff:
+  "reachable s \<longleftrightarrow> s \<in> Init0"
+proof
+  assume "reachable s"
+  then obtain s0 where s0: "s0 \<in> Init0" and r: "system.reachable A s0 s"
+    by (rule reachableE)
+  from Step_system.reachable_Run[OF Init0_Step_system[OF s0] r]
+  obtain as where "(s0,s) \<in> Run (system.Step A) as" by blast
+  then show "s \<in> Init0" using s0
+    by (induct as arbitrary: s0)
+       (auto intro: Init0_closed simp: Step_system_Step)
+qed (rule reachable_Init0)
+
+text \<open>
+  Every relational property here quantifies over reachable states, so in a closed system each
+  equals its restatement over pairs of initial states, by this one rewrite.
+\<close>
+lemma reachable_eq_Init0:
+  "reachable = (\<lambda>s. s \<in> Init0)"
+  by (rule ext) (rule reachable_Init0_iff)
+
+theorem Nonleakage_gen_eq_init:
+  "Nonleakage_gen = Nonleakage_init"
+  using reachable_Init0_iff Nonleakage_gen_lockstep Nonleakage_lockstep_init
+  unfolding Nonleakage_init_def Nonleakage_gen_def
+  by blast
+
+theorem Nonleakage_gen_eq_lockstep:
+  "Nonleakage_gen = Nonleakage_lockstep"
+  using Nonleakage_gen_lockstep Nonleakage_lockstep_init Nonleakage_gen_eq_init
+  by blast
 
 end
 

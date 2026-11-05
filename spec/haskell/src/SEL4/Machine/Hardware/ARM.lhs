@@ -45,6 +45,19 @@ The machine monad contains a platform-specific opaque pointer, used by the exter
 > newtype HardwareASID = HardwareASID { fromHWASID :: Word8 }
 >     deriving (Num, Enum, Bounded, Ord, Ix, Eq, Show)
 
+Hardware ASID 0 is reserved: "setVMRoot" installs the empty global page directory under hardware
+ASID 0 for threads without a valid page directory, without a TLB flush. That is only sound if no
+real page directory ever runs under hardware ASID 0, otherwise such a thread hits that page
+directory's TLB entries.
+
+> hwASIDReserved :: HardwareASID
+> hwASIDReserved = HardwareASID 0
+
+First hardware ASID usable for user page directories.
+
+> hwASIDMin :: HardwareASID
+> hwASIDMin = HardwareASID 1
+
 > toPAddr = Platform.PAddr
 
 \subsubsection{Virtual Memory}
@@ -183,9 +196,6 @@ The following functions define the ARM-specific interface between the kernel and
 > storeWordVM :: PPtr Word -> Word -> MachineMonad ()
 > storeWordVM ptr val = storeWord ptr val
 
-> pageColourBits :: Int
-> pageColourBits = Platform.pageColourBits
-
 > getActiveIRQ :: Bool -> MachineMonad (Maybe IRQ)
 > getActiveIRQ _ = do
 >     cbptr <- ask
@@ -202,7 +212,7 @@ The following functions define the ARM-specific interface between the kernel and
 >     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
 > deactivateInterrupt :: IRQ -> MachineMonad ()
-> deactivateInterrupt irq = error "Unimplemented - GICv3 machine op"
+> deactivateInterrupt irq = isabelleOp
 
 > configureTimer :: MachineMonad IRQ
 > configureTimer = do
@@ -210,14 +220,10 @@ The following functions define the ARM-specific interface between the kernel and
 >     liftIO $ Platform.configureTimer cbptr
 
 > setDeadline :: Word64 -> MachineMonad ()
-> setDeadline d = do
->     cbptr <- ask
->     liftIO $ Platform.setDeadline cbptr d
+> setDeadline d = isabelleOp
 
 > ackDeadlineIRQ :: MachineMonad ()
-> ackDeadlineIRQ = do
->     cbptr <- ask
->     liftIO $ Platform.ackDeadlineIRQ cbptr
+> ackDeadlineIRQ = isabelleOp
 
 > initIRQController :: MachineMonad ()
 > initIRQController = do
@@ -225,10 +231,10 @@ The following functions define the ARM-specific interface between the kernel and
 >     liftIO $ Platform.initIRQController cbptr
 
 > setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
-> setIRQTrigger irq trigger = error "ARM machine callback unimplemented"
+> setIRQTrigger irq trigger = isabelleOp
 
 > handleSpuriousIRQ_mop :: MachineMonad ()
-> handleSpuriousIRQ_mop = error "See MachineOps.thy"
+> handleSpuriousIRQ_mop = isabelleOp
 
 > resetTimer :: MachineMonad ()
 > resetTimer = do
@@ -240,12 +246,6 @@ The following functions define the ARM-specific interface between the kernel and
 
 > getRestartPC = getRegister (Register ARM.FaultIP)
 > setNextPC = setRegister (Register ARM.NextIP)
-
-> getTPIDRURW :: MachineMonad Word
-> getTPIDRURW = error "machine callback unimplemented"
-
-> setTPIDRURW :: Word -> MachineMonad ()
-> setTPIDRURW = error "machine callback unimplemented"
 
 \subsection{ARM Memory Management}
 
@@ -305,16 +305,6 @@ caches must be done separately.
 > writeTTBR0Ptr :: PAddr -> MachineMonad ()
 > writeTTBR0Ptr pd = writeTTBR0 ((fromPAddr pd .&. 0xffffe000) .|. 0x18)
 
-> setCurrentPD :: PAddr -> MachineMonad ()
-> setCurrentPD pd = do
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->     setCurrentPDPL2 pd
-#else
->     dsb
->     writeTTBR0Ptr pd
->     isb
-#endif
-
 > setHardwareASID :: HardwareASID -> MachineMonad ()
 > setHardwareASID (HardwareASID hw_asid) = do
 >     cbptr <- ask
@@ -322,17 +312,8 @@ caches must be done separately.
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
-> setCurrentPDPL2 :: PAddr -> MachineMonad ()
-> setCurrentPDPL2 = error "FIXME ARMHYP machine callback unimplemented"
-
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
-> writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"
-
-> getTPIDRURO :: MachineMonad Word
-> getTPIDRURO = error "FIXME ARMHYP machine callback unimplemented"
-
-> setTPIDRURO :: Word -> MachineMonad ()
-> setTPIDRURO = error "FIXME ARMHYP machine callback unimplemented"
+> writeContextIDAndPD = isabelleOp
 
 #endif
 
@@ -497,6 +478,7 @@ supplied range.
 >     dsb
 >     invalidate_I_PoU
 >     dsb
+>     isb
 
 > cleanInvalidateL1Caches :: MachineMonad ()
 > cleanInvalidateL1Caches = do
@@ -505,6 +487,7 @@ supplied range.
 >     dsb
 >     invalidate_I_PoU
 >     dsb
+>     isb
 
 This function is used to clear the load exclusive monitor. This dummy
 implementation assumes the monitor is not modelled in our simulator.
@@ -534,22 +517,38 @@ implementation assumes the monitor is not modelled in our simulator.
 \subsection{Hypervisor-specific status/control registers}
 
 > getHSR :: MachineMonad Word
-> getHSR = error "FIXME ARMHYP machine callback unimplemented"
+> getHSR = isabelleOp
 
 > setHCR :: Word -> MachineMonad ()
-> setHCR _hcr = error "FIXME ARMHYP machine callback unimplemented"
+> setHCR _hcr = isabelleOp
 
 > getHDFAR :: MachineMonad VPtr
-> getHDFAR = error "FIXME ARMHYP machine callback unimplemented"
+> getHDFAR = isabelleOp
 
 > addressTranslateS1 :: VPtr -> MachineMonad VPtr
-> addressTranslateS1 = error "FIXME ARMHYP machine callback unimplemented"
+> addressTranslateS1 = isabelleOp
 
 > getSCTLR :: MachineMonad Word
-> getSCTLR = error "FIXME ARMHYP machine callback unimplemented"
+> getSCTLR = isabelleOp
 
 > setSCTLR :: Word -> MachineMonad ()
-> setSCTLR _sctlr = error "FIXME ARMHYP machine callback unimplemented"
+> setSCTLR _sctlr = isabelleOp
+
+> setCPACR :: Word -> MachineMonad ()
+> setCPACR _cpacr = isabelleOp
+
+> getHDCR :: MachineMonad Word
+> getHDCR = isabelleOp
+
+> setHDCR :: Word -> MachineMonad ()
+> setHDCR _hdcr = isabelleOp
+
+Set or unset the HDCR.TDE (trap debug exceptions) field in the HDCR register
+
+> trapDebugExceptions :: Bool -> MachineMonad ()
+> trapDebugExceptions trap = do
+>     hdcr <- getHDCR
+>     setHDCR $ if trap then hdcr .|. hdcrTDE else hdcr .&. complement hdcrTDE
 
 \subsection{Hypervisor banked registers}
 
@@ -559,10 +558,10 @@ each. Some special registers, like SCTLR, still get their own load/store
 functions due to being operated on separately.
 
 > readVCPUHardwareReg :: ARM.VCPUReg -> MachineMonad Word
-> readVCPUHardwareReg reg = error "FIXME ARMHYP machine callback unimplemented"
+> readVCPUHardwareReg reg = isabelleOp
 
 > writeVCPUHardwareReg :: ARM.VCPUReg -> Word -> MachineMonad ()
-> writeVCPUHardwareReg reg val = error "FIXME ARMHYP machine callback unimplemented"
+> writeVCPUHardwareReg reg val = isabelleOp
 
 #endif
 
@@ -658,8 +657,6 @@ translation (host-to-hypervisor). This is a three-level table system, but the
 hardware can be configured to omit the first level entirely if all second
 levels are stored contiguously. We use this configuration to preserve the usual
 page table/directory nomenclature.
-
-> -- FIXME ARMHYP global (SH) is never used so I don't know what a global page's SH would look like
 
 seL4 does not use hardware domains or parity on ARM hypervisor systems.
 
@@ -786,8 +783,6 @@ ARM page directories and page tables occupy four frames and one quarter of a fra
 > ioptBits :: Int
 > ioptBits = pageBits
 
-FIXME ARMHYP this is really platform code (TK1), move there
-
 Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bit. What actually happens is that a non-read, non-write entry is considered invalid. In pracice, the kernel writes an IOPTE/IOPDE of all zeros here.
 
 > data IOPDE
@@ -845,62 +840,56 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 \subsection{GIC VCPU interface}
 
-> vgicIRQActive :: Word
-> vgicIRQActive = 2 `shiftL` 28
-
-> vgicIRQMask :: Word
-> vgicIRQMask = 3 `shiftL` 28
-
 > get_gic_vcpu_ctrl_hcr :: MachineMonad Word
-> get_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_hcr = isabelleOp
 
 > set_gic_vcpu_ctrl_hcr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_hcr = isabelleOp
 
 > get_gic_vcpu_ctrl_vmcr :: MachineMonad Word
-> get_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_vmcr = isabelleOp
 
 > set_gic_vcpu_ctrl_vmcr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_vmcr = isabelleOp
 
 > get_gic_vcpu_ctrl_apr :: MachineMonad Word
-> get_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_apr = isabelleOp
 
 > set_gic_vcpu_ctrl_apr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_apr = isabelleOp
 
 > get_gic_vcpu_ctrl_vtr :: MachineMonad Word
-> get_gic_vcpu_ctrl_vtr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_vtr = isabelleOp
 
 > get_gic_vcpu_ctrl_eisr0 :: MachineMonad Word
-> get_gic_vcpu_ctrl_eisr0 = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_eisr0 = isabelleOp
 
 > get_gic_vcpu_ctrl_eisr1 :: MachineMonad Word
-> get_gic_vcpu_ctrl_eisr1 = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_eisr1 = isabelleOp
 
 > get_gic_vcpu_ctrl_misr :: MachineMonad Word
-> get_gic_vcpu_ctrl_misr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_misr = isabelleOp
 
 > get_gic_vcpu_ctrl_lr :: Word -> MachineMonad Word
-> get_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_lr = isabelleOp
 
 > set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_lr = isabelleOp
 
 \subsection{Virtual timer interface}
 
 > get_cntv_cval_64 :: MachineMonad Word64
-> get_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+> get_cntv_cval_64 = isabelleOp
 > set_cntv_cval_64 :: Word64 -> MachineMonad ()
-> set_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_cval_64 = isabelleOp
 
 > get_cntv_off_64 :: MachineMonad Word64
-> get_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+> get_cntv_off_64 = isabelleOp
 > set_cntv_off_64 :: Word64 -> MachineMonad ()
-> set_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_off_64 = isabelleOp
 
 > check_export_arch_timer :: MachineMonad ()
-> check_export_arch_timer = error "FIXME ARMHYP Unimplemented callback"
+> check_export_arch_timer = isabelleOp
 
 #endif
 
@@ -911,9 +900,17 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
+> -- HCR_COMMON
 > hcrCommon :: Word
-> --          HCR_TSC | HCR_AMO  | HCR_IO | HCR_FMO | HCR_DC  | HCR_VM
-> hcrCommon = bit 19 .|. bit 5  .|. bit 4 .|. bit 3 .|. bit 12 .|. bit 0
+> hcrCommon = bit 0  -- HCR_VM
+>         .|. bit 5  -- HCR_AMO
+>         .|. bit 4  -- HCR_IMO
+>         .|. bit 3  -- HCR_FMO
+>         .|. bit 19 -- HCR_TSC
+>         .|. bit 20 -- HCR_TIDCP
+>         .|. bit 21 -- HCR_TACR
+>         .|. bit 1  -- HCR_SWIO
+>         .|. bit 12 -- HCR_DC
 
 > hcrTWE :: Word
 > hcrTWE = bit 14
@@ -926,22 +923,39 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 >           then hcrCommon
 >           else hcrCommon .|. hcrTWE .|. hcrTWI
 
-> hcrNative = (0xFE8103B :: Word) -- HCR_NATIVE
+> -- TRCDIS bit: make PL0 and PL1 accesses to CP14 trace registers undefined.
+> -- All other bits are unset, switching off the FPU globally, trapping access into PL2.
+> cpacrDefault :: Word -- CPACR_DEFAULT
+> cpacrDefault = bit 28
+
+> hdcrTDE :: Word -- HDCR_DEBUG_TDE
+> hdcrTDE = bit 8
+>
+> -- HCR_NATIVE. This assumes ARMv7-A boards only for ARM_HYP (currently true).
+> -- When we add an AArch32 ARMv8-A HYP config, we need to make this conditional as in C.
+> hcrNative :: Word
+> hcrNative = hcrCommon
+>         .|. bit 25 -- HCR_TTLB
+>         .|. bit 26 -- HCR_TVM
+>         .|. bit 27 -- HCR_TGE
+>
 > vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
+
+> -- trap VCPU access to group 0 registers on GICv3, do nothing on GICv2
+> vgicHCRTALL0 :: Word -- VGIC_HCR_TALL0
+> vgicHCRTALL0 = if config_ARM_GIC_V3 then bit 11 else 0
+
 > sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
-> actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
 > gicVCPUMaxNumLR = (64 :: Int)
 
 > -- Wether to trap WFI/WFE instructions or not in hyp mode
 > config_DISABLE_WFI_WFE_TRAPS :: Bool
-> config_DISABLE_WFI_WFE_TRAPS = error "generated from CMake config"
+> config_DISABLE_WFI_WFE_TRAPS = isabelleOp
 
 #endif
 
 > getCurrentTime :: MachineMonad Word64
-> getCurrentTime = do
->     cbptr <- ask
->     liftIO $ Platform.getCurrentTime cbptr
+> getCurrentTime = isabelleOp
 
 > timerPrecision :: Word64
 > timerPrecision = usToTicks 2
@@ -965,27 +979,27 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 > -- Whether to use the GICv3. Defaults to GICv2 when set to False.
 > config_ARM_GIC_V3 :: Bool
-> config_ARM_GIC_V3 = error "generated from CMake config"
+> config_ARM_GIC_V3 = isabelleOp
 
 > -- Whether the handleSpuriousIRQ machine op is available
 > hasSpuriousIRQ_mop :: Bool
-> hasSpuriousIRQ_mop = error "Implemented in MachineOps.thy"
+> hasSpuriousIRQ_mop = isabelleOp
 
 > -- Whether the setTrigger machine op is available
 > haveSetTrigger :: Bool
-> haveSetTrigger = error "Implemented in machine/(ARM|ARM_HYP)/Platform.thy"
+> haveSetTrigger = isabelleOp
 
 \subsection{SGI}
 
 > numSGIs :: Int
-> numSGIs = error "defined in machine/AARCH64/Platform.thy"
+> numSGIs = isabelleOp
 
 > gicNumTargets :: Int
-> gicNumTargets = error "defined in machine/AARCH64/Platform.thy"
+> gicNumTargets = isabelleOp
 
 > isGICPlatform :: Bool
-> isGICPlatform = error "defined in machine/AARCH64/Platform.thy"
+> isGICPlatform = isabelleOp
 
 > -- the machine op uses word_t (and irq_t which is also word_t in C)
 > sendSGI :: Word -> Word -> MachineMonad ()
-> sendSGI irq target = error "Unimplemented - machine op"
+> sendSGI irq target = isabelleOp

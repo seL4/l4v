@@ -28,6 +28,11 @@ definition ptable_attrs_s :: "'s :: state_ext state \<Rightarrow> obj_ref \<Righ
 definition ptable_xn_s where
   "ptable_xn_s s \<equiv> \<lambda>addr. Execute \<notin> ptable_attrs_s s addr"
 
+lemma ptable_xn_s_not_exec:
+  "ptable_xn_s s x = (\<not> ptable_exec (cur_thread s) s x)"
+  by (simp add: ptable_exec_def ptable_xn_s_def ptable_attrs_s_def ptable_attrs_def
+         split: option.splits)
+
 
 type_synonym user_state_if = "user_context \<times> user_mem \<times> device_state"
 
@@ -48,12 +53,13 @@ definition do_user_op_if ::
       pr \<leftarrow> gets ptable_rights_s;
 
       \<comment> \<open>Fetch the execute bits of the current thread's page mappings.\<close>
-      pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s s x);
+      pxn \<leftarrow> gets (\<lambda>s x. ptable_xn_s s x);
 
-      \<comment> \<open>Get the mapping from virtual to physical addresses.\<close>
-      pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {}});
+      \<comment> \<open>Get the mapping from virtual to physical addresses. When the page is
+         executable, it does not fault on AArch64, even when no other rights exist.\<close>
+      pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {} \<or> \<not> pxn x});
 
-      allow_read \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowRead \<in> pr x};
+      allow_read \<leftarrow> return  {y. EX x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not> pxn x)};
       allow_write \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
 
       \<comment> \<open>Get the current thread.\<close>
@@ -62,7 +68,7 @@ definition do_user_op_if ::
       \<comment> \<open>Generate user memory by throwing away anything from global
          memory that the user doesn't have access to. (The user must
          have both (1) a mapping to the page; (2) that mapping has the
-         AllowRead right.\<close>
+         AllowRead or execute right.\<close>
       um \<leftarrow> gets (\<lambda>s. (user_mem s) \<circ> ptrFromPAddr);
       dm \<leftarrow> gets (\<lambda>s. (device_mem s) \<circ> ptrFromPAddr);
       ds \<leftarrow> gets (device_state \<circ> machine_state);
@@ -259,7 +265,7 @@ lemma requiv_ptable_rights_eq:
 
 lemma requiv_ptable_attrs_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
-     is_subject aag (cur_thread s); invs s; invs s'; ptable_rights_s s x \<noteq> {} \<rbrakk>
+     is_subject aag (cur_thread s); invs s; invs s' \<rbrakk>
      \<Longrightarrow> ptable_attrs_s s x = ptable_attrs_s s' x"
   apply (simp add: ptable_attrs_s_def ptable_rights_s_def)
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) =
@@ -293,7 +299,7 @@ lemma requiv_ptable_attrs_eq:
 
 lemma requiv_ptable_lift_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s'; invs s;
-     invs s'; is_subject aag (cur_thread s); ptable_rights_s s x \<noteq> {} \<rbrakk>
+     invs s'; is_subject aag (cur_thread s) \<rbrakk>
      \<Longrightarrow> ptable_lift_s s x = ptable_lift_s s' x"
   apply (simp add: ptable_lift_s_def ptable_rights_s_def)
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) =
@@ -327,7 +333,7 @@ lemma requiv_ptable_lift_eq:
 
 lemma requiv_ptable_xn_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
-     is_subject aag (cur_thread s); invs s; invs s'; ptable_rights_s s x \<noteq> {} \<rbrakk>
+     is_subject aag (cur_thread s); invs s; invs s' \<rbrakk>
      \<Longrightarrow> ptable_xn_s s x = ptable_xn_s s' x"
   by (simp add: ptable_xn_s_def requiv_ptable_attrs_eq)
 
@@ -585,23 +591,62 @@ proof -
     using vref_for_level_user_region by fastforce
 qed
 
+lemma ptable_exec_data_consistent:
+  assumes vs: "valid_state s"
+  and pt_lift: "ptable_lift t s x = Some ptr"
+  and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
+  and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
+             arm_us_global_vspace (arch_state s)"
+  shows "ptable_exec t s (x && ~~ mask (pageBitsForSize sz)) = ptable_exec t s x"
+proof -
+  have vs': "valid_objs s \<and> valid_arch_state s \<and> valid_vspace_objs s
+                          \<and> pspace_distinct s \<and> pspace_aligned s"
+    using vs by (simp add: valid_state_def valid_pspace_def)
+  thus ?thesis
+    using pt_lift dat vs'
+    apply (clarsimp simp: ptable_exec_def ptable_lift_def split: option.splits)
+    apply (clarsimp simp: get_page_info_def simp: obind_def split: option.splits if_splits)
+    apply (rule exE[OF vspace_for_asid_get_vspace_of_thread[OF misc(1)]])
+    apply (rename_tac level pt pde asid)
+    apply (case_tac pde; clarsimp simp: pte_info_def)
+    apply (frule pt_lookup_slot_max_pt_level)
+    apply (frule vspace_for_asid_vs_lookup)
+    apply (frule_tac level=level in valid_vspace_objs_pte)
+      apply clarsimp
+     apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
+     apply (fastforce simp: table_base_pt_slot_offset[OF vs_lookup_table_is_aligned]
+                      dest: valid_arch_state_asid_table dest!: pt_lookup_vs_lookupI
+                     intro: vs_lookup_level)
+    apply (clarsimp simp: valid_pte_def)
+    apply (frule data_at_same_size[symmetric]; simp?)
+    apply (simp add: pageBitsForSize_pt_bits_left)
+    apply (prop_tac "level_of_vmsize (vmsize_of_level level) = level")
+     apply (metis data_at_level pageBitsForSize_pt_bits_left)
+    apply clarsimp
+    apply (fold vref_for_level_def)
+    apply (prop_tac "pt_lookup_slot (get_vspace_of_thread (kheap s) (arch_state s) t)
+                                    (vref_for_level x level) (ptes_of s) = Some (level, pt)")
+     apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad)
+     apply (fastforce dest: pt_walk_vref_for_levelD)
+    apply (rule conjI)
+     apply (fastforce)
+    apply clarsimp
+    using vref_for_level_user_region by fastforce
+qed
 
 lemma user_op_access_data_at:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
      data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s;
-     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
+     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
      \<Longrightarrow> (pasObjectAbs aag tcb, auth,
           pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) tcb = arm_us_global_vspace (arch_state s)")
    apply (clarsimp simp: ptable_lift_def ptable_rights_def split: option.splits)
-   apply (frule get_page_info_gpd_kmaps[rotated 3])
-     apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
-  apply (frule (1) ptable_lift_data_consistant[rotated 2])
-    apply fastforce
-   apply fastforce
-  apply (frule (1) ptable_rights_data_consistant[rotated 2])
-    apply fastforce
-   apply fastforce
+   apply (frule get_page_info_gpd_kmaps[rotated 3];
+          fastforce simp: invs_valid_global_objs invs_arch_state)
+  apply (frule (1) ptable_lift_data_consistant[rotated 2]; fastforce?)
+  apply (frule (1) ptable_rights_data_consistant[rotated 2]; fastforce?)
+  apply (frule (1) ptable_exec_data_consistent[rotated 2]; fastforce?)
   apply (erule (3) user_op_access)
   apply simp
   done
@@ -644,7 +689,7 @@ lemma requiv_device_mem_eq:
    apply (fastforce simp: ptrFromPAddr_mask_simp)
   apply clarsimp
   apply (frule requiv_ptable_rights_eq, fastforce+)
-  apply (frule requiv_ptable_lift_eq, fastforce+)
+  apply (frule requiv_ptable_lift_eq[where x=x], fastforce+)
   apply (clarsimp simp: globals_equiv_def)
   apply (erule notE)
   apply (erule reads_equivE)
@@ -663,7 +708,7 @@ lemma requiv_device_mem_eq:
 
 lemma requiv_user_mem_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s';
-     is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x;
+     is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x \<or> \<not>ptable_xn_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
      \<Longrightarrow> user_mem s (ptrFromPAddr y) = user_mem s' (ptrFromPAddr y)"
   apply (simp add: user_mem_def)
@@ -677,7 +722,8 @@ lemma requiv_user_mem_eq:
       apply assumption+
     apply (erule_tac f="underlying_memory" in equiv_forE)
     apply (frule_tac auth=Read in user_op_access_data_at[where s = s])
-         apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def vspace_cap_rights_to_auth_def
+         apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def ptable_xn_s_not_exec
+                                vspace_cap_rights_to_auth_def
                 | intro typ_at_user_data_at)+
     apply (rule reads_read)
     apply (fastforce simp: ptrFromPAddr_mask_simp)
@@ -688,11 +734,13 @@ lemma requiv_user_mem_eq:
     apply (erule_tac f="underlying_memory" in equiv_forE)
     apply simp
    apply (frule_tac auth=Read in user_op_access)
-       apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def vspace_cap_rights_to_auth_def)+
+       apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def ptable_xn_s_not_exec
+                              vspace_cap_rights_to_auth_def)+
    apply (rule reads_read)
    apply simp
   apply (frule requiv_ptable_rights_eq, fastforce+)
-  apply (frule requiv_ptable_lift_eq, fastforce+)
+  apply (frule requiv_ptable_lift_eq[where x=x], fastforce+)
+  apply (frule requiv_ptable_xn_eq[where x=x], fastforce+)
   apply (clarsimp simp: globals_equiv_def)
   apply (erule notE)
   apply (erule reads_equivE)
@@ -703,53 +751,37 @@ lemma requiv_user_mem_eq:
    apply (erule_tac f="underlying_memory" in equiv_forE)
    apply (erule equiv_symmetric[THEN iffD1])
   apply (frule_tac auth=Read in user_op_access_data_at[where s=s'])
-       apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def vspace_cap_rights_to_auth_def
+       apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def ptable_xn_s_not_exec
+                              vspace_cap_rights_to_auth_def
               | intro typ_at_user_data_at)+
   apply (rule reads_read)
   apply (fastforce simp: ptrFromPAddr_mask_simp)
   done
 
-lemma ptable_rights_imp_frameD:
-  "\<lbrakk> ptable_lift t s x = Some y;valid_state s;ptable_rights t s x \<noteq> {} \<rbrakk>
-     \<Longrightarrow> \<exists>sz. data_at sz (ptrFromPAddr y && ~~ mask (pageBitsForSize sz)) s"
-  apply (subst (asm) addrFromPPtr_ptrFromPAddr_id[symmetric])
-  apply (drule ptable_rights_imp_frame)
-    apply simp+
-   apply (rule addrFromPPtr_ptrFromPAddr_id[symmetric])
-  apply (auto simp: in_user_frame_def in_device_frame_def
-             dest!: spec typ_at_user_data_at typ_at_device_data_at)
-  done
-
 lemma requiv_user_device_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s';
-     is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x;
+     is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x \<or> \<not> ptable_xn_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
      \<Longrightarrow> device_state (machine_state s) (ptrFromPAddr y) =
          device_state (machine_state s') (ptrFromPAddr y)"
-  apply (simp add: ptable_lift_s_def)
-  apply (frule ptable_rights_imp_frameD)
-    apply fastforce
-   apply (fastforce simp: ptable_rights_s_def)
   apply (erule reads_equivE)
   apply clarsimp
   apply (erule_tac f="device_state" in equiv_forD)
-  apply (frule_tac auth=Read in user_op_access_data_at[where s = s])
-       apply ((fastforce simp: ptable_lift_s_def ptable_rights_s_def vspace_cap_rights_to_auth_def
-               | intro typ_at_user_data_at)+)[6]
   apply (rule reads_read)
   apply (frule_tac auth=Read in user_op_access)
-      apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def vspace_cap_rights_to_auth_def)+
+      apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def ptable_xn_s_not_exec
+                             vspace_cap_rights_to_auth_def)+
   done
 
 
 definition context_matches_state where
   "context_matches_state pl pr pxn ms s \<equiv> case ms of (um, ds) \<Rightarrow>
-     pl = ptable_lift_s s |` {x. pr x \<noteq> {}} \<and>
+     pl = ptable_lift_s s |` {x. pr x \<noteq> {} \<or> \<not>pxn x} \<and>
      pr = ptable_rights_s s \<and>
-     pxn = (\<lambda>x. pr x \<noteq> {} \<and> ptable_xn_s s x) \<and>
-     um = (user_mem s \<circ> ptrFromPAddr) |` {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x} \<and>
+     pxn = ptable_xn_s s \<and>
+     um = (user_mem s \<circ> ptrFromPAddr) |` {y. \<exists>x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not>pxn x)} \<and>
      ds = (device_state (machine_state s) \<circ> ptrFromPAddr) |`
-          {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x}"
+          {y. \<exists>x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not>pxn x)}"
 
 
 lemma do_user_op_reads_respects_g:
@@ -771,8 +803,6 @@ lemma do_user_op_reads_respects_g:
   apply (rule spec_equiv_valid_inv_gets[where proj=id,simplified])
    apply (rule ext)
    apply (clarsimp simp: reads_equiv_g_def)
-   apply (case_tac "ptable_rights_s st x = {}", simp)
-   apply simp
    apply (rule requiv_ptable_xn_eq,simp+)[1]
   apply (rule spec_equiv_valid_inv_gets[where proj=id,simplified])
    apply (subst expand_restrict_map_eq,clarsimp)

@@ -31,14 +31,14 @@ lemma objBitsKO_less_word_bits[Arch_assms]:
   "objBitsKO ko < word_bits"
   unfolding objBits_def
   by (case_tac ko;
-      simp add: pageBits_def pteBits_def objBits_simps' word_bits_def
+      simp add: pageBits_def pteBits_def vcpuBits_def objBits_simps' word_bits_def
          split: arch_kernel_object.split)
 
 lemma objBitsKO_neq_0[Arch_assms]:
   "objBitsKO ko \<noteq> 0"
   unfolding objBits_def
   by (case_tac ko;
-      simp add: pageBits_def pteBits_def objBits_simps' word_bits_def
+      simp add: pageBits_def pteBits_def vcpuBits_def objBits_simps' word_bits_def
          split: arch_kernel_object.split)
 
 lemma arch_isCap_simps:

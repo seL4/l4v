@@ -159,7 +159,7 @@ lemma makeArchFaultMessage_inv[Arch_assms, wp]:
   by (wpsimp wp: asUser_inv getRestartPC_inv split: arch_fault.split)
 
 lemma lookupIPCBuffer_valid_ipc_buffer[Arch_assms, wp]:
-  "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
+  "\<lbrace>valid_objs'\<rbrace> lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def
   supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def

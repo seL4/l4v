@@ -653,6 +653,17 @@ lemmas init_arch_objects_obj_at_non_arch[Arch_assms] =
 lemmas init_arch_objects_obj_at_live[Arch_assms] =
   init_arch_objects_obj_at_non_pd[OF live_non_pd]
 
+lemma arch_post_reset_untyped_inv[Arch_assms]:
+  assumes "\<And>s f. P (machine_state_update f s) = P s"
+  shows "arch_post_reset_untyped dev sz \<lbrace>P\<rbrace>"
+  unfolding arch_post_reset_untyped_def do_machine_op_def
+  by (wpsimp simp: assms)
+
+lemma arch_post_reset_untyped_invs[wp, Arch_assms]:
+  "arch_post_reset_untyped dev sz \<lbrace>invs\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by (wpsimp wp: dmo_invs_lift no_irq no_irq_dsb no_irq_invalidate_I_PoU no_irq_isb)
+
 lemmas Untyped_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end

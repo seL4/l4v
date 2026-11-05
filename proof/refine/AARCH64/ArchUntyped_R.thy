@@ -91,7 +91,6 @@ lemma APIType_map2_arch_data_to_obj_type[Arch_assms]:
 
 lemma obj_bits_api_APIType_map2[Arch_assms]:
   "obj_bits_api (APIType_map2 (Inr x)) y = getObjectSize x y"
-  supply vcpuBits_def[bit_simps del] (* FIXME arch-split: suppress warning *)
   apply (clarsimp simp:obj_bits_api_def APIType_map2_def getObjectSize_def simp del: objSize_eq_capBits)
   apply (case_tac x)
         apply (simp_all add:arch_kobj_size_def default_arch_object_def pageBits_def ptBits_def)
@@ -120,13 +119,13 @@ lemma ctes_of_ko_arch[Arch_assms]:
        apply (case_tac ko; simp)
        apply (rename_tac arch_kernel_object)
        apply (case_tac arch_kernel_object;
-                simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
+              simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
       \<comment> \<open>Frame case\<close>
       apply (rename_tac word vmrights vmpage_size option)
       apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def
                             ko_wp_at'_def capAligned_def)
-      apply (frule_tac ptr = ptr and sz = "pageBits" in
-                       nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
+      apply (frule_tac ptr = ptr and sz = "pageBits"
+                    in nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
          apply simp
         apply (simp add: pbfs_atleast_pageBits)+
       apply (clarsimp simp: frame_at'_def)
@@ -134,13 +133,13 @@ lemma ctes_of_ko_arch[Arch_assms]:
       apply (intro exI conjI,assumption)
       apply (clarsimp simp: obj_range'_def shiftl_t2n mask_def add_diff_eq)
       apply (case_tac ko, simp_all split: if_splits,
-            (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
+             (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
      \<comment> \<open>PT case\<close>
      apply (rename_tac word pt_t option)
      apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def obj_at'_def
                            page_table_at'_def typ_at'_def ko_wp_at'_def)
-     apply (cut_tac ptr=ptr and bz="ptBits pt_t" and word=word and sz=pte_bits in
-                    nasty_range[where 'a=machine_word_len]; simp?)
+     apply (cut_tac ptr=ptr and bz="ptBits pt_t" and word=word and sz=pte_bits
+                 in nasty_range[where 'a=machine_word_len]; simp?)
       apply (simp add: pt_bits_def)
      apply clarsimp
      apply (drule_tac x="ucast idx" in spec)
@@ -271,25 +270,40 @@ lemma deleteObjects_caps_no_overlap'':
   apply (simp add:valid_cap'_def capAligned_def)
   done
 
+(* In addition to the page table overlap check, archOverlap also checks kernel
+   window containment for cache operations. Used negated in the assertion below. *)
 defs archOverlap_def:
   "archOverlap \<equiv> \<lambda>s inRange.
-    \<exists>p pt_t. gsPTTypes (ksArchState s) p = Some pt_t \<and>
-             (\<not>is_aligned p (pt_bits pt_t) \<or>
-              ({p .. p + 2 ^ pt_bits pt_t - 1} \<inter> {p. inRange p} \<noteq> {}))"
+    (\<exists>p pt_t. gsPTTypes (ksArchState s) p = Some pt_t \<and>
+              (\<not>is_aligned p (pt_bits pt_t) \<or>
+               ({p .. p + 2 ^ pt_bits pt_t - 1} \<inter> {p. inRange p} \<noteq> {}))) \<or>
+    \<not> in_kernel_window {p. inRange p}"
 
 lemma archNoOverlap[Arch_assms]:
   notes Int_atLeastAtMost[simp del]
   shows
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
                                           \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
-                         \<and> valid_objs s \<and> pspace_aligned s)
+                         \<and> valid_objs s \<and> pspace_aligned s
+                         \<and> valid_arch_state s \<and> cap_refs_in_kernel_window s)
              \<top>
              (return ()) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
   apply (simp add: stateAssert_def assert_def)
   apply (rule corres_symb_exec_r[OF _ get_sp])
     apply (rule corres_req[rotated], subst if_P, assumption)
      apply simp
-    apply (clarsimp simp: archOverlap_def cte_wp_at_caps_of_state)
+    (* extract positive kernel window check without changing the rest of the goal *)
+    apply (simp only: archOverlap_def de_Morgan_disj not_not)
+    apply (rule conjI)
+     prefer 2
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (frule(1) caps_of_state_valid_cap)
+     apply (frule usable_range_subseteq[rotated], simp add: valid_cap_def)
+     apply (drule (1) cap_refs_in_kernel_windowD)
+     apply (rule kernel_window_in_kernel_window)
+      apply (fastforce simp: is_cap_simps)
+     apply (simp add: valid_arch_state_def)
+    apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (frule state_rel_ghost)
     apply (drule (1) ghost_PTTypes)
     apply (frule(1) caps_of_state_valid_cap)
@@ -331,7 +345,6 @@ lemma resetChunkBits_le_word_bits[Arch_assms]:
 lemma APIType_capBits_lower_bound[Arch_assms]:
   "\<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us\<rbrakk>
    \<Longrightarrow> minUntypedSizeBits \<le> APIType_capBits tp us"
-  supply vcpuBits_def[bit_simps del] (* FIXME arch-split: suppress warning *)
   by (simp add: APIType_capBits_def objBits_simps' bit_simps minUntypedSizeBits_def
            split: object_type.split apiobject_type.split)
 
@@ -348,6 +361,23 @@ lemma dmo_freeMemory_clear_um[Arch_assms]:
 crunch createObject
   for nosch[Arch_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and ksInterruptState[Arch_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
+
+lemma postResetUntyped_corres[Arch_assms]:
+  "corres dc \<top> \<top> (arch_post_reset_untyped dev sz) (postResetUntyped dev sz)"
+  unfolding arch_post_reset_untyped_def postResetUntyped_def
+  by (corres corres: corres_machine_op_Id_dc)
+
+lemma postResetUntyped_inv[Arch_assms]:
+  assumes "\<And>s f. P (ksMachineState_update f s) = P s"
+  shows "postResetUntyped dev sz \<lbrace>P\<rbrace>"
+  unfolding postResetUntyped_def doMachineOp_def
+  by (wpsimp simp: assms)
+
+lemma postResetUntyped_invs'[wp, Arch_assms]:
+  "postResetUntyped dev sz \<lbrace>invs'\<rbrace>"
+  unfolding postResetUntyped_def
+  by (wpsimp wp: dmo_machine_op_lift_invs'
+             simp: doMachineOp_bind_dist dsb_def invalidate_I_PoU_def isb_def)
 
 lemmas Untyped_R_assms = Arch_assms (* extract accumulated assumptions *)
 

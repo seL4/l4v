@@ -102,6 +102,8 @@ sig
   type asm_stmt_elements = (string * bool * expr option * expr list)
   val split_asm_stmt : Absyn.statement_node -> asm_stmt_elements
   val merge_asm_stmt : asm_stmt_elements -> Absyn.statement_node
+  (* Errors and warnings for inline asm statements *)
+  val check_asm_stmt : csenv -> Absyn.statement -> unit
 
   val get_globals_rcd : csenv -> senv
 
@@ -882,12 +884,12 @@ fun process_type (posrange as (l,r)) (ty, env) =
         | SOME sz_e => let
             val sz_i = ti (consteval ecenv sz_e)
           in
-            if sz_i < 1 then let
-                val region = Region.make{left=l,right=r}
-              in
-                raise Fail ("Array in area "^Region.toString region^
-                            " has non-positive size "^Int.toString sz_i)
-              end
+            if sz_i < 1 then
+              (Feedback.errorStr'(l, r,
+                                  "Array has non-positive size " ^
+                                  Int.toString sz_i ^
+                                  "; zero-length arrays are not supported");
+               env')
             else
               new_array (constify_abtype ecenv elty, sz_i) env'
           end
@@ -1462,28 +1464,30 @@ in
           (* calculate the size of an initialised incomplete array *)
           case ty of
             Array(elty, NONE) => let
+              fun err msg = (Feedback.errorStr'(left d, right d, msg); ty)
             in
               case iopt of
                 NONE => let
                 in
                   case fname of
                     SOME fnm => if not is_extern then
-                                  raise Fail ("Array "^str^" in function "^fnm^
-                                              " must be given a size or an \
-                                              \initialiser")
+                                  err ("Array "^str^" in function "^fnm^
+                                       " must have a size or an \
+                                       \initializer")
                                 else ty
                   | NONE => ty
                 end
               | SOME (InitE _) =>
-                  raise Fail ("Array "^str^" initialised with non-constant "^
-                              "expression")
+                  err ("Array "^str^" initialized with non-constant "^
+                       "expression")
               | SOME (InitList ilist) => let
                   val sz = complit.find_ilist_size ecenv ilist
-                  val _ = if sz = 0 then
-                            raise Fail "Array given empty initializer"
-                          else ()
                 in
-                  Array(elty, SOME (expr_int (IntInf.fromInt sz)))
+                  if sz = 0 then
+                    err ("Array "^str^" has empty initializer; \
+                         \zero-length arrays are not supported")
+                  else
+                    Array(elty, SOME (expr_int (IntInf.fromInt sz)))
                 end
             end
           | _ => ty
@@ -1508,14 +1512,16 @@ in
       val mvinfo = MungedVar {munge = munged_name,
                               owned_by = StmtDecl.get_owned_by attrs}
       val var_e = ewrap(Var (str, ref (SOME (vty, mvinfo))), left s, right s)
-      val (inits, proc_expr_opt, e) =
+      (* proc_exprs are the expressions of the initialiser that still need to be
+         processed, i.e. analysed for function calls, global reads, etc. *)
+      val (inits, proc_exprs, e) =
           case iopt of
             NONE => let
             in
               case fname of
-                NONE => ([], NONE, e)
+                NONE => ([], [], e)
               | SOME _ => ([swrap(LocalInit var_e, left s, right s)],
-                           NONE,
+                           [],
                            e)
             end
           | SOME (InitE exp) => let
@@ -1545,11 +1551,7 @@ in
                           | SOME _ => ()
                 in
                   ([w (AssignFnCall(SOME var_e, e_fn, args))],
-                   let
-                     fun foldthis (e,acc) = ebogwrap(BinOp(Plus,e,acc))
-                   in
-                     SOME (List.foldl foldthis e_fn args)
-                   end,
+                   e_fn :: args,
                    e)
                 end
               | _ => let
@@ -1557,7 +1559,7 @@ in
                             NONE => cse_fupdglobinits (MSymTab.update (munged_name, exp)) e
                           | _ => e
                 in
-                  ([w (Assign(var_e, exp))], SOME exp, e)
+                  ([w (Assign(var_e, exp))], [exp], e)
                 end
             end
           | SOME (InitList ilist) => let
@@ -1568,14 +1570,16 @@ in
                     NONE => cse_fupdglobinits (MSymTab.update (munged_name, exp)) e
                   | _ => e
             in
-              ([w (Assign(var_e, exp))], SOME exp, e)
+              (* Only process the initialiser expression list. The type of the
+                 overall compound literal has already been processed. *)
+              ([w (Assign(var_e, exp))], inits_to_elist I (InitList ilist) [], e)
             end
       val d' = wrap(VarDecl(ty,s,storage_specs,NONE,attrs), left d, right d)
       val e =
-          case proc_expr_opt of
-              NONE => e
-            | SOME exp => #1 (process_expr RV fname e exp)
-                          (* ignore global reads done by initialiser *)
+          case proc_exprs of
+              [] => e
+            | _ => #1 (process_exprs RV fname e (map E proc_exprs))
+                   (* ignore global reads done by initialiser *)
       val (globalinits, localinits) =
           case fname of
               NONE => (inits, [])
@@ -1721,6 +1725,83 @@ in
     mod1 = (case ret of NONE => [] | SOME expr => [(NONE, "=r", expr)]),
     mod2 = map (fn expr => (NONE, "r", expr)) args,
     mod3 = []}}
+end
+
+(* Avoid later Isabelle type errors and exceptions. Instead provide more readable
+   error messages in standalone parser and install_C_file by explicitly checking
+   asm statements for type wellformedness (lvalue, width, etc). *)
+fun check_asm_stmt cse (s : statement) = let
+  val word_width = int_width ImplementationNumbers.ptr_t
+  val word_str = IntInf.toString word_width
+  fun err e msg = Feedback.errorStr'(eleft e, eright e, msg)
+  fun operand kind cstr e =
+      "asm " ^ kind ^ " operand \"" ^ cstr ^ "\"(" ^
+      (case enode e of Var (nm, _) => nm | _ => "...") ^ ")"
+  fun is_lvalue e =
+      case enode e of
+        Var _ => true
+      | Deref _ => true
+      | ArrayDeref _ => true
+      | StructDot (e', _) => is_lvalue e' orelse ptr_type (cse_typing cse e')
+      | _ => false
+  (* checks for output parameters *)
+  fun check_output (_, cstr, e) = let
+    val ty = cse_typing cse e
+    val pfx = operand "output" cstr e ^ " has type " ^ tyname ty ^ ". "
+  in
+    if not (is_lvalue e) then
+      err e (operand "output" cstr e ^ " is not an lvalue.")
+    else
+      case ty of
+        Unsigned i =>
+          if int_width i = word_width
+          then ()
+          else err e (pfx ^ "Its width (" ^ IntInf.toString (int_width i) ^
+                      ") does not match the machine word width (" ^ word_str ^ ").")
+      | Signed _ =>
+          err e (pfx ^ "Only unsigned types are allowed.")
+      | _ =>
+          err e (pfx ^ "Asm outputs must be lvalues of an unsigned integer type of \
+                        \machine word width (" ^ word_str ^ ").")
+  end
+  (* checks for input parameters *)
+  fun check_input (_, cstr, e) = let
+    val ty = cse_typing cse e
+    val pfx = operand "input" cstr e ^ " has type " ^ tyname ty
+    val width = case ty of
+                  Signed i => SOME (int_width i)
+                | Unsigned i => SOME (int_width i)
+                | PlainChar => SOME ImplementationNumbers.charWidth
+                | Bool => SOME ImplementationNumbers.boolWidth
+                | EnumTy _ => SOME (int_width Int)
+                | _ => NONE
+  in
+    case (ty, width) of
+      (Array _, _) => ()  (* Ok, decays to a pointer *)
+    | (Ptr _, _) => ()
+    | (_, SOME w) =>
+        if w <= word_width
+        then ()
+        else err e (pfx ^ ", which is wider than the machine word width (" ^ word_str ^
+                    ") and would be truncated.")
+    | (_, NONE) =>
+        err e (pfx ^ ", which is not a scalar.")
+  end
+  val supported =
+      (K true (split_asm_stmt (snode s)))
+      handle Fail msg =>
+        (Feedback.warnStr'(sleft s, sright s,
+           "inline asm statement is not in the supported subset (" ^ msg ^
+           "); it will be translated but SimplExport will fail.");
+         false)
+in
+  if not supported
+  then ()
+  else
+    case snode s of
+      AsmStmt {asmblock = {mod1, mod2, ...}, ...} =>
+        (List.app check_output mod1; List.app check_input mod2)
+    | _ => ()
 end
 
 fun process_blockitem fname e bi = let
@@ -1908,6 +1989,7 @@ in
         end
       val (e,grs) = List.foldl handle_mod (e, Binaryset.empty expr_compare) mod1
       val (e,grs) = List.foldl handle_mod (e, grs) mod2
+      val _ = check_asm_stmt e stmt
     in
       (prechaos grs [stmt],
        fold (add_modification fname) [TheHeap, PhantomState, AllGlobals] e)

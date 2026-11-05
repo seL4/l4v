@@ -2653,7 +2653,7 @@ lemma valid_obj'_typ_at_lift:
                gen_typ_at_lifts_strong[OF P] valid_cap'_typ_at_lift[OF P sz]
                valid_ntfn'_typ_at_lift[OF P] valid_sc'_typ_at_lift[OF P] valid_reply'_typ_at_lift[OF P]
   shows      "f \<lbrace>\<lambda>s. valid_obj' obj s\<rbrace>"
-  apply (cases obj; simp add: valid_obj'_def hoare_TrueI; (solves \<open>wpsimp\<close>)?)
+  apply (cases obj; simp add: valid_obj'_def hoare_TrueI; (solves wpsimp)?)
    apply (simp add: valid_tcb'_def split_def opt_tcb_at'_def;
           wpsimp wp: sz hoare_case_option_wp)
   apply (wpsimp simp: valid_cte'_def sz)
@@ -3038,9 +3038,12 @@ context arch_idle_update_eq' begin
 (* exports from Arch locale version (safe for generic use) *)
 interpretation Arch_arch_idle_update_eq' ..
 
-lemmas global_refs_update'[iff] = global_refs_update'
+lemmas global_refs_update' = global_refs_update'
 
 end
+
+(* avoid duplicate declaration warning when re-binding name after interpretation *)
+lemmas (in arch_idle_update_eq') [iff] = global_refs_update'
 
 context Arch_p_arch_idle_update_eq'
 begin
@@ -3061,9 +3064,12 @@ lemma valid_idle_update' [iff]:
 (* exports from Arch locale version (safe for generic use) *)
 interpretation Arch_p_arch_idle_update_eq' ..
 
-lemmas valid_global_refs_update'[iff] = valid_global_refs_update'
+lemmas valid_global_refs_update' = valid_global_refs_update'
 
 end
+
+(* avoid duplicate declaration warning when re-binding name after interpretation *)
+lemmas (in p_arch_idle_update_eq') [iff] = valid_global_refs_update'
 
 context int_update_eq'
 begin
@@ -3360,16 +3366,16 @@ lemma valid_irq_node'_machine_state [simp]:
   by (simp add: valid_irq_node'_def)
 
 (* these should be reasonable safe for automation because of the 0 pattern *)
-lemma no_0_ko_wp' [elim!]:
-  "\<lbrakk> ko_wp_at' Q 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> P"
+lemma no_0_ko_wp'[dest!]:
+  "\<lbrakk> ko_wp_at' Q 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> False"
   by (simp add: ko_wp_at'_def no_0_obj'_def)
 
-lemma no_0_obj_at' [elim!]:
-  "\<lbrakk> obj_at' Q 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> P"
+lemma no_0_obj_at'[dest!]:
+  "\<lbrakk> obj_at' Q 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> False"
   by (simp add: obj_at'_def no_0_obj'_def)
 
-lemma no_0_typ_at' [elim!]:
-  "\<lbrakk> typ_at' T 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> P"
+lemma no_0_typ_at'[dest!]:
+  "\<lbrakk> typ_at' T 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> False"
   by (clarsimp simp: typ_at'_def)
 
 lemma no_0_ko_wp'_eq [simp]:
@@ -3582,7 +3588,7 @@ lemma invs_valid_global'[elim!]:
 
 lemma invs_pspace_canonical'[elim!]:
   "invs' s \<Longrightarrow> pspace_canonical' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
 lemma valid_pspace_canonical'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_canonical' s"

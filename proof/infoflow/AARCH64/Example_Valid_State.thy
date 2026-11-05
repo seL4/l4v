@@ -825,7 +825,7 @@ definition arch_state0 :: "arch_state" where
      arm_kernel_vspace = init_vspace_uses,
      arm_asid_map = Map.empty,
      arm_vmid_table = Map.empty,
-     arm_next_vmid = 0,
+     arm_next_vmid = vmid_min,
      arm_us_global_vspace = arm_global_pt_ptr,
      arm_current_vcpu = None,
      arm_gicvcpu_numlistregs = max_numlistregs - 1,
@@ -1338,9 +1338,15 @@ lemma domain_sep_inv_s0:
   apply (clarsimp simp: timer_irq_def non_kernel_IRQs_def irqVGICMaintenance_def irqVTimerEvent_def)
   done
 
+lemma non_kernel_IRQs_masked_s0:
+  "non_kernel_IRQs_masked s0_internal"
+  by (simp add: non_kernel_IRQs_masked_def non_kernel_IRQs_def s0_internal_def machine_state0_def
+                irqVTimerEvent_def irqVGICMaintenance_def timer_irq_def)
+
 lemma only_timer_irq_inv_s0:
   "only_timer_irq_inv timer_irq s0_internal s0_internal"
-  by (simp add: only_timer_irq_inv_def only_timer_irq_s0 domain_sep_inv_s0)
+  by (simp add: only_timer_irq_inv_def only_timer_irq_s0 domain_sep_inv_s0
+                non_kernel_IRQs_masked_s0)
 
 lemma Sys1_guarded_pas_domain:
   "guarded_pas_domain Sys1PAS s0_internal"

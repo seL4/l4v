@@ -50,7 +50,7 @@ definition init_arch_state :: arch_state where
      arm_kernel_vspace = init_vspace_uses,
      arm_asid_map = Map.empty,
      arm_vmid_table = Map.empty,
-     arm_next_vmid = 0,
+     arm_next_vmid = vmid_min,
      arm_us_global_vspace = arm_global_pt_ptr,
      arm_current_vcpu = None,
      arm_gicvcpu_numlistregs = 20,

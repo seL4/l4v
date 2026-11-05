@@ -81,13 +81,12 @@ nextInstructionRegister = NextIP
 data VCPUReg =
       VCPURegSCTLR
     | VCPURegCPACR
+    | VCPURegTCR
     | VCPURegTTBR0
     | VCPURegTTBR1
-    | VCPURegTCR
     | VCPURegMAIR
     | VCPURegAMAIR
     | VCPURegCIDR
-    | VCPURegACTLR
     | VCPURegAFSR0
     | VCPURegAFSR1
     | VCPURegESR
@@ -99,22 +98,31 @@ data VCPUReg =
     | VCPURegSP_EL1
     | VCPURegELR_EL1
     | VCPURegSPSR_EL1
+    | VCPURegCSSELR_EL1
+    | VCPURegVDISR_EL2
     | VCPURegCNTV_CTL
     | VCPURegCNTV_CVAL
     | VCPURegCNTVOFF
     | VCPURegCNTKCTL_EL1
     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
+vcpuRegSaveRangeStart :: VCPUReg
+vcpuRegSaveRangeStart = VCPURegTTBR0
+
+vcpuRegSaveRangeEnd :: VCPUReg
+vcpuRegSaveRangeEnd = VCPURegVDISR_EL2
+
 vcpuRegNum :: Int
 vcpuRegNum = fromEnum (maxBound :: VCPUReg)
 
 vcpuRegSavedWhenDisabled :: VCPUReg -> Bool
 vcpuRegSavedWhenDisabled VCPURegSCTLR = True
+vcpuRegSavedWhenDisabled VCPURegCPACR = True
+vcpuRegSavedWhenDisabled VCPURegTCR = True
 vcpuRegSavedWhenDisabled VCPURegCNTV_CTL = True
 vcpuRegSavedWhenDisabled VCPURegCNTV_CVAL = True
 vcpuRegSavedWhenDisabled VCPURegCNTVOFF = True
 vcpuRegSavedWhenDisabled VCPURegCNTKCTL_EL1 = True
-vcpuRegSavedWhenDisabled VCPURegCPACR = True
 vcpuRegSavedWhenDisabled _ = False
 
 {- User-level Context -}

@@ -295,9 +295,9 @@ crunch vcpuUpdate, vcpuWriteReg, vcpuSaveReg, vcpuRestoreReg, vcpuReadReg
   and ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   (ignore: getObject setObject)
 
-lemma saveVirtTimer_irq_states'[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
-  unfolding saveVirtTimer_def
+lemma disableVirtTimer_irq_states'[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>valid_irq_states'\<rbrace>"
+  unfolding disableVirtTimer_def
   by (wpsimp wp: doMachineOp_irq_states')
 
 lemma restoreVirtTimer_irq_states'[wp]:
@@ -312,22 +312,23 @@ crunch
   vcpuUpdate, vgicUpdateLR, vcpuSave
   for irq_states' [wp]: valid_irq_states'
   (wp: crunch_wps maskInterrupt_irq_states'[where b=True, simplified] no_irq no_irq_mapM_x
-       no_irq_isb no_irq_dsb
+       no_irq_isb no_irq_dsb no_irq_trapDebugExceptions
    simp: crunch_simps no_irq_modify
-         set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
+         set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def setCPACR_def get_gic_vcpu_ctrl_hcr_def
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
          get_gic_vcpu_ctrl_vmcr_def
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
          set_gic_vcpu_ctrl_lr_def
-   ignore: saveVirtTimer)
+   ignore: disableVirtTimer)
 
 crunch Arch_finaliseCap, prepareThreadDelete
   for irq_states'[Arch_assms, wp]: valid_irq_states'
   (wp: crunch_wps unless_wp getASID_wp no_irq
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
-       no_irq_setCurrentPD no_irq_invalidateLocalTLB_VAASID
-       no_irq_cleanByVA_PoU FalseI
+       no_irq_invalidateLocalTLB_VAASID
+       no_irq_cleanByVA_PoU no_irq_dsb no_irq_isb no_irq_writeVCPUHardwareReg FalseI
    simp: crunch_simps armv_contextSwitch_HWASID_def writeContextIDAndPD_def o_def
+         check_export_arch_timer_def
    rule: ARM_HYP_H.finaliseCap_def)
 
 end (* Arch *)

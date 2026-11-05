@@ -31,7 +31,7 @@ defs makeVCPUObject_def:
     VCPUObj_ \<lparr>
           vcpuTCBPtr= Nothing
         , vcpuVGIC= VGICInterface_ \<lparr>
-                          vgicHCR= vgicHCREN
+                          vgicHCR= vgicHCREN || vgicHCRTALL0
                         , vgicVMCR= 0
                         , vgicAPR= 0
                         , vgicLR= (\<lambda>_. 0)

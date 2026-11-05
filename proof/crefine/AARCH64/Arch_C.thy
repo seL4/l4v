@@ -38,7 +38,9 @@ lemma objBits_InvalidPTE_pte_bits:
 lemma clearMemory_PT_setObject_PTE_ccorres:
   "ccorres dc xfdc
            (page_table_at' pt_t ptr and (\<lambda>s. 2 ^ ptBits pt_t \<le> gsMaxObjectSize s) and
-            (\<lambda>_. is_aligned ptr (ptBits pt_t) \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
+            (\<lambda>_. is_aligned ptr (ptBits pt_t) \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr \<and>
+                 paddrBase \<le> pstart \<and> pstart < AARCH64.paddrTop \<and>
+                 mask (ptBits pt_t) < AARCH64.paddrTop - pstart))
            (\<lbrace>\<acute>ptr___ptr_to_unsigned_long = Ptr ptr\<rbrace> \<inter> \<lbrace>\<acute>bits = of_nat (ptBits pt_t)\<rbrace>) []
        (do x \<leftarrow> mapM_x (\<lambda>p. setObject p InvalidPTE)
                        [ptr , ptr + 2 ^ objBits InvalidPTE .e. ptr + 2 ^ ptBits pt_t - 1];
@@ -97,6 +99,8 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
    apply (simp add: unat_mask_eq flip: mask_2pm1)
    apply (simp add: mask_eq_exp_minus_1)
   apply (simp add: bit_simps split: if_split)
+  apply (simp add: mask_2pm1 add_diff_eq)
+  apply (clarsimp split: if_split_asm)
   done
 
 lemma performPageTableInvocationUnmap_ccorres:
@@ -121,6 +125,7 @@ lemma performPageTableInvocationUnmap_ccorres:
        apply (rule ccorres_Cond_rhs)
         apply (simp add: to_bool_def)
         apply (rule ccorres_rhs_assoc)+
+        apply (rule ccorres_assert2)
         apply csymbr
         apply csymbr
         apply csymbr
@@ -195,7 +200,7 @@ lemma performPageTableInvocationUnmap_ccorres:
              simp flip: canonical_bit_def
                  elim!: ccap_relationE cong: if_cong)
   apply (drule spec[where x=0])
-  apply auto
+  apply (auto simp: paddrTop_H_eq AARCH64_H.fromPAddr_def)
   done
 
 lemma ap_eq_D:
@@ -1603,7 +1608,9 @@ lemma doFlush_ccorres:
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)"
-  apply (cases t; clarsimp simp: doFlush_def doMachineOp_bind)
+  apply (simp only: doFlush_def haskell_assert_def doMachineOp_assert_bind)
+  apply (rule ccorres_assert)
+  apply (cases t; clarsimp simp: doMachineOp_bind AARCH64_H.fromPAddr_def paddrTop_H_eq)
      apply (cinit' lift: pstart_')
       apply (rule ccorres_cond_true)
       apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
@@ -1756,11 +1763,24 @@ lemma cap_frame_cap_lift_asid_upd_idem:
    cap_frame_cap_lift cap"
   by (clarsimp simp: cap_frame_cap_lift_def cap_lift_def Let_def cap_tag_defs)
 
+lemma vmrights_to_H_simps[simp]:
+  "vmrights_to_H (scast Kernel_C.VMReadOnly) = VMReadOnly"
+  "vmrights_to_H (scast Kernel_C.VMReadWrite) = VMReadWrite"
+  "vmrights_to_H (scast Kernel_C.VMKernelOnly) = VMKernelOnly"
+  by (simp add: vmrights_to_H_def vmrights_defs)+
+
+lemma vmrights_to_H_VMKernelOnly:
+  "(vmrights_to_H vm_rights = VMKernelOnly) =
+   (vm_rights \<noteq> scast Kernel_C.VMReadOnly \<and> vm_rights \<noteq> scast Kernel_C.VMReadWrite)"
+  by (clarsimp simp: vmrights_to_H_def vmrights_defs split: if_splits)
+
 lemma cpte_relation_makeUserPTE:
   "\<lbrakk> vm_attributes_lift v =
        \<lparr>armExecuteNever_CL = (attrs >> 2) && 1, armParityEnabled_CL = (attrs >> Suc 0) && 1,
         armPageCacheable_CL = attrs && 1\<rparr>;
-     let uxn = uxn_from_vmattributes (vm_attributes_to_H v);
+     let uxn = uxn_from_vmattributes (vm_attributes_to_H v) ||
+               from_bool (crights \<noteq> scast Kernel_C.VMReadOnly \<and>
+                          crights \<noteq> scast Kernel_C.VMReadWrite);
          ap = ap_from_vm_rights rights;
          attridx = attridx_from_vmattributes (vm_attributes_to_H v)
      in if framesize_from_H sz = scast Kernel_C.ARMSmallPage
@@ -1771,13 +1791,15 @@ lemma cpte_relation_makeUserPTE:
         else pte_lift cpte =
                Some (Pte_pte_page \<lparr>pte_pte_page_CL.UXN_CL = uxn, page_base_address_CL = p,
                                    nG_CL = 0, AF_CL = 1, SH_CL = 0, AP_CL = ap,
-                                   AttrIndx_CL = attridx\<rparr>)\<rbrakk>
-   \<Longrightarrow> cpte_relation (makeUserPTE p rights (attribsFromWord attrs) sz) cpte"
+                                   AttrIndx_CL = attridx\<rparr>);
+     vmrights_to_H crights = capRights\<rbrakk>
+   \<Longrightarrow> cpte_relation (makeUserPTE p rights capRights (attribsFromWord attrs) sz) cpte"
   apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def vm_attributes_to_H_def
-                        uxn_from_vmattributes_def framesize_from_H_eqs
+                        uxn_from_vmattributes_def framesize_from_H_eqs vmrights_to_H_VMKernelOnly
                   split: if_splits)
-   apply (clarsimp simp: pte_lift_def Let_def attribsFromWord_def
-                   simp flip: of_bool_nth to_bool_and_1)+
+   apply (fastforce simp: pte_lift_def Let_def attribsFromWord_def attridx_from_vmattributes_def
+                          true_def false_def
+                    simp flip: of_bool_nth to_bool_and_1 from_bool_eq)+
   done
 
 lemma ccap_relation_decodePageMap[unfolded asid_bits_def canonical_bit_def, simplified]:
@@ -2071,6 +2093,7 @@ lemma decodeARMFrameInvocation_ccorres:
           apply csymbr
           apply csymbr
           apply csymbr
+          apply csymbr
           apply (rule ccorres_add_return)
           apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
            apply (clarsimp simp: assertE_liftE liftE_bindE bind_assoc cong: if_weak_cong)
@@ -2176,8 +2199,9 @@ lemma decodeARMFrameInvocation_ccorres:
                                          lookup_fault_lift_def lookup_fault_tag_defs)
                    apply (solves \<open>clarsimp simp: mask_def word_le_nat_alt\<close>)
                   apply (clarsimp simp: performARMMMUInvocations)
+                  apply csymbr
+                  apply csymbr
                   apply (ctac add: setThreadState_ccorres)
-                    apply csymbr
                     apply (ctac (no_vcg) add: performPageInvocationMap_ccorres)
                       apply (rule ccorres_gen_asm)
                       apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
@@ -2230,8 +2254,9 @@ lemma decodeARMFrameInvocation_ccorres:
                                         lookup_fault_lift_def lookup_fault_tag_defs)
                   apply (solves \<open>clarsimp simp: mask_def word_le_nat_alt\<close>)
                  apply (clarsimp simp: performARMMMUInvocations)
+                 apply csymbr
+                 apply csymbr
                  apply (ctac add: setThreadState_ccorres)
-                   apply csymbr
                    apply (ctac (no_vcg) add: performPageInvocationMap_ccorres)
                      apply (rule ccorres_gen_asm)
                      apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
@@ -2633,6 +2658,16 @@ lemma decodeARMVSpaceRootInvocation_ccorres:
              apply csymbr
              apply (rule ccorres_move_const_guard)+
              apply csymbr
+             apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+                apply vcg
+               apply (clarsimp simp: hd_conv_nth paddrBase_def paddrTop_def pptrBaseOffset_def
+                                     pptrTop_def pptrBase_def fromPAddr_def mask_def)
+              apply (rule syscall_error_throwError_ccorres_n)
+              apply (simp add: syscall_error_to_H_cases)
+             apply (clarsimp simp: ccorres_invocationCatch_Inr performInvocation_def bindE_assoc
+                                   AARCH64_H.performInvocation_def performARMMMUInvocation_def
+                                   liftE_bindE
+                             simp del: Collect_const)
              apply (ctac (no_vcg) add: setThreadState_ccorres)
               apply (rule_tac A="\<lambda>s. unat (ptBitsLeft_C resolve_ret) < 0x40 \<and>
                                      unat (ptBitsLeft_C resolve_ret) \<le> pptrBaseOffset_alignment \<and>
@@ -3370,17 +3405,18 @@ lemma vcpu_reg_saved_when_disabled_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
            Call vcpu_reg_saved_when_disabled_'proc
            \<lbrace> \<acute>ret__unsigned_long = from_bool (\<^bsup>s\<^esup>field \<in> {scast seL4_VCPUReg_SCTLR,
+                                                          scast seL4_VCPUReg_CPACR,
+                                                          scast seL4_VCPUReg_TCR,
                                                           scast seL4_VCPUReg_CNTV_CVAL,
                                                           scast seL4_VCPUReg_CNTVOFF,
                                                           scast seL4_VCPUReg_CNTKCTL_EL1,
-                                                          scast seL4_VCPUReg_CNTV_CTL,
-                                                          scast seL4_VCPUReg_CPACR}) \<rbrace>"
+                                                          scast seL4_VCPUReg_CNTV_CTL}) \<rbrace>"
   by vcg clarsimp
 
 lemma vcpuRegSavedWhenDisabled_spec[simp]:
-  "vcpuRegSavedWhenDisabled reg = (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CVAL \<or>
-                                   reg = VCPURegCNTVOFF \<or> reg = VCPURegCNTKCTL_EL1 \<or>
-                                   reg = VCPURegCNTV_CTL \<or> reg = VCPURegCPACR)"
+  "vcpuRegSavedWhenDisabled reg = (reg = VCPURegSCTLR \<or> reg = VCPURegCPACR \<or> reg = VCPURegTCR \<or>
+                                   reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
+                                   reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL)"
   by (simp add: vcpuRegSavedWhenDisabled_def split: vcpureg.splits)
 
 lemma writeVCPUReg_ccorres:
@@ -3406,8 +3442,9 @@ lemma writeVCPUReg_ccorres:
     apply clarsimp
     apply (rename_tac curvcpuactive)
     apply csymbr
-    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
-                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL \<or> reg = VCPURegCPACR) \<and> \<not>curvcpuactive }"
+    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCPACR \<or> reg = VCPURegTCR \<or>
+                             reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
+                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL) \<and> \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
      subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
@@ -3451,8 +3488,9 @@ lemma readVCPUReg_ccorres:
     apply clarsimp
     apply (rename_tac curvcpuactive)
     apply csymbr
-    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
-                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL \<or> reg = VCPURegCPACR) \<and> \<not>curvcpuactive }"
+    apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCPACR \<or> reg = VCPURegTCR \<or>
+                             reg = VCPURegCNTV_CVAL \<or> reg = VCPURegCNTVOFF \<or>
+                             reg = VCPURegCNTKCTL_EL1 \<or> reg = VCPURegCNTV_CTL) \<and> \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
      subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
@@ -3751,19 +3789,6 @@ lemma virq_virq_pending_EN_new_spec:
                         eoiirqen_shift_def mask_def)
   by (simp add: bit.disj_commute  bit.disj_assoc bit.disj_ac)
 
-lemma virq_virq_active_eq_is_virq_active:
-  "(of_nat (virq_type virq) = (scast virq_virq_active :: machine_word)) = is_virq_active virq"
-  apply (simp add: is_virq_active_def virq_virq_active_def)
-  apply (rule iffI; clarsimp?)
-  apply (clarsimp simp: virq_type_def)
-  done
-
-lemma virq_get_tag_eq_of_nat_virq_type:
-  "virq_get_tag virq = of_nat (virq_type (virq_to_H virq))"
-  (* config unfolding to match bitfield shift in virq_get_tag with virq_type_shift in virq_type *)
-  by (simp add: virq_to_H_def virq_type_def virq_get_tag_def virq_type_shift_def mask_def
-                Kernel_Config.config_ARM_GIC_V3_def)
-
 lemma decodeVCPUInjectIRQ_ccorres:
   notes if_cong[cong] Collect_const[simp del]
   (* csymbr will use this instead now *)
@@ -3878,33 +3903,6 @@ lemma decodeVCPUInjectIRQ_ccorres:
      apply (prop_tac "\<not> (of_nat nregs \<le> (args ! 0 >> 32) && 0xFF)")
       apply (simp add: word_le_nat_alt not_le)
      apply clarsimp
-     apply (rule ccorres_move_const_guard)
-     apply (rule ccorres_move_c_guard_vcpu)
-     apply (simp add: liftM_def)
-     apply (clarsimp simp: rangeCheck_def not_le[symmetric]
-                           liftE_liftM[symmetric] liftE_bindE_assoc)
-
-     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-     apply csymbr
-     apply (rule ccorres_abstract_cleanup)
-
-     apply (rule_tac P="ret__unsigned_longlong =
-                          of_nat (virq_type (vgicLR (vcpuVGIC vcpu)
-                                            (unat ((args ! 0 >> 32) && 0xFF))))"
-                     in ccorres_gen_asm2)
-     apply clarsimp
-     apply (rule ccorres_Cond_rhs_Seq)
-      apply (prop_tac "isVIRQActive (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
-       apply (clarsimp simp add: virq_virq_active_eq_is_virq_active)
-      apply (simp add: rangeCheck_def not_le[symmetric])
-      apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
-                 cong: StateSpace.state.fold_congs globals.fold_congs)
-      apply (rule syscall_error_throwError_ccorres_n)
-      apply (simp add: syscall_error_to_H_cases)
-
-     apply (prop_tac "\<not>is_virq_active (vgicLR (vcpuVGIC vcpu) (unat ((args ! 0 >> 32) && 0xFF)))")
-      apply (clarsimp simp add: virq_virq_active_eq_is_virq_active)
-     apply clarsimp
      apply (simp add: returnOk_bind bindE_assoc not_le
                       performARMMMUInvocations performARMVCPUInvocation_def)
      apply csymbr
@@ -3942,18 +3940,13 @@ lemma decodeVCPUInjectIRQ_ccorres:
    apply (erule order_less_trans; simp)
 
   apply (safe; clarsimp?)
-       apply (simp add: unat_eq_zero)
-      apply (erule order_less_le_trans)
-      apply (simp add: unat_of_nat_eq)
-     apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                      elim: obj_at'_weakenE)
+     apply (simp add: unat_eq_zero)
     apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                      elim: obj_at'_weakenE)
+                     elim: obj_at'_weakenE)
+   apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                    elim: obj_at'_weakenE)
+  apply (erule order_less_le_trans)
   apply (simp add: unat_of_nat_eq)
-  apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
-  apply (subgoal_tac "unat ((args ! 0 >> 32) && 0xFF) < max_armKSGICVCPUNumListRegs")
-   apply (simp add: virq_get_tag_eq_of_nat_virq_type)
-  apply (fastforce simp: unat_of_nat_eq max_armKSGICVCPUNumListRegs_val)
   done
 
 lemma decodeVCPUReadReg_ccorres:

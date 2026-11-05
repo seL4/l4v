@@ -656,9 +656,9 @@ lemmas Finalise_AI_assms = Arch_assms (* extract accumulated assumptions *)
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; fact ARM.Finalise_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -759,7 +759,7 @@ lemma flush_table_empty:
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   supply if_cong[cong]
-  apply (clarsimp simp: flush_table_def set_vm_root_def)
+  apply (clarsimp simp: flush_table_def set_vm_root_def set_global_pd_def)
   apply (wp do_machine_op_obj_at arm_context_switch_empty whenE_wp
     | wpc
     | simp

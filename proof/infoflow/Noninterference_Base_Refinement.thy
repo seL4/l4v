@@ -9,12 +9,12 @@ imports Noninterference_Base
         Noninterference_Base_Alternatives
 begin
 
-(* we assume the same initial state for both systems *)
+(* we assume the same initial states for both systems *)
 locale noninterference_refinement =
-   abs?: complete_unwinding_system A s0 dom uwr policy out schedDomain +
-   conc?: noninterference_system C s0 dom uwr policy out schedDomain
+   abs?: complete_unwinding_system A Init0 dom uwr policy out schedDomain +
+   conc?: noninterference_system C Init0 dom uwr policy out schedDomain
    for A :: "('a,'s,'e) data_type"
-   and s0 :: "'s"
+   and Init0 :: "'s set"
    and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
    and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
    and policy :: "('d \<times> 'd) set"
@@ -28,7 +28,7 @@ context noninterference_refinement begin
 lemma reachable:
   "conc.reachable s \<Longrightarrow> abs.reachable s"
   apply(simp add: conc.reachable_def abs.reachable_def)
-  using refines by (fastforce simp: refines_def)
+  using refines by (fastforce simp: refines_def system.reachable_def)
 
 
 lemma Step:
@@ -79,6 +79,14 @@ lemma uwr_equiv:
   apply(fastforce simp: abs.uwr_equiv_def conc.uwr_equiv_def simp: refines_def dest: subsetD)
   done
 
+text \<open>
+  If every state the abstract system can reach is initial, as when its initial states are closed
+  under its steps, then so is every state the concrete system can reach.
+\<close>
+lemma reachable_Init0_refinement:
+  "\<lbrakk> \<And>s. abs.reachable s \<Longrightarrow> s \<in> Init0; conc.reachable s \<rbrakk> \<Longrightarrow> s \<in> Init0"
+  by (blast dest: reachable)
+
 lemma xNonleakage_gen_refinement_closed:
   "abs.xNonleakage_gen \<Longrightarrow> conc.xNonleakage_gen"
   apply(frule abs.xNonleakage_gen_confidentiality_u)
@@ -91,18 +99,18 @@ lemma xNonleakage_gen_refinement_closed:
 end
 
 
-locale complete_noninterference_refinement = noninterference_refinement A s0 dom uwr policy out schedDomain C
+locale complete_noninterference_refinement = noninterference_refinement A Init0 dom uwr policy out schedDomain C
    for A :: "('a,'s,'e) data_type"
-   and s0 :: "'s"
+   and Init0 :: "'s set"
    and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
    and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
    and policy :: "('d \<times> 'd) set"
    and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"
    and schedDomain :: "'d"
    and C :: "('c,'s,'e) data_type" +
-   assumes Step_C: "Step_system C s0"
+   assumes Step_C: "s0 \<in> Init0 \<Longrightarrow> Step_system C s0"
 
-sublocale complete_noninterference_refinement \<subseteq> conc: complete_unwinding_system C s0 dom uwr policy out schedDomain
+sublocale complete_noninterference_refinement \<subseteq> conc: complete_unwinding_system C Init0 dom uwr policy out schedDomain
   apply(unfold_locales)
     using Step_C apply(fastforce simp: Step_system_def)
    using Step_C apply(fastforce simp: Step_system_def)

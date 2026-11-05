@@ -641,6 +641,22 @@ schematic_goal hcrVCPU_val:
   by (simp add: hcrVCPU_def hcrCommon_def hcrTWE_def hcrTWI_def
                 Kernel_Config.config_DISABLE_WFI_WFE_TRAPS_def)
 
+(* numerical value of cpacrDefault, only needed to match with C *)
+schematic_goal cpacrDefault_val:
+  "cpacrDefault = numeral ?val"
+  by (simp add: cpacrDefault_def del: word_eq_numeral_iff_iszero)
+
+
+text \<open>VGIC HCR interface\<close>
+
+(* The initial VGIC HCR value for a VCPU depends on the GIC version. We only need the numerical
+   value to match with C, no other computations depend on it *)
+schematic_goal vgicHCR_init_val:
+  "vgicHCREN || vgicHCRTALL0 = numeral ?n"
+  by (simp add: vgicHCREN_def vgicHCRTALL0_def Kernel_Config.config_ARM_GIC_V3_def
+           del: word_eq_numeral_iff_iszero)
+     (rule numeral_One[symmetric])? (* can be 1, depending on GIC version *)
+
 
 text \<open>TCBFlags interface\<close>
 

@@ -133,6 +133,12 @@ text \<open>
 definition fail :: "('s, 'a) nondet_monad" where
   "fail \<equiv> \<lambda>s. ({}, True)"
 
+text \<open>
+  The monad function that may do anything: it returns every result with every state and may
+  also fail.\<close>
+definition chaos :: "('s, 'a) nondet_monad" where
+  "chaos \<equiv> \<lambda>s. (UNIV, True)"
+
 text \<open>Assertions: fail if the property @{text P} is not true\<close>
 definition assert :: "bool \<Rightarrow> ('a, unit) nondet_monad" where
   "assert P \<equiv> if P then return () else fail"

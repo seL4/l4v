@@ -615,12 +615,6 @@ lemma isFinal_no_descendants[Arch_assms]:
 sublocale cancelIPC: typ_at_props' "cancelIPC tptr"
   by typ_at_props'
 
-sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr"
-  by typ_at_props'
-
-sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr"
-  by typ_at_props'
-
 sublocale suspend: typ_at_props' "suspend target"
   by typ_at_props'
 
@@ -961,7 +955,7 @@ lemma vcpuInvalidateActive_inactive[wp]:
 
 lemma vcpuDisableNone_obj_at'[wp]:
   "vcpuDisable None \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"
-  unfolding vcpuDisable_def by wpsimp
+  unfolding vcpuDisable_def disableVirtTimer_def by wpsimp
 
 lemma vcpuInvalidateActive_obj_at'[wp]:
   "vcpuInvalidateActive \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"

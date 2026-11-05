@@ -1189,6 +1189,12 @@ lemma delete_objects_invs2:
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   by (rule hoare_name_pre_state, clarsimp, wp delete_objects_invs, fast)
 
+lemma arch_post_reset_untyped_dcorres:
+  "dcorres dc \<top> \<top> (return (u :: unit)) (arch_post_reset_untyped dev sz)"
+  apply (cases dev; cases "pageBits \<le> sz"; simp add: arch_post_reset_untyped_def)
+  apply (rule dcorres_machine_op_noop, wpsimp)
+  done
+
 lemma reset_untyped_cap_corres:
   notes delete_objects_invs[wp del]
   shows
@@ -1221,6 +1227,12 @@ lemma reset_untyped_cap_corres:
       apply (rule corres_split_nor)
          apply (rule delete_objects_dcorres)
          apply (clarsimp simp: is_cap_simps bits_of_def)
+        (* the final arch step has no capDL counterpart *)
+        apply (rule corres_dummy_returnOk_l)
+        apply (rule corres_splitEE[where r'=dc and Q=\<top> and Q'=\<top>, rotated])
+           apply (subst returnOk_liftE)
+           apply (rule corres_liftE_rel_sum[THEN iffD2], rule arch_post_reset_untyped_dcorres)
+          apply (rule wp_post_tautE)+
         apply (rule corres_if_rhs)
          apply (rule_tac x="[cap_objects (transform_cap capa)]" in select_pick_corres_asm)
           apply (clarsimp simp: is_cap_simps cap_aligned_def free_index_of_def)

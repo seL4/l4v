@@ -386,7 +386,7 @@ lemma ARMMMU_improve_cases:
   by (cases cap, simp_all add: isCap_simps) (* not sure if this is useful as is *)
 
 lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp getVCPU_wp | rule conjI)+
+  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp | rule conjI)+
 
 crunch Arch.decodeInvocation
   for inv[Arch_assms, wp]: "P"
@@ -492,7 +492,8 @@ lemma decodeARMPageFlush_corres:
                         page_size \<leftarrow> returnOk $ 1 << pageBitsForSize vmpage_size;
                         whenE (page_size \<le> start \<or> page_size < end) $
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
-                        whenE (pstart < physBase \<or> ARM_HYP.paddrTop < end - start + pstart) $
+                        whenE (pstart < physBase \<or> ARM_HYP.paddrTop < pstart \<or>
+                               ARM_HYP.paddrTop - pstart < end - start) $
                         throwError ExceptionTypes_A.syscall_error.IllegalOperation;
                         returnOk $
                         arch_invocation.InvokePage $
@@ -714,20 +715,6 @@ lemma corres_gets_numlistregs [corres]:
       (gets (arm_gicvcpu_numlistregs \<circ> arch_state)) (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
-lemma get_vcpu_LR_corres[corres]:
-  "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
-             (liftE (get_vcpu v)) (liftE (liftM (vgicLR \<circ> vcpuVGIC) (getObject v)))"
-  apply simp
-  apply (rule corres_rel_imp, rule getObject_vcpu_corres)
-  apply (rename_tac vcpu', case_tac vcpu')
-  apply (clarsimp simp: vcpu_relation_def vgic_map_def)
-  done
-
-lemma vgi_mask[simp]:
-  "vgicIRQMask = vgic_irq_mask"
-  "vgicIRQActive = vgic_irq_active"
-  by (auto simp: vgicIRQMask_def vgic_irq_mask_def vgic_irq_active_def vgicIRQActive_def)
-
 lemma decodeARMVCPUInvocation_corres:
   notes if_split [split del]
   shows
@@ -759,7 +746,7 @@ lemma decodeARMVCPUInvocation_corres:
      apply (cases args; clarsimp)
      apply (case_tac list; clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
      apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
-     apply (corresKsimp wp: get_vcpu_wp)
+     apply corresKsimp
      supply if_split[split del] (* FIXME: this avoids corresK if_split not in set warnings *)
      apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def
                         valid_cap'_def valid_cap_def
@@ -1133,6 +1120,8 @@ shows
           apply (rule corres_guard_imp)
             apply (rule whenE_throwError_corres, simp)
              apply clarsimp
+            apply (rule whenE_throwError_corres, simp)
+             apply (clarsimp simp: fromPAddr_def)
             apply (rule corres_trivial)
             apply (rule corres_returnOk)
             apply (clarsimp simp: archinv_relation_def page_directory_invocation_map_def flush_type_map)+
@@ -2146,7 +2135,7 @@ lemma assoc_invs':
   apply (rule conjI)
    apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
   apply (rule conjI)
-   apply (fastforce dest!: obj_at_aligned' simp add: objBits_def objBits_simps')
+   apply (fastforce dest!: obj_at_aligned' simp: objBits_simps')
   supply fun_upd_apply[simp]
   apply (clarsimp simp: hyp_live'_def arch_live'_def)
   apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs, assumption)

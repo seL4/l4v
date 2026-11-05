@@ -388,7 +388,7 @@ lemma setupReplyMaster_global_refs[wp]:
   apply (case_tac prev_cte, simp)
   apply (frule(1) ctes_of_valid_cap')
   apply (drule(1) valid_global_refsD_with_objSize)+
-  apply (clarsimp simp: valid_cap'_def objBits_simps' obj_at'_def
+  apply (clarsimp simp: valid_cap'_def objBits_simps' vcpuBits_def obj_at'_def
                  split: capability.split_asm)
   done
 

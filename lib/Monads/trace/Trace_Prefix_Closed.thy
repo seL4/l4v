@@ -60,6 +60,10 @@ named_theorems prefix_closed_cond
 
 lemmas [prefix_closed_terminal] = no_trace_terminal[THEN no_trace_prefix_closed]
 
+lemma prefix_closed_chaos[prefix_closed_terminal]:
+  "prefix_closed chaos"
+  by (simp add: prefix_closed_def chaos_def)
+
 lemma prefix_closed_bind[wp_split]:
   "\<lbrakk>prefix_closed f; \<And>x. prefix_closed (g x)\<rbrakk> \<Longrightarrow> prefix_closed (f >>= g)"
   apply (subst prefix_closed_def, clarsimp simp: bind_def)

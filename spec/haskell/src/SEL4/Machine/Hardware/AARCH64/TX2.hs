@@ -30,9 +30,6 @@ newtype PAddr = PAddr { fromPAddr :: Word }
 physBase :: PAddr
 physBase = PAddr 0x80000000
 
-pageColourBits :: Int
-pageColourBits = error "unused on this architecture"
-
 irqInvalid :: IRQ
 irqInvalid = IRQ 0xFFFF -- -1 in 16 bits
 

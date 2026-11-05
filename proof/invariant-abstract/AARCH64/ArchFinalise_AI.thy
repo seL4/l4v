@@ -410,7 +410,7 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
 lemma vcpu_invalidate_tcbs_inv[wp]:
   "\<lbrace>obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>
     vcpu_invalidate_active \<lbrace>\<lambda>rv. obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>"
-  unfolding vcpu_invalidate_active_def vcpu_disable_def by wpsimp
+  unfolding vcpu_invalidate_active_def vcpu_disable_def disable_virt_timer_def by wpsimp
 
 lemma sym_refs_vcpu_None:
   assumes sym_refs: "sym_refs (state_hyp_refs_of s)"
@@ -570,7 +570,8 @@ crunch dissociate_vcpu_tcb
 
 crunch dissociate_vcpu_tcb
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
-  (wp: crunch_wps)
+  (wp: crunch_wps device_region_dmos
+   ignore: do_machine_op)
 
 crunch dissociate_vcpu_tcb
   for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
@@ -590,7 +591,7 @@ crunch dissociate_vcpu_tcb
 
 crunch dissociate_vcpu_tcb
   for valid_kernel_mappings[wp]: "valid_kernel_mappings"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: valid_kernel_mappings_def)
 
 crunch dissociate_vcpu_tcb
   for valid_arch_caps[wp]: "valid_arch_caps"
@@ -627,16 +628,16 @@ crunch vcpu_save_reg, vgic_update, vcpu_disable
   for valid_irq_states[wp]: valid_irq_states
   and in_user_frame[wp]: "in_user_frame p"
   (wp: dmo_maskInterrupt_True_valid_irq_states dmo_valid_irq_states
-   simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
+   simp: isb_def setHCR_def setSCTLR_def writeTCR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
          get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def writeVCPUHardwareReg_def
-         maskInterrupt_def check_export_arch_timer_def)
+         check_export_arch_timer_def)
 
 lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
   "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>valid_machine_state\<rbrace>"
   unfolding valid_machine_state_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift)
 
-crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, save_virt_timer
+crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, disable_virt_timer
   for in_user_frame[wp]: "in_user_frame p"
   and valid_machine_state[wp]: valid_machine_state
   and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
@@ -648,8 +649,9 @@ lemma vcpu_disable_valid_machine_state[wp]:
   "\<lbrace>valid_machine_state\<rbrace> vcpu_disable vcpu_opt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   unfolding vcpu_disable_def valid_machine_state_def
   by (wpsimp wp: dmo_machine_state_lift hoare_vcg_all_lift hoare_vcg_disj_lift
-             simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-                   get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def maskInterrupt_def)
+             simp: isb_def setHCR_def setSCTLR_def writeTCR_def set_gic_vcpu_ctrl_hcr_def
+                   getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def
+                   maskInterrupt_def)
 
 lemma valid_arch_state_vcpu_update_str:
   "valid_arch_state s \<Longrightarrow> valid_arch_state (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>)"
@@ -697,7 +699,8 @@ lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb 
                     valid_cur_fpu_lift_arch arch_thread_set_no_change_arch_tcb_at
          | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def arch_get_sanitise_register_info_def
          | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
-         | simp add: vcpu_disable_def valid_global_vspace_mappings_def valid_global_objs_def
+         | simp add: vcpu_disable_def disable_virt_timer_def valid_global_vspace_mappings_def
+                     valid_global_objs_def
          | wp (once) hoare_drop_imps)+
   done
 

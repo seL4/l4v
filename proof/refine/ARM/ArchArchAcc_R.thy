@@ -1412,10 +1412,10 @@ lemma obj_relation_cuts_range_limit:
        apply (rule_tac x=tcbBlockSizeBits in exI)
        apply (simp add: tcbBlockSizeBits_def)
       apply (rule_tac x=pteBits in exI)
-      apply (simp add: bit_simps is_aligned_shift mask_def pteBits_def)
+      apply (simp add: is_aligned_shift mask_def pteBits_def)
       apply word_bitwise
      apply (rule_tac x=pdeBits in exI)
-     apply (simp add: bit_simps is_aligned_shift mask_def pdeBits_def)
+     apply (simp add: is_aligned_shift mask_def pdeBits_def)
      apply word_bitwise
     apply (rule_tac x=pageBits in exI)
     apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
@@ -1440,7 +1440,7 @@ lemma obj_relation_cuts_range_mask_range[Arch_assms]:
 lemma obj_relation_cuts_obj_bits:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
   apply (erule (1) obj_relation_cutsE;
-          clarsimp simp: objBits_simps objBits_defs bit_simps cte_level_bits_def
+          clarsimp simp: objBits_simps objBits_defs cte_level_bits_def
                          pbfs_atleast_pageBits[simplified bit_simps'] bit_simps')
    apply (cases ko; simp add: other_obj_relation_def objBits_defs split: kernel_object.splits)
   apply (rename_tac ako)
@@ -1459,7 +1459,7 @@ lemma pspace_distinct_cross[Arch_assms]:
   apply (frule (1) pspace_alignedD')
   apply (frule (1) pspace_alignedD)
   apply (rule ps_clearI, assumption)
-   apply (case_tac ko'; simp add: objBits_simps objBits_defs obj_at_simps)
+   apply (case_tac ko'; simp add: obj_at_simps)
    apply (simp split: arch_kernel_object.splits add: obj_at_simps pteBits_def pdeBits_def)
   apply (rule ccontr, clarsimp)
   apply (rename_tac x' ko_x')

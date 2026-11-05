@@ -803,9 +803,9 @@ lemma vcpuRestoreRegRange_isolatable:
          | wpsimp)+
   done
 
-lemma saveVirtTimer_isolatable:
-  "thread_actions_isolatable idx (saveVirtTimer v)"
-  apply (clarsimp simp: saveVirtTimer_def)
+lemma disableVirtTimer_isolatable:
+  "thread_actions_isolatable idx (disableVirtTimer vcpu_ptr_opt)"
+  apply (cases vcpu_ptr_opt; clarsimp simp: disableVirtTimer_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
@@ -844,7 +844,7 @@ lemma vcpuSave_isolatable:
                thread_actions_isolatable_fail
                gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
                vgicUpdateLR_isolatable vgicUpdate_isolatable vcpuSaveRegRange_isolatable
-               saveVirtTimer_isolatable
+               disableVirtTimer_isolatable
                thread_actions_isolatable_mapM_x
          | wpsimp wp: mapM_x_wp|fastforce)+
   done
@@ -872,7 +872,7 @@ lemma vcpuDisable_isolatable:
   apply (clarsimp simp: vcpuDisable_def split: option.splits, intro conjI)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                doMachineOp_isolatable vcpuEnable_isolatable
-               vgicUpdate_isolatable vcpuSaveReg_isolatable saveVirtTimer_isolatable
+               vgicUpdate_isolatable vcpuSaveReg_isolatable disableVirtTimer_isolatable
          | wpsimp)+
   done
 
@@ -1251,9 +1251,9 @@ lemma oblivious_vcpuSwitch_schact:
                          vcpuUpdate_def vgicUpdate_def vgicUpdateLR_def
                          vcpuSaveReg_def vcpuSaveRegRange_def
                          vcpuRestoreReg_def vcpuRestoreRegRange_def
-                         saveVirtTimer_def vcpuWriteReg_def restoreVirtTimer_def vcpuReadReg_def
-                         armvVCPUSave_def isIRQActive_def liftM_bind getIRQState_def
-                         getInterruptState_def
+                         disableVirtTimer_def vcpuWriteReg_def restoreVirtTimer_def
+                         vcpuReadReg_def armvVCPUSave_def isIRQActive_def
+                         liftM_bind getIRQState_def getInterruptState_def
                   split: if_split option.split)+
   done
 

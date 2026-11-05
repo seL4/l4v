@@ -174,7 +174,7 @@ locale Decode_IF_1 =
   and arch_check_irq_rev[wp]:
     "reads_equiv_valid_inv A aag \<top> (arch_check_irq irq)"
   and vspace_cap_rights_to_auth_mono:
-    "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R \<subseteq> vspace_cap_rights_to_auth S"
+    "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R exec \<subseteq> vspace_cap_rights_to_auth S exec"
   and arch_decode_irq_control_invocation_rev:
     "reads_equiv_valid_inv A aag
        (pas_refined aag and
@@ -276,7 +276,7 @@ lemma decode_irq_control_invocation_rev:
   done
 
 lemma vspace_cap_rights_to_auth_mask_vm_rights:
-  "vspace_cap_rights_to_auth (mask_vm_rights R d) \<subseteq> vspace_cap_rights_to_auth R"
+  "vspace_cap_rights_to_auth (mask_vm_rights R d) exec \<subseteq> vspace_cap_rights_to_auth R exec"
   apply (rule vspace_cap_rights_to_auth_mono)
   apply (auto simp: mask_vm_rights_def dest: subsetD[OF validate_vm_rights_subseteq])
   done
