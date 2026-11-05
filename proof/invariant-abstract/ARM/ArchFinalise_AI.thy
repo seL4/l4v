@@ -576,15 +576,18 @@ lemma finalise_cap_replaceable [Arch_assms]:
               apply ((wpsimp
                    | hammer
                    | (wp (once) hoare_drop_imps,
-                      wp (once) reply_unlink_sc_not_live'[unfolded o_def]
+                      wp (once) reply_pop_not_live'[unfolded o_def]
+                                break_reply_chain_at_not_live'[unfolded o_def]
                                 cancel_all_ipc_unlive[unfolded o_def]
                                 cancel_all_signals_unlive[unfolded o_def]))+)[2]
             \<comment> \<open>ntfn\<close>
             apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
                     | hammer
-                    | (wp (once) hoare_drop_imps, wp (once) reply_unlink_sc_not_live'[unfolded o_def]
-                            cancel_all_ipc_unlive[unfolded o_def]
-                            cancel_all_signals_unlive[unfolded o_def]))+)[1]
+                    | (wp (once) hoare_drop_imps,
+                       wp (once) reply_pop_not_live'[unfolded o_def]
+                                 break_reply_chain_at_not_live'[unfolded o_def]
+                                 cancel_all_ipc_unlive[unfolded o_def]
+                                 cancel_all_signals_unlive[unfolded o_def]))+)[1]
            \<comment> \<open>reply\<close>
            apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc | hammer)+)[1]
                      apply (wp (once) hoare_drop_imps, rule hoare_vcg_conj_lift,

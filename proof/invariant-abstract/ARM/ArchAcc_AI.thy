@@ -200,6 +200,9 @@ lemma set_pd_pred_tcb_at[wp]:
   apply (wpsimp wp: set_object_wp_strong simp: pred_tcb_at_def obj_at_def)
   done
 
+lemma set_pt_scs_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
 
 lemma set_asid_pool_pred_tcb_at[wp]:
   "set_asid_pool ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
@@ -208,6 +211,9 @@ lemma set_asid_pool_pred_tcb_at[wp]:
   apply (wpsimp wp: set_object_wp_strong simp: pred_tcb_at_def obj_at_def)
   done
 
+lemma set_asid_pool_scs_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
 
 lemma mask_pd_bits_inner_beauty:
   "is_aligned p 2 \<Longrightarrow>

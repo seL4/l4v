@@ -1181,7 +1181,9 @@ lemma cross_valid_sched_contexts'_cross:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); sc_replies_relation s s';
     valid_objs s; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> cross_valid_sched_contexts' s'"
-  apply (clarsimp simp: cross_valid_sched_contexts'_def map_comp_def split: option.splits)
+  apply (clarsimp simp: cross_valid_sched_contexts'_def map_comp_def
+                        pspace_relation_heap_pspace_relation
+                 split: option.splits)
   apply (fastforce elim: reply_at'_scReply)
   done
 

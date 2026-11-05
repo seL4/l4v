@@ -2220,8 +2220,7 @@ lemma chargeBudget_corres:
              apply (fastforce simp: sc_relation_def obj_at'_def obj_at_def is_sc_obj opt_map_red
                                     opt_pred_def
                              dest!: state_relation_sc_relation)
-            apply (fastforce simp: sc_relation_def obj_at'_def obj_at_def is_sc_obj opt_map_red
-                            dest!: state_relation_sc_replies_relation elim: sc_replies_relation_prevs_list)
+            apply (fastforce simp: sc_relation_def obj_at'_def obj_at_def is_sc_obj opt_map_red)
            apply clarsimp
           apply (wpsimp wp: is_round_robin_wp isRoundRobin_wp | strengthen invs'_implies)+
       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
@@ -2622,7 +2621,6 @@ crunch updateTimeStamp, tcbSchedAppend, postpone
 crunch updateTimeStamp
   for tcbs_of'_ct[wp]: "\<lambda>s. P (tcbs_of' s) (ksCurThread s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj Q p s)"
 
 lemma installThreadBuffer_ksCurThread[wp]:
   "installThreadBuffer target slot buffer \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> "

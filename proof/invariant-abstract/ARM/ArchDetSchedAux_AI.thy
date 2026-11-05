@@ -36,8 +36,16 @@ lemma set_pt_tcbs_of[wp]:
   "set_pt ptr pt \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_pt_def)
 
+lemma set_pt_scs_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
 lemma set_pd_tcbs_of[wp]:
   "set_pd ptr pd \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pd_def)
+
+lemma set_pd_scs_of[wp]:
+  "set_pd ptr pd \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_pd_def)
 
 lemma set_pd_valid_sched_pred[wp]:
@@ -47,6 +55,7 @@ lemma set_pd_valid_sched_pred[wp]:
   apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=scs_of, rotated], wpsimp)
   apply (wpsimp simp: set_pd_def wp: set_object_wp_strong get_object_wp)
   apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def
                   split: kernel_object.splits if_splits)
@@ -59,6 +68,7 @@ lemma set_pt_valid_sched_pred[wp]:
   apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=scs_of, rotated], wpsimp)
   apply (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
   apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def
                   split: kernel_object.splits if_splits)
@@ -83,6 +93,7 @@ lemma set_asid_pool_bound_sc_obj_tcb_at[wp]:
   apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=scs_of, rotated], wpsimp)
   apply (wpsimp simp: set_asid_pool_def wp: set_object_wp_strong get_object_wp)
   apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def
                   split: kernel_object.splits if_splits)
@@ -411,7 +422,7 @@ lemma perform_asid_control_invocation_valid_sched:
                                             perform_asid_control_invocation_ntfn_at_pred_live
                                             hoare_vcg_all_lift
                                       simp: ipc_queued_thread_state_live live_sc_def
-                                            ntfn_queue_nonempty_live
+                                            ntfn_queue_nonempty_live non_empty_sc_replies_at_alt
                                             tcb_at_st_tcb_at)+
   done
 
