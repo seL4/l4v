@@ -119,8 +119,9 @@ lemma setSchedContext_corres:
   "\<lbrakk>sc_relation sc n sc'; n = scSize sc'\<rbrakk> \<Longrightarrow>
    corres dc
      \<top>
-     (obj_at' (\<lambda>k :: sched_context. objBits k = objBits sc') ptr
-      and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)))
+     (\<lambda>s'. obj_at' (\<lambda>k :: sched_context. objBits k = objBits sc') ptr s'
+           \<and> list_linked_list_relation
+                  (sc_replies sc) (scReply sc') (replyPrevs_of s') (replyNexts_of s'))
      (set_sched_context ptr sc n) (setSchedContext ptr sc')"
   apply (rule_tac Q="sc_obj_at n ptr" in corres_cross_add_abs_guard)
    apply (fastforce intro: sc_obj_at'_cross simp: gen_objBits_simps)
@@ -155,13 +156,13 @@ lemma setSchedContext_corres:
    apply (clarsimp simp: sc_replies_relation_def)
    apply (fold fun_upd_def)
    apply (rename_tac s s' p replies)
-   apply (drule_tac x=p in spec)+
-   apply clarsimp
-   subgoal for s s' p replies
-     by (case_tac "p = ptr";
-         force elim: heap_ls_cong
-               simp: obj_at'_def opt_map_def sc_replies_of_scs_def map_project_simps scs_of_kh_def
-              split: option.splits)
+   apply (drule_tac x=p and y=replies in spec2)
+   apply (clarsimp simp: projectKO_opts_defs)
+   apply (case_tac "p = ptr"; clarsimp)
+    apply (force  simp: obj_at'_def opt_map_def scs_of_kh_def
+                 split: option.splits)
+   apply (clarsimp simp: obj_at'_def scs_of_kh_def)
+   apply (clarsimp simp: opt_map_upd_triv_None projectKO_opts_defs opt_map_red)
   apply (rcorres_conj_lift fastforce)+
   done
 
@@ -171,7 +172,8 @@ lemma setSchedContext_update_corres_Q:
    corres dc
      (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n) \<and> Q sc)
      (obj_at' (\<lambda>obj. obj = sc' \<and> Q' sc') ptr
-      and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply (f' sc')) (sc_replies (f sc))))
+      and (\<lambda>s'. list_linked_list_relation
+                  (sc_replies (f sc)) (scReply (f' sc')) (replyPrevs_of s') (replyNexts_of s')))
      (set_sched_context ptr (f sc) n)
      (setSchedContext ptr (f' sc'))"
   apply (rule_tac F="sc_relation sc n sc' \<and> Q sc \<and> Q' sc'" in corres_req)
@@ -207,10 +209,9 @@ lemma setSchedContext_no_stack_update_corres_Q:
   apply (rule stronger_corres_guard_imp)
     apply (rule setSchedContext_update_corres[where sc=sc and sc'=sc'])
      apply simp+
-  apply (clarsimp dest!: state_relation_sc_replies_relation
-                   simp: obj_at'_def)
-  apply (drule (2) sc_replies_relation_prevs_list)
-  apply fastforce
+  apply (fastforce dest!: state_relation_sc_replies_relation
+                    simp: sc_replies_relation_def opt_map_def vs_all_heap_simps obj_at'_def
+                   split: option.splits)
   done
 
 lemmas setSchedContext_no_stack_update_corres =
@@ -449,10 +450,8 @@ lemma schedContextUpdateConsumed_objs'[wp]:
   apply wpsimp
   by (fastforce dest: sc_ko_at_valid_objs_valid_sc')
 
-lemma schedContextUpdateConsumed_sym_refs_lis_refs_of_replies'[wp]:
-  "schedContextUpdateConsumed scPtr \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
-  unfolding schedContextUpdateConsumed_def updateSchedContext_def
-  by wpsimp
+crunch schedContextUpdateConsumed
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 global_interpretation schedContextUpdateConsumed: gen_typ_at_all_props' "schedContextUpdateConsumed scPtr"
   by typ_at_props'
@@ -545,13 +544,10 @@ crunch schedContextCancelYieldTo
   and ksReadyQueuesL1Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and ksReadyQueuesL2Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and valid_sched_pointers[wp]: valid_sched_pointers
+  and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   (wp: crunch_wps threadSet_pred_tcb_no_state threadSet_field_inv threadSet_valid_replies'
        threadSet_field_opt_pred threadSet_valid_sched_pointers
    simp: crunch_simps updateSchedContext_def)
-
-crunch schedContextCancelYieldTo
-  for list_refs_of_replies[wp]: "\<lambda>s. sym_refs (list_refs_of_replies' s)"
-  (wp: crunch_wps simp: crunch_simps updateSchedContext_def comp_def)
 
 global_interpretation schedContextCancelYieldTo: gen_typ_at_all_props' "schedContextCancelYieldTo t"
   by typ_at_props'
@@ -571,7 +567,7 @@ crunch schedContextCompleteYieldTo
   (simp: crunch_simps wp: crunch_wps)
 
 crunch setConsumed
-  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
+  for pred_tcb_at'[wp]: "\<lambda>s. Q (pred_tcb_at' proj P t s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma rfk_invs'[wp]:
@@ -766,7 +762,7 @@ lemma schedContextDonate_valid_objs'[wp]:
   by wpsimp
 
 crunch schedContextDonate
-  for list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 lemma schedContextDonate_bound_tcb_sc_at[wp]:
   "\<lbrace>\<top>\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr\<rbrace>"
@@ -783,13 +779,6 @@ lemma state_relation_sc_relation:
   apply (clarsimp simp: gen_obj_at_simps is_sc_obj)
   apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
   by (clarsimp simp: sc_relation_def scBits_simps opt_map_red)
-
-lemma state_relation_sc_replies_relation_sc:
-  "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk>
-   \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' ptr) (sc_replies (the ((scs_of2 s) ptr)))"
-  supply projection_rewrites[simp] opt_map_red[simp]
-  apply (clarsimp simp: gen_obj_at_simps is_sc_obj)
-  by (fastforce dest!: sc_replies_relation_prevs_list[OF state_relation_sc_replies_relation])
 
 lemma sc_relation_updateRefillHd:
   "\<lbrakk>sc_relation sc n sc'; \<forall>refill'. f (refill_map refill') = refill_map (f' refill');

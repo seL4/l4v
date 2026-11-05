@@ -24,6 +24,7 @@ lemma set_pt_valid_sched_pred[wp]:
   apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=scs_of, rotated], wpsimp)
   apply (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
   apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
   done
@@ -35,6 +36,7 @@ lemma set_asid_pool_bound_sc_obj_tcb_at[wp]:
   apply (rule hoare_lift_Pf[where f=prios_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=eps_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=ntfns_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=scs_of, rotated], wpsimp)
   apply (wpsimp simp: set_asid_pool_def wp: set_object_wp_strong get_object_wp)
   apply (rename_tac ko, case_tac ko;
          clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps
@@ -363,7 +365,7 @@ lemma perform_asid_control_invocation_valid_sched:
                                        perform_asid_control_invocation_ntfn_at_pred_live
                                        hoare_vcg_all_lift
                                  simp: ipc_queued_thread_state_live live_sc_def
-                                       ntfn_queue_nonempty_live
+                                       ntfn_queue_nonempty_live non_empty_sc_replies_at_alt
                                        tcb_at_st_tcb_at)+
 
 lemma perform_asid_control_invocation_cur_sc_active:

@@ -125,7 +125,7 @@ crunch
   cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
   for domain_fields_invs[wp]: "domain_fields P"
 
-crunch reply_unlink_tcb, reply_unlink_sc, tcb_sched_action
+crunch reply_unlink_tcb, reply_pop, break_reply_chain_at, tcb_sched_action
   for domain_list_inv[wp]:  "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps maybeM_inv select_inv gets_the_inv simp: crunch_simps set_object_def)
 
@@ -182,10 +182,10 @@ crunch do_ipc_transfer
   for domain_fields_invs[wp]: "domain_fields P"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
-lemma reply_push_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> reply_push param_a param_b param_c param_d \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  by (wpsimp simp: reply_push_def bind_sc_reply_def split_del: if_split
-    wp: hoare_vcg_if_lift2 hoare_vcg_all_lift hoare_drop_imp get_sched_context_wp)
+lemma reply_link_caller_domain_list_inv[wp]:
+  "reply_link_caller caller callee reply_ptr can_donate \<lbrace>\<lambda>s :: det_state. P (domain_list s)\<rbrace>"
+  by (wpsimp simp: reply_link_caller_def reply_push_def
+               wp: hoare_vcg_if_lift2 hoare_vcg_all_lift hoare_drop_imp get_sched_context_wp)
 
 crunch tcb_ep_append, tcb_ntfn_append, tcb_ep_dequeue, tcb_ntfn_dequeue
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"

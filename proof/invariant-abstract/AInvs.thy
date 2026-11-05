@@ -1413,7 +1413,7 @@ lemma set_thread_state_schact_is_rct_imp_ct_activatable[wp]:
 lemma reply_unlink_tcb_schact_is_rct_imp_ct_activatable[wp]:
   "reply_unlink_tcb t r \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   apply (clarsimp simp: reply_unlink_tcb_def)
-  apply (wpsimp wp: update_sk_obj_ref_wp gts_inv get_simple_ko_inv
+  apply (wpsimp wp: update_reply_wp gts_inv get_simple_ko_inv
          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
@@ -1431,13 +1431,13 @@ lemma sched_context_donate_schact_is_rct_imp_ct_activatable[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift' thread_set_ct_in_state)
   done
 
-crunch bind_sc_reply
+crunch reply_push
   for ct_in_state[wp]: "ct_in_state P"
 
-lemma reply_push_schact_is_rct_imp_ct_activatable[wp]:
-  "reply_push caller callee reply_ptr can_donate
+lemma reply_link_caller_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_link_caller caller callee reply_ptr can_donate
    \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (clarsimp simp: reply_push_def)
+  apply (clarsimp simp: reply_link_caller_def)
   apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
   apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
   done
@@ -1478,39 +1478,28 @@ lemma blocked_cancel_ipc_schact_is_rct_imp_ct_activatable[wp]:
   apply wpsimp
   done
 
-lemma reply_unlink_sc_schact_is_rct_imp_ct_activatable[wp]:
-  "reply_unlink_sc sc_ptr reply_ptr \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (clarsimp simp: reply_unlink_sc_def)
+lemma reply_pop_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_pop reply_ptr sc_ptr \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: reply_pop_def)
   apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
-  apply (rule hoare_if)
-   apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
-   apply (wpsimp wp: update_sk_obj_ref_wp)
-   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-  apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
-  apply (wpsimp wp: update_sched_context_wp)
+  apply (wpsimp wp: update_reply_wp get_simple_ko_wp)
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma break_reply_chain_at_schact_is_rct_imp_ct_activatable[wp]:
+  "break_reply_chain_at reply_ptr \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: break_reply_chain_at_def)
+  apply forward_inv_step
+  apply (rename_tac sc_ptr_opt)
+  apply (case_tac sc_ptr_opt; clarsimp)
+  apply (forward_inv_step wp: hoare_vcg_imp_lift')+
+  apply (wpsimp wp: update_reply_wp hoare_vcg_all_lift hoare_vcg_if_lift2)
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-lemma reply_remove_schact_is_rct_imp_ct_activatable[wp]:
-  "reply_remove caller r \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (clarsimp simp: reply_remove_def)
-  apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
-  apply wpsimp
-  done
-
-lemma reply_remove_tcb_schact_is_rct_imp_ct_activatable[wp]:
-  "reply_remove_tcb tptr rptr \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (clarsimp simp: reply_remove_tcb_def)
-  apply (simp flip: bind_assoc)
-  apply (rule bind_wp)
-   apply wpsimp
-  apply (simp add: bind_assoc)
-  apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
-  apply (rename_tac sc_opt)
-  apply (case_tac sc_opt; clarsimp)
-  apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
-  apply (wpsimp wp: hoare_vcg_imp_lift')
-  done
+crunch reply_remove, reply_remove_tcb
+  for schact_is_rct_imp_ct_activatable[wp]: "\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
+  (wp: get_simple_ko_wp gts_wp)
 
 lemma cancel_signal_schact_is_rct_imp_ct_activatable[wp]:
   "cancel_signal threadptr ntfnptr \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"

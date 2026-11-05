@@ -613,6 +613,10 @@ lemma set_pt_tcbs_of[wp]:
   "set_pt ptr pt \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_pt_def)
 
+lemma set_pt_scs_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
 lemma set_asid_pool_pred_tcb_at[wp]:
   "set_asid_pool ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
@@ -629,6 +633,10 @@ lemma set_asid_pool_ntfns_of[wp]:
 
 lemma set_asid_pool_tcbs_of[wp]:
   "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
+
+lemma set_asid_pool_scs_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
   by (set_object_easy_cases def: set_asid_pool_def)
 
 lemma mask_pt_bits_inner_beauty:

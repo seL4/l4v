@@ -194,20 +194,23 @@ lemma setObject_other_arch_corres:
    apply (clarsimp simp: ep_queues_relation_def eps_of_kh_def opt_map_def split: option.splits)
   apply (extract_conjunct \<open>match conclusion in "ntfn_queues_relation_2 _ _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp: ntfn_queues_relation_def typ_at'_def opt_map_def split: option.splits)
-  apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _" \<Rightarrow> -\<close>)
-   apply (simp add: sc_replies_relation_def)
-   apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
-   apply (drule_tac x=p in spec)
-   apply (rule conjI; clarsimp split: Structures_A.kernel_object.split_asm if_split_asm)
-    apply (clarsimp simp: a_type_def is_other_obj_relation_type_def)
-   apply (rename_tac sc n)
-   apply (drule replyPrevs_of_non_reply_update[simplified])
+  apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _ _" \<Rightarrow> -\<close>)
+   apply (frule replyPrevs_of_non_reply_update[simplified])
     subgoal
       by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
           simp split: arch_kernel_obj.split_asm)
-   apply (clarsimp simp: opt_map_def)
-  \<comment> \<open>ready_queues_relation and release_queue_relation\<close>
-  by (fastforce dest: tcbs_of'_non_tcb_update)
+   apply (drule replyNexts_of_non_reply_update[simplified])
+    subgoal
+      by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
+          simp split: arch_kernel_obj.split_asm)
+   apply (clarsimp simp: sc_replies_relation_def scs_of_kh_def)
+   subgoal
+     by (clarsimp simp: other_aobj_relation_def a_type_def is_other_obj_relation_type_def
+                        prev_list_head_def projectKO_opts_defs;
+         cases ob; cases "injectKO ob'";
+         simp split: arch_kernel_obj.split_asm; intro conjI impI allI; fastforce)
+  apply clarsimp
+  done
 
 lemma dmo_storeWordVM' [simp]:
   "doMachineOp (storeWordVM x y) = return ()"
