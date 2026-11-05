@@ -631,4 +631,15 @@ lemma heap_ls_remove_middle:
   apply fastforce
   done
 
+lemma heap_ls_takeWhile_not_hd:
+  "\<lbrakk>heap_ls hp st (xs @ t # ys); xs \<noteq> []\<rbrakk>
+   \<Longrightarrow> heap_ls (hp(last xs := None)) (Some (hd xs)) (takeWhile ((\<noteq>) t) (xs @ t # ys))"
+  apply (frule heap_ls_distinct)
+  apply (prop_tac "takeWhile ((\<noteq>) t) (xs @ t # ys) = xs")
+   apply (force simp: takeWhile_tail)
+  apply clarsimp
+  apply (frule (1) heap_path_head)
+  apply (force dest: heap_path_last_update)
+  done
+
 end
