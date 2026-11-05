@@ -3837,16 +3837,9 @@ lemma update_sk_obj_ref_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sk_obj_ref C f p v \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def)
 
-crunch set_thread_state, update_sched_context
- for valid_list[wp]: valid_list
-
-lemma reply_unlink_tcb_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: reply_unlink_tcb_def wp: hoare_drop_imp)
-
-lemma reply_unlink_sc_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> reply_unlink_sc sc r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: reply_unlink_sc_def wp: hoare_drop_imp)
+crunch update_sched_context, reply_unlink_tcb, pop_from_stack, break_chain_at
+  for valid_list[wp]: valid_list
+  (wp: crunch_wps)
 
 (* locale for valid_list proofs *)
 locale non_cdt_cdt_list_op =
@@ -3915,32 +3908,11 @@ lemma update_sk_obj_ref_cdt_cdt_list[wp]:
   by (wpsimp simp: update_sk_obj_ref_def set_simple_ko_def partial_inv_def the_equality
        wp: set_object_wp get_object_wp get_simple_ko_wp)
 
-lemma update_sched_context_cdt_cdt_list[wp]:
-  "update_sched_context ptr f \<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp wp: update_sched_context_wp)
-
-lemma reply_unlink_tcb_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reply_unlink_tcb_def set_simple_ko_def wp: hoare_drop_imp set_object_wp)
-
-lemma reply_unlink_sc_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_unlink_sc sc r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reply_unlink_sc_def set_simple_ko_def
-      wp: hoare_drop_imp set_object_wp)
-
-lemma sched_context_donate_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> sched_context_donate sc r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  supply if_cong[cong]
-  by (wpsimp simp: sched_context_donate_def  wp: thread_set_wp set_object_wp hoare_drop_imp)
-
-lemma reply_remove_cdt_cdt_list[wp]:
-   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_remove t r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reply_remove_def
-       wp: hoare_drop_imps hoare_vcg_all_lift)
-
-lemma possible_switch_to_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> possible_switch_to r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: possible_switch_to_def)
+crunch
+  update_sched_context, reply_unlink_tcb, pop_from_stack, break_chain_at, reply_remove,
+  possible_switch_to
+  for cdt_cdt_list[wp]: "\<lambda>s. P (cdt s) (cdt_list s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma set_mrs_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_mrs ptr buf msgs \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4045,9 +4017,9 @@ crunch set_priority,set_mcpriority
   for (empty_fail) empty_fail[wp]
 
 lemma reply_push_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  by (wpsimp simp: reply_push_def bind_sc_reply_def
-    wp: get_simple_ko_wp hoare_drop_imp get_sched_context_wp hoare_vcg_all_lift hoare_vcg_if_lift2)
+  "reply_push caller callee reply_ptr can_donate \<lbrace>valid_list\<rbrace>"
+  by (wpsimp simp: reply_push_def push_to_stack_def
+               wp: get_simple_ko_wp hoare_drop_imp hoare_vcg_all_lift hoare_vcg_if_lift2)
 
 lemma copy_mrs_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> copy_mrs sender sbuf receiver rbuf n \<lbrace>\<lambda>_.valid_list\<rbrace>"

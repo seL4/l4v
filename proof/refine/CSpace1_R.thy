@@ -1632,6 +1632,7 @@ lemma updateCap_stuff:
          (pspace_aligned' s' \<longrightarrow> pspace_aligned' s'') \<and>
          (pspace_distinct' s' \<longrightarrow> pspace_distinct' s'') \<and>
          replyPrevs_of s'' = replyPrevs_of s' \<and>
+         replyNexts_of s'' = replyNexts_of s' \<and>
          scReplies_of s'' = scReplies_of s' \<and>
          epQueues_of s'' = epQueues_of s' \<and>
          ntfnQueues_of s'' = ntfnQueues_of s' \<and>
@@ -1652,14 +1653,15 @@ lemma updateCap_stuff:
   apply (frule setCTE_pspace_only)
   apply (clarsimp simp: setCTE_def)
   apply (intro conjI impI)
-           apply (erule use_valid [OF _ setObject_aligned])
+            apply (erule use_valid [OF _ setObject_aligned])
+            apply (clarsimp simp: updateObject_cte in_monad typeError_def
+                                  in_magnitude_check gen_objBits_simps
+                           split: kernel_object.split_asm if_split_asm)
+           apply (erule use_valid [OF _ setObject_distinct])
            apply (clarsimp simp: updateObject_cte in_monad typeError_def
                                  in_magnitude_check gen_objBits_simps
                           split: kernel_object.split_asm if_split_asm)
-          apply (erule use_valid [OF _ setObject_distinct])
-          apply (clarsimp simp: updateObject_cte in_monad typeError_def
-                                in_magnitude_check gen_objBits_simps
-                         split: kernel_object.split_asm if_split_asm)
+          apply (erule setObject_cte_replies_of'_use_valid_ksPSpace; simp)
          apply (erule setObject_cte_replies_of'_use_valid_ksPSpace; simp)
         apply (erule setObject_cte_scs_of'_use_valid_ksPSpace; simp)
        apply (erule setObject_cte_epQueues_of_use_valid_ksPSpace; simp)
@@ -3021,6 +3023,7 @@ lemma updateMDB_the_lot:
          ksCurSc s''            = ksCurSc s' \<and>
          ksReprogramTimer s''   = ksReprogramTimer s' \<and>
          replyPrevs_of s''      = replyPrevs_of s' \<and>
+         replyNexts_of s''      = replyNexts_of s' \<and>
          scReplies_of s''       = scReplies_of s' \<and>
          epQueues_of s''        = epQueues_of s' \<and>
          ntfnQueues_of s''      = ntfnQueues_of s' \<and>
@@ -3069,6 +3072,7 @@ lemma updateMDB_the_lot':
          ksCurSc s''            = ksCurSc s' \<and>
          ksReprogramTimer s''   = ksReprogramTimer s' \<and>
          replyPrevs_of s''      = replyPrevs_of s' \<and>
+         replyNexts_of s''      = replyNexts_of s' \<and>
          scReplies_of s''       = scReplies_of s' \<and>
          epQueues_of s''        = epQueues_of s' \<and>
          ntfnQueues_of s''      = ntfnQueues_of s' \<and>

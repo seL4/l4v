@@ -374,9 +374,8 @@ lemma setObject_PT_corres:
      apply ((simp split: if_split_asm)+)[2]
     apply (simp add: split: Structures_A.kernel_object.splits)
    apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
-  apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _" \<Rightarrow> -\<close>)
-   apply (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def
-                          scs_of_kh_def opt_map_def projectKO_opts_defs)
+  apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _ _" \<Rightarrow> -\<close>)
+   apply (fastforce simp: sc_replies_relation_def scs_of_kh_def opt_map_def projectKO_opts_defs)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+

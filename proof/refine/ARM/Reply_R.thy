@@ -475,7 +475,7 @@ lemma updateReply_iflive'_strong:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding if_live_then_nonz_cap'_def
   apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
-    apply (wpsimp wp: updateReply_wp_all)
+    apply (wpsimp wp: updateReply_wp)
    apply wpsimp
   apply clarsimp
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def ps_clear_def projectKO_reply)
@@ -880,7 +880,7 @@ lemma updateReply_list_refs_of_replies':
 lemma updateReply_obj_at'_inv:
   "\<forall>x. P (f x) = P x \<Longrightarrow>
    updateReply rPtr f \<lbrace>\<lambda>s. Q (obj_at' (P :: reply \<Rightarrow> bool) rp s)\<rbrace>"
-  apply (wpsimp wp: updateReply_wp_all)
+  apply (wpsimp wp: updateReply_wp)
   apply (subgoal_tac "obj_at' P rp s = (obj_at' P rp (s\<lparr>ksPSpace := (ksPSpace s)(rPtr \<mapsto> KOReply (f ko))\<rparr>))")
    apply simp
   by (force simp: obj_at'_real_def ko_wp_at'_def objBitsKO_def ps_clear_def
@@ -1112,7 +1112,7 @@ lemma no_fail_cleanReply [wp]:
   "no_fail (reply_at' rp) (cleanReply rp)"
   unfolding cleanReply_def
   apply (rule no_fail_pre, rule no_fail_bind)
-     apply (wpsimp wp: updateReply_wp_all)+
+     apply (wpsimp wp: updateReply_wp)+
   apply (clarsimp simp: obj_at'_def ps_clear_upd objBits_simps' projectKOs)
   done
 
@@ -1558,7 +1558,7 @@ lemma sc_replies_update_takeWhile_middle_sym_refs:
 
 lemma updateReply_ko_at'_other:
   "\<lbrace>K (p \<noteq> rp) and ko_at' ko p\<rbrace> updateReply rp f \<lbrace>\<lambda>_. ko_at' ko p\<rbrace>"
-  apply (wpsimp wp: updateReply_wp_all)
+  apply (wpsimp wp: updateReply_wp)
   by (clarsimp simp: obj_at'_def projectKOs ps_clear_upd)
 
 lemma update_replyPrev_replyNexts_inv[wp]:

@@ -703,3 +703,13 @@ thread is bound to a scheduling context
 
 > bound_sc_tcb_at_asrt :: Bool -> PPtr TCB -> KernelState -> Bool
 > bound_sc_tcb_at_asrt _ _ _ = True
+
+An assert with useful information for the function pushToStack'
+
+> pushToStack'_asrt :: Maybe (PPtr Reply) -> KernelState -> Bool
+> pushToStack'_asrt _ _ = True
+
+An assert with useful information for the function popFromStack'
+
+> popFromStack'_asrt :: PPtr Reply -> PPtr SchedContext -> KernelState -> Bool
+> popFromStack'_asrt _ _ _ = True

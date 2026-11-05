@@ -1688,16 +1688,8 @@ lemma refillUnblockCheck_valid_mdb'[wp]:
 
 crunch refillUnblockCheck
   for valid_machine_state'[wp]: valid_machine_state'
+  and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   (simp: crunch_simps wp: crunch_wps)
-
-lemma refillUnblockCheck_list_refs_of_replies'[wp]:
-  "refillUnblockCheck scPtr \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
-  apply (clarsimp simp: refillUnblockCheck_def valid_mdb'_def refillHeadOverlappingLoop_def
-                        mergeOverlappingRefills_def updateRefillHd_def refillPopHead_def updateSchedContext_def
-                        setReprogramTimer_def refillReady_def isRoundRobin_def)
-  apply (wpsimp wp: whileLoop_valid_inv hoare_drop_imps scActive_wp getRefillNext_wp
-              simp: o_def)
-  done
 
 crunch refillUnblockCheck, refillBudgetCheck
   for reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
@@ -1736,17 +1728,17 @@ lemma refillBudgetCheck_valid_mdb'[wp]:
   done
 
 crunch updateRefillHd, updateRefillTl
-  for list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and valid_machine_state'[wp]: valid_machine_state'
   (simp: o_def updateSchedContext_def updateRefillIndex_def)
 
 lemma refillAddTail_list_refs_of_replies'[wp]:
-  "refillAddTail scPtr new \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
+  "refillAddTail scPtr new \<lbrace>\<lambda>s. P (replies_of' s)\<rbrace>"
   by (wpsimp wp: hoare_drop_imps getRefillNext_wp getRefillSize_wp
            simp: o_def updateSchedContext_def refillAddTail_def updateRefillIndex_def)
 
 crunch refillBudgetCheck
-  for list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and valid_machine_state'[wp]: valid_machine_state'
   (wp: crunch_wps hoare_vcg_all_lift hoare_vcg_if_lift2)
 

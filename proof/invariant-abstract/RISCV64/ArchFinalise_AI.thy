@@ -710,7 +710,8 @@ lemma finalise_cap_replaceable [Arch_assms]:
              apply ((wpsimp
                     | hammer
                     | (wp (once) hoare_drop_imps,
-                       wp (once) reply_unlink_sc_not_live'[unfolded o_def]
+                       wp (once) pop_from_stack_not_live'[unfolded o_def]
+                                 break_chain_at_not_live'[unfolded o_def]
                                  cancel_all_ipc_unlive[unfolded o_def]
                                  cancel_all_signals_unlive[unfolded o_def]))+)[2]
            \<comment> \<open>ntfn\<close>
@@ -718,7 +719,8 @@ lemma finalise_cap_replaceable [Arch_assms]:
                               sched_context_maybe_unbind_ntfn_not_bound_sc
                    | hammer
                    | (wp (once) hoare_drop_imps,
-                      wp (once) reply_unlink_sc_not_live'[unfolded o_def]
+                      wp (once) pop_from_stack_not_live'[unfolded o_def]
+                                break_chain_at_not_live'[unfolded o_def]
                                 cancel_all_ipc_unlive[unfolded o_def]
                                 cancel_all_signals_unlive[unfolded o_def]))+)[1]
            \<comment> \<open>reply\<close>

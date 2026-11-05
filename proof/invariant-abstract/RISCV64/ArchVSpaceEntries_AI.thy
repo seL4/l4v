@@ -103,13 +103,9 @@ lemma unmap_page_table_valid_vspace_objs'[wp]:
   apply (simp add: obj_at_def)
   done
 
-crunch set_simple_ko, set_thread_state
- for valid_vspace_objs'[wp]: "valid_vspace_objs'"
+crunch set_simple_ko, set_thread_state, update_reply
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps)
-
-lemma set_reply_obj_ref_valid_vspace_objs'[wp]:
-  "set_reply_obj_ref upd r new \<lbrace>valid_vspace_objs'\<rbrace>"
-  by (wpsimp simp: update_sk_obj_ref_def)
 
 lemma set_ntfn_obj_ref_valid_vspace_objs'[wp]:
   "set_ntfn_obj_ref upd r new \<lbrace>valid_vspace_objs'\<rbrace>"
