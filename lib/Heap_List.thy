@@ -226,6 +226,15 @@ lemma sym_heap_remove_middle_from_chain:
   apply (metis option.simps(1))
   done
 
+lemma sym_heap_break_middle_of_chain:
+  "\<lbrakk>sym_heap hp hp'; before \<noteq> middle; middle \<noteq> after;
+    hp before = Some middle; hp middle = Some after\<rbrakk>
+   \<Longrightarrow> sym_heap (hp(before := None, middle := None))
+                (hp'(after := None, middle := None))"
+  apply (clarsimp simp: sym_heap_def)
+  apply (metis option.simps(1))
+  done
+
 lemma sym_heap_connect:
   "\<lbrakk>sym_heap hp hp'; hp a = None; hp' b = None \<rbrakk> \<Longrightarrow> sym_heap (hp(a \<mapsto> b)) (hp'(b \<mapsto> a))"
   by (force simp: sym_heap_def)
