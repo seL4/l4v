@@ -2322,7 +2322,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
     apply (simp add: interpret_excaps_test_null excaps_map_def)
     apply csymbr
     apply (rule ccorres_Cond_rhs_Seq)
-     (* extraCaps malformed *)
+      (* extraCaps malformed *)
      apply (rule ccorres_cond_true_seq | simp)+
      apply (simp add: throwError_bind invocationCatch_def)
      apply ccorres_rewrite

@@ -444,6 +444,13 @@ locale Retype_R =
        (v = KOTCB tcb)
        = (tp = Inr (APIObjectType ArchTypes_H.apiobject_type.TCBObject)
          \<and> tcb = tcbDomain_update (\<lambda>_. d) makeObject)"
+    "\<And>v sc tp dev us d.
+     makeObjectKO dev us d tp = Some v \<Longrightarrow>
+       (v = KOSchedContext sc)
+       = (tp = Inr (APIObjectType ArchTypes_H.apiobject_type.SchedContextObject)
+          \<and> sc = (makeObject :: sched_context)
+                    \<lparr>scRefills := replicate (refillAbsoluteMax' us) emptyRefill,
+                     scSize := us - minSchedContextBits\<rparr>)"
     "\<And>v reply tp dev us d.
      makeObjectKO dev us d tp = Some v \<Longrightarrow>
        (v = KOReply reply)
@@ -588,13 +595,6 @@ locale Retype_R =
      \<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> P (state_hyp_refs_of' s)\<rbrace>
      createNewCaps ty ptr n us dev
      \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
-  assumes createNewCaps_list_refs_of_replies':
-  "\<And>ty ptr n us dev sz.
-     \<lbrakk>range_cover ptr sz (APIType_capBits ty us) n; n \<noteq> 0;
-      ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us\<rbrakk> \<Longrightarrow>
-     \<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> P (list_refs_of_replies' s)\<rbrace>
-     createNewCaps ty ptr n us dev
-     \<lbrace>\<lambda>_ s. P (list_refs_of_replies' s)\<rbrace>"
   assumes createNewCaps_global_refs':
     "\<And>ty ptr n us d sz.
      \<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0 \<and> pspace_aligned' s \<and>
@@ -1366,6 +1366,36 @@ proof -
     done
 qed
 
+lemma retype_replyNexts_of:
+  assumes  pr: "pspace_relation (kheap s) (ksPSpace s')"
+      and  vs: "valid_pspace s" "valid_mdb s"
+      and vs': "pspace_aligned' s'" "pspace_distinct' s'"
+      and  pn: "pspace_no_overlap_range_cover ptr sz s"
+      and pn': "pspace_no_overlap' ptr sz s'"
+      and  ko: "makeObjectKO dev us d ty = Some ko"
+      and tysc: "ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us"
+      and cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
+      and orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us d) ko"
+      and num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
+  shows
+  "replyNexts_of
+     (s'\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs m ptr ko) (ksPSpace s')\<rparr>)
+    = replyNexts_of s'" (is "replyNexts_of ?ps' = replyNexts_of s'")
+proof -
+  note dom_same' = retype_ksPSpace_dom_same[OF vs' pn' ko tysc cover num_r]
+  show ?thesis
+    apply (rule ext)
+    using pr
+    apply (clarsimp simp: opt_map_def split: option.splits)
+    apply (intro impI conjI allI; (drule dom_same'; simp)?)
+     apply (clarsimp simp: foldr_upd_app_if[folded data_map_insert_def] projectKO_opt_reply
+                    split: if_split_asm kernel_object.split_asm)
+     using ko
+     apply (simp add: makeObjectKO_eq makeObjectKO_gen_def makeObject_reply)
+    apply fastforce
+    done
+qed
+
 lemma retype_tcbSchedPrevs_of:
   assumes   vs': "pspace_aligned' s'" "pspace_distinct' s'"
   assumes   pn': "pspace_no_overlap' ptr sz s'"
@@ -1412,6 +1442,31 @@ proof -
                     split: if_split_asm kernel_object.split_asm)
      using ko
      apply (simp add: makeObjectKO_eq makeObjectKO_gen_def makeObject_tcb)
+    apply fastforce
+    done
+qed
+
+lemma retype_scReplies_of:
+  assumes   vs': "pspace_aligned' s'" "pspace_distinct' s'"
+  assumes   pn': "pspace_no_overlap' ptr sz s'"
+  assumes    ko: "makeObjectKO dev us d ty = Some ko"
+  assumes  tysc: "ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us"
+  assumes cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
+  assumes num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
+  shows
+    "scReplies_of
+       (s'\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs m ptr ko) (ksPSpace s')\<rparr>)
+     = scReplies_of s'"
+proof -
+  note dom_same' = retype_ksPSpace_dom_same[OF vs' pn' ko tysc cover num_r]
+  show ?thesis
+    apply (rule ext)
+    apply (clarsimp simp: opt_map_def split: option.splits)
+    apply (intro impI conjI allI; (drule dom_same'; simp)?)
+     apply (clarsimp simp: foldr_upd_app_if[folded data_map_insert_def]
+                    split: if_split_asm kernel_object.split_asm)
+     using ko
+     apply (simp add: makeObjectKO_eq makeObjectKO_gen_def makeObject_sc)
     apply fastforce
     done
 qed
@@ -1499,28 +1554,24 @@ proof -
   show ?thesis
     using sr pr
     unfolding sc_replies_relation_def
-    apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def
-                   elim!: opt_mapE
-                   split: Structures_A.kernel_object.split_asm)
-    apply (rename_tac sc n'; drule_tac x=p and y="sc_replies sc" in spec2)
+    apply (intro allI)
+    apply (drule_tac x=p in spec)
+    apply (clarsimp simp: scs_of_kh_def
+                   elim!: opt_mapE)
+    apply (rename_tac sc n'; drule_tac x="sc_replies sc" in spec)
     apply (clarsimp simp: foldr_upd_app_if[folded data_map_insert_def] split: if_split_asm)
      apply (case_tac "p \<in> set (new_cap_addrs m ptr ko)")
       apply (case_tac "APIType_map2 ty"; simp add: default_object_def not_unt)
       using ko
       apply (clarsimp simp: makeObjectKO_gen_def makeObject_sc default_sched_context_def
-                            opt_map_def projectKO_opt_sc)
+                            opt_map_def projectKO_opt_sc prev_list_head_def)
      apply (erule notE)
      apply (simp add: obj_relation_retype_addrs_eq[OF not_unt tysc num_r orr cover,symmetric])
-    apply (clarsimp simp: scs_of_kh_def opt_map_Some sc_replies_of_scs_def map_project_Some)
+    apply (clarsimp simp: opt_map_Some)
     apply (fold foldr_upd_app_if[folded data_map_insert_def])
-    apply (simp only: retype_replyPrevs_of[OF pr vs vs' pn pn' ko tysc cover orr num_r, simplified])
-    apply (clarsimp simp: pspace_relation_def)
-    apply (drule_tac x=p in bspec, fastforce)
-    apply (prop_tac "p \<in> dom (ksPSpace s')")
-     apply (clarsimp simp: pspace_dom_def split: if_split_asm, fastforce)
-    apply (clarsimp split: if_split_asm kernel_object.splits)
-    apply (frule dom_same')
-    apply (clarsimp simp: opt_map_def)
+    apply (simp only: retype_replyPrevs_of[OF pr vs vs' pn pn' ko tysc cover orr num_r, simplified]
+                      retype_replyNexts_of[OF pr vs vs' pn pn' ko tysc cover orr num_r, simplified]
+                      retype_scReplies_of[OF vs' pn' ko tysc cover num_r, simplified])
     done
 qed
 
@@ -2023,6 +2074,13 @@ locale Retype_R_2 = Retype_R +
      \<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>
      createNewCaps ty ptr n us dev
      \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+  assumes createNewCaps_reply_pointers:
+    "\<And>ty ptr n us dev sz P.
+     \<lbrakk>range_cover ptr sz (APIType_capBits ty us) n; n \<noteq> 0;
+      ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us\<rbrakk> \<Longrightarrow>
+     \<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> P (replyPrevs_of s) (replyNexts_of s)\<rbrace>
+     createNewCaps ty ptr n us dev
+     \<lbrace>\<lambda>_ s. P (replyPrevs_of s) (replyNexts_of s)\<rbrace>"
   assumes createObjects_no_cte_valid_global:
     "\<And>val ptr sz n gbits.
      \<lbrakk>\<And>c::cte. projectKO_opt val \<noteq> Some c; \<And>t. tcb_of' val \<noteq> Some t\<rbrakk> \<Longrightarrow>
@@ -3674,6 +3732,58 @@ proof -
   qed
 qed
 
+lemma (in Retype_R) createObjects_reply_pointers:
+  "\<lbrace>\<lambda>s. n \<noteq> 0
+        \<and> range_cover ptr sz (objBitsKO val + gbits) n
+        \<and> P (replyPrevs_of s) (replyNexts_of s)
+        \<and> (case val of KOReply reply \<Rightarrow> replyPrev reply = None \<and> replyNext reply = None
+                     | _ \<Rightarrow> True)
+        \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s
+        \<and> pspace_no_overlap' ptr sz s\<rbrace>
+   createObjects' ptr n val gbits
+   \<lbrace>\<lambda>_ s. P (replyPrevs_of s) (replyNexts_of s)\<rbrace>"
+  (is "\<lbrace> \<lambda>s. _ \<and> _ \<and> ?Pre s \<rbrace> _ \<lbrace>\<lambda>_. _\<rbrace>")
+proof -
+  show ?thesis
+    apply (rule hoare_grab_asm)
+    apply (rule hoare_grab_asm)
+  proof -
+    assume not_0: "\<not> n = 0"
+       and cover: "range_cover ptr sz ((objBitsKO val) + gbits) n"
+    then show
+      "\<lbrace>\<lambda>s. ?Pre s\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>_ s. P (replyPrevs_of s) (replyNexts_of s)\<rbrace>"
+    proof -
+      have shiftr_not_zero:" 1 \<le> ((of_nat n)::machine_word) << gbits"
+        using range_cover_not_zero_shift[OF not_0 cover,where gbits = gbits]
+        by (simp add:word_le_sub1)
+      show ?thesis
+        apply (clarsimp simp: createObjects'_def unless_def alignError_def split_def)
+        apply (wp | clarsimp simp del: fun_upd_apply)+
+        apply (clarsimp simp: shiftL_nat data_map_insert_def[symmetric]
+                              new_cap_addrs_fold'[OF shiftr_not_zero]
+                    simp del: data_map_insert_def)
+        using range_cover.unat_of_nat_n_shift[OF cover, where gbits=gbits, simplified]
+        apply (clarsimp simp: foldr_upd_app_if)
+        apply (rule_tac a="replyPrevs_of s" and b="replyNexts_of s"
+                     in rsubst2[rotated, OF sym sym, where P=P])
+          apply (rule ext)
+          apply (clarsimp simp: opt_map_def)
+          apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
+            apply (fastforce intro: cover)
+           apply assumption
+          apply (clarsimp split: kernel_object.splits option.splits)
+         apply (rule ext)
+         apply (clarsimp simp: opt_map_def)
+         apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
+           apply (fastforce intro: cover)
+          apply fastforce
+         apply (clarsimp split: kernel_object.splits option.splits)
+        apply simp
+        done
+    qed
+  qed
+qed
+
 lemma createObjects_valid_sched_pointers:
   "\<lbrace>\<lambda>s. valid_sched_pointers s
         \<and> (case val of KOTCB tcb \<Rightarrow> tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None
@@ -3895,7 +4005,7 @@ proof (rule hoare_gen_asm, elim conjE)
   show "\<lbrace>?P\<rbrace> createNewCaps ty ptr n us dev \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply -
   apply (simp add: invs'_def pointerInUserData_def typ_at'_def sc_size_bounds_def)
-    apply (rule hoare_pre)
+  apply (rule hoare_pre)
    supply createNewCaps_valid_pspace[wp]
    apply (wp createNewCaps_valid_pspace[OF not_0 cover sz_limit ptr_cn ptr_km]
                createNewCaps_state_refs_of'[OF cover not_0]
@@ -3913,7 +4023,7 @@ proof (rule hoare_gen_asm, elim conjE)
                valid_dom_schedule'_lift
                createNewCaps_pred_tcb_at'
                createNewCaps_urz[where sz=sz]
-               createNewCaps_list_refs_of_replies' [OF cover not_0]
+               createNewCaps_reply_pointers[OF cover not_0]
            | simp add: tysc)+
   using not_0
   apply (clarsimp simp: valid_pspace'_def createNewCaps_arch_ko_type_pre_non_arch)

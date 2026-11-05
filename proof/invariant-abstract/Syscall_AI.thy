@@ -1602,8 +1602,7 @@ crunch empty_slot
 lemma reply_unlink_runnable[wp]:
   "reply_unlink_tcb t rptr \<lbrace>st_tcb_at runnable t'\<rbrace>"
   unfolding reply_unlink_tcb_def
-  apply (wpsimp wp: sts_st_tcb_at_cases_strong hoare_vcg_imp_lift' update_sk_obj_ref_wp
-                    get_simple_ko_wp gts_wp)
+  apply (wpsimp wp: sts_st_tcb_at_cases_strong update_reply_wp get_simple_ko_wp gts_wp)
   apply (auto simp: pred_tcb_at_def obj_at_def)
   done
 

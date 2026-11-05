@@ -358,7 +358,7 @@ definition receive_ipc_blocked ::
   "receive_ipc_blocked is_blocking thread epptr reply \<equiv>
      if is_blocking
      then do set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = False\<rparr>);
-             maybeM (\<lambda>r. set_reply_obj_ref reply_tcb_update r (Some thread)) reply;
+             maybeM (\<lambda>r. update_reply (\<lambda>reply. reply\<lparr>reply_tcb := Some thread\<rparr>) r) reply;
              tcb_ep_append thread epptr True
           od
      else do_nbrecv_failed_transfer thread"

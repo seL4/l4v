@@ -40,25 +40,30 @@ This module specifies the behavior of reply objects.
 >     reply <- getReply replyPtr
 >     setReply replyPtr (upd reply)
 
-> bindScReply :: PPtr SchedContext -> PPtr Reply -> Kernel ()
-> bindScReply scPtr replyPtr = do
+> pushToStack' :: PPtr SchedContext -> PPtr Reply -> Maybe (PPtr Reply) -> Kernel ()
+> pushToStack' scPtr replyPtr scReplyOpt = do
+>     stateAssert (pushToStack'_asrt scReplyOpt) ""
+>     updateReply replyPtr (\reply -> reply { replyNext = Nothing })
+>     updateReply replyPtr (\reply -> reply { replyPrev = scReplyOpt })
+>     when (scReplyOpt /= Nothing) $ do
+>         scReplyPtr <- return $ fromJust scReplyOpt
+>         updateReply scReplyPtr (\reply -> reply { replyNext = Just replyPtr })
+>     updateSchedContext scPtr (\sc -> sc { scReply = Just replyPtr })
+
+> pushToStack :: PPtr SchedContext -> PPtr Reply -> Kernel ()
+> pushToStack scPtr replyPtr = do
 >     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     sc <- getSchedContext scPtr
 >     scReplyOpt <- return $ scReply sc
 >     stateAssert (valid_bound_reply'_asrt scReplyOpt) ""
 >     when (scReplyOpt /= Nothing) $ do
 >         scReplyPtr <- return $ fromJust scReplyOpt
->         stateAssert (valid_replies'_sc_asrt scReplyPtr)
->             "`valid_replies'_sc` holds for `replyPtr`"
->         updateReply scReplyPtr (\reply -> reply { replyNext = Just (Next replyPtr) })
->     updateReply replyPtr (\reply -> reply { replyPrev = scReplyOpt })
->     updateSchedContext scPtr (\sc -> sc { scReply = Just replyPtr })
->     updateReply replyPtr (\reply -> reply { replyNext = Just (Head $ scPtr) })
+>         updateReply scReplyPtr (\reply -> reply { replySC = Nothing })
+>     pushToStack' scPtr replyPtr scReplyOpt
+>     updateReply replyPtr (\reply -> reply { replySC = Just scPtr })
 
 > replyPush :: PPtr TCB -> PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > replyPush callerPtr calleePtr replyPtr canDonate = do
->     stateAssert (valid_replies'_sc_asrt replyPtr)
->         "`valid_replies'_sc` holds for `replyPtr`"
 >     stateAssert valid_idle'_asrt "`valid_idle'`"
 >     stateAssert valid_objs'_asrt "`valid_objs'`"
 >     stateAssert (not_sched_linked_asrt callerPtr) ""
@@ -72,32 +77,54 @@ This module specifies the behavior of reply objects.
 >     setThreadState (BlockedOnReply (Just replyPtr)) callerPtr
 
 >     when (scPtrOptDonated /= Nothing && scPtrOptCallee == Nothing && canDonate) $ do
->         bindScReply (fromJust scPtrOptDonated) replyPtr
+>         pushToStack (fromJust scPtrOptDonated) replyPtr
 >         schedContextDonate (fromJust scPtrOptDonated) calleePtr
 
-> replyPop :: PPtr Reply -> PPtr TCB -> Kernel ()
-> replyPop replyPtr tcbPtr = do
->     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+> breakChainAt' :: PPtr Reply -> Kernel ()
+> breakChainAt' replyPtr = do
 >     reply <- getReply replyPtr
->     tptr <- maybeToMonad $ replyTCB reply
->     assert (tptr == tcbPtr) "replyPop: replyTCB must be equal to tcbPtr"
->     state <- getThreadState tcbPtr
->     assert (isReply state) "replyPop: thread state must be BlockedOnReply"
->     assert (replyObject state == Just replyPtr) "replyPop: thread state must have replyPtr as its reply"
-
->     prevReplyPtrOpt <- return $ replyPrev reply
->     nextReplyPtrOpt <- return $ replyNext reply
->     assert (isHead nextReplyPtrOpt) "the reply must be at the head"
->     scPtr <- return $ theHeadScPtr nextReplyPtrOpt
->     updateSchedContext scPtr (\sc -> sc { scReply = prevReplyPtrOpt })
->     when (prevReplyPtrOpt /= Nothing) $ do
->         prevReplyPtr <- return $ fromJust prevReplyPtrOpt
->         updateReply prevReplyPtr (\prevReply -> prevReply { replyNext = replyNext reply })
->     updateReply replyPtr (\reply -> reply { replyNext = Nothing })
->     tcbScPtrOpt <- threadGet tcbSchedContext tcbPtr
->     when (tcbScPtrOpt == Nothing) $ schedContextDonate scPtr tcbPtr
+>     replyPrevOpt <- return $ replyPrev reply
+>     when (replyPrevOpt /= Nothing) $
+>         updateReply (fromJust replyPrevOpt) (\reply -> reply { replyNext = Nothing })
+>     replyNextOpt <- return $ replyNext reply
+>     when (replyNextOpt /= Nothing) $
+>         updateReply (fromJust replyNextOpt) (\reply -> reply { replyPrev = Nothing })
 >     updateReply replyPtr (\reply -> reply { replyPrev = Nothing })
->     replyUnlink replyPtr tcbPtr
+>     updateReply replyPtr (\reply -> reply { replyNext = Nothing })
+>     replySCOpt <- return $ replySC reply
+>     when (replySCOpt /= Nothing) $ 
+>         updateSchedContext (fromJust replySCOpt) (\sc -> sc { scReply = Nothing })
+
+> breakChainAt :: PPtr Reply -> Kernel ()
+> breakChainAt replyPtr = do
+>     reply <- getReply replyPtr
+>     breakChainAt' replyPtr
+>     replySCOpt <- return $ replySC reply
+>     when (replySCOpt /= Nothing) $ 
+>         updateReply replyPtr (\reply -> reply { replySC = Nothing })
+
+> popFromStack' :: PPtr Reply -> PPtr SchedContext -> Maybe (PPtr Reply) -> Kernel ()
+> popFromStack' replyPtr scPtr prevReplyOpt = do
+>     stateAssert (popFromStack'_asrt replyPtr scPtr) ""
+>     updateReply replyPtr (\reply -> reply { replyPrev = Nothing })
+>     when (prevReplyOpt /= Nothing) $ do
+>         prevReplyPtr <- return $ fromJust prevReplyOpt
+>         updateReply prevReplyPtr (\reply -> reply { replyNext = Nothing })
+>     updateSchedContext scPtr (\sc -> sc { scReply = prevReplyOpt })
+
+> popFromStack :: PPtr Reply -> Kernel ()
+> popFromStack replyPtr = do
+>     reply <- getReply replyPtr
+>     replySCOpt <- return $ replySC reply
+>     assert (replySCOpt /= Nothing) "the reply must be the head of the reply stack of some scheduling context"
+>     scPtr <- return $ fromJust replySCOpt
+>     prevReplyOpt <- return $ replyPrev reply
+>     updateReply replyPtr (\reply -> reply { replySC = Nothing })
+>     popFromStack' replyPtr scPtr prevReplyOpt
+>     when (prevReplyOpt /= Nothing) $ do
+>         prevPtr <- return $ fromJust prevReplyOpt
+>         assert (prevPtr /= replyPtr) "the reply stack must be distinct"
+>         updateReply prevPtr (\reply -> reply { replySC = Just scPtr })
 
 > replyRemove :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyRemove replyPtr tcbPtr = do
@@ -109,47 +136,22 @@ This module specifies the behavior of reply objects.
 >     assert (isReply state) "replyRemove: thread state must be BlockedOnReply"
 >     assert (replyObject state == Just replyPtr) "replyRemove: thread state must have replyPtr as its reply"
 
->     nextReplyPtrOpt <- return $ replyNext reply
->     prevReplyPtrOpt <- return $ replyPrev reply
->     if nextReplyPtrOpt /= Nothing && isHead nextReplyPtrOpt
->        then replyPop replyPtr tcbPtr
->        else do
->            when (nextReplyPtrOpt /= Nothing) $ do
->                nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
->                updateReply nextReplyPtr (\reply -> reply { replyPrev = Nothing })
-
->            when (prevReplyPtrOpt /= Nothing) $ do
->                prevReplyPtr <- return $ fromJust prevReplyPtrOpt
->                updateReply prevReplyPtr (\reply -> reply { replyNext = Nothing })
-
->            cleanReply replyPtr
->            replyUnlink replyPtr tcbPtr
+>     replySCOpt <- return $ replySC reply
+>     case replySCOpt of
+>         Nothing -> breakChainAt replyPtr
+>         Just scPtr -> do
+>             popFromStack replyPtr
+>             tcbScPtrOpt <- threadGet tcbSchedContext tcbPtr
+>             when (tcbScPtrOpt == Nothing) $ schedContextDonate scPtr tcbPtr
+>     replyUnlink replyPtr tcbPtr
 
 > replyRemoveTCB :: PPtr TCB -> Kernel ()
 > replyRemoveTCB tptr = do
 >     stateAssert valid_objs'_asrt "`valid_objs'`"
 >     state <- getThreadState tptr
 >     assert (isReply state) "replyRemoveTCB: thread state must be BlockedOnReply"
-
 >     rptr <- maybeToMonad $ replyObject state
->     reply <- getReply rptr
->     nextReplyPtrOpt <- return $ replyNext reply
->     prevReplyPtrOpt <- return $ replyPrev reply
-
->     when (nextReplyPtrOpt /= Nothing) $ do
->        if isHead nextReplyPtrOpt
->            then do
->               scPtr <- return $ theHeadScPtr nextReplyPtrOpt
->               updateSchedContext scPtr (\sc -> sc { scReply = Nothing })
->            else do
->               nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
->               updateReply nextReplyPtr (\reply -> reply { replyPrev = Nothing })
-
->     when (prevReplyPtrOpt /= Nothing) $ do
->         prevReplyPtr <- return $ fromJust prevReplyPtrOpt
->         updateReply prevReplyPtr (\reply -> reply { replyNext = Nothing })
-
->     cleanReply rptr
+>     breakChainAt rptr
 >     replyUnlink rptr tptr
 
 > replyUnlink :: PPtr Reply -> PPtr TCB -> Kernel ()
@@ -168,8 +170,3 @@ on the thread state of the replyTCB of the replyPtr
 
 > replyUnlink_assertion :: PPtr Reply -> ThreadState -> KernelState -> Bool
 > replyUnlink_assertion _ _ _ = True
-
-> cleanReply :: PPtr Reply -> Kernel ()
-> cleanReply replyPtr = do
->     updateReply replyPtr $ \reply -> reply { replyPrev = Nothing }
->     updateReply replyPtr $ \reply -> reply { replyNext = Nothing }

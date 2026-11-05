@@ -5512,30 +5512,28 @@ lemma (in CNodeInv_R) make_zombie_invs':
        | simp split del: if_split)+
   apply clarsimp
   apply (intro conjI[rotated])
-          apply (clarsimp simp: cte_wp_at_ctes_of)
-          apply (auto simp: untypedZeroRange_def gen_isCap_simps)[1]
-         apply (clarsimp simp: modify_map_def ran_def split del: if_split
-                        split: if_split_asm)
-          apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of gen_isCap_simps)
-         subgoal by auto
+        apply (clarsimp simp: cte_wp_at_ctes_of)
+        apply (auto simp: untypedZeroRange_def gen_isCap_simps)[1]
+       apply (clarsimp simp: modify_map_def ran_def split del: if_split
+                      split: if_split_asm)
+        apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of gen_isCap_simps)
+       subgoal by auto
 
-        apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
-                       dest!: ztc_phys capBits_capUntyped_capRange)
-        apply (frule(1) capBits_capUntyped_capRange, simp)
-        apply (clarsimp dest!: valid_global_refsD_with_objSize)
+      apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
+                     dest!: ztc_phys capBits_capUntyped_capRange)
+      apply (frule(1) capBits_capUntyped_capRange, simp)
+      apply (clarsimp dest!: valid_global_refsD_with_objSize)
 
-       apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
-                      dest!: ztc_phys capBits_capUntyped_capRange)
-       apply (frule(1) capBits_capUntyped_capRange, simp)
-       apply (clarsimp dest!: valid_global_refsD_with_objSize)
+     apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
+                    dest!: ztc_phys capBits_capUntyped_capRange)
+     apply (frule(1) capBits_capUntyped_capRange, simp)
+     apply (clarsimp dest!: valid_global_refsD_with_objSize)
 
-     subgoal by (auto elim: if_unsafe_then_capD' simp: gen_isCap_simps)
+    subgoal by (auto elim: if_unsafe_then_capD' simp: gen_isCap_simps)
 
-     apply (clarsimp simp: cte_wp_at_ctes_of)
-     apply (drule bspec[where x=sl], simp)
-     apply (clarsimp simp: gen_isCap_simps)
-
-   apply (simp only: fold_list_refs_of_replies')
+   apply (clarsimp simp: cte_wp_at_ctes_of)
+   apply (drule bspec[where x=sl], simp)
+   apply (clarsimp simp: gen_isCap_simps)
 
   apply (clarsimp simp: cte_wp_at_ctes_of disj_left_commute disj.commute
                  dest!: isCapDs)
@@ -6397,22 +6395,15 @@ lemma cteDelete_cte_wp_at_invs:
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-crunch schedContextMaybeUnbindNtfn, cleanReply
+crunch schedContextMaybeUnbindNtfn
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (simp: crunch_simps wp: crunch_wps getObject_inv)
-
-lemma replyPop_st_tcb_at':
-  assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
-  shows "replyPop a b \<lbrace>st_tcb_at' P t\<rbrace>"
-  unfolding replyPop_def
-  by (wpsimp wp: setThreadState_st_tcb_at'_test_unaffected replyUnlink_st_tcb_at'
-                 hoare_drop_imp hoare_vcg_if_lift2  )
 
 lemma replyRemove_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
   shows "replyRemove a b \<lbrace>st_tcb_at' P t\<rbrace>"
   unfolding replyRemove_def
-  by (wpsimp wp: setThreadState_st_tcb_at'_test_unaffected replyPop_st_tcb_at'
+  by (wpsimp wp: setThreadState_st_tcb_at'_test_unaffected
                  hoare_drop_imps hoare_vcg_if_lift2 replyUnlink_st_tcb_at')
 
 lemma replyClear_st_tcb_at':
