@@ -539,7 +539,7 @@ lemma copyreg_invs'':
   "invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch) \<lbrace>invs'\<rbrace>"
   supply if_split [split del] if_weak_cong[cong]
   unfolding invokeTCB_def performTransfer_def
-  by (wpsimp wp: mapM_x_wp' restart_invs' hoare_vcg_if_lift2 hoare_drop_imp)
+  by (wpsimp wp: mapM_x_wp' restart_invs' hoare_vcg_if_lift2 hoare_drop_imp simp: if_apply_def2)
 
 lemma isRunnable_corres':
   "t = t' \<Longrightarrow>

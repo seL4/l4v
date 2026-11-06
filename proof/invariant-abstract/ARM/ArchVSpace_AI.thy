@@ -1649,8 +1649,9 @@ crunch find_free_hw_asid, store_hw_asid
   and valid_idle[wp]: valid_idle
   and only_idle[wp]: only_idle
   and if_unsafe[wp]: if_unsafe_then_cap
-  and valid_reply_caps[wp]: valid_reply_caps
-  and valid_reply_masters[wp]: valid_reply_masters
+  and valid_replies[wp]: valid_replies
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
+  and cur_sc_tcb[wp]: cur_sc_tcb
   and valid_global_refs[wp]: valid_global_refs
   and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"

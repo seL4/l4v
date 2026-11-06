@@ -46,6 +46,13 @@ lemma init_arch_objects_valid_sched_pred[wp, Arch_assms]:
   supply if_split[split del]
   by (wpsimp simp: init_arch_objects_def wp: dmo_valid_sched_pred mapM_x_wp_inv)
 
+crunch dsb, isb, invalidate_I_PoU
+  for machine_times[wp]: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
+
+lemma arch_post_reset_untyped_valid_sched_pred[wp, Arch_assms]:
+  "arch_post_reset_untyped dev sz \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  by (wpsimp simp: arch_post_reset_untyped_def wp: dmo_valid_sched_pred)
+
 crunch init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"

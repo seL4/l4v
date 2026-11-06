@@ -1644,7 +1644,8 @@ lemma invokeTCB_CopyRegisters_ccorres:
                     | wp mapM_x_wp_inv hoare_drop_imp)+
        apply vcg
       apply clarsimp
-      apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' destn and tcb_at' source"
+      apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s
+                                \<and> tcb_at' destn s \<and> tcb_at' source s"
                    in hoare_strengthen_post[rotated])
        apply fastforce
       apply (wpsimp wp: hoare_drop_imp restart_invs')+

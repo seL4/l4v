@@ -2631,7 +2631,7 @@ lemma installThreadBuffer_ksCurThread[wp]:
 
 crunch resetUntypedCap
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  (simp: crunch_simps wp: mapME_x_inv_wp preemptionPoint_inv crunch_wps)
+  (simp: crunch_simps wp: mapME_x_inv_wp preemptionPoint_inv postResetUntyped_inv crunch_wps)
 
 crunch updateTimeStamp
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"

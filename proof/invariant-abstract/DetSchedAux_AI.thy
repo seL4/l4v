@@ -119,6 +119,8 @@ locale DetSchedAux_AI =
     "\<And>t d p n s r P. init_arch_objects t d p n s r \<lbrace>valid_sched_pred_strong P::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes init_arch_object_valid_machine_time[wp]:
     "\<And>t d p n s r. init_arch_objects t d p n s r \<lbrace>valid_machine_time ::'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_reset_untyped_valid_machine_time[wp]:
+    "\<And>dev sz. arch_post_reset_untyped dev sz \<lbrace>valid_machine_time :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes update_time_stamp_valid_machine_time[wp]:
     "update_time_stamp \<lbrace>valid_machine_time::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes dmo_getCurrentTime_vmt_sp:
@@ -371,7 +373,7 @@ lemma reset_untyped_cap_pred_map_sc_refill_cfgs_of:
   "reset_untyped_cap slot
    \<lbrace>\<lambda>s. pred_map Q (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding reset_untyped_cap_def
-  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv
+  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv arch_post_reset_untyped_inv
                  delete_objects_pred_map_sc_refill_cfgs_of
                  comb: hoare_drop_imp hoare_drop_imp[THEN hoare_vcg_conj_lift])
 
@@ -586,7 +588,7 @@ crunch retype_region, delete_objects
 lemma reset_untyped_cap_cur_sc[wp]:
   "reset_untyped_cap slot \<lbrace>(\<lambda>s. P (cur_sc s))\<rbrace>"
   unfolding reset_untyped_cap_def
-  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv get_cap_wp)
+  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv arch_post_reset_untyped_inv get_cap_wp)
 
 lemma delete_objects_not_bound_sc_tcb_at[wp]:
   "delete_objects d f \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"
@@ -596,7 +598,7 @@ lemma delete_objects_not_bound_sc_tcb_at[wp]:
 lemma reset_untyped_not_bound_sc_tcb_at[wp]:
   "reset_untyped_cap slot \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"
   unfolding reset_untyped_cap_def
-  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv hoare_drop_imp)
+  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv arch_post_reset_untyped_inv hoare_drop_imp)
 
 lemma cur_sc_chargeable_invoke_untypedE_R:
   "\<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>
@@ -1144,6 +1146,7 @@ lemma reset_untyped_cap_obj_at_live:
          \<lbrace>\<lambda>rv s. N (obj_at P p s)\<rbrace>"
   apply (wpsimp wp: set_cap.cspace_agnostic_obj_at[OF csp]
                     mapME_x_wp' get_cap_wp hoare_drop_imp preemption_point_obj_at
+                    arch_post_reset_untyped_inv
               simp: reset_untyped_cap_def delete_objects_def)
   apply (erule rsubst[of N]; rule iffI; clarsimp simp: cte_wp_at_caps_of_state)
   apply (case_tac cap
@@ -1345,6 +1348,7 @@ lemma reset_untyped_cap_cur_time_monotonic:
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule bindE_wp_fwd_skip, wpsimp)
+  apply (rule bindE_wp, wpsimp wp: arch_post_reset_untyped_inv)
   apply (rule valid_validE)
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule hoare_weaken_pre)

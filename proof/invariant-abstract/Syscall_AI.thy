@@ -1444,7 +1444,8 @@ lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
 
 crunch retype_region, create_cap, reset_untyped_cap
   for cur_thread[wp]: "\<lambda>s :: 'state_ext state. P (cur_thread s)"
-  (simp: crunch_simps wp: mapME_x_inv_wp preemption_point_inv crunch_wps)
+  (simp: crunch_simps
+   wp: mapME_x_inv_wp preemption_point_inv crunch_wps arch_post_reset_untyped_inv)
 
 crunch create_cap, set_cap
   for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
@@ -1457,6 +1458,7 @@ lemma reset_untyped_cap_ct_in_state[wp]:
    \<lbrace>\<lambda>_. ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   by (wpsimp wp: mapME_x_inv_wp preemption_point_inv hoare_drop_imps get_cap_wp
+                 arch_post_reset_untyped_inv
          | fastforce simp: ct_in_state_def cte_wp_at_caps_of_state bits_of_def is_cap_simps)+
 
 lemma retype_region_ct_in_state:
