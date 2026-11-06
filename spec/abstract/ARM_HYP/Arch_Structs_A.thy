@@ -150,7 +150,7 @@ definition
   default_gic_vcpu_interface :: gic_vcpu_interface
 where
   "default_gic_vcpu_interface \<equiv> \<lparr>
-      vgic_hcr  = vgicHCREN,
+      vgic_hcr  = vgicHCREN || vgicHCRTALL0,
       vgic_vmcr = 0,
       vgic_apr  = 0,
       vgic_lr   = \<lambda>_. 0 \<rparr>"
@@ -161,7 +161,7 @@ definition
       vcpu_tcb    = None,
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault
-                             , VCPURegACTLR := actlrDefault),
+                             , VCPURegCPACR := cpacrDefault),
       vcpu_vppi_masked = (\<lambda>_. False)
       \<rparr>"
 
@@ -299,7 +299,7 @@ definition
   | VCPUObj \<Rightarrow> VCPU default_vcpu
   | ASIDPoolObj \<Rightarrow> ASIDPool (\<lambda>_. None)"
 
-type_synonym hw_asid = word8
+type_synonym hw_asid = "hw_asid_len word"
 
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"
 

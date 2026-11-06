@@ -77,11 +77,6 @@ definition
   set_pd :: "obj_ref \<Rightarrow> (11 word \<Rightarrow> pde) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pd ptr pd \<equiv> set_object ptr (ArchObj (PageDirectory pd))"
 
-definition
-  set_current_pd :: "paddr \<Rightarrow> unit machine_monad"
-where
-  "set_current_pd pd \<equiv> setCurrentPDPL2 pd"
-
 text \<open>The following function takes a pointer to a PDE in kernel memory
   and returns the actual PDE.\<close>
 definition

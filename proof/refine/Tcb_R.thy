@@ -441,28 +441,28 @@ lemma invokeTCB_CopyRegisters_corres:
         (invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch))
         (invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch'))"
 proof -
-  have Q: "\<And>src src' des des' r r'. \<lbrakk> src = src'; des = des' \<rbrakk> \<Longrightarrow>
+  have Q: "\<And>src src' des des' r r' i. \<lbrakk> src = src'; des = des' \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
                      (tcb_at' src' and tcb_at' des' and invs')
            (do v \<leftarrow> as_user src (getRegister r);
-               as_user des (setRegister r' v)
+               as_user des (setRegister r' (sanitise_register i r' v))
             od)
            (do v \<leftarrow> asUser src' (getRegister r);
-               asUser des' (setRegister r' v)
+               asUser des' (setRegister r' (sanitiseRegister i r' v))
             od)"
     apply clarsimp
     apply (corres corres: asUser_getRegister_corres asUser_corres)
-          apply (rule corres_Id; simp)
+          apply (rule corres_Id; simp add: sanitiseRegister_sanitise_register)
           apply (wpsimp simp: invs_distinct)+
     done
-  have R: "\<And>src src' des des' xs ys. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>
+  have R: "\<And>src src' des des' xs ys i. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
                      (tcb_at' src' and tcb_at' des' and invs')
            (mapM_x (\<lambda>r. do v \<leftarrow> as_user src (getRegister r);
-               as_user des (setRegister r v)
+               as_user des (setRegister r (sanitise_register i r v))
             od) xs)
            (mapM_x (\<lambda>r'. do v \<leftarrow> asUser src' (getRegister r');
-               asUser des' (setRegister r' v)
+               asUser des' (setRegister r' (sanitiseRegister i r' v))
             od) ys)"
     apply (rule corres_mapM_x [where S=Id])
         apply simp
@@ -476,31 +476,33 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF corres_when [OF refl suspend_corres]], simp)
         apply (rule corres_split[OF corres_when [OF refl restart_corres]], simp)
-          apply (rule corres_split_nor)
-             apply (rule corres_when[OF refl])
-             apply (rule corres_split_nor)
-                apply (rule R[OF refl refl])
-                apply (simp add: frame_registers_def frameRegisters_def')
-               apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
-                 apply (rule asUser_setNextPC_corres)
-                apply (wp mapM_x_wp' | simp)+
+          apply (rule corres_split_eqr[OF arch_getSanitiseRegisterInfo_corres])
             apply (rule corres_split_nor)
                apply (rule corres_when[OF refl])
-               apply (rule R[OF refl refl])
-               apply (simp add: gpRegisters_def')
-              apply (rule corres_split_eqr[OF getCurThread_corres])
-                apply (rule corres_split_nor[OF asUser_postModifyRegisters_corres[simplified]])
-                  apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
-                    apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-                    apply simp
-                   apply (solves \<open>wp hoare_weak_lift_imp\<close>)+
-                 apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest" in hoare_post_imp)
-                  apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
-                                         valid_pspace_def)
-                 prefer 2
-                 apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' dest" in hoare_strengthen_post[rotated])
-                  apply (clarsimp simp: invs'_def valid_pspace'_def)
-                 apply ((wp mapM_x_wp' hoare_weak_lift_imp | simp)+)[8]
+               apply (rule corres_split_nor)
+                  apply (rule R[OF refl refl])
+                  apply (simp add: frame_registers_def frameRegisters_def')
+                 apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
+                   apply (rule asUser_setNextPC_corres)
+                  apply (wp mapM_x_wp' | simp)+
+              apply (rule corres_split_nor)
+                 apply (rule corres_when[OF refl])
+                 apply (rule R[OF refl refl])
+                 apply (simp add: gpRegisters_def')
+                apply (rule corres_split_eqr[OF getCurThread_corres])
+                  apply (rule corres_split_nor[OF asUser_postModifyRegisters_corres[simplified]])
+                    apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
+                      apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+                      apply simp
+                     apply (solves \<open>wp hoare_weak_lift_imp\<close>)+
+                   apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest" in hoare_post_imp)
+                    apply (fastforce simp: invs_def valid_state_def valid_pspace_def
+                                           valid_sched_weak_strg valid_sched_def)
+                   prefer 2
+                   apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' dest"
+                                in hoare_strengthen_post[rotated])
+                    apply (clarsimp simp: invs'_def valid_pspace'_def)
+                   apply ((wp mapM_x_wp' hoare_weak_lift_imp | simp)+)[10]
          apply ((wp hoare_weak_lift_imp restart_invs' restart_valid_sched | wpc
                  | clarsimp simp: if_apply_def2)+)[2]
        apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest and tcb_at src and ex_nonz_cap_to dest
@@ -537,7 +539,7 @@ lemma copyreg_invs'':
   "invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch) \<lbrace>invs'\<rbrace>"
   supply if_split [split del] if_weak_cong[cong]
   unfolding invokeTCB_def performTransfer_def
-  by (wpsimp wp: mapM_x_wp' restart_invs' hoare_vcg_if_lift2 hoare_drop_imp)
+  by (wpsimp wp: mapM_x_wp' restart_invs' hoare_vcg_if_lift2 hoare_drop_imp simp: if_apply_def2)
 
 lemma isRunnable_corres':
   "t = t' \<Longrightarrow>
@@ -1696,7 +1698,7 @@ definition valid_tcb_invocation :: "tcbinvocation \<Rightarrow> bool" where
 
 lemma getThreadBufferSlot_dom_tcb_cte_cases:
   "\<lbrace>\<top>\<rbrace> getThreadBufferSlot a \<lbrace>\<lambda>rv s. rv \<in> (+) a ` dom tcb_cte_cases\<rbrace>"
-  unfolding tcbIPCBufferSlot_def getThreadBufferSlot_def locateSlot_conv
+  unfolding getThreadBufferSlot_def locateSlot_conv
   by (wpsimp simp: cteSizeBits_cte_level_bits[symmetric] shiftl_t2n[symmetric])
 
 lemma cteDelete_it [wp]:
@@ -2859,15 +2861,17 @@ lemma invokeTCB_corres:
      apply (rule corres_guard_imp[OF unbindNotification_corres]; clarsimp)
     apply (rule corres_guard_imp[OF bindNotification_corres];
            clarsimp simp: obj_at'_def obj_at_def is_ntfn_def)
-   apply (clarsimp simp: invokeTCB_def tlsBaseRegister_def')
+   apply (clarsimp simp: invokeTCB_def tlsBaseRegister_def' sanitiseRegister_sanitise_register)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF asUser_setRegister_corres])
-       apply (rule corres_split[OF Bits_R.getCurThread_corres])
-         apply (rule corres_split[OF Corres_UL.corres_when])
-             apply simp
-            apply (rule rescheduleRequired_corres)
-           apply (rule corres_trivial, simp)
-          apply (solves \<open>wpsimp wp: hoare_drop_imp RISCV64.as_user_valid_tcbs\<close>)+ (* FIXME: rt arch-split *)
+     apply (rule corres_split_eqr[OF arch_getSanitiseRegisterInfo_corres])
+       apply (rule corres_split[OF asUser_setRegister_corres])
+         apply (rule corres_split[OF Bits_R.getCurThread_corres])
+           apply (rule corres_split[OF Corres_UL.corres_when])
+               apply simp
+              apply (rule rescheduleRequired_corres)
+             apply (rule corres_trivial, simp)
+            apply (solves \<open>wpsimp wp: hoare_drop_imp arch_get_sanitise_register_info_inv
+                                      RISCV64.as_user_valid_tcbs\<close>)+ (* FIXME: rt arch-split *)
     apply clarsimp
     apply (frule invs_sym_refs)
     apply (fastforce dest: valid_sched_valid_ready_qs)

@@ -19,11 +19,6 @@ instance virq_C :: array_inner_packed
   apply intro_classes
   by (simp add: size_of_def)
 
-definition (* FIXME ARMHYP REMOVE, missing machine (stub) *)
-  setCurrentPDPL2 :: "machine_word \<Rightarrow> unit machine_monad"
-where
-  "setCurrentPDPL2 = undefined"
-
 locale kernel_m = kernel +
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
@@ -55,11 +50,6 @@ assumes dmb_ccorres:
            (doMachineOp dmb)
            (Call dmb_'proc)"
 
-assumes setCurrentPDPL2_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = addr \<rbrace>) []
-           (doMachineOp (setCurrentPDPL2 addr))
-           (Call setCurrentPDPL2_'proc)"
-
 assumes writeContextIDAndPD_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>id = ucast asid\<rbrace> \<union> \<lbrace> \<acute>pd_val = pd_val \<rbrace>) []
            (doMachineOp (writeContextIDAndPD asid pd_val))
@@ -86,19 +76,24 @@ assumes getSCTLR_ccorres:
            (Call getSCTLR_'proc)"
 
 assumes setSCTLR_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
-           (doMachineOp (setSCTLR scltr))
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>sctlr = sctlr\<rbrace> []
+           (doMachineOp (setSCTLR sctlr))
            (Call setSCTLR_'proc)"
 
-assumes readTPIDRURO_ccorres:
-  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp getTPIDRURO)
-           (Call readTPIDRURO_'proc)"
+assumes setCPACR_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>cpacr = cpacr\<rbrace> []
+           (doMachineOp (setCPACR cpacr))
+           (Call setCPACR_'proc)"
 
-assumes writeTPIDRURO_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>reg = reg \<rbrace>) []
-           (doMachineOp (setTPIDRURO reg))
-           (Call writeTPIDRURO_'proc)"
+assumes getHDCR_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getHDCR)
+           (Call getHDCR_'proc)"
+
+assumes setHDCR_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>hdcr = hdcr\<rbrace> []
+           (doMachineOp (setHDCR hdcr))
+           (Call setHDCR_'proc)"
 
 assumes addressTranslateS1_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
@@ -819,33 +814,20 @@ lemma cleanCaches_PoU_ccorres:
            (Call cleanCaches_PoU_'proc)"
   apply cinit'
    apply (simp add: cleanCaches_PoU_def doMachineOp_bind empty_fail_cond
-                   empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+                   empty_fail_dsb empty_fail_isb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (ctac (no_vcg) add: clean_D_PoU_ccorres)
      apply (ctac (no_vcg) add: dsb_ccorres)
       apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
        apply (ctac (no_vcg) add: dsb_ccorres)
-      apply wp+
+        apply (ctac (no_vcg) add: isb_ccorres)
+       apply wp+
   apply clarsimp
   done
 
 lemma wrap_config_set_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
   by (rule allI, rule conseqPre, vcg) clarsimp
-
-lemma setCurrentPD_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
-           (doMachineOp (setCurrentPD pd))
-           (Call setCurrentPD_'proc)"
-  apply cinit'
-   apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
-                         setCurrentPDPL2_empty_fail empty_fail_cond
-                  intro!: ccorres_cond_empty)
-   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
-   apply ccorres_rewrite
-   apply (ctac (no_vcg) add: setCurrentPDPL2_ccorres)
-  apply wpsimp
-  done
 
 end
 

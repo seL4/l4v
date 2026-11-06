@@ -16,9 +16,10 @@ context Arch begin arch_global_naming
 clear_named_theorems Arch_assms (* accumulate assumptions for Syscall_R locale *)
 
 lemma prepareSetDomain_corres[Arch_assms, corres]:
-  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and valid_arch_state and tcb_at tptr)
-             (pspace_aligned' and pspace_distinct' and no_0_obj')
-             (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
+  "corres dc
+     (pspace_aligned and pspace_distinct and valid_cur_fpu and valid_arch_state and tcb_at tptr)
+     (pspace_aligned' and pspace_distinct' and no_0_obj')
+     (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
   unfolding prepareSetDomain_def arch_prepare_set_domain_def curDomain_def
   by corres
 

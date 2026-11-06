@@ -21,17 +21,11 @@ This module contains the architecture-specific kernel global data for the X86-64
 
 \end{impdetails}
 
-%FIXME x64: potential C bug: the gdt entry structure in C only has 32 bits for addresses
-
 > data X64VSpaceRegionUse
 >  = X64VSpaceUserRegion
 >  | X64VSpaceInvalidRegion
 >  | X64VSpaceKernelWindow
 >  | X64VSpaceDeviceWindow
-
-
-> gdteBits :: Int
-> gdteBits = 3
 
 > data KernelState = X64KernelState {
 >     x64KSASIDTable        :: Array ASID (Maybe (PPtr ASIDPool)),

@@ -90,16 +90,17 @@ lemma integrity_arm_next_asid[iff]:
 crunch arm_context_switch
   for respects[wp]: "integrity X aag st"
   (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateLocalTLB_ASID_def
-         setHardwareASID_def set_current_pd_def ignore: do_machine_op)
+         setHardwareASID_def write_ttbr0_ptr_def ignore: do_machine_op)
 
 crunch set_vm_root
   for respects[wp]: "integrity X aag st"
-  (simp: set_current_pd_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
+  (simp: write_ttbr0_ptr_def isb_def dsb_def writeTTBR0_def setHardwareASID_def dmo_bind_valid
+         crunch_simps
      wp: crunch_wps ignore: do_machine_op)
 
 crunch set_vm_root_for_flush
   for respects[wp]: "integrity X aag st"
-  (wp: crunch_wps simp: set_current_pd_def crunch_simps ignore: do_machine_op)
+  (wp: crunch_wps simp: write_ttbr0_ptr_def crunch_simps ignore: do_machine_op)
 
 crunch flush_table
   for respects[wp]: "integrity X aag st"
@@ -801,7 +802,7 @@ lemma create_mapping_entries_authorised_slots [wp]:
   "\<lbrace>\<exists>\<rhd> pd and invs and pas_refined aag and
     K (is_subject aag pd \<and> is_aligned pd pd_bits \<and>
        vmsz_aligned vptr vmpage_size \<and> vptr < kernel_base \<and>
-       (\<forall>a\<in>vspace_cap_rights_to_auth rights.
+       (\<forall>a\<in>vspace_cap_rights_to_auth rights False.
           \<forall>p\<in>ptr_range (ptrFromPAddr base) (pageBitsForSize vmpage_size). aag_has_auth_to aag a p))\<rbrace>
    create_mapping_entries base vptr vmpage_size rights attrib pd
    \<lbrace>\<lambda>rv _. authorised_slots aag rv\<rbrace>, -"
@@ -968,8 +969,8 @@ crunch invalidate_asid_entry
 crunch flush_space
   for respects[wp]: "integrity aag X st"
   (ignore: do_machine_op
-   simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def
-         do_machine_op_bind empty_fail_cond)
+   simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def isb_def clean_D_PoU_def
+         invalidate_I_PoU_def do_machine_op_bind empty_fail_cond)
 
 lemma delete_asid_pool_respects[wp]:
   "\<lbrace>integrity aag X st and

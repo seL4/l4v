@@ -18,13 +18,6 @@ This module makes use of the GHC extension allowing data types with no construct
 
 \subsection{x86-64-Specific Invocation Labels}
 
-%FIXME still in flux, some invcations may be 32-bit only (to be removed).
-
-%FIXME the XML says PML4s can be invoked; they can't.
-%Note: there is no unmap for IO pages.
-
-%FIXME: other things that don't exist: IOSpaceRemovePassthrough, IOSpaceUnmap
-
 > data ArchInvocationLabel
 >         = X64PDPTMap
 >         | X64PDPTUnmap

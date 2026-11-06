@@ -62,6 +62,10 @@ lemma in_fail:
   "r \<in> fst (fail s) = False"
   by (simp add: fail_def)
 
+lemma in_chaos:
+  "r \<in> fst (chaos s) = True"
+  by (simp add: chaos_def)
+
 lemma in_assert:
   "(r, s') \<in> fst (assert P s) = (P \<and> s' = s)"
   by (simp add: assert_def return_def fail_def)
@@ -125,7 +129,7 @@ lemma in_bindE:
   by (force simp: bindE_def bind_def lift_def throwError_def return_def  split: sum.splits)
 
 lemmas in_monad = inl_whenE in_whenE in_liftE in_bind in_bindE_L
-                  in_bindE_R in_returnOk in_throwError in_fail
+                  in_bindE_R in_returnOk in_throwError in_fail in_chaos
                   in_assertE in_assert in_return in_assert_opt
                   in_get in_gets in_put in_when inl_unlessE in_unlessE
                   in_unless in_modify gets_the_in_monad

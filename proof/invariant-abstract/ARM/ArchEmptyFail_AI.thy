@@ -131,7 +131,7 @@ lemma preemption_point_empty_fail[wp, Arch_assms]:
   done
 
 crunch maskInterrupt, empty_slot,
-    setHardwareASID, set_current_pd, finalise_cap, preemption_point, reset_work_units,
+    setHardwareASID, write_ttbr0_ptr, finalise_cap, preemption_point, reset_work_units,
     update_work_units, cap_swap_for_delete, decode_invocation
   for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def andM_def ifM_def

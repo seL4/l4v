@@ -118,6 +118,11 @@ lemma exs_valid_fail[wp]:
   unfolding fail_def exs_valid_def
   by simp
 
+lemma exs_valid_chaos[wp]:
+  "\<lbrace>\<lambda>_. \<exists>rv s. Q rv s\<rbrace> chaos \<exists>\<lbrace>Q\<rbrace>"
+  unfolding chaos_def exs_valid_def
+  by simp
+
 lemma exs_valid_assert[wp]:
   "\<lbrace>\<lambda>s. Q () s \<and> G\<rbrace> assert G \<exists>\<lbrace>Q\<rbrace>"
   unfolding assert_def

@@ -467,18 +467,25 @@ lemma vmrights_map_empty[simp]:
   "vmrights_map {} = VMKernelOnly"
   by (simp add: vmrights_map_def)
 
+lemma read_eq_vmrights_map_not_VMKernelOnly:
+  "(AllowRead \<in> R) = (vmrights_map R \<noteq> VMKernelOnly)"
+  by (simp add: vmrights_map_def split: if_splits)
+
 lemma pte_relation_make_user[simp]:
   "pte_relation'
      (make_user_pte (addrFromPPtr p)
                     (attribs_from_word a)
                     (mask_vm_rights R (data_to_rights r))
+                    R
                     sz)
      (makeUserPTE (addrFromPPtr p)
                   (maskVMRights (vmrights_map R) (rightsFromWord r))
+                  (vmrights_map R)
                   (attribsFromWord a)
                   sz)"
   by (auto simp: make_user_pte_def makeUserPTE_def attribs_from_word_def
-                 attribsFromWord_def mask_vmrights_corres)
+                 attribsFromWord_def mask_vmrights_corres
+                 read_eq_vmrights_map_not_VMKernelOnly)
 
 lemma below_user_vtop_in_user_region:
   "p \<le> user_vtop \<Longrightarrow> p \<in> user_region"
@@ -737,20 +744,6 @@ lemma list_all2_Cons: "list_all2 f (x#xs) b \<Longrightarrow> \<exists>y ys. b =
 
 declare corres_gets_gicvcpu_numlistregs[corres]
 
-lemma get_vcpu_LR_corres[corres]:
-  "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
-             (liftE (get_vcpu v)) (liftE (liftM (vgicLR \<circ> vcpuVGIC) (getObject v)))"
-  apply simp
-  apply (rule corres_rel_imp, rule getObject_vcpu_corres)
-  apply (rename_tac vcpu', case_tac vcpu')
-  apply (clarsimp simp: vcpu_relation_def vgic_map_def)
-  done
-
-lemma isVIRQActive_eq[simp]:
-  "isVIRQActive = is_virq_active"
-  unfolding isVIRQActive_def is_virq_active_def
-  by simp
-
 lemma makeVIRQ_eq[simp]:
   "makeVIRQ = make_virq"
   unfolding make_virq_def makeVIRQ_def
@@ -783,7 +776,7 @@ lemma decodeARMVCPUInvocation_corres:
      apply (cases args; clarsimp)
      apply (clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
      apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
-     apply (corresKsimp wp: get_vcpu_wp)
+     apply corresKsimp
      apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def
                            valid_cap'_def valid_cap_def)
     (* read register *)
@@ -937,7 +930,9 @@ lemma decodeARMVSpaceInvocation_corres[corres]:
           apply (corres corres: corres_returnOkTT
                         term_simp: archinv_relation_def vspace_invocation_map_def
                                    labelToFlushType_corres page_base_def pageBase_def
-                                   pageBitsForSize_pt_bits_left)
+                                   pageBitsForSize_pt_bits_left
+                                   AARCH64_H.fromPAddr_def AARCH64.paddrTop_def
+                                   AARCH64_H.paddrTop_def AARCH64.pptrTop_def AARCH64_H.pptrTop_def)
          apply wpsimp
         apply (wpsimp wp: hoare_drop_imp)
        apply wpsimp
@@ -1334,10 +1329,11 @@ lemma arch_performInvocation_corres[Arch_assms]:
          \<comment> \<open>InvokeVSpace\<close>
          apply (clarsimp simp: performARMMMUInvocation_def perform_vspace_invocation_def
                                performVSpaceInvocation_def)
-         apply ((corres simp: perform_flush_def do_flush_def doFlush_def
-                        corres: corres_machine_op_Id_dc
-                        term_simp: vspace_invocation_map_def
-                 | corres_cases_both simp: vspace_invocation_map_def)+)[1]
+         apply (rename_tac vsi vsi')
+         apply (case_tac vsi; clarsimp simp: vspace_invocation_map_def perform_flush_def)
+         apply (corres corres: dmo_doFlush_corres)
+          apply (clarsimp simp: valid_arch_inv_def valid_vsi_def)
+         apply (simp add: pred_conj_def)
 
         \<comment> \<open>InvokePageTable\<close>
         apply (clarsimp simp: performARMMMUInvocation_def)

@@ -1487,17 +1487,4 @@ lemma object_default_state_frame [simp]:
                 split: cdl_object.splits
                 dest: well_formed_frame_extra_data)
 
-lemma sep_map_set_conj_set_append: (* FIXME: move to SepAlgebra *)
-  "distinct (xs@ys) \<Longrightarrow>
-   sep_map_set_conj P (set (xs @ ys)) = (sep_map_set_conj P (set xs) \<and>* sep_map_set_conj P (set ys))"
-  apply (induct xs; clarsimp)
-  apply (case_tac ys; clarsimp)
-  apply (rule ext; rule iffI; sep_solve)
-  done
-
-lemma sep_map_set_conj_set_take_drop: (* FIXME: move to SepAlgebra *)
-  "\<lbrakk> sep_map_set_conj P (set xs) s; distinct xs \<rbrakk> \<Longrightarrow>
-   (sep_map_set_conj P (set (take n xs)) \<and>*  sep_map_set_conj P (set (drop n xs))) s"
-  by (clarsimp simp flip: sep_map_set_conj_set_append append_take_drop_id[where n=n])
-
 end

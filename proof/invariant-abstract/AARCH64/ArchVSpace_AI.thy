@@ -58,7 +58,7 @@ sublocale
   by (wpsimp wp: set_vcpu.vsobj_at get_vcpu.vsobj_at mapM_wp mapM_x_wp
              simp: vcpu_update_def vgic_update_def vcpu_save_reg_def vcpu_restore_reg_def
                    vcpu_restore_reg_range_def vcpu_save_reg_range_def vgic_update_lr_def
-                   save_virt_timer_def vcpu_write_reg_def restore_virt_timer_def
+                   disable_virt_timer_def vcpu_write_reg_def restore_virt_timer_def
                    vcpu_read_reg_def is_irq_active_def get_irq_state_def
          | assumption)+
 
@@ -251,7 +251,7 @@ lemma valid_vcpu_typ_at:
   by (wpsimp simp: valid_vcpu_def split: option.splits)
 
 crunch vgic_update_lr, vcpu_write_reg, vcpu_save_reg, vcpu_disable, vcpu_restore,
-          save_virt_timer, restore_virt_timer, vcpu_save, vcpu_switch, vcpu_save_reg_range
+       disable_virt_timer, restore_virt_timer, vcpu_save, vcpu_switch, vcpu_save_reg_range
   for valid_objs[wp]: valid_objs
   (ignore: vcpu_update simp: vcpu_update_def valid_vcpu_def wp: crunch_wps)
 
@@ -336,7 +336,7 @@ crunch vcpu_save_reg, vcpu_write_reg
   (simp_del: fun_upd_apply simp: opt_map_upd_triv)
 
 crunch vcpu_save_reg_range, vgic_update_lr, vcpu_disable, vcpu_save, vcpu_restore,
-         save_virt_timer, restore_virt_timer
+       disable_virt_timer, restore_virt_timer
   for vcpu_hyp_live[wp]: "\<lambda>s. P (vcpu_hyp_live_of s)"
   (wp: vcpu_update_obj_at crunch_wps
    simp_del: fun_upd_apply
@@ -359,8 +359,7 @@ lemma set_vcpu_pts_of[wp]:
   by (wpsimp wp: get_object_wp)
      (fastforce simp: obind_def opt_map_def obj_at_def split: option.split elim!: rsubst[where P=P])
 
-crunch vgic_update, vcpu_restore_reg, save_virt_timer, vcpu_save_reg, save_virt_timer,
-         restore_virt_timer
+crunch vgic_update, vcpu_restore_reg, disable_virt_timer, vcpu_save_reg, restore_virt_timer
   for asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of s)"
   and pts_of[wp]: "\<lambda>s. P (pts_of s)"
   and arch_state[wp]: "\<lambda>s. P (arch_state s)"
@@ -453,7 +452,9 @@ definition
             cte_wp_at ((=) (ArchObjectCap acap)) cslot s \<and>
             valid_arch_cap acap s
   | PageGetAddr ptr \<Rightarrow> \<top>
-  | PageFlush _ _ _ _ _ _ \<Rightarrow> \<top>"
+  | PageFlush _ start end pstart _ _ \<Rightarrow>
+      \<comment> \<open>the flushed physical range is inside the kernel window\<close>
+      K (paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart)"
 
 definition
   "valid_pti pti \<equiv> case pti of
@@ -562,11 +563,12 @@ lemmas get_vmid_typ_ats[wp] = abs_typ_at_lifts [OF get_vmid_typ_at]
 lemmas invalidate_tlb_by_asid_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_tlb_by_asid_typ_at]
 lemmas invalidate_tlb_by_asid_va_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_tlb_by_asid_va_typ_at]
 
-lemma valid_arch_state_arm_next_vmid[simp]:
-  "valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
+lemma valid_arch_state_arm_next_vmid:
+  "\<lbrakk> valid_next_vmid s; next_vmid \<noteq> vmid_reserved \<rbrakk> \<Longrightarrow>
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
    valid_arch_state s"
   unfolding valid_arch_state_def
-  by (fastforce simp: valid_global_arch_objs_def vmid_inv_def)
+  by (fastforce simp: valid_global_arch_objs_def vmid_inv_def valid_next_vmid_def)
 
 lemma update_asid_pool_entry_vspace_objs_of:
   "\<lbrace>\<lambda>s. \<forall>pool_ptr ap entry. pool_for_asid asid s = Some pool_ptr \<longrightarrow>
@@ -680,7 +682,13 @@ lemma find_free_vmid_vmid_inv[wp]:
   apply wpsimp
   apply (frule is_inv_inj)
   apply (drule findNoneD)
-  apply (drule_tac x="arm_next_vmid (arch_state s)" in bspec, simp add: minBound_word)
+  apply (drule_tac x="arm_next_vmid (arch_state s)" in bspec)
+   apply (simp add: vmid_min_def upto_enum_def maxBound_word unat_minus_one_word image_iff)
+   apply (rule conjI; clarsimp)
+    apply (rule_tac x="unat (arm_next_vmid (arch_state s))" in bexI; clarsimp)
+    apply (rule unat_lt2p[where 'a=vmid_len, simplified])
+   apply (clarsimp simp: not_le take_map image_iff)
+   apply (rule_tac x=0 in bexI; clarsimp simp: unat_eq_0)
   apply (fastforce simp: is_inv_def ran_upd[folded fun_upd_apply] dom_upd
                          fun_upd_apply
                    split: if_split_asm
@@ -707,7 +715,26 @@ crunch find_free_vmid
   and valid_cur_fpu[wp]: valid_cur_fpu
   and valid_numlistregs[wp]: valid_numlistregs
 
-lemma find_free_vmid_valid_arch [wp]:
+crunch invalidate_asid, update_asid_map, invalidate_vmid_entry
+  for valid_next_vmid[wp]: valid_next_vmid
+
+lemma find_free_vmid_valid_next_vmid[wp]:
+  "find_free_vmid \<lbrace>valid_next_vmid\<rbrace>"
+  unfolding find_free_vmid_def
+  apply (wpsimp split_del: if_split)
+  apply (clarsimp simp: valid_next_vmid_def vmid_reserved_def vmid_min_def maxBound_word
+                        max_word_wrap)
+  done
+
+\<comment> \<open>Sanity check: @{const find_free_vmid} never returns the reserved VMID.
+    Not used in any proof, but a useful check on the definitions.\<close>
+lemma find_free_vmid_not_reserved:
+  "\<lbrace>valid_next_vmid\<rbrace> find_free_vmid \<lbrace>\<lambda>vmid _. vmid \<noteq> vmid_reserved\<rbrace>"
+  unfolding find_free_vmid_def valid_next_vmid_def
+  by wpsimp
+     (fastforce dest!: findSomeD in_set_butlastD simp: vmid_reserved_def vmid_min_def)
+
+lemma find_free_vmid_valid_arch[wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def by wpsimp
 
@@ -2629,6 +2656,7 @@ lemma dmo_isb_invs[wp]: "do_machine_op isb \<lbrace>invs\<rbrace>"
   and dmo_dsb_invs[wp]: "do_machine_op dsb \<lbrace>invs\<rbrace>"
   and dmo_setHCR_invs[wp]: "do_machine_op (setHCR w) \<lbrace>invs\<rbrace>"
   and dmo_setSCTLR_invs[wp]: "do_machine_op (setSCTLR x) \<lbrace>invs\<rbrace>"
+  and dmo_writeTCR_invs[wp]: "do_machine_op (writeTCR x) \<lbrace>invs\<rbrace>"
   and dmo_getSCTLR_invs[wp]: "do_machine_op getSCTLR \<lbrace>invs\<rbrace>"
   and dmo_get_gic_vcpu_ctrl_vmcr_invs[wp]: "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>invs\<rbrace>"
   and dmo_set_gic_vcpu_ctrl_vmcr_invs[wp]: "\<And>x. do_machine_op (set_gic_vcpu_ctrl_vmcr x) \<lbrace>invs\<rbrace>"
@@ -2640,6 +2668,7 @@ lemma dmo_isb_invs[wp]: "do_machine_op isb \<lbrace>invs\<rbrace>"
   and dmo_set_gic_vcpu_ctrl_hcr_invs[wp]: "\<And>x. do_machine_op (set_gic_vcpu_ctrl_hcr x) \<lbrace>invs\<rbrace>"
   and dmo_writeVCPUHardwareReg_invs[wp]: "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>invs\<rbrace>"
   and dmo_readVCPUHardwareReg_invs[wp]: "do_machine_op (readVCPUHardwareReg r) \<lbrace>invs\<rbrace>"
+  and dmo_check_export_arch_timer_invs[wp]: "do_machine_op check_export_arch_timer \<lbrace>invs\<rbrace>"
   by (all \<open>wp dmo_invs_lift\<close>)
 
 crunch set_vcpu
@@ -2958,9 +2987,9 @@ lemma vcpu_write_reg_invs[wp]:
   unfolding vcpu_write_reg_def
   by (wpsimp cong: vcpu_state.fold_congs) (* crunch can't do cong yet *)
 
-lemma save_virt_timer_invs[wp]:
-  "save_virt_timer vcpu_ptr \<lbrace>invs\<rbrace>"
-  unfolding save_virt_timer_def
+lemma disable_virt_timer_invs[wp]:
+  "disable_virt_timer vcpu_ptr_opt \<lbrace>invs\<rbrace>"
+  unfolding disable_virt_timer_def
   by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift' dmo_invs_lift)
 
 lemma cur_sc_tcb_machine_state_update[simp]:
@@ -3070,7 +3099,8 @@ lemma vcpu_write_reg_hyp_refs_of[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_write_reg_def by (wpsimp cong: vcpu_state.fold_congs)
 
-crunch save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save, vcpu_switch
+crunch disable_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save,
+       vcpu_switch
   for hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (ignore: vcpu_update wp: crunch_wps)
 
@@ -3085,9 +3115,9 @@ lemma vcpu_save_reg_hyp_live[wp]:
   unfolding vcpu_save_reg_def vcpu_update_def set_vcpu_def
   by (wpsimp wp: set_object_wp get_vcpu_wp hoare_vcg_imp_lift simp: obj_at_hyp_live_vcpu_regs)
 
-lemma save_virt_timer_hyp_live[wp]:
-  "save_virt_timer vcpu_ptr \<lbrace>obj_at hyp_live p\<rbrace>"
-  unfolding save_virt_timer_def by wp
+lemma disable_virt_timer_hyp_live[wp]:
+  "disable_virt_timer vcpu_ptr_opt \<lbrace>obj_at hyp_live p\<rbrace>"
+  unfolding disable_virt_timer_def by wpsimp
 
 lemma vcpu_write_reg_hyp_live[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>obj_at hyp_live p\<rbrace>"

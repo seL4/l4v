@@ -686,13 +686,14 @@ lemma cleanCaches_PoU_ccorres:
            (Call cleanCaches_PoU_'proc)"
   apply cinit'
    apply (simp add: cleanCaches_PoU_def doMachineOp_bind empty_fail_cond
-                   empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+                   empty_fail_dsb empty_fail_isb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (ctac (no_vcg) add: clean_D_PoU_ccorres)
      apply (ctac (no_vcg) add: dsb_ccorres)
       apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
        apply (ctac (no_vcg) add: dsb_ccorres)
-      apply wp+
+        apply (ctac (no_vcg) add: isb_ccorres)
+       apply wp+
   apply clarsimp
   done
 
@@ -708,24 +709,6 @@ lemma writeTTBR0Ptr_ccorres:
 lemma wrap_config_set_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
   by (rule allI, rule conseqPre, vcg) clarsimp
-
-lemma setCurrentPD_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
-           (doMachineOp (setCurrentPD pd))
-           (Call setCurrentPD_'proc)"
-  apply cinit'
-   apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
-                         writeTTBR0_empty_fail empty_fail_cond
-                   intro!: ccorres_cond_empty)
-   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
-   apply ccorres_rewrite
-   apply (rule ccorres_rhs_assoc)+
-   apply (ctac (no_vcg) add: dsb_ccorres)
-    apply (ctac (no_vcg) add: writeTTBR0Ptr_ccorres)
-     apply (ctac (no_vcg) add: isb_ccorres)
-    apply wp+
-  apply clarsimp
-  done
 
 end
 

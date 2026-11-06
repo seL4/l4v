@@ -392,6 +392,25 @@ lemma delete_objects_reads_respects_g:
   apply simp
   done
 
+lemma arch_post_reset_untyped_globals_equiv:
+  "arch_post_reset_untyped dev sz \<lbrace>globals_equiv st\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by (wpsimp wp: dmo_mol_globals_equiv simp: dmo_bind_valid ifence_def)
+
+lemma arch_post_reset_untyped_reads_respects:
+  "reads_respects aag l \<top> (arch_post_reset_untyped dev sz)"
+  unfolding arch_post_reset_untyped_def
+  by (wp when_ev dmo_mol_reads_respects | simp add: ifence_def | subst do_machine_op_bind)+
+
+lemma arch_post_reset_untyped_reads_respects_g:
+  "reads_respects_g aag l \<top> (arch_post_reset_untyped dev sz)"
+  apply (rule equiv_valid_guard_imp[OF reads_respects_g])
+    apply (rule arch_post_reset_untyped_reads_respects)
+   apply (rule doesnt_touch_globalsI[where P="\<top>", simplified,
+                                     OF arch_post_reset_untyped_globals_equiv])
+  apply simp
+  done
+
 lemma reset_untyped_cap_reads_respects_g:
  "reads_equiv_valid_g_inv (affects_equiv aag (l :: 'a subject_label)) aag
     (\<lambda>s. cte_wp_at is_untyped_cap slot s \<and> invs s \<and> ct_active s \<and> only_timer_irq_inv irq st s \<and>
@@ -400,6 +419,7 @@ lemma reset_untyped_cap_reads_respects_g:
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule equiv_valid_guard_imp)
    apply (wp set_cap_reads_respects_g dmo_clearMemory_reads_respects_g
+             arch_post_reset_untyped_reads_respects_g
           | simp add: unless_def when_def split del: if_split)+
        apply (rule_tac I="invs and cte_wp_at (\<lambda>cp. is_untyped_cap rv
                                                  \<and> (\<exists>idx. cp = free_index_update (\<lambda>_. idx) rv)
@@ -608,7 +628,7 @@ lemma reset_untyped_cap_globals_equiv:
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule hoare_pre)
    apply (wp set_cap_globals_equiv dmo_clearMemory_globals_equiv
-             preemption_point_inv | simp add: unless_def)+
+             preemption_point_inv arch_post_reset_untyped_globals_equiv | simp add: unless_def)+
      apply (rule valid_validE)
      apply (rule_tac P="cap_aligned cap \<and> is_untyped_cap cap" in hoare_gen_asm)
      apply (rule_tac Q'="\<lambda>_ s. valid_global_objs s \<and> valid_arch_state s \<and> globals_equiv st s"

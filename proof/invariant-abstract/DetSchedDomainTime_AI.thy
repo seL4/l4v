@@ -218,7 +218,8 @@ crunch delete_objects
 
 crunch preemption_point, reset_untyped_cap
   for dlist_fields_invs[wp]: "dlist_fields P"
-  (wp: crunch_wps mapME_x_inv_wp OR_choiceE_weak_wp simp: ignore_del: preemption_point)
+  (wp: crunch_wps mapME_x_inv_wp OR_choiceE_weak_wp arch_post_reset_untyped_inv
+   ignore_del: preemption_point)
 
 crunch
   set_priority, restart, sched_context_bind_tcb,sched_context_bind_ntfn,

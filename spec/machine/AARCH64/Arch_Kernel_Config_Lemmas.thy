@@ -7,9 +7,9 @@
 (* Architecture-specific lemmas constraining Kernel_Config definitions *)
 
 theory Arch_Kernel_Config_Lemmas
-imports
-  Kernel_Config_Lemmas
-  Platform
+  imports
+    Kernel_Config_Lemmas
+    Platform
 begin
 
 context Arch begin global_naming AARCH64
@@ -87,7 +87,8 @@ lemma irq_machine_le_maxIRQ_irq:
   by (simp add: Kernel_Config.maxIRQ_def word_le_nat_alt unat_ucast)
 
 lemma maxIRQ_eq_ucast_irq_32_signed_uint:
-  "(Kernel_Config.maxIRQ = (ucast b :: 32 signed word)) = (uint b = Kernel_Config.maxIRQ)" for b::irq
+  "(Kernel_Config.maxIRQ = (ucast b :: 32 signed word)) = (uint b = Kernel_Config.maxIRQ)"
+  for b::irq
   unfolding Kernel_Config.maxIRQ_def
   apply uint_arith
   apply (simp add: uint_up_ucast is_up)
@@ -129,4 +130,5 @@ lemma cacheLineBits_sanity:
   by (simp add: cacheLineBits_def Kernel_Config.CONFIG_L1_CACHE_LINE_SIZE_BITS_def)
 
 end
+
 end

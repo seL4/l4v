@@ -99,6 +99,8 @@ case cap of
                     in doE
                         whenE (base_start \<noteq> base_end) $ throwError $
                             RangeError start (base_start + mask (pageBitsForSize frame_size));
+                        whenE (pstart < physBase \<or> pstart > paddrTop \<or> end - start > paddrTop - pstart) $
+                            throwError IllegalOperation;
                         returnOk $ InvokePageDirectory $
                             PageDirectoryFlush (label_to_flush_type (invocation_type label))
                             start (end - 1) pstart pd asid
@@ -190,7 +192,8 @@ case cap of
             whenE (end \<le> start) $ throwError $ InvalidArgument 1;
             page_size \<leftarrow> returnOk $ 1 << pageBitsForSize pgsz;
             whenE (start \<ge> page_size \<or> end > page_size) $ throwError $ InvalidArgument 0;
-            whenE (pstart < physBase \<or> ((end - start) + pstart) > paddrTop) $ throwError IllegalOperation;
+            whenE (pstart < physBase \<or> pstart > paddrTop \<or> end - start > paddrTop - pstart) $
+              throwError IllegalOperation;
             returnOk $ InvokePage $ PageFlush
                 (label_to_flush_type (invocation_type label)) (start + p) \<comment> \<open>check\<close>
                 (end + p - 1) pstart pd asid

@@ -23,8 +23,8 @@ crunch
 crunch
   setIRQTrigger, maskInterrupt, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
   ackInterrupt, setVSpaceRoot, readVCPUHardwareReg,
-  check_export_arch_timer, writeVCPUHardwareReg, enableFpuEL01, isb, setHCR, setSCTLR,
-  set_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_hcr, dsb, set_gic_vcpu_ctrl_lr,
+  check_export_arch_timer, writeVCPUHardwareReg, enableFpuEL01, setHCR, setSCTLR, writeTCR,
+  set_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_lr,
   set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_apr,
   get_gic_vcpu_ctrl_vmcr, invalidateTranslationASID, readFpuState, writeFpuState, disableFpu,
   enableFpu, invalidateTranslationSingle, cleanByVA_PoU, addressTranslateS1, do_flush, sendSGI,

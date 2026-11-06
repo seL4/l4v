@@ -12,23 +12,23 @@ context Arch begin arch_global_naming
 
 subsection \<open>Arch-specific transformation of caps into authorities\<close>
 
-definition vspace_cap_rights_to_auth :: "cap_rights \<Rightarrow> auth set" where
-  "vspace_cap_rights_to_auth r \<equiv>
+definition vspace_cap_rights_to_auth :: "cap_rights \<Rightarrow> bool \<Rightarrow> auth set" where
+  "vspace_cap_rights_to_auth r exec \<equiv>
      (if AllowWrite \<in> r then {Write} else {})
-   \<union> (if AllowRead \<in> r then {Read} else {})"
+   \<union> (if AllowRead \<in> r \<or> exec then {Read} else {})"
 
 definition arch_cap_auth_conferred where
   "arch_cap_auth_conferred arch_cap \<equiv>
-     (if is_FrameCap arch_cap then vspace_cap_rights_to_auth (acap_rights arch_cap) else {Control})"
+     (if is_FrameCap arch_cap then vspace_cap_rights_to_auth (acap_rights arch_cap) False else {Control})"
 
 subsection \<open>Generating a policy from the current ASID distribution\<close>
 
 definition pte_ref2 where
   "pte_ref2 level pte \<equiv> case pte of
-     PagePTE paddr _ _ rights
+     PagePTE paddr _ attrs rights
        \<Rightarrow> Some (ptrFromPAddr paddr,
                 pt_bits_left level,
-                vspace_cap_rights_to_auth rights)
+                vspace_cap_rights_to_auth rights (Execute \<in> attrs))
    | PageTablePTE ppn
        \<Rightarrow> Some (ptrFromPAddr (paddr_from_ppn ppn), 0, {Control})
    | _ \<Rightarrow> None"

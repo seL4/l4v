@@ -953,7 +953,7 @@ proof -
     apply (erule subtree.cases)
      apply (clarsimp simp: mdb_next_rel_def mdb_next_def)
     apply (subgoal_tac "c' = cte_map sl")
-     apply (fastforce dest: invs_no_loops no_loops_direct_simp)
+     apply (fastforce del: invs_no_loops dest: invs_no_loops no_loops_direct_simp)
     apply fastforce
     done
 qed

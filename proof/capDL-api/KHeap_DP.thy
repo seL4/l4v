@@ -93,6 +93,12 @@ lemma throw_on_none_rv:
    apply (wp)+
   done
 
+lemma throw_on_none_wp:
+  "\<lbrace>\<lambda>s. case x of None \<Rightarrow> Q s | Some y \<Rightarrow> P y s\<rbrace> throw_on_none x \<lbrace>P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"
+  unfolding throw_on_none_def
+  by wpsimp
+     auto
+
 lemma oseq:
   "\<lbrakk> \<lbrace>P\<rbrace> gets_the f \<lbrace>Q\<rbrace>; \<forall>x. \<lbrace>Q x\<rbrace> gets_the $ g x \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> gets_the (f |>> g) \<lbrace>R\<rbrace>"
   apply (fastforce simp: gets_def fail_def get_def return_def gets_the_def obind_def valid_def split_def

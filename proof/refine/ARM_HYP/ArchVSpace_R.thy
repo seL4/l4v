@@ -377,6 +377,18 @@ lemma invalidateHWASIDEntry_corres:
       apply (wp | clarsimp)+
   done
 
+lemma hwASIDMin_hw_asid_min[simp]:
+  "hwASIDMin = hw_asid_min"
+  by (simp add: hwASIDMin_def hw_asid_min_def)
+
+lemma hwASIDReserved_hw_asid_reserved[simp]:
+  "hwASIDReserved = hw_asid_reserved"
+  by (simp add: hwASIDReserved_def hw_asid_reserved_def)
+
+lemma armKSNextASID_cross:
+  "(s, s') \<in> state_relation \<Longrightarrow> armKSNextASID (ksArchState s') = arm_next_asid (arch_state s)"
+  by (simp add: state_relation_def arch_state_relation_def)
+
 lemma findFreeHWASID_corres:
   "corres (=)
           (valid_asid_map and valid_vspace_objs
@@ -386,42 +398,34 @@ lemma findFreeHWASID_corres:
               and valid_global_objs)
           (pspace_aligned' and pspace_distinct' and no_0_obj')
           find_free_hw_asid findFreeHWASID"
-  apply (simp add: find_free_hw_asid_def findFreeHWASID_def)
-  apply (rule corres_guard_imp)
+  apply (simp add: find_free_hw_asid_def findFreeHWASID_def init_eq_butlast)
+  apply (rule stronger_corres_guard_imp)
     apply (rule corres_split_eqr[OF corres_trivial])
        apply (clarsimp simp: arch_state_relation_def state_relation_def)
       apply (rule corres_split_eqr[OF corres_trivial])
          apply (clarsimp simp: arch_state_relation_def state_relation_def)
-        apply (subgoal_tac "take (length [minBound .e. maxBound :: hardware_asid])
-                              ([next_asid .e. maxBound] @ [minBound .e. next_asid])
-                              = [next_asid .e. maxBound] @ init [minBound .e. next_asid]")
-         apply (cut_tac option="find (\<lambda>a. hw_asid_table a = None)
-           ([next_asid .e. maxBound] @ init [minBound .e. next_asid])"
-                   in option.nchotomy[rule_format])
-         apply (erule corres_disj_division)
-          apply (clarsimp split del: if_split)
-          apply (rule corres_split[OF invalidate_asid_ext_corres])
-            apply (rule corres_underlying_split [where r'=dc])
-               apply (rule corres_trivial, rule corres_machine_op)
-               apply (rule corres_no_failI)
-                apply (rule no_fail_invalidateLocalTLB_ASID)
-               apply fastforce
-              apply (rule corres_split)
-                 apply (rule invalidateHWASIDEntry_corres)
-                apply (rule corres_split)
-                   apply (rule corres_trivial)
-                   apply (rule corres_modify)
-                   apply (simp add: minBound_word maxBound_word
-                                    state_relation_def arch_state_relation_def)
+        apply (rule corres_assert_assume_r)
+        apply (cut_tac option="find (\<lambda>a. hw_asid_table a = None)
+                               ([next_asid .e. maxBound] @ butlast [hw_asid_min .e. next_asid])"
+                       in option.nchotomy[rule_format])
+        apply (erule corres_disj_division)
+         apply (clarsimp split del: if_split)
+         apply (rule corres_split[OF invalidate_asid_ext_corres])
+           apply (rule corres_underlying_split [where r'=dc])
+              apply (rule corres_trivial, rule corres_machine_op)
+              apply (rule corres_no_failI)
+               apply (rule no_fail_invalidateLocalTLB_ASID)
+              apply fastforce
+             apply (rule corres_split)
+                apply (rule invalidateHWASIDEntry_corres)
+               apply (rule corres_split)
                   apply (rule corres_trivial)
-                  apply simp
-                 apply (wp | simp split del: if_split)+
-         apply (rule corres_trivial, clarsimp)
-        apply (cut_tac x=next_asid in leq_maxBound)
-        apply (simp only: word_le_nat_alt)
-        apply (simp add: init_def upto_enum_word
-                         minBound_word
-                    del: upt.simps)
+                  apply (rule corres_modify)
+                  apply (simp add: state_relation_def arch_state_relation_def)
+                 apply (rule corres_trivial)
+                 apply simp
+                apply (wp | simp split del: if_split)+
+        apply (rule corres_trivial, clarsimp)
        apply wp+
    apply (clarsimp dest!: findNoneD)
    apply (drule bspec, rule UnI1, simp, rule order_refl)
@@ -433,7 +437,7 @@ lemma findFreeHWASID_corres:
     apply (drule subsetD, erule domI)
     apply simp
    apply fastforce
-  apply clarsimp
+  apply (clarsimp simp: armKSNextASID_cross valid_arch_state_def valid_next_asid_def)
   done
 
 crunch findFreeHWASID
@@ -874,11 +878,11 @@ crunch check_export_arch_timer
   for (no_fail) no_fail[intro!, wp, simp]
   (simp: check_export_arch_timer_def)
 
-lemma saveVirtTimer_corres[corres]:
-  "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
-             (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
-  unfolding save_virt_timer_def saveVirtTimer_def
-  by corres
+lemma disableVirtTimer_corres[corres]:
+  "corres dc (none_top vcpu_at vcpu_ptr_opt) (none_top vcpu_at' vcpu_ptr_opt and no_0_obj')
+             (disable_virt_timer vcpu_ptr_opt) (disableVirtTimer vcpu_ptr_opt)"
+  unfolding disable_virt_timer_def disableVirtTimer_def
+  by (cases vcpu_ptr_opt; simp add: bind_assoc; corres)
 
 lemma isIRQActive_corres:
   "corres (=) \<top> \<top> (is_irq_active irqVTimerEvent) (isIRQActive irqVTimerEvent)"
@@ -909,7 +913,7 @@ lemma restoreVirtTimer_corres[corres]:
 lemma vcpuSave_corres:
   "corres dc (none_bot (\<lambda>vcpu. vcpu_at (fst vcpu)) cvcpu) (none_bot (\<lambda>vcpu. vcpu_at' (fst vcpu)) cvcpu and no_0_obj')
              (vcpu_save cvcpu) (vcpuSave cvcpu)"
-  supply no_fail_isb[wp] no_fail_dsb[wp]
+  supply no_fail_dsb[wp]
   unfolding vcpu_save_def vcpuSave_def armvVCPUSave_def
   apply (cases cvcpu; clarsimp; rename_tac v active)
   apply (rule corres_guard_imp)
@@ -922,7 +926,7 @@ lemma vcpuSave_corres:
               apply (rule corres_Id; wpsimp)
              apply (rule corres_split[OF vgicUpdate_corres])
                 apply (clarsimp simp: vgic_map_def)
-               apply (rule saveVirtTimer_corres)
+               apply (rule disableVirtTimer_corres)
               apply wpsimp+
           apply (rule corres_split_eqr[OF corres_machine_op])
            apply (rule corres_Id; wpsimp)
@@ -942,9 +946,8 @@ lemma vcpuSave_corres:
                           apply (clarsimp, fold dc_def)
                           apply (rule vgicUpdateLR_corres)
                          apply wpsimp+
-                    apply (rule corres_split[OF vcpuSaveRegRange_corres])
-                      apply (rule corres_machine_op)
-                      apply (rule corres_Id; wpsimp)
+                    apply (rule corres_split[OF corres_when[OF refl vcpuSaveReg_corres]])
+                      apply (rule vcpuSaveRegRange_corres)
                      apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
                                  simp: if_apply_def2)+
   done
@@ -959,9 +962,10 @@ lemma vcpuDisable_corres:
   apply (cases vcpuopt; clarsimp simp: vcpu_disable_def vcpuDisable_def)
    (* no current VCPU *)
    subgoal
-     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind empty_fail_cond)
+     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc empty_fail_cond IRQ_def)
      apply (rule corres_guard_imp)
        apply (rule corres_split_dc[OF corres_machine_op]
+                   corres_split_dc[OF disableVirtTimer_corres]
          | rule corres_machine_op corres_Id
          | wpsimp)+
      done
@@ -975,9 +979,9 @@ lemma vcpuDisable_corres:
           apply (rule corres_Id; wpsimp)
          apply (rule corres_split_dc[OF vgicUpdate_corres])
             apply (clarsimp simp: vgic_map_def)
-           apply (rule corres_split_dc[OF vcpuSaveReg_corres])
+           apply (rule corres_split_dc[OF vcpuSaveReg_corres])+
              apply (rule corres_split_dc[OF corres_machine_op]
-                         corres_split_dc[OF saveVirtTimer_corres]
+                         corres_split_dc[OF disableVirtTimer_corres]
                     | rule corres_machine_op corres_Id
                     | wpsimp)+
    done
@@ -992,7 +996,7 @@ lemma vcpuEnable_corres:
     apply (rule corres_split_dc[OF vcpuRestoreReg_corres])+
       apply (rule corres_split[OF getObject_vcpu_corres], rename_tac vcpu')
         apply (case_tac vcpu')
-        apply (rule corres_split_dc[OF corres_machine_op]
+        apply (rule corres_split_dc[OF corres_machine_op] corres_split_dc[OF vcpuRestoreReg_corres]
                | rule corres_machine_op corres_Id restoreVirtTimer_corres
                | wpsimp simp: vcpu_relation_def vgic_map_def)+
   done
@@ -1104,20 +1108,6 @@ lemma vcpuSwitch_corres':
   apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
   done
 
-lemma no_fail_setCurrentPDPL2: "no_fail \<top> (setCurrentPDPL2 w)"
-  by (simp add: set_current_pd_def setCurrentPDPL2_def)
-
-lemma setCurrentPD_corres:
-  "addr = addr' \<Longrightarrow> corres dc \<top> \<top> (do_machine_op (set_current_pd addr)) (doMachineOp (setCurrentPD addr'))"
-  apply (simp add: setCurrentPD_def set_current_pd_def)
-  apply (rule corres_machine_op)
-  apply (rule corres_guard_imp)
-    apply (rule corres_rel_imp)
-     apply (rule corres_underlying_trivial)
-    apply (rule no_fail_setCurrentPDPL2)
-    apply simp+
-  done
-
 crunch armv_contextSwitch
   for tcb_at'[wp]: "tcb_at' t"
 crunch armv_contextSwitch
@@ -1136,23 +1126,25 @@ lemma setVMRoot_corres:
              (no_0_obj')
              (set_vm_root t) (setVMRoot t)"
 proof -
+  have P: "corres dc \<top> \<top> set_global_pd setGlobalPD"
+    apply (simp add: set_global_pd_def setGlobalPD_def)
+    apply (rule corres_underlying_split[where P=\<top> and P'=\<top> and r'="(=)"])
+       apply (clarsimp simp: state_relation_def arch_state_relation_def)
+      apply clarsimp
+      apply (rule corres_machine_op)
+      apply (rule corres_rel_imp)
+       apply (rule corres_underlying_trivial)
+       apply (wpsimp wp: no_fail_writeContextIDAndPD)+
+    done
   have Q: "\<And>P P'. corres dc P P'
-        (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
-         (\<lambda>_. do global_us_pd \<leftarrow> gets (arm_us_global_pd \<circ> arch_state);
-                 do_machine_op $ set_current_pd $ addrFromKPPtr global_us_pd
-              od))
-        (throwError Fault_H.lookup_failure.InvalidRoot <catch>
-         (\<lambda>_ . do globalPD \<leftarrow> gets (armUSGlobalPD \<circ> ksArchState);
-                  doMachineOp $ setCurrentPD $ addrFromKPPtr globalPD
-               od))"
+        (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch> (\<lambda>_. set_global_pd))
+        (throwError Fault_H.lookup_failure.InvalidRoot <catch> (\<lambda>_. setGlobalPD))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])
          apply (rule corres_trivial)
          apply (subst corres_throwError, simp add: lookup_failure_map_def)
-        apply (rule corres_underlying_split [where P=\<top> and P'=\<top> and r'="(=)"])
-           apply (clarsimp simp: state_relation_def arch_state_relation_def)
-          apply (simp, rule setCurrentPD_corres, rule refl)
-         apply wpsimp+
+        apply (simp, rule P)
+       apply wpsimp+
     done
   have valid_tcb_vcpu: "\<And>s t p v.\<lbrakk> valid_tcb p t s; tcb_vcpu (tcb_arch t) = Some v \<rbrakk>
                         \<Longrightarrow> vcpu_at v s"
@@ -1212,10 +1204,7 @@ proof -
                                     and valid_vspace_objs
                                     and valid_arch_state"
                           in corres_stateAssert_implied)
-               apply (rule corres_underlying_split [where P=\<top> and P'=\<top> and r'="(=)"])
-                  apply (clarsimp simp: state_relation_def arch_state_relation_def)
-                 apply (rule setCurrentPD_corres, simp)
-                apply wp+
+               apply (rule P)
               apply (clarsimp simp: restrict_map_def state_relation_asid_map
                              elim!: ranE)
               apply (frule(1) valid_asid_mapD)
@@ -1394,7 +1383,7 @@ lemma deleteASID_corres:
       apply (drule Some_to_the)
       apply (wpsimp wp: getASID_wp)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
-                  dest!: invs_arch_state)
+                   del: invs_arch_state dest!: invs_arch_state)
    apply blast
   apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
   done
@@ -1611,7 +1600,7 @@ qed
 
 crunch unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
        performPageDirectoryInvocation, performASIDPoolInvocation, performPageInvocation
-  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 sublocale unmapPageTable: typ_at_props' "unmapPageTable asid vaddr pt"
@@ -2279,9 +2268,11 @@ definition
    | ARM_HYP_A.flush_type.Unify \<Rightarrow> ARM_HYP_H.flush_type.Unify"
 
 lemma doFlush_corres:
-  "corres_underlying Id nf nf' dc \<top> \<top>
-             (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
-  apply (simp add: do_flush_def doFlush_def)
+  "corres_underlying Id nf nf' dc
+     (\<lambda>_. paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart) \<top>
+     (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
+  apply (rule corres_gen_asm[where P=\<top>, simplified])
+  apply (clarsimp simp: do_flush_def doFlush_def fromPAddr_def)
   apply (cases "typ", simp_all add: flush_type_map_def Let_def)
      apply (rule corres_Id [where r=dc], rule refl, simp)
      apply (wp no_fail_cleanCacheRange_RAM)
@@ -2294,6 +2285,13 @@ lemma doFlush_corres:
                               no_fail_dsb no_fail_isb del: no_irq)
   apply clarsimp
   done
+
+lemma dmo_doFlush_corres:
+  "corres dc (\<lambda>_. paddrBase \<le> pstart \<and> pstart < paddrTop \<and> end - start < paddrTop - pstart) \<top>
+             (do_machine_op (do_flush typ start end pstart))
+             (doMachineOp (doFlush (flush_type_map typ) start end pstart))"
+  using corres_machine_op'[OF doFlush_corres]
+  by (simp add: comp_def)
 
 definition
   "page_directory_invocation_map pdi pdi' \<equiv> case pdi of
@@ -2313,8 +2311,7 @@ lemma performPageDirectoryInvocation_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_when, simp)
      apply (rule corres_split[OF setVMRootForFlush_corres])
-       apply (rule corres_split[OF corres_machine_op])
-          apply (rule doFlush_corres)
+       apply (rule corres_split[OF dmo_doFlush_corres])
          apply (rule corres_when, simp)
          apply (rule corres_split[OF getCurThread_corres])
            apply clarsimp
@@ -2941,8 +2938,7 @@ proof -
      apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
        apply (rule corres_when, simp)
        apply (rule corres_split[OF setVMRootForFlush_corres])
-         apply (rule corres_split[OF corres_machine_op])
-            apply (rule doFlush_corres)
+         apply (rule corres_split[OF dmo_doFlush_corres])
            apply (rule corres_when, simp)
            apply (rule corres_split[OF getCurThread_corres])
              apply simp
@@ -3284,27 +3280,26 @@ lemma armv_contextSwitch_invs_no_cicd':
     apply (clarsimp simp: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs | wp)+
   done
 
-lemma no_irq_setCurrentPD: "no_irq (setCurrentPD addr)"
-  by (simp add: setCurrentPD_def setCurrentPDPL2_def)
-
-lemma dmo_setCurrentPD_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setCurrentPD no_irq)
-  apply clarsimp
+lemma setGlobalPD_invs'[wp]:
+  "setGlobalPD \<lbrace>invs'\<rbrace>"
+  apply (simp add: setGlobalPD_def)
+  apply (wpsimp wp: dmo_invs' no_irq_writeContextIDAndPD no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        setCurrentPDPL2_def machine_rest_lift_def split_def | wp)+
+                   in use_valid)
+    apply (clarsimp simp: writeContextIDAndPD_def machine_op_lift_def machine_rest_lift_def
+                          split_def
+           | wp)+
   done
 
-lemma dmo_setCurrentPD_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' no_irq_setCurrentPD no_irq)
-  apply clarsimp
+lemma setGlobalPD_invs_no_cicd':
+  "setGlobalPD \<lbrace>invs_no_cicd'\<rbrace>"
+  apply (simp add: setGlobalPD_def)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_writeContextIDAndPD no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        machine_rest_lift_def split_def setCurrentPDPL2_def| wp)+
+                   in use_valid)
+    apply (clarsimp simp: writeContextIDAndPD_def machine_op_lift_def machine_rest_lift_def
+                          split_def
+           | wp)+
   done
 
 crunch storeWordUser, armv_contextSwitch, doMachineOp
@@ -3330,7 +3325,7 @@ lemma vcpuSwitch_ksQ[wp]:
 
 lemma setVMRoot_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setVMRoot param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setGlobalPD_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpcw
           | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
@@ -3477,99 +3472,40 @@ lemma setVCPU_valid_arch':
      apply (wp hoare_vcg_all_lift hoare_drop_imp)+
 done
 
-lemma isb_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp isb \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq no_irq_isb)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)+
-  done
-
-lemma dsb_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp dsb \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq no_irq_dsb)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)+
-  done
-
-lemma setSCTLR_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setSCTLR w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_setSCTLR no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def setSCTLR_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_hcr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_hcr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_lr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_lr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_apr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_apr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma set_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_vmcr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma setHCR_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setHCR w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_setHCR no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def setHCR_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma get_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_hcr no_irq
-           simp: get_gic_vcpu_ctrl_hcr_def gets_def in_monad)
-
-lemma get_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (get_gic_vcpu_ctrl_lr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_lr no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def get_gic_vcpu_ctrl_lr_def
-                        machine_rest_lift_def split_def)+
-  done
-
-lemma get_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_apr no_irq
-           simp: get_gic_vcpu_ctrl_apr_def gets_def in_monad)
-
-lemma get_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_vmcr no_irq
-           simp: get_gic_vcpu_ctrl_vmcr_def gets_def in_monad)
+lemma
+  shows isb_invs_no_cicd'[wp]:
+    "doMachineOp isb \<lbrace>invs_no_cicd'\<rbrace>"
+  and dsb_invs_no_cicd'[wp]:
+    "doMachineOp dsb \<lbrace>invs_no_cicd'\<rbrace>"
+  and setSCTLR_invs_no_cicd'[wp]:
+    "doMachineOp (setSCTLR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and setCPACR_invs_no_cicd'[wp]:
+    "doMachineOp (setCPACR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and set_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
+    "doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and setHCR_invs_no_cicd'[wp]:
+    "doMachineOp (setHCR w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and trapDebugExceptions_invs_no_cicd'[wp]:
+    "doMachineOp (trapDebugExceptions trap) \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
+    "doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
+    "doMachineOp (get_gic_vcpu_ctrl_lr w) \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
+    "doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>invs_no_cicd'\<rbrace>"
+  and get_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
+    "doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>invs_no_cicd'\<rbrace>"
+  and readVCPUHardwareReg_invs_no_cicd'[wp]:
+    "doMachineOp (readVCPUHardwareReg r) \<lbrace>invs_no_cicd'\<rbrace>"
+  and writeVCPUHardwareReg_invs_no_cicd'[wp]:
+    "doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs_no_cicd'\<rbrace>"
+  by (all \<open>wp dmo_invs_no_cicd_lift'\<close>)
 
 lemma setVCPU_tcbs_of'[wp]:
   "setObject v (vcpu :: vcpu) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
@@ -3641,20 +3577,6 @@ lemma setVCPU_VPPIMasked_invs_cicd':
   apply (fastforce simp: ko_wp_at'_def)
   done
 
-lemma readVCPUHardwareReg_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: dmo_invs_no_cicd' no_irq_readVCPUHardwareReg no_irq
-             simp: readVCPUHardwareReg_def gets_def in_monad)
-
-lemma writeVCPUHardwareReg_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (writeVCPUHardwareReg r v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_writeVCPUHardwareReg no_irq)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: machine_op_lift_def writeVCPUHardwareReg_def
-                        machine_rest_lift_def split_def)+
-  done
-
 lemma vgicUpdate_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> vgicUpdate f v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   by (wpsimp simp: vgicUpdate_def vcpuUpdate_def wp: setVCPU_vgic_invs_cicd')
@@ -3692,9 +3614,9 @@ lemma check_export_arch_timer_no_cicd'[wp]:
     apply (wpsimp wp: check_export_arch_timer_underlying_memory)+
   done
 
-lemma saveVirtTimer_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> saveVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  by (wpsimp simp: saveVirtTimer_def get_cntv_off_64_def get_cntv_cval_64_def
+lemma disableVirtTimer_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> disableVirtTimer vcpu_ptr_opt \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: disableVirtTimer_def get_cntv_off_64_def get_cntv_cval_64_def
              wp: dmo'_gets_wp)+
 
 lemma set_cntv_off_64_invs_no_cicd'[wp]:
@@ -3778,9 +3700,9 @@ crunch
   for hyp[wp]: "ko_wp_at' (is_vcpu' and hyp_live') v"
   (wp: crunch_wps setVCPU_regs_vcpu_live dmo_vcpu_hyp)
 
-lemma saveVirtTimer_hyp[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
-  by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
+lemma disableVirtTimer_hyp[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: disableVirtTimer_def vcpuUpdate_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
 
 lemma restoreVirtTimer_hyp[wp]:
   "restoreVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
@@ -3922,18 +3844,22 @@ lemma setVCPU_VPPIMasked_invs':
   apply (fastforce simp: ko_wp_at'_def)
   done
 
-lemma read_writeVCPUHardwareReg_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (writeVCPUHardwareReg r v) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  "\<lbrace>invs'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by ((wpsimp wp: dmo_invs' no_irq no_irq_writeVCPUHardwareReg)
-       , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
-       , (wpsimp simp: writeVCPUHardwareReg_def readVCPUHardwareReg_def)+)+
-
-lemma check_export_arch_timer_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp check_export_arch_timer \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (wpsimp wp: dmo_invs' no_irq no_irq_check_export_arch_timer
-      , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
-      , (wpsimp simp: check_export_arch_timer_def)+)
+lemma
+  shows dmo_writeVCPUHardwareReg_invs'[wp]: "doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs'\<rbrace>"
+  and dmo_readVCPUHardwareReg_invs'[wp]: "doMachineOp (readVCPUHardwareReg r) \<lbrace>invs'\<rbrace>"
+  and check_export_arch_timer_invs'[wp]: "doMachineOp check_export_arch_timer \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_hcr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_apr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_vmcr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>invs'\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_lr_invs'[wp]: "doMachineOp (set_gic_vcpu_ctrl_lr n w) \<lbrace>invs'\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_lr_invs'[wp]: "doMachineOp (get_gic_vcpu_ctrl_lr n) \<lbrace>invs'\<rbrace>"
+  and dmo_setSCTLR_invs'[wp]: "doMachineOp (setSCTLR w) \<lbrace>invs'\<rbrace>"
+  and dmo_setCPACR_invs'[wp]: "doMachineOp (setCPACR w) \<lbrace>invs'\<rbrace>"
+  and dmo_setHCR_invs'[wp]: "doMachineOp (setHCR w) \<lbrace>invs'\<rbrace>"
+  and dmo_trapDebugExceptions_invs'[wp]: "doMachineOp (trapDebugExceptions trap) \<lbrace>invs'\<rbrace>"
+  and dmo_isb_invs'[wp]: "doMachineOp isb \<lbrace>invs'\<rbrace>"
+  and dmo_dsb_invs'[wp]: "doMachineOp dsb \<lbrace>invs'\<rbrace>"
+  by (all \<open>wp dmo_invs_lift'\<close>)
 
 lemma vcpuWriteReg_invs'[wp]:
   "vcpuWriteReg vcpu_ptr r v \<lbrace>invs'\<rbrace>"
@@ -3943,15 +3869,15 @@ lemma vcpuSaveReg_invs'[wp]:
   "vcpuSaveReg v r \<lbrace>invs'\<rbrace>"
   by (wpsimp simp: vcpuSaveReg_def vcpuUpdate_def wp: setVCPU_regs_invs')
 
-lemma saveVirtTimer_invs'[wp]:
-  "saveVirtTimer vcpu_ptr \<lbrace>invs'\<rbrace>"
-  unfolding saveVirtTimer_def
+lemma disableVirtTimer_invs'[wp]:
+  "disableVirtTimer vcpu_ptr_opt \<lbrace>invs'\<rbrace>"
+  unfolding disableVirtTimer_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
              simp: doMachineOp_bind get_cntv_off_64_def get_cntv_cval_64_def)
 
 lemma vcpuDisable_invs'[wp]:
   "vcpuDisable v \<lbrace>invs'\<rbrace>"
-  unfolding vcpuDisable_def isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def
+  unfolding vcpuDisable_def isb_def setHCR_def setSCTLR_def setCPACR_def set_gic_vcpu_ctrl_hcr_def
              getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def vgicUpdate_def vcpuUpdate_def
              vcpuSaveReg_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
@@ -3961,87 +3887,6 @@ lemma vcpuDisable_invs'[wp]:
 lemma vcpuInvalidateActive_invs'[wp]:
   "vcpuInvalidateActive \<lbrace>invs'\<rbrace>"
     unfolding vcpuInvalidateActive_def by wpsimp
-
-lemma dmo_set_gic_vcpu_ctrl_hcr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_hcr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_hcr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_hcr_def)+
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_apr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_apr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_apr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_apr_def)+
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_vmcr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_vmcr_def)+
-  done
-
-lemma dmo_set_gic_vcpu_ctrl_lr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_lr addr w) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_lr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: set_gic_vcpu_ctrl_lr_def)+
-  done
-
-lemma dmo_get_gic_vcpu_ctrl_lr_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (get_gic_vcpu_ctrl_lr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_get_gic_vcpu_ctrl_lr no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: get_gic_vcpu_ctrl_lr_def)+
-  done
-
-lemma dmo_setSCTLR_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (setSCTLR addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setSCTLR no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: setSCTLR_def)+
-  done
-
-lemma dmo_setHCR_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (setHCR addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setHCR no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (wpsimp simp: setHCR_def)+
-  done
-
-lemma dmo_isb_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp isb \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_isb no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply wpsimp+
-  done
-
-lemma dmo_dsb_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp dsb \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_dsb no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply wpsimp+
-  done
 
 crunch
   vcpuRestoreReg, vcpuRestoreRegRange, vcpuSaveReg, vcpuSaveRegRange, vgicUpdateLR, vcpuReadReg
@@ -4126,7 +3971,7 @@ lemma setVMRoot_valid_arch_state'[wp]:
   "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace>
      setVMRoot p
    \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setGlobalPD_def)
   apply ((wpsimp wp: hoare_vcg_ex_lift hoare_drop_imps
                     getObject_tcb_wp valid_case_option_post_wp'
                simp: if_apply_def2
@@ -4188,7 +4033,7 @@ lemma setVMRoot_invs_no_cicd'[wp]:
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
    apply (wp hoare_drop_imps getObject_tcb_hyp_sym_refs
              armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
-             dmo_setCurrentPD_invs_no_cicd'
+             setGlobalPD_invs_no_cicd'
           | wpcw
           | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
   done
@@ -4850,8 +4695,8 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
 crunch unmapPageTable
   for invs'[wp]: "invs'"
   (ignore: storePDE doMachineOp
-       wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
-           storePDE_Invalid_invs mapM_wp' no_irq_setCurrentPD
+       wp: dmo_invalidateLocalTLB_VAASID_invs'
+           storePDE_Invalid_invs mapM_wp'
            crunch_wps
      simp: crunch_simps)
 

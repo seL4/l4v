@@ -2764,13 +2764,13 @@ lemma decodeARMFrameInvocation_ccorres:
              apply csymbr
              (* can't csymbr the IF calculation because of the function calls, but we can show
                 it's the same as the condition on the Haskell side*)
-             apply (rule ccorres_rhs_assoc2)
+             apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
              apply (rule_tac xf'=ret__int_' and R'=UNIV and R=\<top> and
                              val="from_bool (
                                     addrFromPPtr v0 + hd args < physBase \<or>
-                                    ARM_HYP_H.fromPAddr paddrTop
-                                      < hd (drop (Suc 0) args) - hd args +
-                                        ARM_HYP_H.fromPAddr (addrFromPPtr v0 + hd args))"
+                                    paddrTop < addrFromPPtr v0 + hd args \<or>
+                                    ARM_HYP_H.fromPAddr (paddrTop - (addrFromPPtr v0 + hd args))
+                                      < hd (drop (Suc 0) args) - hd args)"
                              in ccorres_symb_exec_r_known_rv)
                 apply (rule conseqPre, vcg)
                 apply (clarsimp dest!: ccap_relation_PageCap_generics)
@@ -3324,6 +3324,13 @@ lemma injection_handler_stateAssert_relocate:
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
 
+(* VCG result shape for a C condition "P || Q || R" with function calls in Q and R *)
+lemma vcg_helper_if_disj3_cases_conj:
+  "(P \<longrightarrow> (if P \<or> Q \<or> R then a else b) = a) \<and>
+   (\<not> P \<longrightarrow> (Q \<longrightarrow> (if P \<or> Q \<or> R then a else b) = a) \<and>
+   (\<not> Q \<longrightarrow> (if R then a else b) = (if P \<or> Q \<or> R then a else b)))"
+  by auto
+
 lemma decodeARMPageDirectoryInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -3483,20 +3490,41 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply csymbr
              apply (rule ccorres_Guard_Seq)
              apply csymbr
-             apply (ctac add: setThreadState_ccorres)
-               apply (simp add:bindE_assoc)
-               apply (ctac add: performPageDirectoryInvocationFlush_ccorres)
-                  apply (rule ccorres_alternative2)
-                  apply (simp add:returnOk_liftE[symmetric])
-                  apply (rule ccorres_return_CE,simp+)[1]
-                 apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                apply (rule hoareE_TrueI[where P = \<top>])
+             (* csymbr fails for the condition because of the physBase() calls, and rv is a large
+                instantation, so we use ccorres_symb_exec_r_known_rv with a schematic rv. This gets
+                instantiated to the value of ret__int by vcg + vcg_helper_if_disj3_cases_conj below. *)
+             apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
+             apply (rule ccorres_symb_exec_r_known_rv[where xf'=ret__int_' and R'=UNIV and R=\<top>])
+                apply (rule conseqPre, vcg)
+                apply clarsimp
+                apply (rule vcg_helper_if_disj3_cases_conj)
+               apply ceqv
+              apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+                 apply vcg
+                apply (clarsimp simp: resolve_ret_rel_def to_option_def rel_option_alt_def
+                                      framesize_from_to_H mask_def
+                                      fromPAddr_def paddrTop_def pptrBase_def pptrTop_def
+                                      pptrBaseOffset_def add.commute
+                                split: option.splits if_splits)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases)
+              apply (simp add: performARMMMUInvocations)
+              apply (ctac add: setThreadState_ccorres)
+                apply (simp add:bindE_assoc)
+                apply (ctac add: performPageDirectoryInvocationFlush_ccorres)
+                   apply (rule ccorres_alternative2)
+                   apply (simp add:returnOk_liftE[symmetric])
+                   apply (rule ccorres_return_CE,simp+)[1]
+                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+                 apply (rule hoareE_TrueI[where P=\<top>])
+                apply simp
+                apply (vcg exspec=performPDFlush_modifies)
+               apply (wp sts_invs_minor' sts_Restart_ct_active)
                apply simp
-               apply (vcg exspec=performPDFlush_modifies)
-              apply (wp sts_invs_minor' sts_Restart_ct_active)
               apply simp
+              apply (vcg exspec=setThreadState_modifies)
              apply simp
-             apply (vcg exspec=setThreadState_modifies)
+             apply vcg
             apply (rule_tac P = "(the v1 \<le> mask asid_bits)" in hoare_gen_asm)
             apply simp
             apply (rule hoare_post_imp[OF _ resolveVAddr_ret
@@ -4322,7 +4350,9 @@ lemma vcpu_reg_saved_when_disabled_spec:
                                                           scast seL4_VCPUReg_CNTV_CVALlow,
                                                           scast seL4_VCPUReg_CNTVOFFhigh,
                                                           scast seL4_VCPUReg_CNTVOFFlow,
-                                                          scast seL4_VCPUReg_CNTKCTL }) \<rbrace>"
+                                                          scast seL4_VCPUReg_CNTKCTL,
+                                                          scast seL4_VCPUReg_CPACR,
+                                                          scast seL4_VCPUReg_FPEXC }) \<rbrace>"
   by vcg clarsimp
 
 
@@ -4330,7 +4360,8 @@ lemma vcpuRegSavedWhenDisabled_spec[simp]:
   "vcpuRegSavedWhenDisabled reg = (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CTL \<or>
                                    reg = VCPURegCNTV_CVALhigh \<or> reg = VCPURegCNTV_CVALlow \<or>
                                    reg = VCPURegCNTVOFFhigh \<or> reg = VCPURegCNTVOFFlow \<or>
-                                   reg = VCPURegCNTKCTL)"
+                                   reg = VCPURegCNTKCTL \<or> reg = VCPURegCPACR \<or>
+                                   reg = VCPURegFPEXC)"
   by (simp add: vcpuRegSavedWhenDisabled_def split: vcpureg.splits)
 
 lemma writeVCPUReg_ccorres:
@@ -4359,7 +4390,9 @@ lemma writeVCPUReg_ccorres:
       apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CTL \<or>
                                reg = VCPURegCNTV_CVALhigh \<or> reg = VCPURegCNTV_CVALlow \<or>
                                reg = VCPURegCNTVOFFhigh \<or> reg = VCPURegCNTVOFFlow \<or>
-                               reg = VCPURegCNTKCTL) \<and> \<not>curvcpuactive }"
+                               reg = VCPURegCNTKCTL \<or> reg = VCPURegCPACR \<or>
+                               reg = VCPURegFPEXC) \<and>
+                              \<not>curvcpuactive }"
                               and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                               and Q'=UNIV in ccorres_rewrite_cond_sr)
     subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
@@ -4406,7 +4439,9 @@ lemma readVCPUReg_ccorres:
     apply (rule_tac C'="{s. (reg = VCPURegSCTLR \<or> reg = VCPURegCNTV_CTL \<or>
                              reg = VCPURegCNTV_CVALhigh \<or> reg = VCPURegCNTV_CVALlow \<or>
                              reg = VCPURegCNTVOFFhigh \<or> reg = VCPURegCNTVOFFlow \<or>
-                             reg = VCPURegCNTKCTL) \<and> \<not>curvcpuactive }"
+                             reg = VCPURegCNTKCTL \<or> reg = VCPURegCPACR \<or>
+                             reg = VCPURegFPEXC) \<and>
+                            \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
      subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
@@ -4803,43 +4838,6 @@ lemma decodeVCPUInjectIRQ_ccorres:
         prefer 2
   subgoal by (simp add: word_le_nat_alt not_le)
        apply clarsimp
-       apply (rule ccorres_move_const_guard)
-       apply (rule ccorres_move_c_guard_vcpu)
-       apply (simp add: liftM_def)
-       apply (clarsimp simp: rangeCheck_def not_le[symmetric]
-                             liftE_liftM[symmetric] liftE_bindE_assoc)
-
-       apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-       apply csymbr
-       apply (rule ccorres_abstract_cleanup)
-       apply (simp add: virq_virq_active_def)
-       apply (rule_tac
-                P="ret__unsigned = (vgicLR (vcpuVGIC vcpu) (unat (args ! Suc 0 && 0xFF))
-                                     && vgic_irq_mask) >> 28"
-                in ccorres_gen_asm2)
-       apply clarsimp
-       apply (rule ccorres_Cond_rhs_Seq)
-        apply (subgoal_tac "vgicLR (vcpuVGIC vcpu) (unat (args ! Suc 0 && 0xFF)) && vgic_irq_mask =
-                          vgic_irq_active")
-         prefer 2
-  subgoal
-           apply (clarsimp simp: vgic_irq_active_def vgic_irq_mask_def shiftr_over_and_dist)
-           apply (drule shiftr_and_eq_shiftl)
-           apply simp
-           done
-
-        apply (simp add: rangeCheck_def not_le[symmetric])
-        apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
-                   cong: StateSpace.state.fold_congs globals.fold_congs)
-        apply (rule syscall_error_throwError_ccorres_n)
-        apply (simp add: syscall_error_to_H_cases)
-
-       apply (subgoal_tac "vgicLR (vcpuVGIC vcpu) (unat (args ! Suc 0 && 0xFF)) && vgic_irq_mask \<noteq>
-                          vgic_irq_active")
-               prefer 2
-  subgoal by (clarsimp simp: vgic_irq_active_def)
-
-       apply clarsimp
        apply (simp add: returnOk_bind bindE_assoc
                         performARMMMUInvocations performARMVCPUInvocation_def)
        apply csymbr
@@ -4882,36 +4880,13 @@ lemma decodeVCPUInjectIRQ_ccorres:
   prefer 2 subgoal by (erule order_le_less_trans; simp)
 
   apply (safe; clarsimp?)
-    apply (subgoal_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
-     prefer 2 subgoal by (erule order_le_less_trans; simp)
-    apply (erule order_less_le_trans)
-    apply (simp add: unat_of_nat_eq)
-  apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+    apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                     elim: obj_at'_weakenE)
+   apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
                     elim: obj_at'_weakenE)
-  apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
-                    elim: obj_at'_weakenE)
-
-  apply (subgoal_tac "armKSGICVCPUNumListRegs (ksArchState s) < 2 ^ LENGTH(machine_word_len)")
-  prefer 2 subgoal by (erule order_le_less_trans; simp)
   apply (erule order_less_le_trans)
   apply (simp add: unat_of_nat_eq)
-  apply (clarsimp simp: typ_heap_simps')
-  apply (simp add: virq_get_tag_def mask_def vgic_irq_mask_def shiftr_over_and_dist)
-  apply (simp add: cvcpu_relation_def cvgic_relation_def virq_to_H_def)
-  apply (clarsimp simp: cvcpu_relation_def cvgic_relation_def virq_get_tag_def vgic_irq_mask_def
-                        shiftr_over_and_dist mask_def )
-  apply (subgoal_tac "unat ((args ! Suc 0) && 0xFF) \<le> 63")
-  apply (rule sym)
-  apply simp
-  apply (subgoal_tac "gic_vcpu_num_list_regs_' (globals s') \<le> 63")
-  apply (simp add: word_le_nat_alt)
-  apply (simp add: rf_sr_armKSGICVCPUNumListRegs)
-  apply (simp add: word_le_nat_alt)
-  apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_def dest!: invs_arch_state')
-  apply (clarsimp simp: rf_sr_armKSGICVCPUNumListRegs)
-  apply (subst unat_of_nat_eq)
-  apply (erule order_le_less_trans, simp+)
-done
+  done
 
 lemma decodeVCPUReadReg_ccorres:
   notes if_cong[cong] Collect_const[simp del]

@@ -196,11 +196,6 @@ Every table is one small page in size.
 > --ioptBits :: Int
 > --ioptBits = ptTranslationBits + 3
 
-> pageColourBits :: Int
-> pageColourBits = error "Does not exist on x64" -- Platform.pageColourBits
-
-%FIXME: IOAPIC: set_mode_config and map_pin_to_vector equivalents needed?
-
 > setInterruptMode :: IRQ -> Bool -> Bool -> MachineMonad ()
 > setInterruptMode _ _ _ = return ()
 
@@ -229,8 +224,6 @@ There are several operations used by the memory management code to access releva
 This function is called before a region of user-memory is recycled.
 It zeros every word to ensure that user tasks cannot access any private data
 that might previously have been stored in the region.
-
-%FIXME x64: then flushes the kernel's mapping from the virtually-indexed caches?
 
 > clearMemory :: PPtr Word -> Int -> MachineMonad ()
 > clearMemory ptr byteLength = do
@@ -386,8 +379,6 @@ The following types are Haskell representations of an entry in an x64 page table
 >         pdeRights :: VMRights }
 >     deriving (Show, Eq)
 
-%FIXME x64 review
-
 > wordFromPDE :: PDE -> Word
 > wordFromPDE InvalidPDE = 0
 > wordFromPDE (PageTablePDE table accessed cd wt xd rights) = 1 .|.
@@ -496,8 +487,6 @@ The following types are Haskell representations of an entry in an x64 page table
 >--wordFromIORTE (VTDRTE ptr present) = ((fromIntegral $ ptr) .&. 0xfffff000) .|. (if present then 1 else 0)
 
 
-%FIXME x64: word size review
-
 > wordFromPTE :: PTE -> Word
 > wordFromPTE InvalidPTE = 0
 > wordFromPTE (SmallPagePTE frame global pat dirty accessed cd wt xd rights) = 1 .|.
@@ -592,17 +581,17 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 IO Port interface.
 
 > in8 :: IOPort -> MachineMonad Word
-> in8 = error "Unimplemented"
+> in8 = isabelleOp
 > in16 :: IOPort -> MachineMonad Word
-> in16 = error "Unimplemented"
+> in16 = isabelleOp
 > in32 :: IOPort -> MachineMonad Word
-> in32 = error "Unimplemented"
+> in32 = isabelleOp
 > out8 :: IOPort -> Word8 -> MachineMonad ()
-> out8 = error "Unimplemented"
+> out8 = isabelleOp
 > out16 :: IOPort -> Word16 -> MachineMonad ()
-> out16 = error "Unimplemented"
+> out16 = isabelleOp
 > out32 :: IOPort -> Word32 -> MachineMonad ()
-> out32 = error "Unimplemented"
+> out32 = isabelleOp
 
 IRQ parameters
 
@@ -632,24 +621,22 @@ IRQ parameters
 >     cbptr <- ask
 >     liftIO $ Platform.ioapicMapPinToVector cbptr ioapic pin level polarity vector
 
-%FIXME: review how deeply we need to model this.
-
 > initIRQController :: MachineMonad ()
-> initIRQController = error "Unimplemented"
+> initIRQController = error "Unimplemented init code"
 
 FPU operations
 
 > readFpuState :: MachineMonad X64.FPUState
-> readFpuState = error "Unimplemented - machine op"
+> readFpuState = isabelleOp
 
 > writeFpuState :: X64.FPUState -> MachineMonad ()
-> writeFpuState _ = error "Unimplemented - machine op"
+> writeFpuState _ = isabelleOp
 
 > enableFpu :: MachineMonad ()
-> enableFpu = error "Unimplemented - machine op"
+> enableFpu = isabelleOp
 
 > disableFpu :: MachineMonad ()
-> disableFpu = error "Unimplemented - machine op"
+> disableFpu = isabelleOp
 
 > isFpuEnable :: MachineMonad Bool
-> isFpuEnable = error "Unimplemented - machine op"
+> isFpuEnable = isabelleOp

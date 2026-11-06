@@ -68,7 +68,6 @@ lookupIPCBuffer isReceiver thread = do
 
 {- ASID Lookups -}
 
--- FIXME: make this a Reader Monad when we move to MCS
 getPoolPtr :: ASID -> Kernel (Maybe (PPtr ASIDPool))
 getPoolPtr asid = do
     assert (asid > 0) "ASID 0 is used for objects that are not mapped"
@@ -76,7 +75,6 @@ getPoolPtr asid = do
     asidTable <- gets (armKSASIDTable . ksArchState)
     return $ asidTable!(asidHighBitsOf asid)
 
--- FIXME: make this a Reader Monad when we move to MCS
 getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
 getASIDPoolEntry asid = do
     poolPtr <- getPoolPtr asid
@@ -253,8 +251,11 @@ invalidateTLBByASIDVA asid vaddr = do
         doMachineOp $ invalidateTranslationSingle vpn
 
 doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
-doFlush flushType vstart vend pstart =
+doFlush flushType vstart vend pstart = do
     -- the address calculations that happen here on ARM_HYP are at the caller side in AARCH64
+    assert (paddrBase <= pstart && pstart < paddrTop &&
+            fromVPtr (vend - vstart) < fromPAddr (paddrTop - pstart))
+        "doFlush: flush range must be inside the kernel window"
     case flushType of
         Clean           -> cleanCacheRange_RAM vstart vend pstart
         Invalidate      -> invalidateCacheRange_RAM vstart vend pstart
@@ -374,7 +375,7 @@ armContextSwitch vspace asid = do
 setGlobalUserVSpace :: Kernel ()
 setGlobalUserVSpace = do
     globalUserVSpace <- gets (armKSGlobalUserVSpace . ksArchState)
-    doMachineOp $ setVSpaceRoot (addrFromKPPtr globalUserVSpace) 0
+    doMachineOp $ setVSpaceRoot (addrFromKPPtr globalUserVSpace) (fromIntegral vmidReserved)
 
 setVMRoot :: PPtr TCB -> Kernel ()
 setVMRoot tcb = do
@@ -440,8 +441,9 @@ findFreeVMID = do
     -- Look for a free VM ID.
     vmidTable <- gets (armKSVMIDTable . ksArchState)
     nextVMID <- gets (armKSNextVMID . ksArchState)
+    assert (nextVMID /= vmidReserved) "nextVMID must never be reserved"
     let maybeVMID = find (\a -> isNothing (vmidTable ! a))
-                    ([nextVMID .. maxBound] ++ init [minBound .. nextVMID])
+                    ([nextVMID .. maxBound] ++ init [vmidMin .. nextVMID])
 
     -- If there is one, return it, otherwise revoke the next one in a strict round-robin.
     case maybeVMID of
@@ -450,7 +452,7 @@ findFreeVMID = do
             invalidateASID $ fromJust $ vmidTable ! nextVMID
             doMachineOp $ invalidateTranslationASID $ fromIntegral nextVMID
             invalidateVMIDEntry nextVMID
-            let new_nextVMID = if nextVMID == maxBound then minBound else nextVMID + 1
+            let new_nextVMID = if nextVMID == maxBound then vmidMin else nextVMID + 1
             modify (\s -> s { ksArchState = (ksArchState s) { armKSNextVMID = new_nextVMID }})
             return nextVMID
 
@@ -506,13 +508,18 @@ attribsFromWord w = VMAttributes {
     armExecuteNever = w `testBit` 2,
     armPageCacheable = w `testBit` 0 }
 
-makeUserPTE :: PAddr -> VMRights -> VMAttributes -> VMPageSize -> PTE
-makeUserPTE baseAddr rights attrs vmSize =
+-- On AArch64, read access is not required to execute code, but executing code
+-- effectively confers read access to the page contents. Hence, we force
+-- execute-never if the frame cap does not have the Read right. The masked
+-- rights may still be less than the cap's rights, so that execute-only
+-- mappings are possible with a cap that has the Read right.
+makeUserPTE :: PAddr -> VMRights -> VMRights -> VMAttributes -> VMPageSize -> PTE
+makeUserPTE baseAddr rights capRights attrs vmSize =
     PagePTE {
         pteBaseAddress = baseAddr,
         pteSmallPage = vmSize == ARMSmallPage,
         pteGlobal = False,
-        pteExecuteNever = armExecuteNever attrs,
+        pteExecuteNever = armExecuteNever attrs || capRights == VMKernelOnly,
         pteDevice = not (armPageCacheable attrs),
         pteRights = rights }
 
@@ -544,7 +551,8 @@ decodeARMFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
 decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     let attributes = attribsFromWord attr
     let frameSize = capFSize cap
-    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
+    let capRights = capFVMRights cap
+    let vmRights = maskVMRights capRights $ rightsFromWord rightsMask
     let basePtr = capFBasePtr cap
     assert (fromVPtr pptrBase <= fromPPtr basePtr &&
             fromPPtr basePtr < fromVPtr pptrTop)
@@ -567,7 +575,7 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     return $ InvokePage $ PageMap {
         pageMapCap = cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
-        pageMapEntries = (makeUserPTE base vmRights attributes frameSize, slot) }
+        pageMapEntries = (makeUserPTE base vmRights capRights attributes frameSize, slot) }
 
 decodeARMFrameInvocationFlush :: Word -> [Word] -> ArchCapability ->
                                  KernelF SyscallError ArchInv.Invocation
@@ -681,6 +689,8 @@ decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTType = VSRootPT_T 
                         throw $ RangeError start $ fromVPtr $ baseStart + mask bitsLeft
                     let offset = start .&. mask bitsLeft
                     let pStart = pAddr + toPAddr offset
+                    when (pStart < paddrBase || ((end - start) + fromPAddr pStart > fromPAddr paddrTop)) $
+                        throw IllegalOperation
                     return $ InvokeVSpace $ VSpaceFlush {
                          vsFlushType = labelToFlushType label,
                          vsFlushStart = VPtr start,
@@ -792,6 +802,9 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
     case capPTMappedAddress cap of
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
+            assert (paddrBase <= addrFromPPtr ptr && addrFromPPtr ptr < paddrTop &&
+                    mask (ptBits (capPTType cap)) < fromPAddr (paddrTop - addrFromPPtr ptr))
+                "performPageTableInvocation: page table must be inside the kernel window"
             unmapPageTable asid vaddr ptr
             let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTType cap)) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
@@ -886,34 +899,34 @@ storePTE slot pte = do
 {- Unimplemented Boot Code Stubs -}
 
 mapKernelWindow  :: Kernel ()
-mapKernelWindow = error "boot code unimplemented"
+mapKernelWindow = error "unimplemented init code"
 
 activateGlobalVSpace :: Kernel ()
-activateGlobalVSpace = error "boot code unimplemented"
+activateGlobalVSpace = error "unimplemented init code"
 
 createIPCBufferFrame :: Capability -> VPtr -> KernelInit Capability
-createIPCBufferFrame = error "boot code unimplemented"
+createIPCBufferFrame = error "unimplemented init code"
 
 createBIFrame :: Capability -> VPtr -> Word32 -> Word32 -> KernelInit Capability
-createBIFrame = error "boot code unimplemented"
+createBIFrame = error "unimplemented init code"
 
 createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit ()
-createFramesOfRegion = error "boot code unimplemented"
+createFramesOfRegion = error "unimplemented init code"
 
 createITPDPTs :: Capability -> VPtr -> VPtr -> KernelInit Capability
-createITPDPTs  = error "boot code unimplemented"
+createITPDPTs  = error "unimplemented init code"
 
 writeITPDPTs :: Capability -> Capability -> KernelInit ()
-writeITPDPTs  = error "boot code unimplemented"
+writeITPDPTs  = error "unimplemented init code"
 
 createITASIDPool :: Capability -> KernelInit Capability
-createITASIDPool  = error "boot code unimplemented"
+createITASIDPool  = error "unimplemented init code"
 
 writeITASIDPool :: Capability -> Capability -> Kernel ()
-writeITASIDPool  = error "boot code unimplemented"
+writeITASIDPool  = error "unimplemented init code"
 
 createDeviceFrames :: Capability -> KernelInit ()
-createDeviceFrames  = error "boot code unimplemented"
+createDeviceFrames  = error "unimplemented init code"
 
 vptrFromPPtr :: PPtr a -> KernelInit VPtr
-vptrFromPPtr  = error "boot code unimplemented"
+vptrFromPPtr  = error "unimplemented init code"

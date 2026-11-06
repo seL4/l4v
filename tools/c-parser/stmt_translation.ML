@@ -655,17 +655,23 @@ in
       val reg_cty = Unsigned ImplementationNumbers.ptr_t;
       val (nm, vol, ret, args) = ProgramAnalysis.split_asm_stmt (AsmStmt st)
       val _ = if ASM_Ignore_Hooks.ignore_thy (nm, vol, ret, args) sg
-        then raise Fail "hook fired" else ()
+        then (Feedback.warnStr'(sleft stmt, sright stmt,
+                "inline asm statement is ignored by an ASM_Ignore_Hooks hook. \
+                \It will be translated as an asm_semantics_ok_to_ignore guard, \
+                \which SimplExport does not handle.");
+              raise Fail "hook fired")
+        else ()
       val sty = hd styargs
+      fun pos e = SourcePos.toString (eleft e) ^ ": "
       val ret = case ret of NONE => (fn x => (fn s => s))
         | SOME r => valOf (lval_of (expr_term r))
-            handle Option => error ("Value (" ^ expr_string r
+            handle Option => error (pos r ^ "Value (" ^ expr_string r
                 ^ ") without l-value used as asm stmt lval specifier.")
       val x = Free ("x", addr_ty)
       val ret = mk_abs (x, mk_abs (svar, ret x svar))
       fun conv_arg arg = mk_abs (svar, rval_of (typecast
             (sg, reg_cty, expr_term arg)) svar)
-        handle Option => error ("Value (" ^ expr_string arg
+        handle Option => error (pos arg ^ "Value (" ^ expr_string arg
                 ^ ") without r-value used as asm stmt rval specifier.")
       val args = map conv_arg args
     in

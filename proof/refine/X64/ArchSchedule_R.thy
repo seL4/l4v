@@ -427,7 +427,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres[Arch_assms]:
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
       apply (rule switchToThread_corres)
-     apply (wp gts_st_tcb_at)+
+     apply (wpsimp wp: gts_st_tcb_at gts_st_tcb_at')+
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
                           invs_valid_vs_lookup invs_unique_refs)
   apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
@@ -442,8 +442,8 @@ lemma prepareNextDomain_corres[corres]:
   by corres
 
 crunch prepareNextDomain
-  for invs'[wp]: invs'
-  and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  for invs'[Arch_assms, wp]: invs'
+  and nosch[Arch_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 crunch tcb_sched_action
   for valid_vs_lookup[Arch_assms, wp]: valid_vs_lookup
@@ -510,14 +510,14 @@ lemma scheduleChooseNewThread_invs'[Arch_assms]:
 crunch lazyFpuRestore
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
-lemma stt_nosch:
+lemma stt_nosch[Arch_assms]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
    switchToThread t
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (simp add: Thread_H.switchToThread_def X64_H.switchToThread_def storeWordUser_def)
      (wpsimp wp: setCurThread_nosch hoare_drop_imp)
 
-lemma stit_nosch[wp]:
+lemma stit_nosch[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
    switchToIdleThread
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"

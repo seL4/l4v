@@ -61,7 +61,7 @@ lemma dmo_getActiveIRQ_valid_irq_states[ADT_IF_assms,wp]:
   unfolding getActiveIRQ_def by wpsimp
 
 lemmas [wp] = invalidateLocalTLB_ASID_irq_masks cleanCaches_PoU_irq_masks
-              setHardwareASID_irq_masks set_current_pd_irq_masks
+              setHardwareASID_irq_masks write_ttbr0_ptr_irq_masks
 
 crunch prepare_thread_delete, arch_finalise_cap, arch_post_cap_deletion
   for valid_irq_states[ADT_IF_assms,wp]: "\<lambda>s :: det_state. valid_irq_states s"
@@ -415,6 +415,11 @@ lemma valid_irq_states_kheap_update[simp]:
 crunch delete_objects
   for valid_irq_states[wp]: valid_irq_states
   (wp: dmo_machine_state_lift simp: crunch_simps detype_def)
+
+lemma arch_post_reset_untyped_irq_state_of_state[wp]:
+  "arch_post_reset_untyped dev sz \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  unfolding arch_post_reset_untyped_def
+  by (wpsimp wp: dmo_wp simp: dsb_def invalidate_I_PoU_def isb_def)
 
 lemma reset_untyped_cap_irq_state_inv[ADT_IF_assms]:
   "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>

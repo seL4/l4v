@@ -323,6 +323,13 @@ locale Untyped_R = mdb_insert_again_all_common +
     "word_size_bits \<le> untyped_min_bits"
   assumes resetChunkBits_le_word_bits:
     "resetChunkBits < word_bits"
+  assumes postResetUntyped_corres:
+    "\<And>dev sz. corres dc \<top> \<top> (arch_post_reset_untyped dev sz) (postResetUntyped dev sz)"
+  assumes postResetUntyped_inv:
+    "\<And>P dev sz. (\<And>s f. P (ksMachineState_update f s) = P s) \<Longrightarrow>
+       postResetUntyped dev sz \<lbrace>P\<rbrace>"
+  assumes postResetUntyped_invs'[wp]:
+    "\<And>dev sz. postResetUntyped dev sz \<lbrace>invs'\<rbrace>"
   (* FIXME arch-split: candidate for Kernel_Config lemmas *)
   assumes word_size_bits_le_resetChunkBits:
     "word_size_bits \<le> resetChunkBits"
@@ -342,7 +349,8 @@ locale Untyped_R = mdb_insert_again_all_common +
     "\<And>R.
      corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
                                             \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
-                           \<and> valid_objs s \<and> pspace_aligned s)
+                           \<and> valid_objs s \<and> pspace_aligned s
+                           \<and> valid_arch_state s \<and> cap_refs_in_kernel_window s)
                \<top>
                (return ()) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
   assumes createObject_nosch[wp]:
@@ -4195,6 +4203,9 @@ lemma resetUntypedCap_corres:
           apply (clarsimp simp: valid_cap_def cap_aligned_def)
          apply (clarsimp simp: valid_cap_def cap_aligned_def
                                order_trans[OF word_size_bits_le_untyped_min_bits])
+        apply (rule corres_splitEE[where f=dc and r'=dc and Q=\<top> and Q'=\<top>, rotated])
+           apply (rule corres_liftE_rel_sum[THEN iffD2], rule postResetUntyped_corres)
+          apply (rule wp_post_tautE)+
         apply (rule corres_if)
           apply simp
          apply (simp add: bits_of_def shiftL_nat)
@@ -4494,6 +4505,12 @@ lemma (in Untyped_R) resetUntypedCap_invs_etc:
    apply (strengthen descendants_range_ex_cte'[rotated, OF _ order_refl, mk_strg D _ E])
    apply (clarsimp simp: gen_isCap_simps empty_descendants_range_in' add_mask_fold)
    apply auto[1]
+  (* the final arch step preserves invs' and does not touch the rest of the postcondition *)
+  apply (rule bindE_wp_fwd[rotated])
+   apply (rule liftE_wp)
+   apply (simp only: pred_conj_def conj_assoc)
+   apply (rule hoare_vcg_conj_lift[OF postResetUntyped_invs' postResetUntyped_inv])
+   apply (simp add: sch_act_simple_def)
   apply (cases "dev \<or> sz < resetChunkBits")
    apply (simp add: pred_conj_def unless_def)
    apply (rule hoare_pre)
@@ -5020,7 +5037,7 @@ lemma (in Untyped_R_2) inv_untyped_corres:
          apply (clarsimp simp:conj_comms)
          apply (strengthen invs_mdb invs_valid_objs
                 invs_valid_pspace invs_arch_state invs_psp_aligned
-                invs_distinct)
+                invs_distinct invs_cap_refs_in_kernel_window)
          apply (clarsimp simp:conj_comms ball_conj_distrib ex_in_conv)
          apply (rule validE_R_validE, rule_tac Q'="\<lambda>_ s. valid_list s \<and> invs s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ui
@@ -5133,7 +5150,7 @@ context Untyped_R begin
 crunch invokeUntyped
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM
-     wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv)
+     wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv postResetUntyped_inv)
 
 crunch deleteObjects
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
@@ -5649,7 +5666,7 @@ lemma invokeUntyped_invs'[wp]:
 
 end (* Untyped_R_2 *)
 
-lemma resetUntypedCap_st_tcb_at':
+lemma (in Untyped_R) resetUntypedCap_st_tcb_at':
   "\<lbrace>invs'
       and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) t
       and cte_wp_at' (\<lambda>cp. isUntypedCap (cteCap cp)) slot
@@ -5670,7 +5687,7 @@ lemma resetUntypedCap_st_tcb_at':
   apply (subst hoare_ex_all[symmetric])+
   apply (clarsimp simp: resetUntypedCap_def)
   apply (wpsimp wp: unlessE_wp deleteObjects_st_tcb_at'[where p=slot] mapME_x_inv_wp
-                    preemptionPoint_inv hoare_drop_imps getSlotCap_wp)
+                    preemptionPoint_inv postResetUntyped_inv hoare_drop_imps getSlotCap_wp)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule exI, strengthen refl)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
@@ -5710,7 +5727,7 @@ lemma inv_untyp_tcb'[wp]:
 
 crunch invokeUntyped
   for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv
+  (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv postResetUntyped_inv
    simp: crunch_simps)
 
 end (* Untyped_R_2 *)

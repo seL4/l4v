@@ -274,7 +274,8 @@ lemma archNoOverlap[Arch_assms]:
   shows
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
                                           \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
-                         \<and> valid_objs s \<and> pspace_aligned s)
+                         \<and> valid_objs s \<and> pspace_aligned s
+                         \<and> valid_arch_state s \<and> cap_refs_in_kernel_window s)
              \<top>
              (return ()) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
   by (simp add: archOverlap_def)
@@ -323,6 +324,22 @@ crunch resetUntypedCap
   (simp: crunch_simps
      wp: hoare_drop_imps unless_wp mapME_x_inv_wp
          preemptionPoint_inv)
+
+lemma postResetUntyped_corres[Arch_assms]:
+  "corres dc \<top> \<top> (arch_post_reset_untyped dev sz) (postResetUntyped dev sz)"
+  unfolding arch_post_reset_untyped_def postResetUntyped_def ifence_def
+  by (corres corres: corres_machine_op_Id_dc wp: no_fail_machine_op_lift)
+
+lemma postResetUntyped_inv[Arch_assms]:
+  assumes "\<And>s f. P (ksMachineState_update f s) = P s"
+  shows "postResetUntyped dev sz \<lbrace>P\<rbrace>"
+  unfolding postResetUntyped_def doMachineOp_def
+  by (wpsimp simp: assms)
+
+lemma postResetUntyped_invs'[wp, Arch_assms]:
+  "postResetUntyped dev sz \<lbrace>invs'\<rbrace>"
+  unfolding postResetUntyped_def ifence_def
+  by (wpsimp wp: dmo_invs' simp: machine_op_lift_def in_monad machine_rest_lift_def select_f_def)
 
 lemmas Untyped_R_assms = Arch_assms (* extract accumulated assumptions *)
 

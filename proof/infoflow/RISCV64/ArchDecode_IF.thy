@@ -35,7 +35,7 @@ lemma arch_check_irq_rev[Decode_IF_assms, wp]:
   done
 
 lemma vspace_cap_rights_to_auth_mono[Decode_IF_assms]:
-  "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R \<subseteq> vspace_cap_rights_to_auth S"
+  "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R exec \<subseteq> vspace_cap_rights_to_auth S exec"
   by (auto simp: vspace_cap_rights_to_auth_def)
 
 lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:

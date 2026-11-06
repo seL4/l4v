@@ -320,9 +320,9 @@ lemma invoke_tcb_globals_equiv:
                                 | intro conjI impI
                                 | clarsimp simp: no_cap_to_idle_thread)+\<close>)?)
    apply wpsimp
-       apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arch_copy_register_sets)
+       apply (rename_tac dest src susp resume frames ints arch sanitise_info)
        apply (rule_tac Q'="\<lambda>_. valid_arch_state and globals_equiv st and
-                              (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)"
+                              (\<lambda>s. dest \<noteq> idle_thread s) and (\<lambda>s. src \<noteq> idle_thread s)"
                     in hoare_strengthen_post)
         apply (wpsimp wp: mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
                           weak_if_wp')+
@@ -544,8 +544,9 @@ lemma invoke_tcb_reads_respects_f:
               | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
     \<comment> \<open>SetTLSBase\<close>
     apply (wpsimp wp: when_ev reschedule_required_reads_respects_f
-                      as_user_reads_respects_f hoare_drop_imps)+
-    apply (auto simp: det_setRegister authorised_tcb_inv_def)[1]
+                      as_user_reads_respects_f hoare_drop_imps
+                simp: det_setRegister)
+    apply (auto simp: authorised_tcb_inv_def)[1]
    \<comment> \<open>SetFlags\<close>
    apply (wpsimp wp: set_flags_reads_respects_f thread_get_reads_respects_f
                      arch_post_set_flags_reads_respects_f)

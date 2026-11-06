@@ -131,9 +131,6 @@ definition make_virq :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<R
 definition virq_type :: "virq \<Rightarrow> nat" where
   "virq_type virq \<equiv> unat ((virq >> virq_type_shift) && 3)"
 
-definition is_virq_active :: "virq \<Rightarrow> bool" where
-  "is_virq_active virq \<equiv> virq_type virq = 2"
-
 definition decode_vcpu_inject_irq ::
   "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
   where
@@ -149,11 +146,6 @@ definition decode_vcpu_inject_irq ::
      num_list_regs \<leftarrow> liftE $ gets (arm_gicvcpu_numlistregs \<circ> arch_state);
      whenE (index \<ge> of_nat num_list_regs) $
         (throwError $ RangeError 0 (of_nat num_list_regs - 1));
-
-     vcpu \<leftarrow> liftE $ get_vcpu p;
-     vcpuLR \<leftarrow> returnOk (vgic_lr $ vcpu_vgic $ vcpu);
-
-     whenE (is_virq_active (vcpuLR (unat index))) $ throwError DeleteFirst;
 
      virq \<leftarrow> returnOk (make_virq group priority vid);
      returnOk $ InvokeVCPU $ VCPUInjectIRQ p (unat index) virq

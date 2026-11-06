@@ -67,14 +67,9 @@ definition
   set_pd :: "obj_ref \<Rightarrow> (12 word \<Rightarrow> pde) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pd ptr pd \<equiv> set_object ptr (ArchObj (PageDirectory pd))"
 
-definition
-  set_current_pd :: "paddr \<Rightarrow> unit machine_monad"
-where
-  "set_current_pd pd \<equiv> do
-     dsb;
-     writeTTBR0 ((pd && 0xffffe000) || 0x18);
-     isb
-   od"
+text \<open>Write a page directory address to TTBR0\<close>
+definition write_ttbr0_ptr :: "paddr \<Rightarrow> unit machine_monad" where
+  "write_ttbr0_ptr pd \<equiv> writeTTBR0 ((pd && 0xffffe000) || 0x18)"
 
 text \<open>The following function takes a pointer to a PDE in kernel memory
   and returns the actual PDE.\<close>

@@ -1882,7 +1882,7 @@ lemma integrity_no_hyp_arm_current_vcpu[simp]:
   by (simp add: integrity_no_hyp_def integrity_asids_def integrity_fpu_def)
 
 crunch readVCPUHardwareReg, writeVCPUHardwareReg,
-       check_export_arch_timer, maskInterrupt, setHCR, setSCTLR, enableFpuEL01,
+       check_export_arch_timer, maskInterrupt, setHCR, setSCTLR, writeTCR, enableFpuEL01,
        set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_lr,
        get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr
   for fpu_state[wp]: "\<lambda>s. P (fpu_state s)"
@@ -1912,7 +1912,7 @@ definition vcpu_proj where
 abbreviation (input)
   "vtimerRegs \<equiv> {VCPURegCNTV_CTL,VCPURegCNTV_CVAL,VCPURegCNTVOFF,VCPURegCNTKCTL_EL1}"
 abbreviation (input)
-  "savedWhenDisabledRegs \<equiv> {VCPURegSCTLR,VCPURegCPACR} \<union> vtimerRegs"
+  "savedWhenDisabledRegs \<equiv> {VCPURegSCTLR,VCPURegCPACR,VCPURegTCR} \<union> vtimerRegs"
 
 lemma savedWhenDisabledRegs_def:
   "savedWhenDisabledRegs = Collect vcpuRegSavedWhenDisabled"
@@ -2076,12 +2076,13 @@ lemma modify_reg_vcpu_proj[wp]:
   apply (fastforce intro: vcpu.equality split: option.splits)
   done
 
-lemma save_virt_timer_vcpu_proj[wp]:
-  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vr = p then r - vtimerRegs else r) l h v a p s \<and> vtimerRegs \<subseteq> r\<rbrace>
-   save_virt_timer vr
+lemma disable_virt_timer_vcpu_proj[wp]:
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj (if vcpu_ptr_opt = Some p then r - vtimerRegs else r) l h v a p s \<and>
+        vtimerRegs \<subseteq> r\<rbrace>
+   disable_virt_timer vcpu_ptr_opt
    \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
   by (wpsimp wp: vcpu_save_reg_vcpu_proj modify_reg_vcpu_proj
-           simp: save_virt_timer_def dmo_distr Diff_insert[symmetric]
+           simp: disable_virt_timer_def dmo_distr Diff_insert[symmetric]
                  writeVCPUHardwareReg_def check_export_arch_timer_def
           split: if_split_asm split_del: if_split
       | wp dmo_lift_vcpu_proj)+
@@ -2092,7 +2093,8 @@ lemma vcpu_disable_vcpu_proj[wp]:
    vcpu_disable vcpu
    \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
   supply if_split[split del] if_split_asm[split]
-  apply (case_tac vcpu; simp add: vcpu_disable_def enableFpuEL01_def setSCTLR_def dmo_distr)
+  apply (case_tac vcpu;
+         simp add: vcpu_disable_def enableFpuEL01_def setSCTLR_def writeTCR_def dmo_distr)
   by (wpsimp wp: vcpu_save_reg_vcpu_proj modify_reg_vcpu_proj
            simp: insert_commute Diff_insert[symmetric] | wp dmo_lift_vcpu_proj)+
 
@@ -2103,10 +2105,11 @@ lemma vcpu_save_vcpu_proj[wp]:
         r = UNIV \<and> arm_current_vcpu (arch_state s) = Some (vr,b) \<and> valid_arch_state s\<rbrace>
    vcpu_save (Some (vr,b))
    \<lbrace>\<lambda>_ s. vopt = vcpu_proj r l h v a p s\<rbrace>"
-  apply (wpsimp wp: save_virt_timer_vcpu_proj hoare_weak_lift_imp dmo_lift_vcpu_proj
+  apply (wpsimp wp: disable_virt_timer_vcpu_proj hoare_weak_lift_imp dmo_lift_vcpu_proj
               simp: vcpu_save_def if_fun_split split_del: if_split)
   by (auto intro: vcpureg.exhaust intro!: arg_cong[where f="\<lambda>x. _ (vcpu_proj x)"]
-            simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def)
+            simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def
+                  vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)
 
 \<comment> \<open>Enable/Restore\<close>
 
@@ -2150,7 +2153,8 @@ lemma vcpu_restore_vcpu_proj[wp]:
          | wp dmo_lift_vcpu_proj)+
   apply (rule conjI)
    apply (auto intro!: arg_cong[where f="\<lambda>x. _ (vcpu_proj x)"] intro: vcpureg.exhaust
-                 simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def)[1]
+                 simp: enum_vcpureg upto_enum_def toEnum_def fromEnum_def
+                       vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def)[1]
   apply (clarsimp simp: vcpu_proj_def split: if_splits)
   done
 
@@ -2177,7 +2181,7 @@ lemma vcpu_update_extra_lrs[wp]:
   apply (auto intro!: ext simp: vcpu_extra_lrs_def)
   done
 
-crunch vcpu_save_reg, vcpu_save_reg_range, save_virt_timer
+crunch vcpu_save_reg, vcpu_save_reg_range, disable_virt_timer
   for extra_lrs[wp]: "\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))"
   (wp: mapM_x_wp)
 
@@ -2227,10 +2231,11 @@ lemma vcpu_switch_respects:
 crunch vcpu_invalidate_active
   for integrity_no_hyp[wp]: "integrity_no_hyp aag X st"
   and arm_gicvcpu_numlistregs[wp]: "\<lambda>s. P (arm_gicvcpu_numlistregs (arch_state s))"
+  (wp: dmo_no_mem_integrity_no_hyp crunch_wps)
 
 lemma vcpu_invalidate_active_integrity_hyp[wp]:
   "\<lbrace>\<lambda>s. integrity_hyp aag subjects x st s \<and>
-        (\<exists>v b. arm_current_vcpu (arch_state s) = Some (v,b) \<and> pasObjectAbs aag v \<in> subjects)\<rbrace>
+        (\<exists>v b. arm_current_vcpu (arch_state s) = Some (v, b) \<and> pasObjectAbs aag v \<in> subjects)\<rbrace>
    vcpu_invalidate_active
    \<lbrace>\<lambda>_. integrity_hyp aag subjects x st\<rbrace>"
   unfolding vcpu_invalidate_active_def integrity_hyp_def vcpu_integrity_def vcpu_proj_of_state
@@ -2307,7 +2312,7 @@ lemma dissociate_vcpu_tcb_respects:
 
 crunch vcpu_invalidate_active
   for vcpus_of[wp]: "\<lambda>s. P (vcpus_of s)"
-  (simp: vcpu_invalidate_active_def vcpu_disable_def)
+  (simp: vcpu_invalidate_active_def vcpu_disable_def disable_virt_timer_def)
 
 lemma thread_set_vcpus_of[wp]:
   "thread_set f tptr \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
@@ -2821,6 +2826,18 @@ lemma decode_fr_inv_map_authorised:
   apply (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
                         aag_cap_auth_def cap_links_asid_slot_def cap_links_irq_def pte_ref2_def
                         make_user_pte_def cap_auth_conferred_def arch_cap_auth_conferred_def)
+  apply (rule conjI; clarsimp)
+   apply (rule conjI)
+    apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
+    apply (drule (1) vs_lookup_slot_unique_level; clarsimp)
+    apply (fastforce simp: cte_wp_at_caps_of_state make_user_pte_def pte_ref2_def
+                           vspace_cap_rights_to_auth_def validate_vm_rights_def
+                           mask_vm_rights_def vm_read_only_def vm_kernel_only_def
+                    split: if_splits)
+   apply (fastforce elim: pt_lookup_slot_from_level_is_subject[rotated 4]
+                   intro: vs_lookup_table_vref_independent[OF vspace_for_asid_vs_lookup]
+                          pas_refined_Control[symmetric]
+                    simp: pt_lookup_slot_def)
   apply (rule conjI)
    apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
    apply (drule (1) vs_lookup_slot_unique_level; clarsimp)

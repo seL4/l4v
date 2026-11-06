@@ -272,15 +272,14 @@ find_free_hw_asid :: "(hardware_asid,'z::state_ext) s_monad" where
     hw_asid_table \<leftarrow> gets (arm_hwasid_table \<circ> arch_state);
     next_asid \<leftarrow> gets (arm_next_asid \<circ> arch_state);
     maybe_asid \<leftarrow> return (find (\<lambda>a. hw_asid_table a = None)
-                    (take (length [minBound :: hardware_asid .e. maxBound])
-                        ([next_asid .e. maxBound] @ [minBound .e. next_asid])));
+                    ([next_asid .e. maxBound] @ butlast [hw_asid_min .e. next_asid]));
     (case maybe_asid of
        Some hw_asid \<Rightarrow> return hw_asid
      | None \<Rightarrow>  do
             invalidate_asid $ the $ hw_asid_table next_asid;
             do_machine_op $ invalidateLocalTLB_ASID next_asid;
             invalidate_hw_asid_entry next_asid;
-            new_next_asid \<leftarrow> return (next_asid + 1);
+            new_next_asid \<leftarrow> return (if next_asid = maxBound then hw_asid_min else next_asid + 1);
             modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_next_asid := new_next_asid \<rparr>\<rparr>);
             return next_asid
        od)
@@ -374,17 +373,22 @@ where
   "vcpu_write_reg vr reg val \<equiv>
     vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu)(reg := val) \<rparr> )"
 
-definition save_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "save_virt_timer vcpu_ptr \<equiv> do
-     vcpu_save_reg vcpu_ptr VCPURegCNTV_CTL;
+definition disable_virt_timer :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "disable_virt_timer vcpu_ptr_opt \<equiv> do
+     case vcpu_ptr_opt of
+       Some vcpu_ptr \<Rightarrow> do
+         vcpu_save_reg vcpu_ptr VCPURegCNTV_CTL;
+         cval \<leftarrow> do_machine_op get_cntv_cval_64;
+         cntvoff \<leftarrow> do_machine_op get_cntv_off_64;
+         vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALhigh (ucast (cval >> 32));
+         vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALlow (ucast cval);
+         vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (cntvoff >> 32));
+         vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast cntvoff);
+         vcpu_save_reg vcpu_ptr VCPURegCNTKCTL
+       od
+     | None \<Rightarrow> return ();
+     \<comment> \<open>with or without VCPU, turn off the timer and return to user-mode timer config\<close>
      do_machine_op $ writeVCPUHardwareReg VCPURegCNTV_CTL 0;
-     cval \<leftarrow> do_machine_op get_cntv_cval_64;
-     cntvoff \<leftarrow> do_machine_op get_cntv_off_64;
-     vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALhigh (ucast (cval >> 32));
-     vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALlow (ucast cval);
-     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (cntvoff >> 32));
-     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast cntvoff);
-     vcpu_save_reg vcpu_ptr VCPURegCNTKCTL;
      do_machine_op check_export_arch_timer
    od"
 
@@ -418,30 +422,27 @@ text \<open>Turn VPCU mode off on the hardware level.\<close>
 definition
   vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "vcpu_disable vo \<equiv> do
+  "vcpu_disable vcpu_ptr_opt \<equiv> do
     do_machine_op dsb;
-    (case vo of
+    (case vcpu_ptr_opt of
       Some vr \<Rightarrow> do
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
-        do_machine_op isb
+        vcpu_save_reg vr VCPURegCPACR
       od
     | _ \<Rightarrow> return ());
     do_machine_op $ do
         set_gic_vcpu_ctrl_hcr 0; \<comment> \<open>turn VGIC off\<close>
-        isb;
         setSCTLR sctlrDefault; \<comment> \<open>turn SI MMU off\<close>
         setHCR hcrNative;
+        setCPACR cpacrDefault;
+        trapDebugExceptions True; \<comment> \<open>native threads always trap debug exceptions\<close>
         isb
       od;
-    case vo of
-      Some vr \<Rightarrow> do
-          save_virt_timer vr;
-          do_machine_op $ maskInterrupt True irqVTimerEvent
-        od
-      | _ \<Rightarrow> return ()
-    od"
+    disable_virt_timer vcpu_ptr_opt;
+    do_machine_op $ maskInterrupt True irqVTimerEvent
+  od"
 
 text \<open>Turn VCPU mode on, on the hardware level.\<close>
 definition
@@ -453,8 +454,10 @@ where
      do_machine_op $ do
         setHCR hcrVCPU;
         isb;
-        set_gic_vcpu_ctrl_hcr (vgic_hcr $ vcpu_vgic vcpu)
+        set_gic_vcpu_ctrl_hcr (vgic_hcr $ vcpu_vgic vcpu);
+        trapDebugExceptions False \<comment> \<open>guests handle their own debug exceptions\<close>
      od;
+     vcpu_restore_reg vr VCPURegCPACR;
      restore_virt_timer vr
    od"
 
@@ -505,7 +508,7 @@ where
             vcpu_save_reg vr VCPURegSCTLR;
             hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
             vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
-            save_virt_timer vr
+            disable_virt_timer (Some vr)
           od;
 
           vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;
@@ -523,8 +526,9 @@ where
                   od)
             gicIndices;
 
-          vcpu_save_reg_range vr VCPURegACTLR VCPURegPARlow;
-          do_machine_op isb
+          \<comment> \<open>disabled VCPUs already have CPACR stored\<close>
+          when active $ vcpu_save_reg vr VCPURegCPACR;
+          vcpu_save_reg_range vr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
        od
      | _ \<Rightarrow> fail"
 
@@ -546,7 +550,7 @@ where
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
     \<comment> \<open>restore banked VCPU registers except SCTLR (that's in VCPUEnable)\<close>
-     vcpu_restore_reg_range vr VCPURegACTLR VCPURegPARlow;
+     vcpu_restore_reg_range vr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd;
      vcpu_enable vr
   od"
 
@@ -652,6 +656,15 @@ where
 
 (* end of vcpu related definitions *)
 
+text \<open>Switch to the global user page directory on the reserved hardware ASID. Only global
+kernel mappings are available from the TLB afterwards.\<close>
+definition
+  set_global_pd :: "(unit,'z::state_ext) s_monad" where
+  "set_global_pd \<equiv> do
+     global_us_pd \<leftarrow> gets (arm_us_global_pd \<circ> arch_state);
+     do_machine_op $ writeContextIDAndPD hw_asid_reserved (addrFromKPPtr global_us_pd)
+   od"
+
 text \<open>Switch into the address space of a given thread or the global address
 space if none is correctly configured.\<close>
 definition
@@ -666,10 +679,7 @@ definition
            liftE $ arm_context_switch pd asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
-    (\<lambda>_. do
-       global_us_pd \<leftarrow> gets (arm_us_global_pd o arch_state);
-       do_machine_op $ set_current_pd $ addrFromKPPtr global_us_pd
-    od)
+    (\<lambda>_. set_global_pd)
 od"
 
 text \<open>Before deleting an ASID pool object we must deactivate all page

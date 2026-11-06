@@ -404,11 +404,9 @@ lemma do_machine_op_globals_equiv_scheduler:
         \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
   unfolding do_machine_op_def by (wp | simp add: split_def)+
 
-lemma dmo_user_memory_update_globals_equiv_scheduler:
-  "\<lbrace>globals_equiv_scheduler st and
-    (invs and (\<lambda>s. pl = ptable_lift t s |` {x. pr x \<noteq> {}} \<and> pr = ptable_rights t s))\<rbrace>
-   do_machine_op
-     (user_memory_update ((ba |` {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x} \<circ> addrFromPPtr) |` S))
+lemma dmo_user_memory_update_globals_equiv_scheduler':
+  "\<lbrace>globals_equiv_scheduler st and invs\<rbrace>
+   do_machine_op (user_memory_update um)
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply (rule do_machine_op_globals_equiv_scheduler)
   apply clarsimp
@@ -417,6 +415,14 @@ lemma dmo_user_memory_update_globals_equiv_scheduler:
    apply (wp modify_wp)
   apply (clarsimp simp: globals_equiv_scheduler_def split: option.splits)
   done
+
+lemma dmo_user_memory_update_globals_equiv_scheduler:
+  "\<lbrace>globals_equiv_scheduler st and
+    (invs and (\<lambda>s. pl = ptable_lift t s |` {x. pr x \<noteq> {}} \<and> pr = ptable_rights t s))\<rbrace>
+   do_machine_op
+     (user_memory_update ((ba |` {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x} \<circ> addrFromPPtr) |` S))
+   \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
+  by (wpsimp wp: dmo_user_memory_update_globals_equiv_scheduler')
 
 lemma dmo_device_memory_update_globals_equiv_scheduler:
   "\<lbrace>globals_equiv_scheduler st and (\<lambda>s. device_region s = S)\<rbrace>
@@ -1504,14 +1510,16 @@ text \<open>
 \<close>
 sublocale valid_initial_state \<subseteq> ni?:
    complete_unwinding_system "big_step_ADT_A_if utf" (* the ADT that we prove infoflow for *)
-                             s0                      (* initial state *)
+                             Init0                   (* initial states *)
                              "\<lambda>e s. part s"          (* dom function *)
                              uwr                     (* uwr *)
                              "policyFlows (pasPolicy initial_aag)" (* policy *)
                              undefined               (* out -- unused *)
                              PSched                  (* scheduler partition name *)
-  apply (simp add: complete_unwinding_system_def big_step_ADT_A_if_enabled_Step_system
-                   unwinding_system_def complete_unwinding_system_axioms_def)
+  apply (insert big_step_ADT_A_if_enabled_Step_system)
+  apply (simp add: complete_unwinding_system_def unwinding_system_def noninterference_system_def
+                   complete_unwinding_system_axioms_def unwinding_system_axioms_def
+                   noninterference_system_axioms_def enabled_Step_system_def)
   apply (rule conjI)
    apply (unfold_locales)
       apply (clarsimp simp: equiv_def uwr_def, safe)[1]
@@ -1527,6 +1535,13 @@ sublocale valid_initial_state \<subseteq> ni?:
   apply (simp add: refl_onD[OF policyFlows_refl])
   done
 
+text \<open>Its initial states are closed under big steps, so all forms of nonleakage coincide.\<close>
+sublocale valid_initial_state \<subseteq> ni?:
+   closed_unwinding_system "big_step_ADT_A_if utf" Init0 "\<lambda>e s. part s" uwr
+                           "policyFlows (pasPolicy initial_aag)" undefined PSched
+  by unfold_locales
+     (erule Init0_big_step_closed, simp add: ni.Step_system_Step)
+
 lemma Fin_big_step_adt:
   "Fin (big_step_adt A R evmap) = Fin A"
   by (simp add: big_step_adt_def)
@@ -1535,14 +1550,17 @@ lemma Fin_big_step_adt:
 context valid_initial_state begin
 
 lemma small_step_reachable:
-  "ni.reachable s \<Longrightarrow> system.reachable (ADT_A_if utf) s0 s"
-  apply (rule reachable_big_step_adt)
-  apply (simp add: big_step_ADT_A_if_def)
-  done
+  "ni.reachable s \<Longrightarrow> sreachable s"
+  by (simp add: ni.reachable_Init0_iff Init0_sreachable)
+
+lemma reachable_bs_boundary:
+  "ni.reachable s \<Longrightarrow> bs_boundary s"
+  by (drule ni.reachable_Init0_iff[THEN iffD1])
+     (simp add: Init0_def bs_boundary_def)
 
 lemma reachable_invs_if:
   "ni.reachable s \<Longrightarrow> invs_if s"
-  apply (rule ADT_A_if_reachable_invs_if)
+  apply (rule sreachable_invs_if)
   apply (erule small_step_reachable)
   done
 
@@ -1648,17 +1666,18 @@ lemma handle_ev[wp]:
   by simp
 
 lemma pas_refined_initial_aag_reachable:
-  "system.reachable (big_step_ADT_A_if utf) s0 s
+  "ni.reachable s
    \<Longrightarrow> pas_refined initial_aag (internal_state_if s)"
+  apply (drule pas_refined_if)
   apply (simp add: initial_aag_bak[where s="internal_state_if s"])
-  apply (rule pas_refined_pasSubject_update[OF pas_refined_if pas_wellformed_cur])
+  apply (rule pas_refined_pasSubject_update[OF _ pas_wellformed_cur])
    apply assumption
   apply (clarsimp simp: current_aag_def)
   apply blast
   done
 
 lemma silc_inv_initial_aag_reachable:
-  "system.reachable (big_step_ADT_A_if utf) s0 s
+  "ni.reachable s
    \<Longrightarrow> silc_inv initial_aag s0_internal (internal_state_if s)"
   apply (simp add: silc_inv_cur[symmetric])
   apply (fastforce dest: reachable_invs_if simp: invs_if_def Invs_def)
@@ -1711,17 +1730,6 @@ lemma ct_running_not_ct_idle:
 lemma not_schedule_modes_KernelEntry:
   "(\<not> scheduler_modes (KernelEntry event)) = (event \<noteq> Interrupt)"
   by (case_tac event, simp_all)
-
-lemma Step_ADT_A_if'':
-  "\<lbrakk> (s, t) \<in> data_type.Step (ADT_A_if utf) (); system.reachable (ADT_A_if utf) s0 s \<rbrakk>
-     \<Longrightarrow> (s, t) \<in> system.Step (ADT_A_if utf) ()"
-  apply (simp add: system.reachable_def)
-  apply (clarsimp)
-  apply (frule execution_invs)
-  apply (frule invs_if_full_invs_if)
-  apply (frule execution_restrict)
-  apply (simp add: system.Step_def execution_def steps_def ADT_A_if_def)
-  done
 
 end
 
@@ -1790,14 +1798,14 @@ lemma user_small_Step_partitionIntegrity:
 lemma small_Step_partitionIntegrity:
   notes active_from_running[simp]
   assumes step: "(s, t) \<in> data_type.Step (ADT_A_if utf) ()"
-    and reachable: "system.reachable (ADT_A_if utf) s0 s"
+    and reachable: "sreachable s"
     and sched: "part s \<noteq> PSched"
   shows "partitionIntegrity (current_aag (internal_state_if s))
                             (internal_state_if s) (internal_state_if t)"
 proof (cases "sys_mode_of s")
   case InUserMode
   with assms show ?thesis
-    by (fastforce dest: ADT_A_if_reachable_invs_if
+    by (fastforce dest: sreachable_invs_if
                   simp: invs_if_def part_def global_automaton_if_def
                         Step_ADT_A_if_def_global_automaton_if
                  intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)
@@ -1807,7 +1815,7 @@ next case InIdleMode
                  intro: check_active_irq_A_if_partitionIntegrity)
 next case KernelEntry
   with assms show ?thesis
-    by (fastforce dest: ADT_A_if_reachable_invs_if
+    by (fastforce dest: sreachable_invs_if
                  simp: invs_if_def part_def Step_ADT_A_if_def_global_automaton_if
                        global_automaton_if_def not_schedule_modes_KernelEntry
                 intro: kernel_call_A_if_partitionIntegrity)
@@ -1831,7 +1839,7 @@ next case KernelSchedule
     apply (erule use_valid)
      apply (wp schedule_if_partitionIntegrity[OF current_domains_distinct])
     apply (clarsimp simp: partitionIntegrity_refl)
-    apply (drule ADT_A_if_reachable_invs_if)
+    apply (drule sreachable_invs_if)
     apply (clarsimp simp: invs_if_def Invs_def silc_inv_refl current_aag_def)
     done
 qed
@@ -1842,30 +1850,17 @@ end
 context valid_initial_state begin
 
 lemma sub_big_steps_reachable:
-  "\<lbrakk> (s', evlist') \<in> sub_big_steps (ADT_A_if utf) big_step_R s;
-     system.reachable (ADT_A_if utf) s0 s \<rbrakk>
-     \<Longrightarrow> system.reachable (ADT_A_if utf) s0 s'"
-  apply (rule_tac s=s and js=evlist' in Step_system.reachable_execution[OF ADT_A_if_Step_system])
-   apply assumption
-  apply (drule sub_big_steps_Run)
-  apply (clarsimp simp: execution_def image_def)
-  apply (subst Bex_def)
-  apply (simp only: steps_eq_Run)
-  apply (rule_tac x="s'" in exI)
-  apply (rule conjI)
-   apply (rule_tac x=s in exI)
-   apply (clarsimp simp: system.reachable_def)
-   apply (frule execution_invs)
-   apply (frule invs_if_full_invs_if)
-   apply (frule execution_restrict)
-   apply (simp add: ADT_A_if_def)
-  apply (simp add: ADT_A_if_def)
+  "\<lbrakk> (s', evlist') \<in> sub_big_steps (ADT_A_if utf) big_step_R s; sreachable s \<rbrakk>
+     \<Longrightarrow> sreachable s'"
+  apply (induct rule: sub_big_steps.induct)
+   apply simp
+  apply (blast intro: sreachable_Step)
   done
 
 lemma sub_big_steps_not_PSched:
-  "\<lbrakk> (s', blah) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; big_step_R\<^sup>*\<^sup>* s0 s; part s \<noteq> PSched \<rbrakk>
+  "\<lbrakk> (s', blah) \<in> sub_big_steps (ADT_A_if utf) big_step_R s; bs_boundary s; part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> part s' \<noteq> PSched"
-  apply (drule tranclp_s0)
+  apply (drule bs_boundaryD)
   apply (induct s' blah rule: sub_big_steps.induct)
    apply simp
   apply simp
@@ -1883,20 +1878,10 @@ lemma sub_big_steps_not_PSched:
   done
 
 lemma reachable_Step':
-  "\<lbrakk> system.reachable (big_step_ADT_A_if utf) s0 s;
+  "\<lbrakk> ni.reachable s;
      (s, s') \<in> data_type.Step (big_step_ADT_A_if utf) a \<rbrakk>
-     \<Longrightarrow> system.reachable (big_step_ADT_A_if utf) s0 s'"
-  apply (rule reachable_Step, assumption)
-  apply (drule small_step_reachable)
-  apply (frule ADT_A_if_reachable_full_invs_if)
-  apply (drule ADT_A_if_reachable_step_restrict)
-  apply (clarsimp simp: system.Step_def execution_def big_step_ADT_A_if_def
-                        Fin_big_step_adt Fin_ADT_if steps_eq_Run)
-  apply (simp add: big_step_ADT_A_if_def big_step_adt_def Init_ADT_if)
-  apply (cases s)
-  apply (case_tac a)
-  apply blast
-  done
+     \<Longrightarrow> ni.reachable s'"
+  by (simp add: ni.reachable_Init0_iff Step_big_step_ADT_A_if Init0_big_steps_closed)
 
 end
 
@@ -1905,7 +1890,7 @@ context Noninterference_valid_initial_state begin
 
 lemma sub_big_steps_partitionIntegrity:
   "\<lbrakk> (t, as) \<in> sub_big_steps (ADT_A_if utf) big_step_R s;
-     big_step_R\<^sup>*\<^sup>* s0 s; system.reachable (ADT_A_if utf) s0 s; part s \<noteq> PSched \<rbrakk>
+     bs_boundary s; sreachable s; part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> partitionIntegrity (current_aag (internal_state_if s))
                             (internal_state_if s) (internal_state_if t)"
   apply (induct t as rule: sub_big_steps.induct)
@@ -1920,7 +1905,7 @@ lemma sub_big_steps_partitionIntegrity:
 
 lemma Step_partitionIntegrity':
   "\<lbrakk> (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) ()\<rbrakk>
-     \<Longrightarrow> system.reachable (big_step_ADT_A_if utf) s0 s \<and> part s \<noteq> PSched
+     \<Longrightarrow> ni.reachable s \<and> part s \<noteq> PSched
          \<longrightarrow> partitionIntegrity (current_aag (internal_state_if s))
                                 (internal_state_if s) (internal_state_if s')"
   apply (simp add: Step_big_step_ADT_A_if)
@@ -1929,37 +1914,33 @@ lemma Step_partitionIntegrity':
   apply (intro impI | elim conjE)+
   apply (rule partitionIntegrity_trans')
    apply (erule sub_big_steps_partitionIntegrity)
-     apply (simp add: reachable_def execution_def)
-     apply (clarsimp simp: big_step_ADT_A_if_def Fin_big_step_adt Fin_ADT_if steps_eq_Run)
-     apply (rule Run_big_steps_tranclp)
-     apply (simp add: big_step_ADT_A_if_def big_step_adt_def Init_ADT_if)
-    apply (blast intro: small_step_reachable)
+     apply (erule reachable_bs_boundary)
+    apply (erule small_step_reachable)
    apply assumption
   apply (erule small_Step_partitionIntegrity)
    apply (erule(1) sub_big_steps_reachable[OF _ small_step_reachable])
-  apply (rule sub_big_steps_not_PSched, simp+)
-   apply (simp add: reachable_def execution_def)
-   apply (clarsimp simp: big_step_ADT_A_if_def Fin_big_step_adt Fin_ADT_if steps_eq_Run)
-   apply (rule Run_big_steps_tranclp)
-   apply (simp add: big_step_ADT_A_if_def big_step_adt_def Init_ADT_if)
-  by simp
+  apply (rule sub_big_steps_not_PSched)
+    apply assumption
+   apply (erule reachable_bs_boundary)
+  apply assumption
+  done
 
 lemma Step_partitionIntegrity:
-  "\<lbrakk> system.reachable (big_step_ADT_A_if utf) s0 s;
+  "\<lbrakk> ni.reachable s;
      (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) (); part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> partitionIntegrity (current_aag (internal_state_if s))
                             (internal_state_if s) (internal_state_if s')"
   by (blast dest: Step_partitionIntegrity')
 
 lemma Step_cur_domain_unchanged:
-  "\<lbrakk> system.reachable (big_step_ADT_A_if utf) s0 s;
+  "\<lbrakk> ni.reachable s;
      (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) (); part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> cur_domain (internal_state_if s') = cur_domain (internal_state_if s)"
   by (fastforce dest: Step_partitionIntegrity
                 simp: partitionIntegrity_def domain_fields_equiv_def)
 
 lemma Step_current_aag_unchanged:
-  "\<lbrakk> system.reachable (big_step_ADT_A_if utf) s0 s;
+  "\<lbrakk> ni.reachable s;
      (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) (); part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> current_aag (internal_state_if s') = current_aag (internal_state_if s)"
   apply (simp add: current_aag_def)
@@ -1968,7 +1949,7 @@ lemma Step_current_aag_unchanged:
 
 (* TOPLEVEL *)
 lemma integrity_part:
-  "\<lbrakk> system.reachable (big_step_ADT_A_if utf) s0 s;
+  "\<lbrakk> ni.reachable s;
      (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
      (part s, u) \<notin> policyFlows (pasPolicy initial_aag); u \<noteq> PSched; part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> (s,s') \<in> uwr u"
@@ -3088,15 +3069,6 @@ lemma partitionIntegrity_part_unchanged:
              add: partition_def partitionIntegrity_def domain_fields_equiv_def)
   done
 
-lemma big_step_R_rtranclp:
-  "system.reachable (big_step_ADT_A_if utf) s0 s
-       \<Longrightarrow> big_step_R\<^sup>*\<^sup>* s0 s"
-  apply (simp add: reachable_def execution_def)
-  apply (clarsimp simp: big_step_ADT_A_if_def Fin_big_step_adt Fin_ADT_if steps_eq_Run)
-  apply (rule Run_big_steps_tranclp)
-  apply (simp add: big_step_ADT_A_if_def big_step_adt_def Init_ADT_if)
-  done
-
 lemma sub_big_steps_strict_prefix:
   "(s', as @ bs) \<in> sub_big_steps A R s \<Longrightarrow>
    \<exists>t. (t, as) \<in> sub_big_steps A R s"
@@ -3229,19 +3201,19 @@ lemma small_Step_confidentiality_part_not_PSched:
   "\<lbrakk>(s, s') \<in> Simulation.Step (ADT_A_if utf) ();
     (t, t') \<in> Simulation.Step (ADT_A_if utf) ();
     (s, t) \<in> uwr PSched; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;
-    system.reachable (ADT_A_if utf) s0 s;
-    system.reachable (ADT_A_if utf) s0 t;
+    sreachable s;
+    sreachable t;
     (part s, u) \<in> policyFlows (pasPolicy initial_aag);
     part s \<noteq> PSched; u \<noteq> PSched\<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
   apply (frule schedIncludesCurrentDom)
   apply (frule uwr_part_sys_mode_of_eq, simp+)
-  apply (frule_tac s=s in ADT_A_if_reachable_invs_if)
-  apply (frule_tac s=t in ADT_A_if_reachable_invs_if)
-  apply (frule(2) Step_system.reachable_Step[where s=s, OF ADT_A_if_Step_system _ Step_ADT_A_if''])
-  apply (frule(2) Step_system.reachable_Step[where s=t, OF ADT_A_if_Step_system _ Step_ADT_A_if''])
-  apply (frule_tac s=s' in ADT_A_if_reachable_invs_if)
-  apply (frule_tac s=t' in ADT_A_if_reachable_invs_if)
+  apply (frule_tac s=s in sreachable_invs_if)
+  apply (frule_tac s=t in sreachable_invs_if)
+  apply (frule(1) sreachable_Step[where s=s])
+  apply (frule(1) sreachable_Step[where s=t])
+  apply (frule_tac s=s' in sreachable_invs_if)
+  apply (frule_tac s=t' in sreachable_invs_if)
   apply (case_tac "sys_mode_of s")
        (* InUserMode *)
        apply ((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def
@@ -3325,14 +3297,14 @@ lemma sub_big_steps_not_PSched_confidentiality_part:
     (t', as) \<in> sub_big_steps (ADT_A_if utf) big_step_R t;
      (s, t) \<in> uwr PSched; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;
      u \<noteq> PSched;     (part s, u) \<in> policyFlows (pasPolicy initial_aag);
-     system.reachable (big_step_ADT_A_if utf) s0 s;
-     system.reachable (big_step_ADT_A_if utf) s0 t; part s \<noteq> PSched\<rbrakk> \<Longrightarrow>
+     ni.reachable s;
+     ni.reachable t; part s \<noteq> PSched\<rbrakk> \<Longrightarrow>
   (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s) \<and>
    part s' = part s"
   apply (frule_tac s=s and t=t and X="\<lambda>s t. part s \<noteq> PSched \<and> ((s, t) \<in> uwr PSched \<and>
                                           (s, t) \<in> uwr (part s) \<and> (s, t) \<in> uwr u \<and>
-                                          system.reachable (ADT_A_if utf) s0 s \<and>
-                                          system.reachable (ADT_A_if utf) s0 t)"
+                                          sreachable s \<and>
+                                          sreachable t)"
                in relation_preserved_across_sub_big_steps)
       apply (simp add: small_step_reachable del: split_paired_All)+
    apply (intro impI allI | elim conjE)+
@@ -3340,12 +3312,11 @@ lemma sub_big_steps_not_PSched_confidentiality_part:
    apply (subgoal_tac "part sx = part s \<and> part sx' = part s")
     apply (frule_tac u=u and s=sx and t=tx in small_Step_confidentiality_part_not_PSched)
               apply (simp add: small_step_reachable)+
-    apply (fastforce intro: Step_system.reachable_Step[OF ADT_A_if_Step_system _ Step_ADT_A_if'',
-                                                      rotated])
+    apply (fastforce intro: sreachable_Step)
    apply (elim exE conjE)
    apply (frule schedIncludesCurrentDom)
    apply (frule_tac s'=sx in partitionIntegrity_part_unchanged[OF sub_big_steps_partitionIntegrity])
-        apply (blast intro: big_step_R_rtranclp)
+        apply (blast intro: reachable_bs_boundary)
        apply (erule small_step_reachable)
       apply assumption
      apply assumption
@@ -3353,16 +3324,16 @@ lemma sub_big_steps_not_PSched_confidentiality_part:
    apply (rule conjI, assumption)
    apply (rule partitionIntegrity_part_unchanged[OF sub_big_steps_partitionIntegrity])
         apply assumption
-       apply (blast intro: big_step_R_rtranclp)
+       apply (blast intro: reachable_bs_boundary)
       apply (erule small_step_reachable)
      apply assumption
     apply assumption
    apply (rule sub_big_steps_not_PSched)
      apply assumption
-    apply (blast intro: big_step_R_rtranclp)
+    apply (blast intro: reachable_bs_boundary)
    apply assumption
   apply (frule_tac s'=s' in partitionIntegrity_part_unchanged[OF sub_big_steps_partitionIntegrity])
-       apply (blast intro: big_step_R_rtranclp)
+       apply (blast intro: reachable_bs_boundary)
       apply (erule small_step_reachable)
      apply assumption
     apply assumption
@@ -3376,8 +3347,8 @@ lemma non_PSched_steps_run_in_lock_step':
      (s'a, asa) \<in> sub_big_steps (ADT_A_if utf) big_step_R sa;
      (s'a, ta) \<in> data_type.Step (ADT_A_if utf) (); big_step_R sa ta;
      (s, sa) \<in> uwr PSched; (s, sa) \<in> uwr (part s);
-     system.reachable (big_step_ADT_A_if utf) s0 s;
-     system.reachable (big_step_ADT_A_if utf) s0 sa; part s \<noteq> PSched;
+     ni.reachable s;
+     ni.reachable sa; part s \<noteq> PSched;
      asa < as\<rbrakk> \<Longrightarrow> False"
   apply (erule strict_prefixE')
   apply (simp, subst (asm) app_Cons)
@@ -3414,11 +3385,11 @@ lemma non_PSched_steps_run_in_lock_step':
    apply (erule schedIncludesCurrentDom)
   apply (rule sym, rule partitionIntegrity_part_unchanged[OF sub_big_steps_partitionIntegrity])
        apply assumption
-      apply (erule big_step_R_rtranclp)
+      apply (erule reachable_bs_boundary)
      apply (erule small_step_reachable)
     apply simp+
   apply (rule sub_big_steps_not_PSched, assumption)
-   apply (erule big_step_R_rtranclp)
+   apply (erule reachable_bs_boundary)
   apply simp
   done
 
@@ -3428,8 +3399,8 @@ lemma non_PSched_steps_run_in_lock_step:
     (s'a, asa) \<in> sub_big_steps (ADT_A_if utf) big_step_R sa;
     (s'a, ta) \<in> data_type.Step (ADT_A_if utf) (); big_step_R sa ta;
     (s, sa) \<in> uwr PSched; (s, sa) \<in> uwr (part s);
-    system.reachable (big_step_ADT_A_if utf) s0 s;
-    system.reachable (big_step_ADT_A_if utf) s0 sa;
+    ni.reachable s;
+    ni.reachable sa;
     part s \<noteq> PSched\<rbrakk>
    \<Longrightarrow> asa = as"
   apply (case_tac "asa = as", assumption)
@@ -3444,8 +3415,8 @@ lemma confidentiality_part_not_PSched:
   "\<lbrakk>(s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
     (t, t') \<in> Simulation.Step (big_step_ADT_A_if utf) ()\<rbrakk> \<Longrightarrow>
     (s, t) \<in> uwr PSched \<and> (s, t) \<in> uwr (part s) \<and> (s, t) \<in> uwr u \<and>
-    system.reachable (big_step_ADT_A_if utf) s0 s \<and>
-    system.reachable (big_step_ADT_A_if utf) s0 t \<and>
+    ni.reachable s \<and>
+    ni.reachable t \<and>
     (part s, u) \<in> policyFlows (pasPolicy initial_aag) \<and>
     part s \<noteq> PSched \<and> u \<noteq> PSched \<longrightarrow>
    (s', t') \<in> uwr u"
@@ -3455,8 +3426,8 @@ lemma confidentiality_part_not_PSched:
   apply (subgoal_tac "asa = as")
    apply (drule_tac X="\<lambda>s t. (s, t) \<in> uwr PSched \<and> (s, t) \<in> uwr (part s) \<and>
     (s, t) \<in> uwr u \<and>
-    system.reachable (ADT_A_if utf) s0 s \<and>
-    system.reachable (ADT_A_if utf) s0 t \<and>
+    sreachable s \<and>
+    sreachable t \<and>
     (part s, u) \<in> policyFlows (pasPolicy initial_aag) \<and>
     part s \<noteq> PSched" in relation_preserved_across_sub_big_steps)
       apply assumption
@@ -3471,23 +3442,22 @@ lemma confidentiality_part_not_PSched:
     apply (simp del: split_paired_All)
     apply (frule_tac u=u and s=x_s and t=x_t in small_Step_confidentiality_part_not_PSched)
               apply (simp add: small_step_reachable)+
-     apply (fastforce intro: Step_system.reachable_Step[OF ADT_A_if_Step_system _ Step_ADT_A_if'',
-                                                       rotated])
+     apply (fastforce intro: sreachable_Step)
     apply (elim exE)
     apply (rule trans)
      apply (rule partitionIntegrity_part_unchanged[OF sub_big_steps_partitionIntegrity])
           apply blast
-         apply (erule big_step_R_rtranclp)
+         apply (erule reachable_bs_boundary)
         apply (erule small_step_reachable)
        apply simp+
      apply (rule sub_big_steps_not_PSched)
        apply blast
-      apply (erule big_step_R_rtranclp)
+      apply (erule reachable_bs_boundary)
      apply simp
     apply (rule sym)
     apply (rule partitionIntegrity_part_unchanged[OF sub_big_steps_partitionIntegrity])
          apply blast
-        apply (erule big_step_R_rtranclp)
+        apply (erule reachable_bs_boundary)
        apply (erule small_step_reachable)
       apply (simp+)[3]
    apply (elim conjE)
@@ -3685,18 +3655,48 @@ lemma interrupt_step:
     done
   done
 
+lemma invs_if_irq_masks:
+  "invs_if s \<Longrightarrow> irq_masks_of_state (internal_state_if s) = (\<lambda>irq. irq \<noteq> timer_irq)"
+proof (rule ext)
+  fix irq
+  assume inv: "invs_if s"
+  let ?is = "internal_state_if s"
+  have vis: "\<forall>irq. interrupt_states ?is irq = IRQInactive \<longrightarrow> irq_masks_of_state ?is irq"
+    using inv
+    by (auto simp: invs_if_def Invs_def invs_def valid_state_def
+                   valid_irq_states_def valid_irq_masks_def)
+  have dsi: "\<forall>irq. interrupt_states ?is irq \<noteq> IRQSignal \<and> interrupt_states ?is irq \<noteq> IRQReserved"
+    using inv
+    by (auto simp: invs_if_def Invs_def only_timer_irq_inv_def domain_sep_inv_def)
+  have oti: "\<forall>x. interrupt_states ?is x = IRQTimer \<longrightarrow> x = timer_irq"
+    using inv
+    by (auto simp: invs_if_def Invs_def only_timer_irq_inv_def only_timer_irq_def domain_sep_inv_def)
+  have rec: "\<exists>m. is_irq_at ?is timer_irq m"
+    using invs_if_irq_is_recurring[OF inv]
+    by (auto simp: irq_is_recurring_def)
+  show "irq_masks_of_state ?is irq = (irq \<noteq> timer_irq)"
+  proof (cases "irq = timer_irq")
+    case True
+    from rec obtain m where "is_irq_at ?is timer_irq m" ..
+    then have "\<not> irq_masks_of_state ?is timer_irq"
+      by (rule is_irq_at_not_masked)
+    with True show ?thesis
+      by simp
+  next
+    case False
+    with dsi oti
+    have "interrupt_states ?is irq = IRQInactive"
+      by (cases "interrupt_states ?is irq"; blast)
+    with vis False
+    show ?thesis
+      by simp
+  qed
+qed
+
 lemma irq_masks_constant':
-  "\<lbrakk> system.reachable (ADT_A_if utf) s0 s1; i_s1 = internal_state_if s1 \<rbrakk>
+  "\<lbrakk> sreachable s1; i_s1 = internal_state_if s1 \<rbrakk>
      \<Longrightarrow> irq_masks_of_state i_s1 = irq_masks_of_state (internal_state_if s0)"
-  apply simp
-  apply (rule Step_system.reachable_induct[OF ADT_A_if_Step_system,rotated,rotated], rule refl)
-   apply (rule trans)
-    prefer 2
-    apply assumption
-   apply (rule ADT_A_if_Step_irq_masks, simp add: Step_ADT_A_if')
-   apply (rule ADT_A_if_reachable_invs_if,assumption)
-  apply simp
-  done
+  by (simp add: invs_if_irq_masks sreachable_invs_if)
 
 lemmas irq_masks_constant = irq_masks_constant'[OF small_step_reachable]
 
@@ -3821,13 +3821,13 @@ lemma scheduler_step_1_confidentiality:
   assumes uwr: "(s,t) \<in> uwr PSched"  "(s,t) \<in> uwr u"
   assumes step_s: "(s,s') \<in> data_type.Step (ADT_A_if utf) ()"
   assumes step_t: "(t,t') \<in> data_type.Step (ADT_A_if utf) ()"
-  assumes reach_s: "system.reachable (ADT_A_if utf) s0 s"
-  assumes reach_t: "system.reachable (ADT_A_if utf) s0 t"
+  assumes reach_s: "sreachable s"
+  assumes reach_t: "sreachable t"
   shows "interrupted_modes (sys_mode_of s) \<Longrightarrow> (s',t') \<in> uwr u"
   supply [[simp_depth_limit=2]] \<comment> \<open>speedup\<close>
   apply (insert uwr step_s step_t)
-  apply (cut_tac ADT_A_if_reachable_invs_if[OF reach_s])
-  apply (cut_tac ADT_A_if_reachable_invs_if[OF reach_t])
+  apply (cut_tac sreachable_invs_if[OF reach_s])
+  apply (cut_tac sreachable_invs_if[OF reach_t])
   apply (cut_tac irq_masks_constant'[OF reach_s, OF refl])
   apply (cut_tac irq_masks_constant'[OF reach_t, OF refl])
   apply (subgoal_tac "interrupted_modes (sys_mode_of t)")
@@ -4000,19 +4000,19 @@ lemma scheduler_steps:
   by clarsimp+
 
 lemma PSched_reachable_interrupted:
-  "\<lbrakk> part s = PSched; system.reachable (big_step_ADT_A_if utf) s0 s \<rbrakk>
+  "\<lbrakk> part s = PSched; ni.reachable s \<rbrakk>
      \<Longrightarrow> interrupted_modes (sys_mode_of s)"
-  apply (drule big_step_R_rtranclp)
-  apply (drule tranclp_s0)
+  apply (drule reachable_bs_boundary)
+  apply (drule bs_boundaryD)
   apply (clarsimp simp add: part_def sys_mode_of_def split: if_split_asm)
   done
 
 (*If we're starting a non_schedule partition then we must have just exited*)
 lemma reachable_nonsched_exit:
-  "\<lbrakk> system.reachable (big_step_ADT_A_if utf) s0 s; part s \<noteq> PSched \<rbrakk>
+  "\<lbrakk> ni.reachable s; part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> (snd s) = KernelExit"
-  apply (drule big_step_R_rtranclp)
-  apply (drule tranclp_s0)
+  apply (drule reachable_bs_boundary)
+  apply (drule bs_boundaryD)
   apply (clarsimp simp add: part_def split: if_split_asm)
   apply (case_tac s)
   apply simp
@@ -4048,15 +4048,15 @@ lemma scheduler_step_2_confidentiality:
   assumes uwr: "(s,t) \<in> uwr PSched" "(s,t) \<in> uwr u"
   assumes step_s: "(s,s') \<in> data_type.Step (ADT_A_if utf) ()"
   assumes step_t: "(t,t') \<in> data_type.Step (ADT_A_if utf) ()"
-  assumes reach_s: "system.reachable (ADT_A_if utf) s0 s"
-  assumes reach_t: "system.reachable (ADT_A_if utf) s0 t"
+  assumes reach_s: "sreachable s"
+  assumes reach_t: "sreachable t"
   shows "\<lbrakk> (sys_mode_of s) = KernelSchedule True; (sys_mode_of t) = KernelSchedule True \<rbrakk>
            \<Longrightarrow> (s',t') \<in> uwr u"
   apply (insert uwr step_s step_t)
   apply (rule_tac s=s and s'=s' in schedule_step,simp_all)
   apply (rule_tac s=t and s'=t' in schedule_step,simp_all)
-  apply (cut_tac ADT_A_if_reachable_invs_if[OF reach_s])
-  apply (cut_tac ADT_A_if_reachable_invs_if[OF reach_t])
+  apply (cut_tac sreachable_invs_if[OF reach_s])
+  apply (cut_tac sreachable_invs_if[OF reach_t])
   apply (rule equiv_valid_2E[where s="internal_state_if s" and t="internal_state_if t",
                              OF schedule_if_reads_respects_scheduler_2
                                   [where aag="initial_aag" and st="s0_internal"
@@ -4069,7 +4069,7 @@ lemma scheduler_step_2_confidentiality:
 
 lemma confidentiality_part_sched_transition:
   "\<lbrakk> (s, t) \<in> uwr PSched; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;
-     system.reachable (big_step_ADT_A_if utf) s0 s; system.reachable (big_step_ADT_A_if utf) s0 t;
+     ni.reachable s; ni.reachable t;
      (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
      (t, t') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
      (part s, u) \<in> policyFlows (pasPolicy initial_aag); part s = PSched \<rbrakk>
@@ -4087,18 +4087,16 @@ lemma confidentiality_part_sched_transition:
     apply (rule PSched_reachable_interrupted,simp+)
    apply (frule_tac s="s'a" and t="s'aa" and u=u in scheduler_step_2_confidentiality,
           assumption, assumption, assumption)
-       apply (rule Step_system.reachable_Step[OF ADT_A_if_Step_system _ Step_ADT_A_if''])
-         apply (erule small_step_reachable, simp)
-       apply (erule small_step_reachable)
-      apply (rule Step_system.reachable_Step[OF ADT_A_if_Step_system _ Step_ADT_A_if''])
+       apply (rule_tac s=s in sreachable_Step)
         apply (erule small_step_reachable, simp)
-      apply (erule small_step_reachable)
+      apply (rule_tac s=t in sreachable_Step)
+       apply (erule small_step_reachable, simp)
      apply simp+
   done
 
 lemma confidentiality_for_sched:
   "\<lbrakk> (s, t) \<in> uwr PSched;
-     system.reachable (big_step_ADT_A_if utf) s0 s; system.reachable (big_step_ADT_A_if utf) s0 t;
+     ni.reachable s; ni.reachable t;
      (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
      (t, t') \<in> Simulation.Step (big_step_ADT_A_if utf) (); part s \<noteq> PSched \<rbrakk>
      \<Longrightarrow> (s', t') \<in> uwr PSched"
@@ -4128,13 +4126,13 @@ lemma confidentiality_for_sched:
     apply (rule sym)
     apply (rule_tac ?s1.0="((a, b), KernelExit)" in big_step_irq_state_next_irq)
          apply (simp add: reachable_invs_if)
-        apply (simp add: big_step_R_rtranclp)
+        apply (simp add: reachable_bs_boundary)
        apply simp+
    apply (subgoal_tac "irq_masks_of_state b = irq_masks_of_state bb")
     apply simp
     apply (rule_tac ?s1.0="((aa, bb), KernelExit)" in big_step_irq_state_next_irq)
          apply (simp add: reachable_invs_if)
-        apply (simp add: big_step_R_rtranclp)
+        apply (simp add: reachable_bs_boundary)
        apply simp+
    apply (rule trans)
     apply (rule irq_masks_constant,assumption,fastforce)
@@ -4151,7 +4149,7 @@ lemma confidentiality_for_sched:
 
 lemma confidentiality_part:
   "\<lbrakk> (s, t) \<in> uwr PSched; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;
-     system.reachable (big_step_ADT_A_if utf) s0 s; system.reachable (big_step_ADT_A_if utf) s0 t;
+     ni.reachable s; ni.reachable t;
      (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
      (t, t') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
      (part s, u) \<in> policyFlows (pasPolicy initial_aag); u = PSched \<longrightarrow> part s = PSched \<rbrakk>
@@ -4165,7 +4163,8 @@ lemma confidentiality_part:
 lemma confidentiality_u:
   notes split_paired_All[simp del]
   shows "ni.confidentiality_u"
-  apply (simp add: ni.confidentiality_u_def | intro allI impI | elim conjE)+
+  apply (simp add: ni.confidentiality_u_def ni.Step_system_Step[symmetric]
+         | intro allI impI | elim conjE)+
   apply (case_tac "(part s, u) \<in> policyFlows (pasPolicy initial_aag)")
    apply (simp)
    apply (fastforce intro: confidentiality_part schedNotGlobalChannel simp: big_Step2)
@@ -4187,6 +4186,24 @@ lemma xnonleakage:
   "ni.xNonleakage_gen"
   apply (rule xNonleakage_gen[OF confidentiality_u])
   done
+
+text \<open>
+  Why this is the right property. Since @{term Init0} is closed under big steps, nonleakage over
+  any two reachable states coincides with nonleakage over two states reached by the same events
+  from two initial states, and with nonleakage over two initial states only. The variant
+  @{term ni.xNonleakage_gen} is equivalent too: both are equivalent to @{term ni.confidentiality_u}.
+\<close>
+theorem nonleakage_eq_lockstep:
+  "ni.Nonleakage_gen = ni.Nonleakage_lockstep"
+  by (rule ni.Nonleakage_gen_eq_lockstep)
+
+theorem nonleakage_eq_init:
+  "ni.Nonleakage_gen = ni.Nonleakage_init"
+  by (rule ni.Nonleakage_gen_eq_init)
+
+theorem xnonleakage_eq_nonleakage:
+  "ni.xNonleakage_gen = ni.Nonleakage_gen"
+  by (metis xNonleakage_gen xNonleakage_gen_confidentiality_u Nonleakage_gen_equiv_confidentiality_u)
 
 end
 

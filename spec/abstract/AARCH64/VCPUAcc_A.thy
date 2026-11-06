@@ -73,13 +73,18 @@ definition vcpu_write_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> machin
   "vcpu_write_reg vr reg val \<equiv>
     vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu)(reg := val) \<rparr> )"
 
-definition save_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "save_virt_timer vcpu_ptr \<equiv> do
-     vcpu_save_reg vcpu_ptr VCPURegCNTV_CTL;
+definition disable_virt_timer :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "disable_virt_timer vcpu_ptr_opt \<equiv> do
+     case vcpu_ptr_opt of
+       Some vcpu_ptr \<Rightarrow> do
+         vcpu_save_reg vcpu_ptr VCPURegCNTV_CTL;
+         vcpu_save_reg vcpu_ptr VCPURegCNTV_CVAL;
+         vcpu_save_reg vcpu_ptr VCPURegCNTVOFF;
+         vcpu_save_reg vcpu_ptr VCPURegCNTKCTL_EL1
+       od
+     | None \<Rightarrow> return ();
+     \<comment> \<open>with or without VCPU, turn off the timer and return to user-mode timer config\<close>
      do_machine_op $ writeVCPUHardwareReg VCPURegCNTV_CTL 0;
-     vcpu_save_reg vcpu_ptr VCPURegCNTV_CVAL;
-     vcpu_save_reg vcpu_ptr VCPURegCNTVOFF;
-     vcpu_save_reg vcpu_ptr VCPURegCNTKCTL_EL1;
      do_machine_op check_export_arch_timer
    od"
 
@@ -105,38 +110,35 @@ definition restore_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_m
 
 text \<open>Turn VPCU mode off on the hardware level.\<close>
 definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "vcpu_disable vo \<equiv> do
+  "vcpu_disable vcpu_ptr_opt \<equiv> do
     do_machine_op dsb;
-    case vo of
+    case vcpu_ptr_opt of
       Some vr \<Rightarrow> do
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
         vcpu_save_reg vr VCPURegCPACR; \<comment> \<open>since FPU enabled\<close>
-        do_machine_op isb
+        vcpu_save_reg vr VCPURegTCR
       od
     | _ \<Rightarrow> return ();
     do_machine_op $ do
         set_gic_vcpu_ctrl_hcr 0; \<comment> \<open>turn VGIC off\<close>
-        isb;
+        dsb; \<comment> \<open>for GIC memory-mapped register\<close>
         setSCTLR sctlrDefault; \<comment> \<open>turn S1 MMU off\<close>
-        isb;
+        writeTCR tcrEL1Native;
         setHCR hcrNative;
         isb;
         \<comment> \<open>allow FPU instructions in EL0 and EL1 for native threads\<close>
         enableFpuEL01
       od;
-    case vo of
-      Some vr \<Rightarrow> do
-          save_virt_timer vr;
-          do_machine_op $ maskInterrupt True irqVTimerEvent
-        od
-    | _ \<Rightarrow> return ()
-    od"
+    disable_virt_timer vcpu_ptr_opt;
+    do_machine_op $ maskInterrupt True irqVTimerEvent
+  od"
 
 text \<open>Turn VCPU mode on, on the hardware level.\<close>
 definition vcpu_enable :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_enable vr \<equiv> do
+     vcpu_restore_reg vr VCPURegTCR;
      vcpu_restore_reg vr VCPURegSCTLR;
      vcpu \<leftarrow> get_vcpu vr;
      do_machine_op $ do
@@ -169,7 +171,7 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
             vcpu_save_reg vr VCPURegSCTLR;
             hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
             vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
-            save_virt_timer vr
+            disable_virt_timer (Some vr)
           od;
 
           vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;
@@ -188,8 +190,11 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
             gicIndices;
 
           \<comment> \<open>armvVCPUSave\<close>
-          when active $ vcpu_save_reg vr VCPURegCPACR;
-          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1
+          when active $ do
+            vcpu_save_reg vr VCPURegCPACR;
+            vcpu_save_reg vr VCPURegTCR
+          od;
+          vcpu_save_reg_range vr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd
        od
      | _ \<Rightarrow> fail"
 
@@ -209,7 +214,7 @@ definition vcpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" 
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
     \<comment> \<open>restore banked VCPU registers except those covered by VCPUEnable\<close>
-     vcpu_restore_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1;
+     vcpu_restore_reg_range vr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd;
      vcpu_enable vr
   od"
 

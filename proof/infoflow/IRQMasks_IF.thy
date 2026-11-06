@@ -11,6 +11,23 @@ begin
 abbreviation irq_masks_of_state :: "det_ext state \<Rightarrow> irq \<Rightarrow> bool" where
   "irq_masks_of_state s \<equiv> irq_masks (machine_state s)"
 
+text \<open>
+  This follows from @{term "domain_sep_inv False st"}, but only together with
+  @{term valid_irq_states}. Since this property is purely about irq_masks,
+  it is easier to preseve over @{text rec_del}, so we use it specifically there.\<close>
+definition non_kernel_IRQs_masked_2 :: "(irq \<Rightarrow> bool) \<Rightarrow> bool" where
+  "non_kernel_IRQs_masked_2 masks \<equiv> \<forall>irq \<in> non_kernel_IRQs. masks irq"
+
+abbreviation non_kernel_IRQs_masked :: "'z::state_ext state \<Rightarrow> bool" where
+  "non_kernel_IRQs_masked \<equiv> \<lambda>s. non_kernel_IRQs_masked_2 (irq_masks (machine_state s))"
+
+lemmas non_kernel_IRQs_masked_def = non_kernel_IRQs_masked_2_def
+
+lemma valid_irq_states_non_kernel_IRQs_masked[simp]:
+  "\<lbrakk> domain_sep_inv False st s; valid_irq_states s \<rbrakk> \<Longrightarrow> non_kernel_IRQs_masked s"
+  by (fastforce simp: non_kernel_IRQs_masked_def domain_sep_inv_def valid_irq_states_def
+                      valid_irq_masks_def)
+
 lemma detype_irq_masks[simp]:
   "irq_masks (machine_state (detype S s)) = irq_masks_of_state s"
   by (simp add: detype_def)
@@ -55,7 +72,9 @@ locale IRQMasks_IF_1 =
   and invoke_untyped_irq_masks[wp]:
     "invoke_untyped ui \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and finalise_cap_irq_masks[wp]:
-    "finalise_cap cap final \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
+     finalise_cap cap final
+     \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   and send_signal_irq_masks[wp]:
     "send_signal ntfnptr badge \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and handle_vm_fault_irq_masks[wp]:
@@ -91,12 +110,15 @@ crunch send_ipc
 (* Clagged from re_del_domain_sep_inv' -- would Dan's annotations be good here? *)
 lemma rec_del_irq_masks':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del] rec_del.simps[simp del]
-  shows "s \<turnstile> \<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+  shows "s \<turnstile> \<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
+              non_kernel_IRQs_masked\<rbrace>
              rec_del call
              \<lbrace>\<lambda>a s. (case call of (FinaliseSlotCall x y) \<Rightarrow> y \<or> fst a \<longrightarrow> snd a = NullCap
                                 | _ \<Rightarrow> True) \<and>
-                    domain_sep_inv False st s \<and> P (irq_masks_of_state s)\<rbrace>,
-             \<lbrace>\<lambda>_. domain_sep_inv False st and (\<lambda>s. P (irq_masks_of_state s))\<rbrace>"
+                    domain_sep_inv False st s \<and> P (irq_masks_of_state s) \<and>
+                    non_kernel_IRQs_masked s\<rbrace>,
+             \<lbrace>\<lambda>_. domain_sep_inv False st and (\<lambda>s. P (irq_masks_of_state s)) and
+                  non_kernel_IRQs_masked\<rbrace>"
 proof (induct s arbitrary: rule: rec_del.induct, simp_all only: rec_del_fails hoare_fail_any)
   case (1 slot exposed s) show ?case
     apply (wpsimp wp: empty_slot_domain_sep_inv empty_slot_irq_masks
@@ -143,7 +165,8 @@ next
 qed
 
 lemma rec_del_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
+    non_kernel_IRQs_masked\<rbrace>
    rec_del call
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>, \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply (rule use_spec)
@@ -154,10 +177,17 @@ lemma rec_del_irq_masks:
   done
 
 lemma cap_delete_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
+    non_kernel_IRQs_masked\<rbrace>
    cap_delete blah
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>,\<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (simp add: cap_delete_def) (wpsimp wp: rec_del_irq_masks)
+
+lemma cap_delete_irq_masks_R:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and non_kernel_IRQs_masked\<rbrace>
+   cap_delete slot
+   \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>, -"
+  by (rule validE_validE_R, rule hoare_strengthen_postE[OF cap_delete_irq_masks]; simp)
 
 lemma invoke_irq_control_irq_masks:
   "\<lbrace>domain_sep_inv False (st :: 's state) and irq_control_inv_valid ivk\<rbrace>
@@ -207,7 +237,8 @@ context IRQMasks_IF_1 begin
 
 lemma cap_revoke_irq_masks':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
-  shows "s \<turnstile> \<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+  shows "s \<turnstile> \<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
+              non_kernel_IRQs_masked\<rbrace>
              cap_revoke slot
              \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>, \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
 proof (induct rule: cap_revoke.induct[where ?a1.0=s])
@@ -220,6 +251,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
             apply (wp drop_spec_validE[OF valid_validE[OF preemption_point_irq_masks]]
                       drop_spec_validE[OF valid_validE[OF preemption_point_domain_sep_inv]]
                       cap_delete_domain_sep_inv cap_delete_irq_masks
+                      cap_delete_irq_masks_R
                       drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                       drop_spec_validE[OF liftE_wp]
                       drop_spec_validE[OF  hoare_vcg_conj_liftE1]
@@ -231,13 +263,15 @@ qed
 lemmas cap_revoke_irq_masks = use_spec(2)[OF cap_revoke_irq_masks']
 
 lemma finalise_slot_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
+    non_kernel_IRQs_masked\<rbrace>
    finalise_slot p e
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (simp add: finalise_slot_def | wp rec_del_irq_masks)+
 
 lemma invoke_cnode_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_cnode_inv ci\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
+    non_kernel_IRQs_masked and valid_cnode_inv ci\<rbrace>
    invoke_cnode ci
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   unfolding invoke_cnode_def
@@ -284,13 +318,17 @@ locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
   assumes do_reply_transfer_irq_masks[wp]:
     "do_reply_transfer sender receiver slot grant \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and arch_perform_invocation_irq_masks:
-    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
+      non_kernel_IRQs_masked\<rbrace>
      arch_perform_invocation i
      \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   and arch_prepare_set_domain_irq_masks_of_state[wp]:
-    "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
+     arch_prepare_set_domain t new_dom
+     \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   and invoke_tcb_irq_masks:
-    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and tcb_inv_wf tinv\<rbrace>
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and
+      non_kernel_IRQs_masked and tcb_inv_wf tinv\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   and handle_hypervisor_fault_irq_masks[wp]:
@@ -303,7 +341,9 @@ locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
      arch_switch_to_thread t
      \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   and arch_prepare_next_domain_irq_masks[wp]:
-    "arch_prepare_next_domain \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
+     arch_prepare_next_domain
+     \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   and arch_prepare_next_domain_valid_irq_states[wp]:
     "arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
 begin
@@ -315,7 +355,8 @@ lemma perform_invocation_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and
     (\<lambda>s. (\<forall>blah. oper = InvokeIRQHandler blah
                  \<longrightarrow> (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv blah))) ptr' s))) and
-    domain_sep_inv False (st :: 's state) and valid_invocation oper\<rbrace>
+    domain_sep_inv False (st :: 's state) and non_kernel_IRQs_masked and
+    valid_invocation oper\<rbrace>
    perform_invocation blocking calling oper
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply (cases oper)
@@ -334,6 +375,7 @@ lemma handle_invocation_irq_masks:
   apply (wp hoare_weak_lift_imp syscall_valid perform_invocation_irq_masks[where st=st]
             hoare_vcg_all_lift hoare_vcg_ex_lift decode_invocation_IRQHandlerCap
          | simp add: invs_valid_objs)+
+  apply (fastforce intro: valid_irq_states_non_kernel_IRQs_masked)
   done
 
 crunch handle_reply

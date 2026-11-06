@@ -100,10 +100,11 @@ lemma handleSpuriousIRQ_corres[Arch_assms, corres]:
   by (simp add: handle_spurious_irq_def handleSpuriousIRQ_def)
 
 lemma handleHypervisorFault_corres[Arch_assms]:
-  "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread)
-             (invs' and sch_act_not thread
-                    and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
-          (handle_hypervisor_fault thread fault) (handleHypervisorFault thread fault)"
+  "corres dc
+     (einvs and st_tcb_at active thread and ex_nonz_cap_to thread)
+     (invs' and sch_act_not thread
+            and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
+     (handle_hypervisor_fault thread fault) (handleHypervisorFault thread fault)"
   apply (cases fault; clarsimp simp: handleHypervisorFault_def isFpuEnable_def split del: if_split)
   apply (corres corres: handleFault_corres simp: valid_fault_def)
   done

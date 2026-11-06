@@ -123,6 +123,11 @@ definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
    case_option {} (snd o snd o snd)
       (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
+definition ptable_exec :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<Rightarrow> bool" where
+  "ptable_exec tcb s \<equiv> \<lambda>addr.
+   case_option False ((\<lambda>attrs. Execute \<in> attrs) o fst o snd o snd)
+      (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
+
 lemma ptable_lift_Some_user_regionD:
   "ptable_lift t s vptr = Some p \<Longrightarrow> vptr \<in> user_region"
   by (clarsimp simp: ptable_lift_def get_page_info_def

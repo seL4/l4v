@@ -39,9 +39,8 @@ lemma do_user_op_if_globals_equiv_scheduler[Noninterference_assms]:
    do_user_op_if tc uop
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply (simp add: do_user_op_if_def)
-  apply (wpsimp wp: dmo_user_memory_update_globals_equiv_scheduler
+  apply (wpsimp wp: dmo_user_memory_update_globals_equiv_scheduler'
                     dmo_device_memory_update_globals_equiv_scheduler)+
-  apply (auto simp: ptable_lift_s_def ptable_rights_s_def)
   done
 
 crunch do_user_op_if

@@ -2379,7 +2379,6 @@ lemma vcpu_at_rf_sr:
 lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_SCTLR_def
     seL4_VCPURegSaveRange_start_def
-    seL4_VCPUReg_ACTLR_def
     seL4_VCPUReg_TTBCR_def
     seL4_VCPUReg_TTBR0_def
     seL4_VCPUReg_TTBR1_def
@@ -2394,7 +2393,6 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_NMRR_def
     seL4_VCPUReg_CIDR_def
     seL4_VCPUReg_TPIDRPRW_def
-    seL4_VCPUReg_FPEXC_def
     seL4_VCPUReg_LRsvc_def
     seL4_VCPUReg_SPsvc_def
     seL4_VCPUReg_LRabt_def
@@ -2416,6 +2414,12 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_SPSRund_def
     seL4_VCPUReg_SPSRirq_def
     seL4_VCPUReg_SPSRfiq_def
+    seL4_VCPUReg_PARhigh_def
+    seL4_VCPUReg_PARlow_def
+    seL4_VCPUReg_TTBR0high_def
+    seL4_VCPUReg_TTBR1high_def
+    seL4_VCPUReg_CSSELR_def
+    seL4_VCPUReg_VDISR_def
     seL4_VCPURegSaveRange_end_def
     seL4_VCPUReg_CNTV_CTL_def
     seL4_VCPUReg_CNTV_CVALhigh_def
@@ -2423,6 +2427,8 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_CNTVOFFhigh_def
     seL4_VCPUReg_CNTVOFFlow_def
     seL4_VCPUReg_CNTKCTL_def
+    seL4_VCPUReg_CPACR_def
+    seL4_VCPUReg_FPEXC_def
 
 (* rewrite a definition from a C enum into a vcpureg enumeration lookup *)
 (* FIXME type annotations are ham-fisted and repetitive *)
@@ -2520,13 +2526,13 @@ lemma unat_scast_seL4_VCPUReg_SCTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_SCTLR) = fromEnum VCPURegSCTLR"
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegSCTLR, simplified, symmetric])
 
-lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
-  "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_ACTLR) = fromEnum VCPURegACTLR"
-  by (simp add: vcpureg_eq_use_types[where reg=VCPURegACTLR, simplified, symmetric])
-
 lemma unat_scast_seL4_VCPUReg_CNTKCTL_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_CNTKCTL) = fromEnum VCPURegCNTKCTL"
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTKCTL, simplified, symmetric])
+
+lemma unat_scast_seL4_VCPUReg_CPACR_simp[simp]:
+  "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_CPACR) = fromEnum VCPURegCPACR"
+  by (simp add: vcpureg_eq_use_types[where reg=VCPURegCPACR, simplified, symmetric])
 
 lemma numDomains_sge_1_simp:
   "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"

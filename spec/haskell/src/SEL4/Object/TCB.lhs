@@ -553,12 +553,16 @@ The source is suspended and the destination resumed, if requested.
 >     when suspendSource $ suspend src
 >     when resumeTarget $ restart dest
 
+Copied register values are sanitised with respect to the destination thread like in "WriteRegisters" below. Which values are legal depends on the destination thread, e.g. on whether it has a VCPU or not.
+
+>     sanitiseInfo <- getSanitiseRegisterInfo dest
+
 Transfer the frame registers.
 
 >     when transferFrame $ do
 >         mapM_ (\r -> do
 >                 v <- asUser src $ getRegister r
->                 asUser dest $ setRegister r v)
+>                 asUser dest $ setRegister r (sanitiseRegister sanitiseInfo r v))
 >             frameRegisters
 
 The target thread's program counter has been modified. Ensure that the thread will restart at that address.
@@ -571,7 +575,7 @@ Transfer the other integer registers.
 >     when transferInteger $ do
 >         mapM_ (\r -> do
 >                 v <- asUser src $ getRegister r
->                 asUser dest $ setRegister r v)
+>                 asUser dest $ setRegister r (sanitiseRegister sanitiseInfo r v))
 >             gpRegisters
 
 
@@ -634,7 +638,9 @@ Modifying the current thread may require rescheduling because modified registers
 
 > invokeTCB (SetTLSBase tcb tls_base) =
 >   withoutPreemption $ do
->     asUser tcb $ setRegister tlsBaseRegister tls_base
+>     sanitiseInfo <- getSanitiseRegisterInfo tcb
+>     asUser tcb $
+>         setRegister tlsBaseRegister (sanitiseRegister sanitiseInfo tlsBaseRegister tls_base)
 >     cur <- getCurThread
 >     when (tcb == cur) rescheduleRequired
 >     return []

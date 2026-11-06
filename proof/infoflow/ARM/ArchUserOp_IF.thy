@@ -737,7 +737,7 @@ qed
 lemma user_op_access_data_at:
   "\<lbrakk> invs s; valid_pdpt_objs s;pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
      data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s;
-     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
+     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
      \<Longrightarrow> (pasObjectAbs aag tcb, auth,
           pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
   apply (case_tac "x \<in> kernel_mappings")
@@ -756,7 +756,7 @@ lemma user_op_access_data_at:
     apply fastforce
    apply fastforce
   apply (erule (3) user_op_access)
-  apply simp
+  apply (simp add: vspace_cap_rights_to_auth_def)
   done
 
 lemma user_frame_at_equiv:

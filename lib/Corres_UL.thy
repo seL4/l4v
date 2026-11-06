@@ -947,6 +947,11 @@ lemma corres_assert_assume_l:
   \<Longrightarrow> corres_underlying sr nf nf' rrel (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
   by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
+lemma corres_assert_assume_r:
+  "\<lbrakk>P' \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ())\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P (Q and K P') f (assert P' >>= g)"
+  by (cases P'; simp add: corres_underlying_def)
+
 lemma corres_assert_assume_l_forward:
   "\<lbrakk>\<And>s. P s \<Longrightarrow> P'; corres_underlying sr nf nf' rrel (P and K P') Q (f ()) g\<rbrakk>
   \<Longrightarrow> corres_underlying sr nf nf' rrel P Q (assert P' >>= f) g"
@@ -1182,6 +1187,30 @@ lemma corres_fail:
   shows "corres_underlying sr nf nf' R P P' f fail"
   using no_fail
   by (auto simp add: corres_underlying_def fail_def)
+
+text \<open>
+  @{const chaos} is refined by everything as long as sr and rv can be satisfied for all concrete
+  states. This is only needed when @{text nf} is not set, because @{const chaos} has the failure
+  flag on.\<close>
+lemma corres_chaos:
+  assumes "\<And>t'. \<not> nf \<Longrightarrow> \<exists>t. (t, t') \<in> sr"
+  assumes "\<And>rv'. \<not> nf \<Longrightarrow> \<exists>rv. r rv rv'"
+  assumes "nf' \<Longrightarrow> no_fail P' m"
+  shows "corres_underlying sr nf nf' r \<top> P' chaos m"
+  using assms
+  unfolding corres_underlying_def
+  by (fastforce simp: corres_underlying_def chaos_def no_fail_def)
+
+lemma corres_chaos_nf':
+  assumes "\<And>t'. \<not> nf \<Longrightarrow> \<exists>t. (t, t') \<in> sr"
+  assumes "\<And>rv'. \<not> nf \<Longrightarrow> \<exists>rv. r rv rv'"
+  shows "corres_underlying sr nf False r \<top> \<top> chaos m"
+  using assms
+  by (rule corres_chaos; simp)
+
+lemma corres_chaos_nf:
+  "corres_underlying sr True False r \<top> \<top> chaos m"
+  by (rule corres_chaos; simp)
 
 lemma corres_returnOk:
   "(\<And>s s'. \<lbrakk> (s,s') \<in> sr; P s; P' s' \<rbrakk> \<Longrightarrow> r x y) \<Longrightarrow>
@@ -1729,11 +1758,6 @@ qed
 lemma corres_assert_ret:
   "corres_underlying sr False nf' dc (\<lambda>s. P) \<top> (assert P) (return ())"
   by (rule corres_no_failI; clarsimp simp: assert_def return_def fail_def no_fail_def)
-
-lemma corres_assert_assume_r:
-  "corres_underlying sr nf nf' rrel P Q f (g ())
-  \<Longrightarrow> corres_underlying sr nf nf' rrel P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"
-  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
 lemma corres_assert_opt_assume_l:
   "corres_underlying sr nf nf' rrel P Q (f (the X)) g

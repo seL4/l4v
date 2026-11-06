@@ -1065,7 +1065,7 @@ definition arch_state0H :: Arch.kernel_state where
   "arch_state0H \<equiv> ARMKernelState
              \<comment> \<open>armKSASIDTable    =\<close> Map.empty
              \<comment> \<open>armKSHWASIDTable  =\<close> Map.empty
-             \<comment> \<open>armKSNextASID     =\<close> 0
+             \<comment> \<open>armKSNextASID     =\<close> hwASIDMin
              \<comment> \<open>armKSASIDMap      =\<close> Map.empty
              \<comment> \<open>armKSGlobalPD     =\<close> init_global_pd
              \<comment> \<open>armKSGlobalPTs    =\<close> []

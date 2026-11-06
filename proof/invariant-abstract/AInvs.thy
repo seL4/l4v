@@ -859,6 +859,7 @@ lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
     apply (wpsimp wp: hoare_vcg_imp_lift' restart_ct_not_in_release_q_not_cur_thread)
     apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
                      simp: obj_at_def pred_tcb_at_def vs_all_heap_simps)
+   apply (rule bind_wp_fwd_skip, wpsimp)
    apply (rule bind_wp_fwd_skip)
     apply (wpsimp wp: hoare_vcg_imp_lift' mapM_x_wp_inv)
    apply (rule bind_wp_fwd_skip)

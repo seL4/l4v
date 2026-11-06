@@ -1869,7 +1869,7 @@ lemma resetUntypedCap_gsCNodes_at_pt:
    \<lbrace>\<lambda>rv s. P (gsCNodes s ptr)\<rbrace>, -"
   apply (simp add: resetUntypedCap_def unlessE_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_wp' | simp add: unless_def)+
+   apply (wp mapME_x_wp' postResetUntyped_inv | simp add: unless_def)+
     apply (wp hoare_vcg_const_imp_lift
               deleteObjects_gsCNodes_at_pt
               getSlotCap_wp)+
@@ -2294,6 +2294,23 @@ lemma cleanCacheRange_RAM_preserves_bytes:
   apply (fastforce elim!: byte_regions_unmodified_trans)
   done
 
+lemma Arch_postResetUntyped_ccorres:
+  "sz < 2 ^ word_bits \<Longrightarrow>
+   ccorres dc xfdc
+     \<top> (\<lbrace>\<acute>deviceMemory = from_bool dev\<rbrace> \<inter> \<lbrace>\<acute>sizeBits = of_nat sz\<rbrace>) []
+     (postResetUntyped dev sz) (Call Arch_postResetUntyped_'proc)"
+  apply (cinit lift: deviceMemory_' sizeBits_' simp: doMachineOp_bind_dist)
+   apply (rule ccorres_when[where R=\<top>])
+    apply (clarsimp simp: from_bool_0 word_le_nat_alt unat_of_nat32 pageBits_def)
+   apply (rule ccorres_rhs_assoc)+
+   apply (ctac (no_vcg) add: dsb_ccorres)
+    apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
+     apply (ctac (no_vcg) add: dsb_ccorres)
+      apply (ctac (no_vcg) add: isb_ccorres)
+     apply wp+
+  apply clarsimp
+  done
+
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
         untypedBits_defs[simp] if_cong[cong] option.case_cong[cong]
@@ -2343,11 +2360,12 @@ lemma resetUntypedCap_ccorres:
          apply (rule_tac idx="capFreeIndex (cteCap cte)" in deleteObjects_ccorres[where p=slot])
         apply ceqv
        apply clarsimp
-       apply (simp only: ccorres_seq_cond_raise)
+       apply (simp only: ccorres_seq_cond_raise if_to_top_of_bindE)
        apply (rule ccorres_cond[where R="\<top>"])
          apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
          apply (simp add: word_less_nat_alt unat_of_nat32 from_bool_0)
          apply blast
+        apply (simp add: liftE_bindE)
         apply (simp add: liftE_def bind_assoc shiftL_nat unless_def
                          when_def)
         apply (rule ccorres_rhs_assoc)+
@@ -2357,7 +2375,7 @@ lemma resetUntypedCap_ccorres:
              apply (ctac add: clearMemory_untyped_ccorres[where ut_slot=slot])
             apply (rule ccorres_return_Skip)
            apply ceqv
-          apply (rule ccorres_rhs_assoc2)+
+          apply (rule ccorres_rhs_assoc2)
           apply (rule ccorres_split_nothrow_novcg)
               apply (rule_tac cap'="cteCap cte" in updateFreeIndex_ccorres)
               apply (rule allI, rule conseqPre, vcg)
@@ -2368,7 +2386,10 @@ lemma resetUntypedCap_ccorres:
               apply (simp only: t_hrs_update_use_t_hrs mex_def meq_def)
               apply blast
              apply ceqv
-            apply (rule ccorres_return_CE'[unfolded returnOk_def o_apply], simp+)
+            apply (ctac add: Arch_postResetUntyped_ccorres)
+              apply (rule ccorres_return_CE'[unfolded returnOk_def o_apply], simp+)[1]
+             apply wp
+            apply (vcg exspec=Arch_postResetUntyped_modifies)
            apply wp
           apply (simp add: guard_is_UNIV_def)
          apply wp
@@ -2387,7 +2408,6 @@ lemma resetUntypedCap_ccorres:
                         reset_name_seq_bound_helper2[simplified simp_thms]
                         Collect_True)
        apply ((rule ccorres_Guard_Seq[where S=UNIV])+)?
-       apply (rule ccorres_add_returnOk)
        apply (rule ccorres_splitE_novcg)
            apply (rule_tac P="capPtr (cteCap cte) \<le> getFreeRef (capPtr (cteCap cte))
                  (capFreeIndex (cteCap cte)) - 1"
@@ -2598,7 +2618,11 @@ lemma resetUntypedCap_ccorres:
             apply (simp add: word_bits_def Kernel_Config.resetChunkBits_def)
            apply (simp add: field_simps)
           apply ceqv
-         apply (rule ccorres_return_CE, simp+)[1]
+         apply (simp add: liftE_def)
+         apply (ctac add: Arch_postResetUntyped_ccorres[simplified word_bits_def])
+           apply (rule ccorres_return_CE'[unfolded returnOk_def o_apply], simp+)[1]
+          apply wp
+         apply (vcg exspec=Arch_postResetUntyped_modifies)
         apply wp
        apply (simp add: ccHoarePost_def guard_is_UNIV_def)
       apply simp

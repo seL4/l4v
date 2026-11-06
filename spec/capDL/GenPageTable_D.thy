@@ -13,11 +13,6 @@ theory GenPageTable_D
     CSpace_D
 begin
 
-(* FIXME AARCH64: move to nondet_monad *)
-(* A monad that may produce anything, including failure. *)
-definition chaos :: "('s, 'a) nondet_monad" where
-  "chaos \<equiv> \<lambda>s. (UNIV, True)"
-
 section \<open>Decode\<close>
 
 text \<open>

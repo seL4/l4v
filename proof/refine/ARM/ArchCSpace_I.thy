@@ -144,7 +144,6 @@ lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
   by (fastforce simp: global.capUntypedSize_def objBits_simps
                       ARM_H.capUntypedSize_def
-                      pteBits_def pdeBits_def
                       ptBits_def pdBits_def
                       shiftl_eq_mult bit_simps'
                 split: capability.splits arch_capability.splits
@@ -389,8 +388,7 @@ lemmas distinct_zombies_sameMasterE
 declare distinct_zombies_sameMasterE[Arch_assms]
 
 lemma cap_table_at_gsCNodes_eq[Arch_assms]:
-  "(s, s') \<in> state_relation
-   \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
+  "(s, s') \<in> state_relation \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
   by (fastforce simp: state_relation_def ghost_relation_def obj_at_def is_cap_table)
 
 lemmas CSpace_I_2_assms = Arch_assms (* extract accumulated assumptions *)

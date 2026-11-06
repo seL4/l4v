@@ -199,6 +199,8 @@ locale Retype_AC_1 =
     "\<And>tp. retype_region ptr n us tp dev \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
   and reset_untyped_cap_pas_cur_domain[wp]:
     "reset_untyped_cap src_slot \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
+  and arch_post_reset_untyped_integrity[wp]:
+    "\<And>dev sz. arch_post_reset_untyped dev sz \<lbrace>\<lambda>s :: det_state. integrity aag X st s\<rbrace>"
   and arch_data_to_obj_type_not_ASIDPoolObj[simp]:
     "arch_data_to_obj_type v \<noteq> Some ASIDPoolObj"
   and data_to_nat_of_nat[simp]:
@@ -912,7 +914,7 @@ lemma reset_untyped_cap_valid_vspace_objs:
    reset_untyped_cap src_slot
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding reset_untyped_cap_def
-  apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
+  apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv)
       apply (wp hoare_weak_lift_imp delete_objects_valid_vspace_objs)
      apply (wpsimp wp: get_cap_wp)+
   apply (cases src_slot)
@@ -950,7 +952,7 @@ lemma reset_untyped_cap_valid_arch_state:
    reset_untyped_cap src_slot
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding reset_untyped_cap_def
-  apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
+  apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv arch_post_reset_untyped_inv)
       apply (wp hoare_weak_lift_imp delete_objects_valid_arch_state)
      apply (wpsimp wp: get_cap_wp)+
   apply (cases src_slot)
@@ -967,7 +969,9 @@ lemma reset_untyped_cap_pas_refined[wp]:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: reset_untyped_cap_def)
   apply (rule hoare_pre)
-   apply (wps | wp set_cap_pas_refined_not_transferable | simp add: unless_def)+
+   apply (wps
+          | wp set_cap_pas_refined_not_transferable arch_post_reset_untyped_inv
+          | simp add: unless_def)+
      apply (rule valid_validE)
      apply (rule_tac P="is_untyped_cap cap \<and> pas_cap_cur_auth aag cap" in hoare_gen_asm)
      apply (rule_tac Q'="\<lambda>_. cte_wp_at (\<lambda> c. \<not> is_transferable (Some c)) slot and pas_refined aag"

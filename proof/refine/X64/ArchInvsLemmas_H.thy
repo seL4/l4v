@@ -43,7 +43,6 @@ lemma valid_cap'_pspaceI[Arch_assms]:
 lemma valid_obj'_pspaceI[Arch_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
-  supply no_0_obj_at'[rule del] (* avoid weak elim rule warning *)
   by (cases obj)
      (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
                  valid_tcb_state'_def valid_bound_tcb'_def
@@ -107,6 +106,7 @@ context Arch begin arch_global_naming
 clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_ats locale *)
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
+(* 0 case already covered by tcb_cte_cases_simps' *)
 lemma raw_tcb_cte_cases_simps:
   "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
   "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
@@ -346,7 +346,7 @@ lemma in_kernel_mappings_neq_mask:
 
 lemma invs_pspace_in_kernel_mappings'[elim!]:
   "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
 lemma valid_pspace_in_kernel_mappings'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"
@@ -445,7 +445,7 @@ lemma asid_pool_at'_typ_at_lift_strong:
   by assumption
 
 lemma valid_arch_tcb'_typ_at_lift_strong[Arch_assms]:
-  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   unfolding valid_arch_tcb'_def
   apply (rule bool_to_bool_cases[where f=P]; clarsimp)
   apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_ex_lift

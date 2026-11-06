@@ -90,7 +90,7 @@ crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def)
 
 crunch readVCPUHardwareReg, check_export_arch_timer, writeVCPUHardwareReg, maskInterrupt,
-       enableFpuEL01, isb, dsb, setHCR, setSCTLR, sendSGI, set_gic_vcpu_ctrl_hcr,
+       enableFpuEL01, isb, dsb, setHCR, setSCTLR, writeTCR, sendSGI, set_gic_vcpu_ctrl_hcr,
        set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_hcr,
        get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_vmcr, do_flush,
        invalidateTranslationASID, writeFpuState, disableFpu, enableFpu, deactivateInterrupt
@@ -1546,6 +1546,12 @@ lemma dmo_setSCTLR_equiv_but_for_labels[wp]:
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   by (wpsimp wp: dmo_equiv_but_for_labels_vcpu)
 
+lemma dmo_writeTCR_equiv_but_for_labels[wp]:
+  "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> cur_vcpu_for (\<lambda>x. pasObjectAbs aag x \<notin> L) s = None\<rbrace>
+   do_machine_op (writeTCR val)
+   \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
+  by (wpsimp wp: dmo_equiv_but_for_labels_vcpu)
+
 lemma dmo_setHCR_equiv_but_for_labels[wp]:
   "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> cur_vcpu_for (\<lambda>x. pasObjectAbs aag x \<notin> L) s = None\<rbrace>
    do_machine_op (setHCR val)
@@ -1579,14 +1585,21 @@ lemma vcpu_save_reg_equiv_but_for_labels[wp]:
   unfolding vcpu_save_reg_def
   by wpsimp
 
-lemma save_virt_timer_equiv_but_for_labels[wp]:
-   "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> pasObjectAbs aag vr \<in> L \<and> cur_vcpu_of s vr \<noteq> None\<rbrace>
-   save_virt_timer vr
+lemma disable_virt_timer_Some_equiv_but_for_labels[wp]:
+  "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> pasObjectAbs aag vr \<in> L \<and> cur_vcpu_of s vr \<noteq> None\<rbrace>
+   disable_virt_timer (Some vr)
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  unfolding save_virt_timer_def
+  unfolding disable_virt_timer_def
   apply wpsimp
   apply (clarsimp simp: cur_vcpu_for_def cur_vcpu_of_def split: option.splits if_splits)
   done
+
+lemma disable_virt_timer_None_equiv_but_for_labels[wp]:
+  "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> cur_vcpu_for (\<lambda>x. pasObjectAbs aag x \<notin> L) s = None\<rbrace>
+   disable_virt_timer None
+   \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
+  unfolding disable_virt_timer_def
+  by wpsimp
 
 lemma dmo_enableFpuEL01_equiv_but_for_labels[wp]:
   "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> cur_vcpu_for (\<lambda>x. pasObjectAbs aag x \<notin> L) s = None\<rbrace>
@@ -1933,11 +1946,13 @@ lemma vcpu_save_reg_states_equiv_valid[wp]:
 
 lemma vcpu_save_reg_range_states_equiv_valid[wp]:
   "states_equiv_valid aag L (\<lambda>s. \<exists>b. current_vcpu s = Some (vr,b))
-                      (vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1)"
+                      (vcpu_save_reg_range vr vcpuRegSaveRangeStart vcpuRegSaveRangeEnd)"
   (is "states_equiv_valid _ _ ?P _")
   unfolding vcpu_save_reg_range_def
   apply (wpsimp wp: mapM_x_ev[where I="\<lambda>s. \<exists>b. current_vcpu s = Some (vr,b)"])
-    apply (auto simp: upto_enum_def fromEnum_def enum_vcpureg toEnum_def vcpuRegSavedWhenDisabled_def)[1]
+    apply (auto simp: upto_enum_def fromEnum_def enum_vcpureg toEnum_def
+                      vcpuRegSaveRangeStart_def vcpuRegSaveRangeEnd_def
+                      vcpuRegSavedWhenDisabled_def)[1]
    apply wpsimp+
   done
 
@@ -2092,56 +2107,35 @@ lemma vcpu_mask_regs_update[simp]:
   "vcpu_mask n (vcpu_regs_update f vst) = vcpu_regs_update f (vcpu_mask n vst)"
   by (rule vcpu_state.equality; clarsimp)
 
-lemma check_export_arch_timer_states_equiv_valid'':
-  "states_equiv_valid aag L (\<lambda>s. cur_vcpu_for (L o pasObjectAbs aag) s = None)
-                      (do_machine_op check_export_arch_timer)"
-  (is "states_equiv_valid _ _ ?P _")
+lemma check_export_arch_timer_states_equiv_valid[wp]:
+  "states_equiv_valid aag L \<top> (do_machine_op check_export_arch_timer)"
   unfolding check_export_arch_timer_def dmo_distr
-  apply (rule_tac P'="?P" in bind_ev_pre)
-     apply (wpsimp wp: dmo_mol_states_equiv_valid)
-    apply (rule do_machine_op_states_equiv_valid')
-     apply (wpsimp wp: modify_ev')
-    apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def cur_vcpu_for_def)
-   apply wpsimp+
-  done
-
-lemma check_export_arch_timer_states_equiv_valid':
-  "states_equiv_valid aag L (\<lambda>s. \<exists>vr. cur_vcpu_for (L o pasObjectAbs aag) s = Some True)
-                      (do_machine_op check_export_arch_timer)"
-  (is "states_equiv_valid _ _ ?P _")
-  unfolding check_export_arch_timer_def dmo_distr
-  apply (rule_tac P'="?P" in bind_ev_pre)
-     apply (wpsimp wp: dmo_mol_states_equiv_valid)
-    apply (rule do_machine_op_states_equiv_valid')
-     apply (wpsimp wp: modify_ev')
-    apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def cur_vcpu_for_Some)
-   apply wpsimp+
+  apply (wpsimp wp: dmo_mol_states_equiv_valid)
+    apply (wpsimp wp: do_machine_op_states_equiv_valid' modify_ev)
+   apply wpsimp
+  apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def)
+  apply (case_tac "cur_vcpu_for (L \<circ> pasObjectAbs aag) s"; clarsimp simp: cur_vcpu_for_Some)
+  apply (clarsimp simp: hw_vcpu_def split: if_splits)
+   apply (intro conjI ext; drule_tac x=r in fun_cong; clarsimp)+
   done
 
 lemma cur_vcpu_for_None':
   "(cur_vcpu_for P s = None) = (\<forall>vr. P vr \<longrightarrow> cur_vcpu_of s vr = None)"
   by (auto simp: cur_vcpu_for_def cur_vcpu_of_def split: option.splits)
 
-lemma check_export_arch_timer_states_equiv_valid[wp]:
-  "states_equiv_valid aag L (\<lambda>s. \<exists>vr. current_vcpu s = Some (vr,True))
-                      (do_machine_op check_export_arch_timer)"
-  (is "states_equiv_valid _ _ ?P _")
-  apply (rule_tac P="\<lambda>s. cur_vcpu_for (L o pasObjectAbs aag) s = None" in equiv_valid_cases'')
-    apply (prop_tac "equiv_hyp (L o pasObjectAbs aag) s t")
-     apply (auto simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def equiv_hyp_def equiv_for_def)[1]
-    apply (auto simp: cur_vcpu_for_None' equiv_hyp_def equiv_for_def)[1]
-   apply (wpsimp wp: check_export_arch_timer_states_equiv_valid'')
-  apply (wpsimp wp: check_export_arch_timer_states_equiv_valid')
-  done
-
-lemma save_virt_timer_states_equiv_valid[wp]:
+lemma disable_virt_timer_Some_states_equiv_valid[wp]:
   "states_equiv_valid aag L (\<lambda>s. current_vcpu s = Some (vr,True))
-                      (save_virt_timer vr)"
+                      (disable_virt_timer (Some vr))"
   (is "states_equiv_valid _ _ ?P _")
-  unfolding save_virt_timer_def
+  unfolding disable_virt_timer_def
   apply (wpsimp wp: vcpu_save_reg_states_equiv_valid)
   apply auto
   done
+
+lemma disable_virt_timer_None_states_equiv_valid[wp]:
+  "states_equiv_valid aag L \<top> (disable_virt_timer None)"
+  unfolding disable_virt_timer_def
+  by wpsimp
 
 lemma dmo_dsb_states_equiv_valid[wp]:
   "states_equiv_valid aag L \<top> (do_machine_op dsb)"
@@ -2253,6 +2247,44 @@ lemma setSCTLR_states_equiv_valid[wp]:
     apply (auto simp: cur_vcpu_for_None' equiv_hyp_def equiv_for_def)[1]
    apply (wpsimp wp: setSCTLR_states_equiv_valid'')
   apply (wpsimp wp: setSCTLR_states_equiv_valid')
+  done
+
+lemma writeTCR_states_equiv_valid'':
+  "states_equiv_valid aag L (\<lambda>s. cur_vcpu_for (L o pasObjectAbs aag) s = None)
+                      (do_machine_op (writeTCR val))"
+  (is "states_equiv_valid _ _ ?P _")
+   unfolding writeTCR_def dmo_distr
+   apply (rule_tac P'="?P" in bind_ev_pre)
+      apply (wpsimp wp: dmo_mol_states_equiv_valid)
+     apply (rule do_machine_op_states_equiv_valid')
+      apply (wpsimp wp: modify_ev')
+     apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def cur_vcpu_for_def)
+    apply wpsimp+
+   done
+
+lemma writeTCR_states_equiv_valid':
+  "states_equiv_valid aag L (\<lambda>s. \<exists>vr. cur_vcpu_for (L o pasObjectAbs aag) s = Some True)
+                      (do_machine_op (writeTCR val))"
+  (is "states_equiv_valid _ _ ?P _")
+   unfolding writeTCR_def dmo_distr
+   apply (rule_tac P'="?P" in bind_ev_pre)
+      apply (wpsimp wp: dmo_mol_states_equiv_valid)
+     apply (rule do_machine_op_states_equiv_valid')
+      apply (wpsimp wp: modify_ev')
+     apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def cur_vcpu_for_Some)
+    apply wpsimp+
+   done
+
+lemma writeTCR_states_equiv_valid[wp]:
+  "states_equiv_valid aag L (\<lambda>s. \<forall>vr b. current_vcpu s = Some (vr,b) \<longrightarrow> b)
+                      (do_machine_op (writeTCR val))"
+  (is "states_equiv_valid _ _ ?P _")
+  apply (rule_tac P="\<lambda>s. cur_vcpu_for (L o pasObjectAbs aag) s = None" in equiv_valid_cases'')
+    apply (prop_tac "equiv_hyp (L o pasObjectAbs aag) s t")
+     apply (auto simp: states_equiv_for_def equiv_hyp_def equiv_for_def)[1]
+    apply (auto simp: cur_vcpu_for_None' equiv_hyp_def equiv_for_def)[1]
+   apply (wpsimp wp: writeTCR_states_equiv_valid'')
+  apply (wpsimp wp: writeTCR_states_equiv_valid')
   done
 
 lemma set_gic_vcpu_ctrl_hcr_states_equiv_valid'':
@@ -2851,6 +2883,20 @@ lemma writeVCPUHardwareReg_reads_respects[wp]:
    apply (intro conjI ext; drule_tac x=r in fun_cong; clarsimp)+
   done
 
+lemma check_export_arch_timer_reads_respects[wp]:
+  "reads_respects aag l \<top> (do_machine_op check_export_arch_timer)"
+  unfolding check_export_arch_timer_def dmo_distr
+  apply (wpsimp wp: dmo_mol_reads_respects)
+    apply (rule use_spec_ev)
+    apply (wpsimp wp: do_machine_op_reads_respects'' modify_ev)
+   apply wpsimp
+  apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def)
+  apply (case_tac "cur_vcpu_for (aag_can_read aag or aag_can_affect aag l) s";
+         clarsimp simp: cur_vcpu_for_Some)
+  apply (clarsimp simp: hw_vcpu_def split: if_splits)
+   apply (intro conjI ext; drule_tac x=r in fun_cong; clarsimp)+
+  done
+
 lemma invoke_vcpu_read_register_reads_respects:
   "reads_respects aag l (K (aag_can_read aag v)) (invoke_vcpu_read_register v reg)"
   unfolding invoke_vcpu_read_register_def read_vcpu_register_def gets_def
@@ -3131,6 +3177,46 @@ lemma setSCTLR_reads_respects[wp]:
   apply (wpsimp wp: setSCTLR_reads_respects')
   done
 
+lemma writeTCR_reads_respects'':
+  "reads_respects aag l (\<lambda>s. cur_vcpu_for (aag_can_read_or_affect aag l) s = None)
+                        (do_machine_op (writeTCR val))"
+  (is "reads_respects _ _ ?P _")
+   unfolding writeTCR_def dmo_distr
+   apply (rule_tac P'="?P" in bind_ev_pre)
+      apply (wpsimp wp: dmo_mol_reads_respects)
+     apply (rule do_machine_op_reads_respects'')
+      apply (wpsimp wp: modify_ev')
+     apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def cur_vcpu_for_def)
+    apply wpsimp+
+   done
+
+lemma writeTCR_reads_respects':
+  "reads_respects aag l (\<lambda>s. \<exists>vr. cur_vcpu_for (aag_can_read_or_affect aag l) s = Some True)
+                        (do_machine_op (writeTCR val))"
+  (is "reads_respects _ _ ?P _")
+   unfolding writeTCR_def dmo_distr
+   apply (rule_tac P'="?P" in bind_ev_pre)
+      apply (wpsimp wp: dmo_mol_reads_respects)
+     apply (rule do_machine_op_reads_respects'')
+      apply (wpsimp wp: modify_ev')
+     apply (clarsimp simp: equiv_for_def equiv_hyp_state_def equiv_fpu_state_def cur_vcpu_for_Some)
+    apply wpsimp+
+   done
+
+lemma writeTCR_reads_respects[wp]:
+  "reads_respects aag l (\<lambda>s. \<forall>vr b. current_vcpu s = Some (vr,b) \<longrightarrow> b)
+                        (do_machine_op (writeTCR val))"
+  (is "reads_respects _ _ ?P _")
+  apply (rule_tac P="\<lambda>s. cur_vcpu_for (aag_can_read_or_affect aag l) s = None"
+               in equiv_valid_cases'')
+    apply (prop_tac "equiv_hyp (aag_can_read_or_affect aag l) s t")
+     apply (auto simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def equiv_hyp_def
+                       equiv_for_def)[1]
+    apply (auto simp: cur_vcpu_for_None' equiv_hyp_def equiv_for_def)[1]
+   apply (wpsimp wp: writeTCR_reads_respects'')
+  apply (wpsimp wp: writeTCR_reads_respects')
+  done
+
 lemma set_gic_vcpu_ctrl_hcr_reads_respects'':
   "reads_respects aag l (\<lambda>s. cur_vcpu_for (aag_can_read_or_affect aag l) s = None)
                         (do_machine_op (set_gic_vcpu_ctrl_hcr val))"
@@ -3169,6 +3255,11 @@ lemma set_gic_vcpu_ctrl_hcr_reads_respects[wp]:
   apply (wpsimp wp: set_gic_vcpu_ctrl_hcr_reads_respects')
   done
 
+lemma disable_virt_timer_None_reads_respects[wp]:
+  "reads_respects aag l \<top> (disable_virt_timer None)"
+  unfolding disable_virt_timer_def
+  by wpsimp
+
 lemma vcpu_disable_None_reads_respects[wp]:
   "reads_respects aag l (\<lambda>s. \<exists>vr. current_vcpu s = Some (vr,True)) (vcpu_disable None)"
   apply (simp only: vcpu_disable_def fun_app_def bind_assoc[symmetric] vcpu_save_vgic_defs[symmetric])
@@ -3179,13 +3270,7 @@ lemma vcpu_disable_None_reads_respects[wp]:
 lemma vcpu_invalidate_active_reads_respects:
   "reads_respects aag l (\<lambda>s. cur_vcpu_for (aag_can_read_or_affect aag l) s \<noteq> None) vcpu_invalidate_active"
   unfolding vcpu_invalidate_active_def
-  apply wp
-      apply wpsimp
-     apply wpsimp
-    apply (wp gets_arm_current_vcpu_reads_respects)
-   apply wpsimp
-  apply clarsimp
-  done
+  by (wpsimp wp: gets_arm_current_vcpu_reads_respects)
 
 lemma arch_thread_get_tcb_vcpu_reads_respects[wp]:
   "reads_respects aag l (K (aag_can_read aag t)) (arch_thread_get tcb_vcpu t)"
@@ -3349,6 +3434,7 @@ lemma vcpu_invalidate_active_valid_arch_state[wp]:
 
 crunch vcpu_invalidate_active
   for globals_equiv[wp]: "globals_equiv st"
+  (wp: dmo_globals_equiv)
 
 lemma dissociate_vcpu_tcb_globals_equiv[wp]:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>

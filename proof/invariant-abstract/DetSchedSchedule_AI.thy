@@ -13218,7 +13218,8 @@ lemma invoke_tcb_valid_sched:
                 clarsimp simp: invs_valid_objs invs_valid_global_refs split: if_splits)
          \<comment> \<open>CopyRegisters\<close>
          apply (wpsimp wp: reschedule_valid_sched_const mapM_x_wp, assumption)
-            apply (wpsimp wp: mapM_x_wp, assumption)
+             apply (wpsimp wp: mapM_x_wp, assumption)
+            apply wpsimp
            apply (wpsimp wp: restart_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')
           apply (wpsimp wp: suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')
             apply (rule_tac Q'="\<lambda>rv s. invs s \<and> simple_sched_action s \<and> current_time_bounded s"
@@ -20599,6 +20600,7 @@ lemma reset_untyped_cap_consumed_time_bounded[wp]:
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule bindE_wp_fwd_skip, wpsimp)
+  apply (rule bindE_wp, wpsimp wp: arch_post_reset_untyped_inv)
   apply (rule valid_validE)
   apply (rule hoare_if; (solves wpsimp)?)
   apply (rule_tac Q'="\<lambda>_. ?pre" in hoare_strengthen_post)
@@ -20608,7 +20610,7 @@ lemma reset_untyped_cap_consumed_time_bounded[wp]:
 lemma reset_untyped_cap_current_time_bounded[wp]:
   "reset_untyped_cap slot \<lbrace>current_time_bounded :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: reset_untyped_cap_def)
-  apply (wpsimp wp: mapME_x_wp_inv get_cap_wp)
+  apply (wpsimp wp: mapME_x_wp_inv arch_post_reset_untyped_inv get_cap_wp)
   done
 
 lemma invoke_untyped_consumed_time_bounded[wp]:
@@ -22211,7 +22213,7 @@ lemma reset_untyped_cap_cur_sc_active_implies_cur_sc_offset_ready[wp]:
        apply wpsimp
       apply fastforce
      apply wpsimp
-    apply wpsimp
+    apply (wpsimp wp: arch_post_reset_untyped_inv)
    apply (rule bindE_wp_fwd_skip)
     apply (subst cur_sc_active_implies_cur_sc_offset_ready_rewrite)+
     apply (rule hoare_validE_conj)
@@ -22222,7 +22224,7 @@ lemma reset_untyped_cap_cur_sc_active_implies_cur_sc_offset_ready[wp]:
       apply wpsimp
      apply fastforce
     apply wpsimp
-   apply wpsimp
+   apply (wpsimp wp: arch_post_reset_untyped_inv)
   apply (rule bindE_wp_fwd_skip)
    apply (subst cur_sc_active_implies_cur_sc_offset_ready_rewrite)+
    apply (rule hoare_validE_conj)
@@ -22233,7 +22235,7 @@ lemma reset_untyped_cap_cur_sc_active_implies_cur_sc_offset_ready[wp]:
      apply wpsimp
     apply fastforce
    apply wpsimp
-  apply wpsimp
+  apply (rule bindE_wp, wpsimp wp: arch_post_reset_untyped_inv)
   apply (rule_tac P'="?pre" in hoare_weaken_preE[rotated], simp)
   apply (rule valid_validE)
   apply (rule hoare_strengthen_post)
@@ -22266,7 +22268,7 @@ lemma reset_untyped_cap_cur_sc_active_implies_cur_sc_offset_sufficient[wp]:
      apply wpsimp
     apply wpsimp
    apply fastforce
-  apply (wpsimp wp: mapME_x_wp_inv')
+  apply (wpsimp wp: mapME_x_wp_inv' arch_post_reset_untyped_inv)
   done
 
 lemma invoke_untyped_cur_sc_active_implies_cur_sc_offset_ready[wp]:
@@ -23304,7 +23306,7 @@ lemma delete_objects_cur_sc_not_in_release_q[wp]:
 lemma (in DetSchedSchedule_AI) reset_untyped_cap_cur_sc_not_in_release_q[wp]:
   "reset_untyped_cap src_slot \<lbrace>\<lambda>s. sc_not_in_release_q (cur_sc s) s\<rbrace>"
   apply (clarsimp simp: reset_untyped_cap_def)
-  apply (wpsimp wp: mapME_x_wp_inv hoare_drop_imps)
+  apply (wpsimp wp: mapME_x_wp_inv arch_post_reset_untyped_inv hoare_drop_imps)
   done
 
 (* FIXME: prove this in the locales *)
@@ -24758,6 +24760,7 @@ lemma invoke_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
       apply (rule_tac Q'="\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed s" in bind_wp_fwd)
        apply wpsimp
 
+      apply (rule bind_wp_fwd_skip, wpsimp)
       apply (rule bind_wp_fwd_skip, wpsimp wp: mapM_x_wp[where S="set frame_registers"])
       apply (rule bind_wp_fwd_skip, wpsimp wp: mapM_x_wp[where S="set gpRegisters"])
       apply wpsimp

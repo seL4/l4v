@@ -107,7 +107,7 @@ maskIrqSignal irq =
     when (not config_ARM_GIC_V3) (doMachineOp $ maskInterrupt True irq)
 
 initInterruptController :: Kernel ()
-initInterruptController = error "Unimplemented. Init code."
+initInterruptController = error "Unimplemented init code"
 
 -- This check takes a different form on architectures where the invalid IRQ is
 -- in the [minIRQ,maxIRQ] range. On Arm platforms, irqInvalid is outside

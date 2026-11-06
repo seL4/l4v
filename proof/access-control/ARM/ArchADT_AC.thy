@@ -83,7 +83,7 @@ lemmas kernel_mappings_kernel_mapping_slots' =
 
 lemma ptable_state_objs_to_policy:
   "\<lbrakk> invs s; ptable_lift tcb s x = Some ptr;
-     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x);
+     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) exec;
      get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s);
      \<forall>word1 set1 word2. get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj))
                                      (get_pd_of_thread (kheap s) (arch_state s) tcb) x \<noteq>
@@ -98,11 +98,11 @@ lemma ptable_state_objs_to_policy:
   apply (clarsimp simp: typ_at_eq_kheap_obj)
   apply (clarsimp simp: vs_refs_no_global_pts_def)
   apply (rule_tac x="(ucast (x >> 20), ptrFromPAddr a, aa,
-                      vspace_cap_rights_to_auth b)" in bexI)
+                      vspace_cap_rights_to_auth b False)" in bexI)
    apply clarsimp
    apply (rule_tac x="(ptrFromPAddr a + (x && mask aa), auth)" in image_eqI)
     apply (simp add: ptrFromPAddr_def)
-   apply (simp add: ptr_offset_in_ptr_range)
+   apply (simp add: ptr_offset_in_ptr_range vspace_cap_rights_to_auth_def)
   apply (simp add: kernel_mappings_kernel_mapping_slots')
   apply (clarsimp simp: graph_of_def)
   apply (clarsimp simp: get_page_info_def get_pd_entry_def pde_ref2_def
@@ -145,7 +145,7 @@ lemma pt_in_pd_page_table_at:
   done
 
 lemma get_page_info_state_objs_to_policy:
-  "\<lbrakk> invs s; auth \<in> vspace_cap_rights_to_auth r;
+  "\<lbrakk> invs s; auth \<in> vspace_cap_rights_to_auth r exec;
      get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
                    (get_pd_of_thread (kheap s) (arch_state s) tcb) x =
      Some (base, sz, attr, r);
@@ -162,11 +162,11 @@ lemma get_page_info_state_objs_to_policy:
   apply (clarsimp simp: typ_at_eq_kheap_obj)
   apply (clarsimp simp: vs_refs_no_global_pts_def)
   apply (rule_tac x="(ucast ((x >> 12) && mask 8),  ptrFromPAddr base, sz,
-                      vspace_cap_rights_to_auth r)" in bexI)
+                      vspace_cap_rights_to_auth r False)" in bexI)
    apply clarsimp
    apply (rule_tac x="(ptrFromPAddr base + (x && mask sz), auth)" in image_eqI)
     apply (simp add: ptrFromPAddr_def)
-   apply (simp add: ptr_offset_in_ptr_range)
+   apply (simp add: ptr_offset_in_ptr_range vspace_cap_rights_to_auth_def)
   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_pt_info_def
                         get_pt_entry_def get_arch_obj_def pte_ref_def graph_of_def
                  split: option.splits pte.splits pde.splits arch_kernel_obj.splits)
@@ -174,7 +174,7 @@ lemma get_page_info_state_objs_to_policy:
 
 lemma user_op_access[ADT_AC_assms]:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
-     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
+     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
      \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
   apply (case_tac "x \<in> kernel_mappings")
    apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
@@ -197,16 +197,17 @@ lemma user_op_access[ADT_AC_assms]:
    apply (subst pt_in_pd_same_agent)
        apply fastforce+
    apply (rule pas_refined_mem[rotated], simp)
-   apply (rule get_page_info_state_objs_to_policy)
+   apply (rule_tac exec="ptable_exec tcb s x" in get_page_info_state_objs_to_policy)
         apply fastforce+
   apply (rule pas_refined_mem[rotated], simp)
-  apply (rule ptable_state_objs_to_policy)
+  apply (rule_tac exec="ptable_exec tcb s x" in ptable_state_objs_to_policy)
        apply simp+
   done
 
 lemma write_in_vspace_cap_rights[ADT_AC_assms]:
   "AllowWrite \<in> ptable_rights (cur_thread s) s va
-   \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)"
+   \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)
+                                         (ptable_exec (cur_thread s) s va)"
   by (clarsimp simp: vspace_cap_rights_to_auth_def)
 
 end

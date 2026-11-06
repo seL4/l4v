@@ -49,11 +49,6 @@ word = 'machine_word'
 # constructores start with upper case. For new names, we tend to use `config_`
 # as prefix and potentially shorten the C name a bit.
 known_config_keys = {
-    'CONFIG_ARM_HIKEY_OUTSTANDING_PREFETCHERS': (bool, None),
-    'CONFIG_ARM_HIKEY_PREFETCHER_STRIDE': (bool, None),
-    'CONFIG_ARM_HIKEY_PREFETCHER_NPFSTRM': (bool, None),
-    'CONFIG_ARM_HIKEY_PREFETCHER_STBPFDIS': (bool, None),
-    'CONFIG_ARM_HIKEY_PREFETCHER_STBPFRS': (bool, None),
     'CONFIG_PLAT_SABRE': (bool, None),
     'CONFIG_PLAT_IMX6DQ': (bool, None),
     'CONFIG_ARM_PLAT': (string, None),
@@ -72,12 +67,9 @@ known_config_keys = {
     'CONFIG_USER_TOP': (word, None),
     'CONFIG_PLAT_ALLWINNERA20': (bool, None),
     'CONFIG_PLAT_AM335X': (bool, "config_PLAT_AM335X"),
-    'CONFIG_PLAT_APQ8064': (bool, None),
     'CONFIG_PLAT_BCM2711': (bool, None),
     'CONFIG_PLAT_BCM2837': (bool, "config_PLAT_BCM2837"),
-    'CONFIG_PLAT_EXYNOS4': (bool, None),
     'CONFIG_PLAT_EXYNOS5': (bool, None),
-    'CONFIG_PLAT_HIKEY': (bool, None),
     'CONFIG_PLAT_IMX6': (bool, None),
     'CONFIG_PLAT_IMX7_SABRE': (bool, None),
     'CONFIG_PLAT_IMX8MQ_EVK': (bool, None),

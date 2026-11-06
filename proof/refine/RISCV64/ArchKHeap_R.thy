@@ -108,6 +108,7 @@ lemma obj_relation_cut_same_type:
                  Structures_H.kernel_object.split_asm
                  arch_kernel_obj.split_asm)
 
+(* FIXME rt arch-split: check if this can be removed by using gen_obj_at_simps everywhere *)
 lemmas obj_at_simps = gen_obj_at_simps is_other_obj_relation_type_def
                       objBits_simps pageBits_def
 

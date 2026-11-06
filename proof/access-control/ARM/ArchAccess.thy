@@ -12,31 +12,37 @@ context Arch begin arch_global_naming
 
 subsection \<open>Arch-specific transformation of caps into authorities\<close>
 
-definition vspace_cap_rights_to_auth :: "cap_rights \<Rightarrow> auth set" where
-  "vspace_cap_rights_to_auth r \<equiv>
+\<comment> \<open>Execute does not confer Read authority on this architecture and is ignored.\<close>
+definition vspace_cap_rights_to_auth :: "cap_rights \<Rightarrow> bool \<Rightarrow> auth set" where
+  "vspace_cap_rights_to_auth r exec \<equiv>
      (if AllowWrite \<in> r then {Write} else {})
    \<union> (if AllowRead \<in> r then {Read} else {})"
 
 definition arch_cap_auth_conferred where
   "arch_cap_auth_conferred arch_cap \<equiv>
-     (if is_page_cap arch_cap then vspace_cap_rights_to_auth (acap_rights arch_cap) else {Control})"
+     (if is_page_cap arch_cap then vspace_cap_rights_to_auth (acap_rights arch_cap) False
+      else {Control})"
 
 subsection \<open>Generating a policy from the current ASID distribution\<close>
 
 definition pte_ref where
   "pte_ref pte \<equiv> case pte of
      SmallPagePTE addr atts rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSmallPage, vspace_cap_rights_to_auth rights)
+       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSmallPage,
+                vspace_cap_rights_to_auth rights False)
    | LargePagePTE addr atts rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMLargePage, vspace_cap_rights_to_auth rights)
+       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMLargePage,
+                vspace_cap_rights_to_auth rights False)
    | _ \<Rightarrow> None"
 
 definition pde_ref2 where
   "pde_ref2 pde \<equiv> case pde of
      SectionPDE addr atts domain rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSection, vspace_cap_rights_to_auth rights)
+       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSection,
+                vspace_cap_rights_to_auth rights False)
    | SuperSectionPDE addr atts rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSuperSection, vspace_cap_rights_to_auth rights)
+       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSuperSection,
+                vspace_cap_rights_to_auth rights False)
    | PageTablePDE addr atts domain
        \<comment> \<open>The 0 is a hack, saying that we own only addr, although 12 would also be OK\<close>
        \<Rightarrow> Some (ptrFromPAddr addr, 0, {Control})

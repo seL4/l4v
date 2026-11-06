@@ -934,10 +934,16 @@ termination finaliseSlot'
 lemmas finaliseSlot'_simps_ext =
     finaliseSlot'.simps [THEN ext [where f="finaliseSlot' slot exp" for slot exp]]
 
-lemmas finalise_spec_induct = finaliseSlot'.induct[where P=
-    "\<lambda>sl exp s. s \<turnstile> \<lbrace>P sl exp\<rbrace> finaliseSlot' sl exp \<lbrace>Q sl exp\<rbrace>,\<lbrace>E sl exp\<rbrace>" for P Q E]
+context includes no valid_cap_syn begin
+
+lemmas finalise_spec_induct =
+  finaliseSlot'.induct[
+    where P="\<lambda>sl exp s. s \<turnstile> \<lbrace>P sl exp\<rbrace> finaliseSlot' sl exp \<lbrace>Q sl exp\<rbrace>,\<lbrace>E sl exp\<rbrace>" for P Q E]
+
+end
 
 lemma finaliseSlot'_preservation:
+  includes no valid_cap_syn
   assumes wp:
     "\<And>cap final. \<lbrace>P\<rbrace> finaliseCap cap final False \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>sl opt. \<lbrace>P\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -5171,8 +5177,7 @@ lemma capSwap_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: capSwapForDelete_def)
   apply (wp getCTE_wp')
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (auto dest!: ctes_of_valid')
+  apply (auto simp: cte_wp_at_ctes_of)
   done
 
 end (* CNodeInv_R *)
@@ -5785,10 +5790,12 @@ crunch capSwapForDelete
 context CNodeInv_R begin
 
 lemma finaliseSlot_abort_cases':
-  "s \<turnstile> \<lbrace>\<top>\<rbrace>
-       finaliseSlot' sl ex
-       \<lbrace>\<lambda>rv s. fst rv \<or> (\<not> ex \<and> cte_wp_at' (\<lambda>cte. isZombie (cteCap cte)
-                         \<and> capZombiePtr (cteCap cte) = sl) sl s)\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
+  includes no valid_cap_syn
+  shows
+    "s \<turnstile> \<lbrace>\<top>\<rbrace>
+         finaliseSlot' sl ex
+         \<lbrace>\<lambda>rv s. fst rv \<or> (\<not> ex \<and> cte_wp_at' (\<lambda>cte. isZombie (cteCap cte)
+                           \<and> capZombiePtr (cteCap cte) = sl) sl s)\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
 proof (induct rule: finalise_spec_induct)
   case (1 slot exp)
   show ?case
@@ -5973,6 +5980,7 @@ lemma finalise_prop_stuff_archD:
   by (simp add: finalise_prop_stuff_def)
 
 lemma reduceZombie_invs'':
+  includes no valid_cap_syn
   assumes fin:
   "\<And>s'' rv. \<lbrakk>\<not> (isZombie cap \<and> capZombieNumber cap = 0); \<not> (isZombie cap \<and> \<not> exposed); isZombie cap \<and> exposed;
               (Inr rv, s'')
@@ -6057,6 +6065,7 @@ crunch schedContextCompleteYieldTo, unbindMaybeNotification, schedContextMaybeUn
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma finaliseSlot_invs':
+  includes no valid_cap_syn
   assumes finaliseCap:
     "\<And>cap final sl. \<lbrace>no_cte_prop Pr and invs'
         and cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace> finaliseCap cap final False \<lbrace>\<lambda>rv. no_cte_prop Pr\<rbrace>"
@@ -6515,9 +6524,11 @@ lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
 
 lemma finaliseSlot_rvk_prog:
-  "s \<turnstile> \<lbrace>\<lambda>s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>
-       finaliseSlot' slot e
-       \<lbrace>\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
+  includes no valid_cap_syn
+  shows
+    "s \<turnstile> \<lbrace>\<lambda>s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>
+         finaliseSlot' slot e
+         \<lbrace>\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
 proof (induct rule: finalise_induct3)
   case (1 sl ex st)
   show ?case
@@ -7271,6 +7282,7 @@ termination cteRevoke
   done
 
 lemma cteRevoke_preservation':
+  includes no valid_cap_syn
   assumes x: "\<And>ptr. \<lbrace>P\<rbrace> cteDelete ptr True \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes y: "\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s"
   assumes indep: "irq_state_independent_H P"

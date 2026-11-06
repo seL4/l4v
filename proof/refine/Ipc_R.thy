@@ -59,15 +59,6 @@ lemma (in Arch) word_size_gt_0_mw[simp]:
 requalify_facts Arch.word_size_gt_0_mw
 lemmas [simp] = word_size_gt_0_mw
 
-(* same proof on all architectures *)
-(* FIXME: move to Bits_R *)
-lemma (in Arch) word_size_bits_le_pageBits:
-  "word_size_bits \<le> pageBits"
-  by (simp add: pageBits_def word_size_bits_def)
-
-requalify_facts Arch.word_size_bits_le_pageBits
-lemmas [simp] = word_size_bits_le_pageBits
-
 (* FIXME arch-split: move *)
 (* invariant version; a proper wp lemma would look more like no_fail_mapM_wp *)
 lemma no_fail_zipWithM_x_inv:
@@ -96,7 +87,7 @@ lemma gets_the_noop_corres:
 (* FIXME arch-split: move *)
 lemma invs_pspace_in_kernel_mappings'[elim!]:
   "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
 (* FIXME: move *)
 lemma unifyFailure_wp_E[wp]:
@@ -946,9 +937,8 @@ lemma transferCapsToSlots_vp[wp]:
         \<and> transferCaps_srcs caps s\<rbrace>
    transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
-  apply (simp add: valid_pspace'_def | wp)+
-  apply (fastforce simp: cte_wp_at_ctes_of dest: ctes_of_valid')
-  done
+  by (wpsimp simp: valid_pspace'_def)
+     (fastforce simp: cte_wp_at_ctes_of del: ctes_of_valid' dest: ctes_of_valid')
 
 crunch setExtraBadge, doIPCTransfer
   for sch_act [wp]: "\<lambda>s. P (ksSchedulerAction s)"

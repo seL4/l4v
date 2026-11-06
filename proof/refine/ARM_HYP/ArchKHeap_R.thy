@@ -176,7 +176,7 @@ lemma obj_relation_cut_same_type:
   done
 
 lemmas obj_at_simps = gen_obj_at_simps is_other_obj_relation_type_def
-                      objBits_simps pageBits_def
+                      word_size_def archObjSize_def pageBits_def
 
 (* No aobjs dependency on this architecture *)
 lemma arch_state_relation_no_aobjs[elim!]:

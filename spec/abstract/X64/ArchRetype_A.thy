@@ -33,6 +33,10 @@ where
   "init_arch_objects new_type is_device ptr num_objects obj_sz refs
     \<equiv> when (new_type = ArchObject PML4Obj) (mapM_x copy_global_mappings refs)"
 
+text \<open>Nothing to do after resetting an untyped region on x86.\<close>
+definition arch_post_reset_untyped :: "bool \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "arch_post_reset_untyped is_device sz \<equiv> return ()"
+
 definition
   empty_context :: user_context where
   "empty_context \<equiv> UserContext (\<lambda>_. 0) (\<lambda>_. 0)"

@@ -277,6 +277,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     initTimer_impl
     invalidateCacheRange_I_impl
     invalidateCacheRange_RAM_impl
+    invalidate_I_PoU_impl
     invalidateTranslationASID_impl
     invalidateTranslationSingle_impl
     isb_impl
@@ -289,6 +290,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     setHCR_impl
     setIRQTrigger_impl
     setSCTLR_impl
+    writeTCR_impl
     setVSpaceRoot_impl
     writeFpuState_impl
     writeVCPUHardwareReg_impl
@@ -337,6 +339,7 @@ crunch
   initTimer,
   invalidateCacheRange_I,
   invalidateCacheRange_RAM,
+  invalidate_I_PoU,
   invalidateTranslationASID,
   invalidateTranslationSingle,
   isb,
@@ -349,6 +352,7 @@ crunch
   setHCR,
   setIRQTrigger,
   setSCTLR,
+  writeTCR,
   setVSpaceRoot,
   writeFpuState,
   readVCPUHardwareReg,
