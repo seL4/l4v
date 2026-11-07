@@ -397,6 +397,40 @@ lemma pspace_relation_ctes_ofI:
   apply (simp add: cte_wp_at_ctes_of)
   done
 
+lemma valid_cap_arch_obj_zobj_refs:
+  "\<lbrakk> valid_cap cap s; ptr \<in> zobj_refs cap; kheap s ptr = Some (ArchObj ko) \<rbrakk>
+   \<Longrightarrow> \<exists>acap. cap = Structures_A.ArchObjectCap acap"
+  by (cases cap; auto simp: valid_cap_def obj_at_def is_obj_defs a_type_def
+                     split: option.splits)
+
+locale CSpace1_R_nonz = CSpace1_R +
+  assumes acap_relation_zobj_refs:
+    "\<And>acap acap'.
+     acap_relation acap acap' \<Longrightarrow> set_option (aobj_ref acap) = azobj_refs' acap'"
+begin
+
+lemma ex_nonz_cap_to'_cross:
+  "\<lbrakk> ex_nonz_cap_to ptr s; \<exists>ko. kheap s ptr = Some (ArchObj ko);
+     valid_objs s; pspace_relation (kheap s) (ksPSpace s');
+     pspace_aligned' s'; pspace_distinct' s' \<rbrakk>
+   \<Longrightarrow> ex_nonz_cap_to' ptr s'"
+  apply (clarsimp simp: ex_nonz_cap_to_def ex_nonz_cap_to'_def)
+  apply (drule cte_wp_at_norm)
+  apply clarsimp
+  apply (frule(1) cte_wp_at_valid_objs_valid_cap)
+  apply clarsimp
+  apply (frule(2) valid_cap_arch_obj_zobj_refs)
+  apply clarsimp
+  apply (drule(3) pspace_relation_cte_wp_at)
+  apply (rule_tac x="cte_map (a, b)" in exI)
+  apply (erule cte_wp_at_weakenE')
+  apply clarsimp
+  apply (drule acap_relation_zobj_refs)
+  apply fastforce
+  done
+
+end
+
 lemma pspace_relation_caps_of_state_cross:
   "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
      caps_of_state s slot = Some c; pspace_aligned s; pspace_distinct s \<rbrakk>

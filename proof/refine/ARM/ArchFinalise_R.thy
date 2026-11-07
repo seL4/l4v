@@ -892,15 +892,154 @@ lemma deleteASID_ctes_of[wp]:
   "deleteASID a ptr \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
   unfolding deleteASID_def by (wpsimp wp: getASID_wp hoare_drop_imps hoare_vcg_all_lift)
 
+lemma typ_at'_unlive:
+  assumes "typ_at' T p s"
+  assumes "T = UserDataT \<or> T = UserDataDeviceT \<or>
+           T = ArchT ASIDPoolT \<or> T = ArchT PTET \<or> T = ArchT PDET"
+  shows "ko_wp_at' (Not \<circ> live') p s"
+  apply (rule ko_wp_at'_weakenE[OF assms(1)[unfolded typ_at'_def]])
+  using assms(2)
+  by (case_tac ko; simp add: live'_def hyp_live'_def)
+
+lemma valid_arch_cap_zobj_refs_unlive:
+  "\<lbrakk>s \<turnstile>' ArchObjectCap cap; p \<in> zobj_refs' (ArchObjectCap cap)\<rbrakk>
+   \<Longrightarrow> ko_wp_at' (Not \<circ> live') p s"
+  apply (cases cap)
+  subgoal
+    apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def)
+    apply (erule typ_at'_unlive)
+    apply simp
+    done
+  subgoal by simp
+  subgoal for is_device ref rights size mapping
+    apply (cases is_device)
+     apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def
+                    dest!: spec[where x=0])
+     apply (rule typ_at'_unlive[where T=UserDataDeviceT])
+      apply (erule mp)
+      apply (cases size; simp add: pageBitsForSize_def pageBits_def)
+     apply simp
+    apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def
+                   dest!: spec[where x=0])
+    apply (rule typ_at'_unlive[where T=UserDataT])
+     apply (erule mp)
+     apply (cases size; simp add: pageBitsForSize_def pageBits_def)
+    apply simp
+    done
+  subgoal
+    apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def page_table_at'_def)
+    apply (rule typ_at'_unlive[where T="ArchT PTET"])
+     apply (drule_tac x=0 in spec)
+     apply simp
+    apply simp
+    done
+  subgoal
+    apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def page_directory_at'_def)
+    apply (rule typ_at'_unlive[where T="ArchT PDET"])
+     apply (drule_tac x=0 in spec)
+     apply simp
+    apply simp
+    done
+  subgoal by simp
+  done
+
+lemma arch_finaliseCap_zobj_refs_unlive:
+  "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap\<rbrace>
+     Arch.finaliseCap cap final
+   \<lbrace>\<lambda>_ s. \<forall>p \<in> zobj_refs' (ArchObjectCap cap). ko_wp_at' (Not \<circ> live') p s\<rbrace>"
+  apply (cases cap)
+  subgoal for ref asid
+    apply (rule hoare_post_imp[where Q'="\<lambda>_ s. typ_at' (ArchT ASIDPoolT) ref s"])
+     apply (fastforce intro: typ_at'_unlive)
+    apply (rule hoare_weaken_pre[OF Arch_finaliseCap_typ_at'])
+    apply (simp add: valid_cap'_def valid_arch_cap'_def)
+    done
+  subgoal by wpsimp
+  subgoal for is_device ref rights size mapping
+    apply (cases is_device)
+     apply (rule hoare_post_imp[where Q'="\<lambda>_ s. typ_at' UserDataDeviceT ref s"])
+      apply (fastforce intro: typ_at'_unlive)
+     apply (rule hoare_weaken_pre[OF Arch_finaliseCap_typ_at'])
+     apply (cases size; clarsimp simp: valid_cap'_def valid_arch_cap'_def
+                                      pageBitsForSize_def pageBits_def
+                               dest!: spec[where x=0])
+    apply (rule hoare_post_imp[where Q'="\<lambda>_ s. typ_at' UserDataT ref s"])
+     apply (fastforce intro: typ_at'_unlive)
+    apply (rule hoare_weaken_pre[OF Arch_finaliseCap_typ_at'])
+    apply (cases size; clarsimp simp: valid_cap'_def valid_arch_cap'_def
+                                     pageBitsForSize_def pageBits_def
+                              dest!: spec[where x=0])
+    done
+  subgoal for ref mapping
+    apply (rule hoare_post_imp[where Q'="\<lambda>_ s. typ_at' (ArchT PTET) ref s"])
+     apply (fastforce intro: typ_at'_unlive)
+    apply (rule hoare_weaken_pre[OF Arch_finaliseCap_typ_at'])
+    apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def page_table_at'_def)
+    apply (drule_tac x=0 in spec)
+    apply simp
+    done
+  subgoal for ref mapping
+    apply (rule hoare_post_imp[where Q'="\<lambda>_ s. typ_at' (ArchT PDET) ref s"])
+     apply (fastforce intro: typ_at'_unlive)
+    apply (rule hoare_weaken_pre[OF Arch_finaliseCap_typ_at'])
+    apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def page_directory_at'_def)
+    apply (drule_tac x=0 in spec)
+    apply simp
+    done
+  subgoal by wpsimp
+  done
+
+lemma arch_finaliseCap_NullCaps:
+  "\<lbrace>\<top>\<rbrace>
+     Arch.finaliseCap cap final
+   \<lbrace>\<lambda>rv _. isNullCap (fst rv) \<and> isNullCap (snd rv)\<rbrace>"
+  unfolding ARM_H.finaliseCap_def
+  apply (case_tac cap; clarsimp simp: isCap_simps)
+  subgoal
+    apply safe
+    apply wpsimp+
+    done
+  subgoal
+    by wpsimp
+  subgoal
+    apply safe
+    apply wpsimp+
+    done
+  subgoal
+    apply safe
+    apply wpsimp+
+    done
+  subgoal
+    apply safe
+    apply wpsimp+
+    done
+  subgoal
+    by wpsimp
+  done
+
+lemma arch_finaliseCap_removeable_valid:
+  "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap\<rbrace>
+     Arch.finaliseCap cap final
+   \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap)
+              \<and> isNullCap (snd rv)\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule hoare_post_imp)
+    prefer 2
+    apply (rule hoare_vcg_conj_lift)
+     apply (rule arch_finaliseCap_NullCaps)
+    apply (rule arch_finaliseCap_zobj_refs_unlive)
+   apply (fastforce simp: removeable'_def)
+  apply simp
+  done
+
 lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s
        \<and> (final_matters' (ArchObjectCap cap)
                \<longrightarrow> (final = isFinal (ArchObjectCap cap) slot (cteCaps_of s))) \<rbrace>
      Arch.finaliseCap cap final
    \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap) \<and> isNullCap (snd rv)\<rbrace>"
-  apply (simp add: ARM_H.finaliseCap_def
-                   removeable'_def)
-  apply (safe ; wpsimp)
+  apply (rule hoare_weaken_pre[OF arch_finaliseCap_removeable_valid])
+  apply simp
   done
 
 crunch archThreadSet

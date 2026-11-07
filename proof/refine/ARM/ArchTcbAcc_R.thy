@@ -199,13 +199,12 @@ lemma setObject_tcb_pde_mappings'[wp]:
   apply (auto dest: updateObject_default_result)
   done
 
-lemma zobj_refs'_capRange[Arch_assms]:
-  "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
-  by (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow)
-
 lemma capAligned_zobj_refs'_capRange[Arch_assms]:
   "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
-  by (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
+  apply (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
+  apply (rename_tac arch_capability)
+  apply (case_tac arch_capability; clarsimp dest!: is_aligned_no_overflow)
+  done
 
 (* interface lemma, but can't be done via locale *)
 lemma asUser_valid_tcbs'[wp]:
@@ -320,6 +319,7 @@ lemma msg_align_bits_le_pageBitsForSize[Arch_assms]:
   by (simp add: msg_align_bits pageBitsForSize_def split: vmpage_size.split)
 
 lemmas [Arch_assms] =
+  zobj_refs'_capRange
   dmo_getirq_inv
   getActiveIRQ_masked
   tcb_at'_cross
