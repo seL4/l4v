@@ -790,6 +790,10 @@ lemma acap_relation_capBadge[Arch_assms]:
   "acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
   by (simp add: arch_capBadge_def)
 
+lemma acap_relation_zobj_refs:
+  "acap_relation acap acap' \<Longrightarrow> set_option (aobj_ref acap) = azobj_refs' acap'"
+  by (cases acap; simp)
+
 lemma obj_relation_cuts_in_obj_range[Arch_assms]:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
      kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
@@ -859,6 +863,9 @@ interpretation CSpace1_R?: CSpace1_R
 proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.CSpace1_R_assms)?)?)
 qed
+
+interpretation CSpace1_R_nonz?: CSpace1_R_nonz
+  by (unfold_locales; fact ARM.acap_relation_zobj_refs)
 
 context Arch begin arch_global_naming
 

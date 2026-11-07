@@ -70,8 +70,13 @@ definition arch_live' :: "arch_kernel_object \<Rightarrow> bool" where
 definition hyp_live' :: "kernel_object \<Rightarrow> bool" where
   "hyp_live' ko \<equiv> False"
 
-definition azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
-  "azobj_refs' _ = {}"
+primrec azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
+  "azobj_refs' (ASIDPoolCap r _) = {r}"
+| "azobj_refs' ASIDControlCap = {}"
+| "azobj_refs' (PageCap _ r _ _ _) = {r}"
+| "azobj_refs' (PageTableCap r _) = {r}"
+| "azobj_refs' (PageDirectoryCap r _) = {r}"
+| "azobj_refs' (SGISignalCap _ _) = {}"
 
 (* FIXME arch-split: might need to add more here, non-arch-split ARM proofs don't know these yet *)
 lemmas [simp] = refs_of_a'_def azobj_refs'_def

@@ -408,8 +408,12 @@ lemma setupReplyMaster_global_refs[wp]:
   apply (case_tac prev_cte, simp)
   apply (frule(1) ctes_of_valid_cap')
   apply (drule(1) valid_global_refsD_with_objSize)+
-  apply (clarsimp simp: valid_cap'_def objBits_simps' obj_at'_def
-                 split: capability.split_asm)
+  apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def objBits_simps'
+                        pageBitsForSize_def
+                        vspace_table_at'_defs obj_at'_def typ_at'_def ko_wp_at'_def
+                 split: capability.split_asm arch_capability.split_asm option.split_asm
+                        vmpage_size.split_asm
+                 dest!: spec[where x=0])
   done
 
 lemma setupReplyMaster_valid_pspace':
@@ -425,16 +429,26 @@ crunch setupReplyMaster
   for valid_arch'[wp]: "valid_arch_state'"
   (wp: crunch_wps simp: crunch_simps)
 
+lemma zobj_refs'_capRange[Arch_assms]:
+  "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
+  apply (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow)
+  apply (rename_tac arch_capability)
+  apply (case_tac arch_capability; clarsimp dest!: is_aligned_no_overflow)
+  done
+
 lemma ex_nonz_tcb_cte_caps'[Arch_assms]:
   "\<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
    ex_cte_cap_to' (t + sl) s"
   apply (clarsimp simp: ex_nonz_cap_to'_def ex_cte_cap_to'_def cte_wp_at_ctes_of)
-  apply (subgoal_tac "s \<turnstile>' cteCap cte")
-   apply (rule_tac x=cref in exI, rule_tac x=cte in exI)
-   apply (clarsimp simp: valid_cap'_def obj_at'_def dom_def ARM.typ_at_to_obj_at_arches
-                  split: cte.split_asm capability.split_asm)
-  apply (case_tac cte)
-  apply (clarsimp simp: ctes_of_valid_cap')
+  apply (frule(1) ctes_of_valid_cap'')
+  apply (rule_tac x=cref in exI, rule_tac x=cte in exI)
+  apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def vspace_table_at'_defs
+                        pageBitsForSize_def pageBits_def
+                        obj_at'_def typ_at'_def ko_wp_at'_def dom_def
+                        ARM.typ_at_to_obj_at_arches
+                 split: capability.split_asm arch_capability.split_asm option.split_asm
+                        vmpage_size.split_asm if_split_asm
+                 dest!: spec[where x=0])
   done
 
 lemma ex_nonz_cap_not_global':
@@ -442,14 +456,9 @@ lemma ex_nonz_cap_not_global':
    t \<notin> global_refs' s"
   apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
   apply (frule(1) valid_global_refsD')
-  apply clarsimp
-  apply (drule orthD1, erule (1) subsetD)
-  apply (subgoal_tac "s \<turnstile>' cteCap cte")
-   apply (fastforce simp: valid_cap'_def capRange_def capAligned_def
-                         is_aligned_no_overflow
-                  split: cte.split_asm capability.split_asm)
-  apply (case_tac cte)
-  apply (clarsimp simp: ctes_of_valid_cap')
+  apply (frule(1) ctes_of_valid_cap'')
+  apply (drule zobj_refs'_capRange)
+  apply blast
   done
 
 lemma setupReplyMaster_invs'[Arch_assms, wp]:
