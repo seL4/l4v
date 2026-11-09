@@ -577,7 +577,7 @@ This module uses the C preprocessor to select a target architecture.
 >     stateAssert (valid_bound_reply'_asrt replyPtrOpt) ""
 >     when (replyPtrOpt /= Nothing) $ do
 >         replyPtr <- return $ fromJust replyPtrOpt
->         updateReply replyPtr (\reply -> reply { replyNext = Nothing })
+>         updateReply replyPtr (\reply -> reply { replySC = Nothing })
 >         updateSchedContext scPtr (\sc -> sc { scReply = Nothing })
 
 > schedContextSetInactive :: PPtr SchedContext -> Kernel ()

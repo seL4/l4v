@@ -32,7 +32,7 @@ lemma obj_at_replyTCBs_of:
 
 abbreviation valid_replies'_alt :: "kernel_state \<Rightarrow> bool" where
   "valid_replies'_alt s \<equiv>
-     (\<forall>rptr rp. ko_at' rp rptr s \<and> ((\<exists>rp'. replyNext rp = Some (Next rp')) \<or> replyPrev rp \<noteq> None)
+     (\<forall>rptr rp. ko_at' rp rptr s \<and> ((\<exists>rp'. replyNext rp = Some rp') \<or> replyPrev rp \<noteq> None)
                 \<longrightarrow> (\<exists>tptr. replyTCB rp = Some tptr
                             \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s))"
 
@@ -1245,20 +1245,6 @@ lemma replyPrevs_of_non_reply_update:
   by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def projectKO_opts_defs
                split: kernel_object.splits)
 
-definition replyPrev_same :: "'a :: pspace_storable \<Rightarrow> 'a \<Rightarrow> bool" where
-  "replyPrev_same obj1 obj2 \<equiv>
-    (case (injectKO obj1, injectKO obj2) of
-       (KOReply r1, KOReply r2) \<Rightarrow> replyPrev r1 = replyPrev r2
-      | _ \<Rightarrow> True)"
-
-lemma replyPrevs_of_replyPrev_same_update:
-  "\<And>s'. \<lbrakk>typ_at' ReplyT ptr s'; ksPSpace s' ptr = Some ko;
-   koTypeOf (injectKO (ob':: 'a :: pspace_storable)) = ReplyT;
-   projectKO_opt ko = Some ab; replyPrev_same (ob':: 'a) ab\<rbrakk>
-     \<Longrightarrow> replyPrevs_of (s'\<lparr>ksPSpace := (ksPSpace s')(ptr \<mapsto> injectKO ob')\<rparr>) = replyPrevs_of s'"
-  apply (cases "injectKO ob'"; clarsimp simp: typ_at'_def ko_wp_at'_def)
-  by (cases ko; fastforce simp add: replyPrev_same_def project_inject projectKO_opts_defs opt_map_def)
-
 lemma tcbs_of'_non_tcb_update:
   "\<lbrakk>typ_at' (koTypeOf ko) ptr s'; koTypeOf ko \<noteq> TCBT\<rbrakk>
    \<Longrightarrow> tcbs_of' (s'\<lparr>ksPSpace := (ksPSpace s')(ptr \<mapsto> ko)\<rparr>) = tcbs_of' s'"
@@ -2321,7 +2307,7 @@ lemma set_reply_state_hyp_refs_of'[wp]:
   done
 
 lemma setReply_reply_projs[wp]:
-  "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := replyNext_of reply))
+  "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := replyNext reply))
           ((replyPrevs_of s)(rptr := replyPrev reply))
           ((replyTCBs_of s)(rptr := replyTCB reply))
           ((replySCs_of s)(rptr := replySC reply))\<rbrace>
@@ -2329,26 +2315,16 @@ lemma setReply_reply_projs[wp]:
    \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
   apply (wpsimp simp: setReply_def updateObject_default_def setObject_def split_def)
   apply (erule rsubst4[where P=P])
-     apply (clarsimp simp: ext opt_map_def list_refs_of_reply'_def map_set_def projectKO_opt_reply
+     apply (clarsimp simp: ext opt_map_def map_set_def projectKO_opt_reply
                     split: option.splits)+
   done
 
-lemma updateReply_wp_all:
+lemma updateReply_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko rptr s \<longrightarrow> P (set_obj' rptr (upd ko) s)\<rbrace>
    updateReply rptr upd
    \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding updateReply_def
   apply (wpsimp wp: set_reply'.set_wp)
-  done
-
-lemma setReply_list_refs_of_replies'[wp]:
-  "\<lbrace>\<lambda>s. P ((list_refs_of_replies' s)(p := list_refs_of_reply' reply))\<rbrace>
-   setReply p reply
-   \<lbrace>\<lambda>_ s. P (list_refs_of_replies' s)\<rbrace>"
-  apply (wpsimp simp: setReply_def)
-  apply (erule arg_cong[where f=P, THEN iffD1, rotated])
-  apply (rule ext)
-  apply (clarsimp simp: opt_map_def map_set_def)
   done
 
 lemma setObject_ksPSpace_only:
@@ -2490,7 +2466,7 @@ lemma updateNotification_wp:
 
 lemma updateReply_dom_replies_of'[wp]:
   "updateReply ptr f \<lbrace>\<lambda>s. P (dom (replies_of' s))\<rbrace>"
-  apply (wpsimp wp: updateReply_wp_all)
+  apply (wpsimp wp: updateReply_wp)
   apply (fastforce elim!: rsubst[where P=P] simp: projectKO_opts_defs obj_at'_def opt_map_red)
   done
 
@@ -3021,7 +2997,7 @@ lemma sym_refs_cross:
     apply (clarsimp simp: obj_at'_def opt_map_def)
    apply (force dest!: replies_relation_reply_relation_abs_obj_at'
                  simp: get_refs_def2 obj_at'_def reply_relation_def opt_map_def
-                       sc_replies_of_scs_def map_project_def scs_of_kh_def refs_of_def hd_opt_def
+                       scs_of_kh_def refs_of_def hd_opt_def
                 split: Structures_A.kernel_object.splits option.splits)
   apply (frule heap_pspace_relation_replies_relation)
   apply (frule (1) replies_relation_reply_relation_conc)
@@ -3039,7 +3015,7 @@ lemma sym_refs_cross:
     apply (frule_tac sc_ptr=ref in sc_replies_relation_scReplies_of)
       apply (clarsimp simp: scs_relation_def obj_at_def is_sc_obj_def)
      apply (clarsimp simp: opt_map_def)
-    apply (clarsimp simp: opt_map_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
+    apply (clarsimp simp: opt_map_def scs_of_kh_def)
    apply (force simp: obj_at'_def)
   apply (clarsimp simp: get_refs_def2 refs_of_def refs_of'_def
                  split: Structures_A.kernel_object.splits option.splits)
@@ -3455,31 +3431,6 @@ lemma scs_of_rewrite:
   by (fastforce simp: sc_heap_of_state_def opt_map_def
               split: option.splits Structures_A.kernel_object.splits)
 
-abbreviation sc_replies_of2 :: "'z state \<Rightarrow> obj_ref \<Rightarrow>obj_ref list option" where
-  "sc_replies_of2 s \<equiv> scs_of2 s ||> sc_replies"
-
-lemma sc_replies_of_rewrite:
-  "sc_replies_of s = sc_replies_of2 s"
-  by (fastforce simp: sc_heap_of_state_def sc_replies_of_scs_def opt_map_def map_project_def
-              split: option.splits Structures_A.kernel_object.splits)
-
-definition sc_replies_relation2_2 ::
-  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool"
-  where
-  "sc_replies_relation2_2 sc_repls scRepl replPrevs \<equiv>
-     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_ls replPrevs (scRepl p) replies"
-
-abbreviation sc_replies_relation2 :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "sc_replies_relation2 s s' \<equiv>
-    sc_replies_relation2_2 (sc_replies_of2 s) (scReplies_of s') (replyPrevs_of s')"
-
-lemmas sc_replies_relation2_def = sc_replies_relation2_2_def
-
-lemma sc_replies_relation_rewrite:
-  "sc_replies_relation s s' = sc_replies_relation2 s s'"
-  unfolding sc_replies_relation_def sc_replies_relation2_def sc_replies_of_rewrite
-  by simp
-
 definition is_active_sc2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "is_active_sc2 p s \<equiv> ((\<lambda>sc. 0 < sc_refill_max sc) |< scs_of2 s) p"
 
@@ -3703,8 +3654,6 @@ lemma shows
     "obj_at' (\<lambda>x. scTCB x = Some t) p s = (sc_at' p s \<and> scTCBs_of s p = Some t)"
   and obj_at'_tcb_scs_of_equiv:
     "obj_at' (\<lambda>x. tcbSchedContext x = Some sc) p s = (tcb_at' p s \<and> tcbSCs_of s p = Some sc)"
-  and obj_at'_replySCs_of_equiv:
-    "obj_at' (\<lambda>a. replyNext a = Some (Head sc)) p s = (reply_at' p s \<and> replySCs_of s p = Some sc)"
   and obj_at'_scReplies_of_equiv:
     "obj_at' (\<lambda>a. scReply a = Some sc) p s = (sc_at' p s \<and> scReplies_of s p = Some sc)"
   by (intro iffI; clarsimp simp: obj_at'_real_def ko_wp_at'_def opt_map_def)+
@@ -3828,13 +3777,6 @@ lemma threadSet_tcbSCs_of:
   apply (erule back_subst[where P=P], rule ext)
   apply (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def)
   done
-
-lemma shows
-  replyNexts_Some_replySCs_None:
-  "replyNexts_of s rp \<noteq> None \<Longrightarrow> replySCs_of s rp = None" and
-  replySCs_Some_replyNexts_None:
-  "replySCs_of s rp \<noteq> None \<Longrightarrow> replyNexts_of s rp = None"
-  by (clarsimp simp: opt_map_def split: option.splits reply_next.splits)+
 
 lemma pred_tcb_at'_equiv:
   "pred_tcb_at' p P t s = (tcb_at' t s \<and> P (p (tcb_to_itcb' (the (tcbs_of' s t)))))"
@@ -4218,7 +4160,7 @@ lemma live'_sc_cross:
    apply (clarsimp simp: sc_relation_def live_def live_sc_def)
   apply (clarsimp simp: obj_at_def live_def live_sc_def sc_replies_relation_def)
   apply (drule_tac x=ptr in spec)
-  apply (fastforce simp: sc_replies_of_scs_def map_project_def scs_of_kh_def opt_map_def)
+  apply (fastforce simp: scs_of_kh_def opt_map_def)
   done
 
 lemma live'_reply_cross:
@@ -4229,13 +4171,7 @@ lemma live'_reply_cross:
   apply (clarsimp simp: reply_relation_def live_def live_reply_def live_reply'_def
                         valid_replies'_def)
   apply (drule_tac x=ptr in spec)
-  apply (elim disjE)
-   apply (clarsimp simp: opt_map_red)
-   apply (prop_tac "\<exists>y. replyNexts_of s' ptr = Some y")
-    apply (clarsimp simp: opt_map_red)
-    apply (rename_tac reply_next, case_tac reply_next; clarsimp)
-   apply (clarsimp simp: opt_map_red)
-  apply (fastforce dest: spec[where x=ptr] simp: opt_map_red)
+  apply (fastforce simp: opt_map_red)
   done
 
 lemma pspace_relation_cte_wp_at:
@@ -4598,9 +4534,9 @@ lemma if_live_then_nonz_cap_to_cross:
    apply (frule scs_relation_sc_relation_conc; (fastforce simp: live'_def)?)
    apply clarsimp
    apply (rule ex_nonz_cap_to_sc_at_cross; fastforce?)
+    apply (frule state_relation_sc_replies_relation)
     apply (erule (1) if_live_then_nonz_capD2)
     apply (rule live'_sc_cross; fastforce?)
-    apply (fastforce intro: state_relation_sc_replies_relation)
    apply (force intro!: sc_at_pred_n_sc_at simp: sc_at_pred_n_def obj_at_def)
   apply (frule replies_relation_reply_relation_conc; fastforce?)
   apply clarsimp

@@ -144,7 +144,7 @@ lemma tcbs_relation_lift_rcorres[rcorres_lift]:
    apply (fastforce intro: det_wp_pre det)
   apply (rename_tac s t)
   apply (rule_tac P'1="\<lambda>_. tcbs_of t = tcbs_of s" in hoare_pre_add[THEN iffD2])
-   apply (fastforce dest: use_valid[OF _ abs])
+   apply (fast dest!: use_valid[OF _ abs])
   apply (insert conc)
   unfolding map_relation_def
   apply (rule hoare_vcg_conj_lift_pre_fix)
@@ -317,26 +317,174 @@ lemma tcbs_relation_lift_rcorres[rcorres_lift]:
   apply fastforce
   done
 
-lemma scs_relation_lift_rcorres_weak[rcorres_lift]:
-  "\<lbrakk>\<And>s'. no_fail (\<lambda>s. Q s s') f; empty_fail f;
-    \<And>P s'. \<lbrace>\<lambda>s. P (scs_of s) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s)\<rbrace>;
-    \<And>P s'. \<lbrace>\<lambda>s. P (sc_sizes_of s) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (sc_sizes_of s)\<rbrace>;
-    \<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s')\<rbrace>\<rbrakk>
-   \<Longrightarrow> rcorres (\<lambda>s s'. scs_relation s s' \<and> Q s s') f  f' (\<lambda>_ _. scs_relation)"
-  apply (rule rcorres_lift_conc[where p=scs_of'])
-   apply (rule rcorres_lift_abs)
-    apply (rule rcorres_prop_fwd)
-      apply (fastforce intro: no_fail_pre)
-     apply fastforce
-    apply fastforce
-   apply (rule hoare_weaken_pre)
-    apply (rule hoare_lift_Pf2_pre_conj[where f=scs_of])
-     apply (rule hoare_lift_Pf2_pre_conj[where f=sc_sizes_of])
-      apply wpsimp
-     apply fastforce
-    apply fastforce
+lemma scs_relation_lift_rcorres[rcorres_lift]:
+  assumes det: "\<And>s'. det_wp (\<lambda>s. Q s s') f"
+  assumes abs:
+    "\<And>P s'. \<lbrace>\<lambda>s. P (dom (scs_of s)) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (dom (scs_of s))\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s ||> sc_period) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s ||> sc_period)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s ||> sc_consumed) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s ||> sc_consumed)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s |> sc_tcb) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s |> sc_tcb)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s |> sc_ntfn) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s |> sc_ntfn)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s ||> sc_refills) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s ||> sc_refills)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s ||> sc_refill_max) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s ||> sc_refill_max)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s ||> sc_badge) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s ||> sc_badge)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s ||> sc_sporadic) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s ||> sc_sporadic)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (scs_of s |> sc_yield_from) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (scs_of s |> sc_yield_from)\<rbrace>"
+    "\<And>P s'. \<lbrace>\<lambda>s. P (sc_sizes_of s) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (sc_sizes_of s)\<rbrace>"
+  assumes conc:
+    "\<And>P s. \<lbrace>\<lambda>s'. P (dom (scs_of' s')) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (dom (scs_of' s'))\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scPeriod) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scPeriod)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scConsumed) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scConsumed)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' |> scTCB) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' |> scTCB)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' |> scNtfn) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' |> scNtfn)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scRefillHead) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scRefillHead)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scRefillTail) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scRefillTail)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scRefillMax) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scRefillMax)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scRefills) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scRefills)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scSize) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scSize)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scBadge) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scBadge)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' ||> scSporadic) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' ||> scSporadic)\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (scs_of' s' |> scYieldFrom) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scs_of' s' |> scYieldFrom)\<rbrace>"
+  shows "rcorres (\<lambda>s s'. scs_relation s s' \<and> Q s s') f  f' (\<lambda>_ _. scs_relation)"
+  apply (rule rcorres_from_valid_det)
+   apply (fastforce intro: det_wp_pre det)
+  apply (rename_tac s t)
+  apply (clarsimp simp: scs_relation_def)
+  apply (rule_tac P'1="\<lambda>_. dom (scs_of t) = dom (scs_of s)" in hoare_pre_add[THEN iffD2])
+   apply clarsimp
+   apply (force elim!: use_valid[OF _ abs(1)])
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (fastforce intro: hoare_weaken_pre conc)
+  apply clarsimp
+  apply (subst conj_commute)
+  apply clarsimp
+  apply (subst all_conj_increase)
+  apply (rule hoare_vcg_all_lift, rename_tac p)
+  apply (rule hoare_allI, rename_tac abs_sc_post)
+  apply (rule hoare_allI, rename_tac n)
+  apply (rule hoare_allI, rename_tac conc_sc_post)
+  apply (rule_tac P'1="\<lambda>_. sc_sizes_of t = sc_sizes_of s" in hoare_pre_add[THEN iffD2])
+   apply (force elim: use_valid[OF _ abs(11)])
+  apply (subst conj_commute)
+  apply (clarsimp simp: imp_conjL)
+  apply (rule hoare_impI)
+  apply (rule hoare_impI)
+  apply (clarsimp simp: all_conj_distrib imp_conjR)
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (rule hoare_drop_imp)
+   apply wpsimp
+   apply blast
+  apply (rule_tac P'="\<lambda>s'. (\<forall>sc. (\<forall>sc'. scs_of s p = Some sc \<longrightarrow> scs_of' s' p = Some sc'
+                                        \<longrightarrow> sc_relation sc n sc'))
+                           \<and> Q s s'
+                           \<and> dom (scs_of t) = dom (scs_of s)
+                           \<and> dom (scs_of s) = dom (scs_of' s')
+                           \<and> sc_sizes_of t = sc_sizes_of s"
+               in hoare_weaken_pre[rotated])
    apply fastforce
-  apply wpsimp
+  apply (clarsimp simp: sc_relation_def all_conj_distrib imp_conjR pred_conj_def)
+  apply (rule hoare_name_pre_state)
+  apply (rename_tac conc_state)
+  apply clarsimp
+  apply (prop_tac "\<exists>abs_sc_pre. scs_of s p = Some abs_sc_pre")
+   apply (force simp: opt_map_red)
+  apply (prop_tac "\<exists>conc_sc_pre. scs_of' conc_state p = Some conc_sc_pre")
+   apply force
+  apply clarsimp
+  apply (insert conc)
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s ||> sc_period) p = (scs_of t ||> sc_period) p")
+    apply (fastforce intro: use_valid[OF _ abs(2)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' ||> scPeriod) p = (scs_of' conc_state ||> scPeriod) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s ||> sc_consumed) p = (scs_of t ||> sc_consumed) p")
+    apply (fastforce intro: use_valid[OF _ abs(3)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' ||> scConsumed) p = (scs_of' conc_state ||> scConsumed) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s |> sc_tcb) p = (scs_of t |> sc_tcb) p")
+    apply (fastforce intro: use_valid[OF _ abs(4)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' |> scTCB) p = (scs_of' conc_state |> scTCB) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s |> sc_ntfn) p = (scs_of t |> sc_ntfn) p")
+    apply (fastforce intro: use_valid[OF _ abs(5)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' |> scNtfn) p = (scs_of' conc_state |> scNtfn) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s ||> sc_refills) p = (scs_of t ||> sc_refills) p")
+    apply (fastforce intro: use_valid[OF _ abs(6)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' ||> scRefillHead) p
+                                = (scs_of' conc_state ||> scRefillHead) p
+                              \<and> (scs_of' s' ||> scRefillTail) p
+                                  = (scs_of' conc_state ||> scRefillTail) p
+                              \<and> (scs_of' s' ||> scRefillMax) p
+                                  = (scs_of' conc_state ||> scRefillMax) p
+                              \<and> (scs_of' s' ||> scRefills) p = (scs_of' conc_state ||> scRefills) p"
+                in hoare_post_imp)
+    apply (fastforce simp: refillSize_def opt_map_def split: if_splits option.splits)
+   apply clarsimp
+   apply (rule hoare_vcg_conj_lift_pre_fix)
+    apply (rule hoare_weaken_pre, assumption)
+    apply (fastforce simp: opt_map_red)
+   apply (rule hoare_vcg_conj_lift_pre_fix)
+    apply (rule hoare_weaken_pre, assumption)
+    apply (fastforce simp: opt_map_red)
+   apply (rule hoare_vcg_conj_lift_pre_fix)
+    apply (rule hoare_weaken_pre, assumption)
+    apply (fastforce simp: opt_map_red)
+   apply (rule hoare_weaken_pre, assumption)
+   apply (fastforce simp: opt_map_red)
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' ||> scSize) p = (scs_of' conc_state ||> scSize) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s ||> sc_refill_max) p = (scs_of t ||> sc_refill_max) p")
+    apply (fastforce intro: use_valid[OF _ abs(7)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' ||> scRefillMax) p = (scs_of' conc_state ||> scRefillMax) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s ||> sc_badge) p = (scs_of t ||> sc_badge) p")
+    apply (fastforce intro: use_valid[OF _ abs(8)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' ||> scBadge) p = (scs_of' conc_state ||> scBadge) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(scs_of s ||> sc_sporadic) p = (scs_of t ||> sc_sporadic) p")
+    apply (fastforce intro: use_valid[OF _ abs(9)])
+   apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' ||> scSporadic) p = (scs_of' conc_state ||> scSporadic) p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fast
+  apply (prop_tac "(scs_of s |> sc_yield_from) p = (scs_of t |> sc_yield_from) p")
+   apply (fastforce intro: use_valid[OF _ abs(10)])
+  apply (rule_tac Q'="\<lambda>_ s'. (scs_of' s' |> scYieldFrom) p = (scs_of' conc_state |> scYieldFrom) p"
+               in hoare_post_imp)
+   apply (clarsimp simp: opt_map_def)
+  apply (rule hoare_weaken_pre, assumption)
+  apply fast
   done
 
 lemma eps_relation_lift_rcorres[rcorres_lift]:
@@ -360,14 +508,58 @@ lemma ntfns_relation_lift_rcorres[rcorres_lift]:
      by (fastforce intro: no_fail_pre hoare_weaken_pre)+
 
 lemma replies_relation_lift_rcorres[rcorres_lift]:
-  "\<lbrakk>\<And>s'. no_fail (\<lambda>s. Q s s') f; empty_fail f;
-    \<And>P s'. \<lbrace>\<lambda>s. P (replies_of s) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (replies_of s)\<rbrace>;
-    \<And>P s. \<lbrace>\<lambda>s'. P (replies_of' s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s. P (replies_of' s)\<rbrace>\<rbrakk>
-   \<Longrightarrow> rcorres (\<lambda>s s'. replies_relation s s' \<and> Q s s') f  f' (\<lambda>_ _. replies_relation)"
-  apply (rule rcorres_lift_conc[where p=replies_of'])
-   apply (rule rcorres_lift_abs)
-    apply (rule rcorres_prop_fwd)
-     by (fastforce intro: no_fail_pre hoare_weaken_pre)+
+  assumes det: "\<And>s'. det_wp (\<lambda>s. Q s s') f"
+  assumes abs: "\<And>P s'. \<lbrace>\<lambda>s. P (replies_of s) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (replies_of s)\<rbrace>"
+  assumes conc:
+    "\<And>P s. \<lbrace>\<lambda>s'. P (dom (replies_of' s')) \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (dom (replies_of' s'))\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (replyTCBs_of s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (replyTCBs_of s')\<rbrace>"
+    "\<And>P s. \<lbrace>\<lambda>s'. P (replySCs_of s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (replySCs_of s')\<rbrace>"
+  shows "rcorres (\<lambda>s s'. replies_relation s s' \<and> Q s s') f  f' (\<lambda>_ _. replies_relation)"
+  apply (rule rcorres_from_valid_det)
+   apply (fastforce intro: det_wp_pre det)
+  apply (rename_tac s t)
+  apply (clarsimp simp: reply_relation_def map_relation_def)
+  apply (rule_tac P'1="\<lambda>_. dom (replies_of t) = dom (replies_of s)" in hoare_pre_add[THEN iffD2])
+   apply clarsimp
+   apply (force elim!: use_valid[OF _ abs])
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (fastforce intro: hoare_weaken_pre conc)
+  apply clarsimp
+  apply (subst conj_commute)
+  apply clarsimp
+  apply (subst all_conj_increase)
+  apply (rule hoare_vcg_all_lift, rename_tac p)
+  apply (rule hoare_allI, rename_tac abs_reply_post)
+  apply (rule hoare_allI, rename_tac conc_reply_post)
+  apply (subst conj_commute)
+  apply (clarsimp simp: imp_conjL)
+  apply (rule hoare_impI)
+  apply (clarsimp simp: all_conj_distrib imp_conjR)
+  apply (rule hoare_name_pre_state)
+  apply (rename_tac conc_state)
+  apply clarsimp
+  apply (prop_tac "\<exists>abs_reply_pre. replies_of s p = Some abs_reply_pre")
+   apply blast
+  apply (prop_tac "\<exists>conc_reply_pre. replies_of' conc_state p = Some conc_reply_pre")
+   apply blast
+  apply clarsimp
+  apply (insert conc)
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (prop_tac "(replies_of s ||> reply_sc) p = (replies_of t ||> reply_sc) p")
+    apply (force elim!: use_valid[OF _ abs])
+   apply (rule_tac Q'="\<lambda>_ s'. replySCs_of s' p = replySCs_of conc_state p"
+                in hoare_post_imp)
+    apply (clarsimp simp: opt_map_def)
+   apply (rule hoare_weaken_pre, assumption)
+   apply fastforce
+  apply (prop_tac "(replies_of s ||> reply_tcb) p = (replies_of t ||> reply_tcb) p")
+   apply (force elim!: use_valid[OF _ abs])
+  apply (rule_tac Q'="\<lambda>_ s'. replyTCBs_of s' p = replyTCBs_of conc_state p"
+               in hoare_post_imp)
+   apply (clarsimp simp: opt_map_def)
+  apply (rule hoare_weaken_pre, assumption)
+  apply fastforce
+  done
 
 lemma caps_relation_lift_rcorres[rcorres_lift]:
   "\<lbrakk>\<And>s'. no_fail (\<lambda>s. Q s s') f; empty_fail f;
@@ -403,17 +595,19 @@ lemma sc_replies_relation_lift_rcorres[rcorres_lift]:
   "\<lbrakk>\<And>s'. no_fail (\<lambda>s. Q s s') f; empty_fail f;
     \<And>P s'. \<lbrace>\<lambda>s. P (sc_replies_of s) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (sc_replies_of s)\<rbrace>;
     \<And>P s. \<lbrace>\<lambda>s'. P (scReplies_of s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (scReplies_of s')\<rbrace>;
-    \<And>P s. \<lbrace>\<lambda>s'. P (replyPrevs_of s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (replyPrevs_of s')\<rbrace>\<rbrakk>
+    \<And>P s. \<lbrace>\<lambda>s'. P (replyPrevs_of s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (replyPrevs_of s')\<rbrace>;
+    \<And>P s. \<lbrace>\<lambda>s'. P (replyNexts_of s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (replyNexts_of s')\<rbrace>\<rbrakk>
    \<Longrightarrow> rcorres (\<lambda>s s'. sc_replies_relation s s' \<and> Q s s') f  f' (\<lambda>_ _. sc_replies_relation)"
   apply (rule rcorres_lift_abs[where p=sc_replies_of])
-   apply (rule rcorres_lift_conc)
-    apply (rule rcorres_prop_fwd)
-      apply (fastforce intro: no_fail_pre)
-     apply fastforce
-    apply force
-   apply (rule hoare_weaken_pre)
-    apply (rule hoare_lift_Pf2_pre_conj[where f=scReplies_of])
-     by (fastforce intro: hoare_weaken_pre)+
+   apply (rule rcorres_lift_conc[where p=replyPrevs_of])
+    apply (rule rcorres_lift_conc)
+     apply (rule rcorres_prop_fwd)
+       apply (fastforce intro: no_fail_pre)
+      apply fastforce
+     apply force
+    apply (rule hoare_weaken_pre)
+     apply (rule hoare_lift_Pf2_pre_conj[where f=scReplies_of])
+      by (fastforce intro: hoare_weaken_pre)+
 
 lemma ready_queues_relation_lift_rcorres[rcorres_lift]:
   "\<lbrakk>\<And>s'. no_fail (\<lambda>s. Q s s') f; empty_fail f;

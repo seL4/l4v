@@ -1215,7 +1215,7 @@ lemma asUser_cap_to'[wp]:
   by (wp ex_nonz_cap_to_pres')
 
 lemma asUser_pred_tcb_at' [wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> asUser t' f \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
+  "asUser t' f \<lbrace>\<lambda>s. Q (pred_tcb_at' proj P t s)\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadSet_pred_tcb_no_state)
      apply (case_tac tcb)
@@ -1571,7 +1571,7 @@ lemma set_tcb_queue_cte_at:
 crunch setReprogramTimer, setReleaseQueue, setQueue, removeFromBitmap
   for valid_pspace'[wp]: valid_pspace'
   and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-  and list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
+  and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and valid_global_refs'[wp]: valid_global_refs'
   and valid_arch_state'[wp]: valid_arch_state'
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
@@ -5112,10 +5112,8 @@ lemma setThreadState_state_refs_of':
   apply (subst state_refs_of'_helper2)
   by fastforce
 
-lemma setBoundNotification_list_refs_of_replies'[wp]:
-  "setBoundNotification ntfn t \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
-  unfolding setBoundNotification_def
-  by wpsimp
+crunch setBoundNotification
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 lemma tcbSchedNext_update_ctes_of[wp]:
   "threadSet (tcbSchedNext_update f) tptr \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"

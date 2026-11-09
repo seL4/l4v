@@ -139,13 +139,6 @@ lemma heap_not_in_dom[simp]:
   "ptr \<notin> dom hp \<Longrightarrow> hp(ptr := None) = hp"
   by (auto simp: dom_def)
 
-lemma heap_path_takeWhile_lookup_next:
-  "\<lbrakk> heap_path hp st rs ed; r \<in> set rs \<rbrakk>
-   \<Longrightarrow> heap_path hp st (takeWhile ((\<noteq>) r) rs) (Some r)"
-  apply (drule heap_path_prefix)
-  apply (subgoal_tac "takeWhile ((\<noteq>) r) rs @ [r] \<le> rs", fastforce)
-  by (fastforce dest!: in_list_decompose_takeWhile intro: Prefix_Order.prefixI)
-
 lemma heap_path_heap_upd_not_in_strong:
   "\<lbrakk>heap_path hp st rs ed; \<forall>t \<in> set rs. hp' t = hp t\<rbrakk> \<Longrightarrow> heap_path hp' st rs ed"
   by (induct rs arbitrary: st; clarsimp)
@@ -222,6 +215,15 @@ lemma sym_heap_remove_middle_from_chain:
     hp before = Some middle; hp middle = Some after\<rbrakk>
    \<Longrightarrow> sym_heap (hp(before := Some after, middle := None))
                 (hp'(after := Some before, middle := None))"
+  apply (clarsimp simp: sym_heap_def)
+  apply (metis option.simps(1))
+  done
+
+lemma sym_heap_break_middle_of_chain:
+  "\<lbrakk>sym_heap hp hp'; before \<noteq> middle; middle \<noteq> after;
+    hp before = Some middle; hp middle = Some after\<rbrakk>
+   \<Longrightarrow> sym_heap (hp(before := None, middle := None))
+                (hp'(after := None, middle := None))"
   apply (clarsimp simp: sym_heap_def)
   apply (metis option.simps(1))
   done
@@ -412,55 +414,10 @@ lemma heap_ls_neighbour_in_set:
   apply (fastforce dest: heap_ls_prev_cases[where np=p] sym_heapD2)
   done
 
-(* more on heap_path *)
-
-lemma heap_ls_next_takeWhile_append:
-  "\<lbrakk>heap_ls hp st xs; p \<in> set xs; hp p = Some np\<rbrakk>
-  \<Longrightarrow> takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
-  apply (frule heap_ls_distinct)
-  apply (frule in_list_decompose_takeWhile)
-  apply (subgoal_tac "heap_ls hp st (takeWhile ((\<noteq>) p) xs @ p # drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs)")
-   prefer 2 apply simp
-  apply (drule heap_path_non_nil_lookup_next)
-  apply (case_tac "drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs"; simp)
-  apply (subgoal_tac "np \<in> set xs")
-   prefer 2 apply (erule (2) heap_ls_next_in_list)
-  apply (frule in_list_decompose_takeWhile[where x=np])
-  apply (drule (1) distinct_inj_middle[where x=np and xa="takeWhile ((\<noteq>) np) xs" and ya="takeWhile ((\<noteq>) p) xs @ [p]"])
-   apply simp+
-  done
-
 (* RT FIXME: Move *)
 lemma takeWhile_neq_notin_same:
   "x \<notin> set xs \<Longrightarrow> takeWhile ((\<noteq>) x) xs = xs"
   using takeWhile_eq_all_conv by blast
-
-lemma heap_path_extend_takeWhile:
-  "\<lbrakk>heap_ls hp st xs; heap_path hp st (takeWhile ((\<noteq>) p) xs) (Some p); hp p = Some np\<rbrakk>
-  \<Longrightarrow> heap_path hp st (takeWhile ((\<noteq>) np) xs) (Some np)"
-  apply (case_tac "p \<in> set xs")
-  apply (subst heap_ls_next_takeWhile_append[where p=p and np=np and hp=hp]; simp)
-  apply (drule takeWhile_neq_notin_same, simp)
-  apply (drule (1) heap_path_end_unique, simp)
-  done
-
-lemma heap_ls_next_takeWhile_append_sym:
-  "\<lbrakk>heap_ls hp st xs; np \<in> set xs; st \<noteq> Some np; hp p = Some np; sym_heap hp hp'\<rbrakk>
-  \<Longrightarrow>takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
-  apply (frule (3) heap_ls_prev_cases, simp)
-  apply (fastforce elim!: heap_ls_next_takeWhile_append)
-  done
-
-lemma heap_path_curtail_takeWhile:
-  "\<lbrakk>heap_ls hp st xs; heap_path hp st (takeWhile ((\<noteq>) np) xs) (Some np);
-    st \<noteq> Some np; hp p = Some np; sym_heap hp hp'\<rbrakk>
-  \<Longrightarrow> heap_path hp st (takeWhile ((\<noteq>) p) xs) (Some p)"
-  apply (case_tac "np \<in> set xs")
-   apply (drule (4) heap_ls_next_takeWhile_append_sym)
-   apply simp
-  apply (drule takeWhile_neq_notin_same, simp)
-  apply (drule (1) heap_path_end_unique, simp)
-  done
 
 (* more on heap_path : end *)
 
@@ -629,6 +586,17 @@ lemma heap_ls_remove_middle:
     using heap_path_head apply fastforce
    apply force
   apply fastforce
+  done
+
+lemma heap_ls_takeWhile_not_hd:
+  "\<lbrakk>heap_ls hp st (xs @ t # ys); xs \<noteq> []\<rbrakk>
+   \<Longrightarrow> heap_ls (hp(last xs := None)) (Some (hd xs)) (takeWhile ((\<noteq>) t) (xs @ t # ys))"
+  apply (frule heap_ls_distinct)
+  apply (prop_tac "takeWhile ((\<noteq>) t) (xs @ t # ys) = xs")
+   apply (force simp: takeWhile_tail)
+  apply clarsimp
+  apply (frule (1) heap_path_head)
+  apply (force dest: heap_path_last_update)
   done
 
 end

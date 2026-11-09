@@ -515,21 +515,21 @@ lemma get_simple_ko_valid_simple_obj[wp]:
               split: option.splits)
   done
 
-lemma set_reply_obj_ref_valid_tcb[wp]:
-  "set_reply_obj_ref f rp opt \<lbrace>valid_tcb ptr tcb\<rbrace>"
-  apply (clarsimp simp: update_sk_obj_ref_def set_simple_ko_def)
+lemma update_reply_valid_tcb[wp]:
+  "update_reply f reply_ptr \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: update_reply_def set_simple_ko_def)
   apply (wpsimp wp: set_object_typ_ats get_object_wp get_simple_ko_wp)
   done
 
-lemma set_reply_obj_ref_not_tcb_at[wp]:
-  "set_reply_obj_ref f rp opt \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
-  apply (clarsimp simp: update_sk_obj_ref_def)
+lemma update_reply_not_tcb_at[wp]:
+  "update_reply f reply_ptr \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
+  apply (clarsimp simp: update_reply_def)
   apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp)
   apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
   done
 
-lemma set_reply_obj_ref_valid_tcbs[wp]:
-  "set_reply_obj_ref f rp opt \<lbrace>valid_tcbs\<rbrace>"
+lemma update_reply_valid_tcbs[wp]:
+  "update_reply f reply_ptr \<lbrace>valid_tcbs\<rbrace>"
   unfolding valid_tcbs_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' simp: pred_neg_def)
   done
@@ -2435,12 +2435,12 @@ lemma set_simple_ko_obj_at_disjoint:
    \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   by (wpsimp simp: set_simple_ko_def wp: set_object_at_obj get_object_wp)
 
-global_interpretation set_reply_sc: non_reply_tcb_op "set_reply_obj_ref reply_sc_update r sc"
+global_interpretation update_reply_sc: non_reply_tcb_op "update_reply (reply_sc_update f) reply_ptr"
   apply unfold_locales
-  apply (wpsimp wp: update_sk_obj_ref_wp)
+  apply (wpsimp simp: update_reply_def wp: set_simple_ko_wp get_simple_ko_wp)
   by (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
 
-crunch update_sk_obj_ref
+crunch update_sk_obj_ref, update_reply
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
   and valid_cur_fpu[wp]: valid_cur_fpu
 
@@ -2448,11 +2448,10 @@ lemma set_ntfn_obj_ref_sc_at_pred_n[wp]:
   "set_ntfn_obj_ref update ref new \<lbrace>\<lambda>s. P (sc_at_pred_n f g h sc s)\<rbrace>"
   by (wpsimp wp: update_sk_obj_ref_wp simp: sc_at_pred_n_def obj_at_def)
 
-global_interpretation set_reply_obj_ref: non_sc_op "set_reply_obj_ref f r v"
+global_interpretation update_reply: non_sc_op "update_reply f reply_ptr"
   apply unfold_locales
-  apply (wpsimp wp: update_sk_obj_ref_wp)
-  apply (erule_tac P=P in rsubst)
-  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  apply (wpsimp simp: update_reply_def wp: set_simple_ko_wp get_simple_ko_wp)
+  apply (fastforce elim: rsubst simp: sc_at_pred_n_def obj_at_def)
   done
 
 lemma typ_at_pspace_aligned:
@@ -2860,6 +2859,19 @@ lemma set_sched_context_aobjs_of[wp]:
   "set_sched_context ptr sc n \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
   by set_object_easy_cases
 
+lemma update_sched_context_dom_scs_of[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (dom (scs_of s))\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (erule rsubst[where P=P])
+  apply (force simp: dom_def scs_of_kh_def opt_map_def obj_at_def split: option.splits)
+  done
+
+lemma update_sched_context_sc_sizes_of[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (sc_sizes_of s)\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (force elim!: rsubst[where P=P] simp: opt_map_def obj_at_def)
+  done
+
 crunch update_sched_context
   for tcbs_of[wp]: "\<lambda>s. P (tcbs_of s)"
   and eps_of[wp]: "\<lambda>s. P (eps_of s)"
@@ -2867,6 +2879,20 @@ crunch update_sched_context
   and replies_of[wp]: "\<lambda>s. P (replies_of s)"
   and aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
   (wp: crunch_wps ignore: set_object)
+
+lemma update_sched_context_field_inv:
+  "(\<And>sc. f (F sc) = f sc) \<Longrightarrow> update_sched_context ptr F \<lbrace>\<lambda>s. P (scs_of s |> f)\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (fastforce elim!: rsubst[where P=P] simp: opt_map_def scs_of_kh_def obj_at_def)
+  done
+
+lemma set_sched_context_scs_of_other:
+  "\<lbrace>\<lambda>s. P ((scs_of s |> f) p) \<and> sc_ptr \<noteq> p\<rbrace>
+   set_sched_context sc_ptr sc n
+   \<lbrace>\<lambda>_ s. P ((scs_of s |> f) p)\<rbrace>"
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: scs_of_kh_def opt_map_def)
+  done
 
 \<comment> \<open>thread_set\<close>
 
@@ -2956,6 +2982,10 @@ lemma set_reply_scs_fields_of[wp]:
   "set_reply ptr reply \<lbrace>\<lambda>s. P (scs_fields_of s)\<rbrace>"
   by set_simple_ko_heaps_inv
 
+lemma set_reply_scs_of[wp]:
+  "set_reply ptr reply \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
 lemma set_reply_cnodes_of[wp]:
   "set_reply ptr reply \<lbrace>\<lambda>s. P (cnodes_of s)\<rbrace>"
   by set_simple_ko_heaps_inv
@@ -2971,5 +3001,15 @@ lemma set_reply_ntfns_of[wp]:
 lemma set_reply_aobjs_of[wp]:
   "set_reply ptr reply \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
   by set_simple_ko_heaps_inv
+
+crunch update_reply
+  for tcbs_of[wp]: "\<lambda>s. P (tcbs_of s)"
+  and sc_fields_of[wp]: "\<lambda>s. P (scs_fields_of s)"
+  and scs_of[wp]: "\<lambda>s. P (scs_of s)"
+  and cnodes_of[wp]: "\<lambda>s. P (cnodes_of s)"
+  and eps_of[wp]: "\<lambda>s. P (eps_of s)"
+  and ntfns_of[wp]: "\<lambda>s. P (ntfns_of s)"
+  and aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+  (wp: crunch_wps ignore: set_simple_ko)
 
 end

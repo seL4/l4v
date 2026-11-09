@@ -1321,15 +1321,16 @@ lemma cpspace_sched_context_relation_unique:
   done
 
 lemma ksPSpace_valid_pspace_replyRefs_nonzero:
-  "\<lbrakk>map_to_replies (ksPSpace s) p = Some reply; valid_objs' s; no_0_obj' s\<rbrakk> \<Longrightarrow>
-   replyTCB reply \<noteq> Some 0 \<and> replyPrev reply \<noteq> Some 0 \<and> replyNext_of reply \<noteq> Some 0"
-  apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
-  by (fastforce simp: valid_obj'_def valid_reply'_def)
+  "\<lbrakk>map_to_replies (ksPSpace s) p = Some reply; valid_objs' s; no_0_obj' s\<rbrakk>
+   \<Longrightarrow> replyTCB reply \<noteq> Some 0 \<and> replySC reply \<noteq> Some 0
+       \<and> replyPrev reply \<noteq> Some 0 \<and> replyNext reply \<noteq> Some 0"
+  by (fastforce simp: map_comp_def valid_pspace'_def valid_obj'_def valid_reply'_def
+               split: option.splits)
 
 lemma tcb_at'_replyTCB:
   "\<lbrakk>pspace_aligned' as; pspace_distinct' as; valid_reply' areply as\<rbrakk>
    \<Longrightarrow> \<forall>tcbPtr. replyTCB areply = Some tcbPtr \<longrightarrow> tcb_at' tcbPtr as"
-  by (clarsimp simp: valid_reply'_def obj_at'_def theReplyNextPtr_def)
+  by (clarsimp simp: valid_reply'_def obj_at'_def)
 
 lemma ksPSpace_valid_reply':
   "\<lbrakk>ksPSpace s scPtr = Some (KOReply reply); valid_objs' s\<rbrakk>
@@ -1376,16 +1377,14 @@ lemma cpspace_reply_relation_unique:
   apply (clarsimp simp: creply_relation_def option_to_ctcb_ptr_def option_to_ptr_def option_to_0_def)
   apply (rule reply.expand)
   apply (intro conjI)
-    apply (case_tac "replyTCB reply"; case_tac "replyTCB reply'"; clarsimp)
+     apply (case_tac "replyTCB reply"; case_tac "replyTCB reply'"; clarsimp)
+       apply (force dest!: kernel.tcb_at_not_NULL)
       apply (force dest!: kernel.tcb_at_not_NULL)
-     apply (force dest!: kernel.tcb_at_not_NULL)
-    apply (force simp: tcb_ptr_to_ctcb_ptr_inj)
+     apply (force simp: tcb_ptr_to_ctcb_ptr_inj)
+    apply (case_tac "replySC reply"; case_tac "replySC reply'"; clarsimp)
    apply (case_tac" replyPrev reply'"; case_tac "replyPrev reply"; clarsimp)
   apply (case_tac" replyNext reply'"; case_tac "replyNext reply"; clarsimp)
-    apply (clarsimp simp: valid_reply'_def isHead_def split: reply_next.splits)
-   apply (clarsimp simp: valid_reply'_def isHead_def split: reply_next.splits)
-  apply (rename_tac reply_next reply_next')
-  by (case_tac reply_next; case_tac reply_next'; clarsimp simp: true_def false_def isHead_def)
+  done
 
 lemma cpspace_refill_relation_unique:
   assumes valid_pspaces: "valid_pspace' s" "valid_pspace' s'"

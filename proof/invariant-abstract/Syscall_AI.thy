@@ -1376,7 +1376,7 @@ lemma send_signal_ct_active[wp]:
   apply (simp add: send_signal_def)
   by (wpsimp wp: set_thread_state_ct_in_state hoare_drop_imps)
 
-crunch reply_push, tcb_ep_append, tcb_ntfn_append
+crunch reply_link_caller, tcb_ep_append, tcb_ntfn_append
   for ct_active[wp]: "ct_active :: 'state_ext state \<Rightarrow> _"
   (wp: sts_ctis_neq crunch_wps simp: crunch_simps)
 
@@ -1431,7 +1431,7 @@ lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
    apply wpsimp
   apply (rename_tac list)
   apply (case_tac list; simp)
-  apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imp wp_del: reply_push_ct_active)+
+  apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imp wp_del: reply_link_caller_ct_active)+
             apply (rule hoare_pre_cont)
            apply (rule hoare_pre_cont)
           apply (wpsimp wp: hoare_drop_imp)
@@ -1604,8 +1604,7 @@ crunch empty_slot
 lemma reply_unlink_runnable[wp]:
   "reply_unlink_tcb t rptr \<lbrace>st_tcb_at runnable t'\<rbrace>"
   unfolding reply_unlink_tcb_def
-  apply (wpsimp wp: sts_st_tcb_at_cases_strong hoare_vcg_imp_lift' update_sk_obj_ref_wp
-                    get_simple_ko_wp gts_wp)
+  apply (wpsimp wp: sts_st_tcb_at_cases_strong update_reply_wp get_simple_ko_wp gts_wp)
   apply (auto simp: pred_tcb_at_def obj_at_def)
   done
 
