@@ -20,6 +20,7 @@ This module defines the low-level ARM hardware interface.
 > import SEL4.Machine.RegisterSet
 
 > import Control.Monad.Reader
+> import Control.Monad (when)
 > import Data.Bits
 > import Data.Word(Word8, Word32, Word64)
 > import Data.Ix

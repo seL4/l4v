@@ -25,7 +25,8 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 > import qualified Data.Word
 > import Foreign.Storable
 
-> import Control.Monad.State(State,liftM)
+> import Control.Monad.State(State)
+> import Control.Monad(liftM)
 
 \end{impdetails}
 

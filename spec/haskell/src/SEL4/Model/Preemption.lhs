@@ -16,6 +16,7 @@ This module defines the types and functions used by the kernel model to implemen
 > import SEL4.Model.StateData
 
 > import Control.Monad.Except
+> import Control.Monad.Trans (lift)
 
 \end{impdetails}
 

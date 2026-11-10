@@ -70,6 +70,7 @@ import Foreign.Ptr
 import Foreign.StablePtr
 import Foreign.C.String
 import Foreign.C.Types
+import Control.Monad
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Exception
