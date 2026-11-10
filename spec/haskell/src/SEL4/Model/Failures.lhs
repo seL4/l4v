@@ -16,6 +16,7 @@ This module defines the kernel's mechanisms for handling failures in kernel code
 > import SEL4.Model.StateData
 
 > import Control.Monad.Except
+> import Control.Monad.Trans (lift)
 
 \end{impdetails}
 

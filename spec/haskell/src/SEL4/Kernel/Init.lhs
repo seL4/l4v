@@ -31,6 +31,7 @@ This module contains functions that create a new kernel state and set up the add
 > import Data.Bits
 > import Control.Monad.State(StateT, runStateT)
 > import Control.Monad.Except
+> import Control.Monad.Trans (lift)
 > import Data.Word(Word8)
 
 \end{impdetails}

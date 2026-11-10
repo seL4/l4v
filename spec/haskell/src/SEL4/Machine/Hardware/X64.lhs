@@ -21,6 +21,7 @@ This module defines the low-level x64 hardware interface.
 
 > import Foreign.Ptr
 > import Control.Monad.Reader
+> import Control.Monad (when)
 > import Data.Bits
 > import Data.Word(Word8, Word16, Word32, Word64)
 

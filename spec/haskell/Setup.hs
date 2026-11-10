@@ -9,7 +9,7 @@ module Main where
 import Distribution.Simple
 import Distribution.Simple.Setup
 import Distribution.PackageDescription
-import Distribution.PackageDescription.Parsec
+import Distribution.Simple.PackageDescription (readGenericPackageDescription)
 import Distribution.Verbosity
 import Control.Monad
 import Data.List
