@@ -10,13 +10,13 @@ begin
 
 context Arch begin global_naming ARM
 
-named_theorems FinalCaps_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for FinalCaps locale *)
 
-lemma FIXME_arch_gen_refs[FinalCaps_assms]:
+lemma FIXME_arch_gen_refs[Arch_assms]:
   "arch_gen_refs cap = {}"
   by (clarsimp simp: arch_cap_set_map_def arch_gen_obj_refs_def split: cap.splits)
 
-lemma aobj_ref_same_aobject[FinalCaps_assms]:
+lemma aobj_ref_same_aobject[Arch_assms]:
   "same_aobject_as cp cp' \<Longrightarrow> aobj_ref cp = aobj_ref cp'"
   by (cases cp; cases cp'; clarsimp)
 
@@ -60,21 +60,21 @@ lemma set_asid_pool_silc_inv[wp]:
   done
 
 crunch arch_finalise_cap, prepare_thread_delete, init_arch_objects
-  for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
+  for silc_inv[Arch_assms, wp]: "silc_inv aag st"
   (wp: crunch_wps modify_wp simp: crunch_simps ignore: set_object)
 
-declare finalise_cap_makes_halted[FinalCaps_assms]
+declare finalise_cap_makes_halted[Arch_assms]
 
 crunch handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
          arch_invoke_irq_handler, arch_mask_irq_signal,
          arch_post_cap_deletion, arch_post_modify_registers,
          arch_activate_idle_thread, arch_switch_to_idle_thread, arch_switch_to_thread
-for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
+for silc_inv[Arch_assms, wp]: "silc_inv aag st"
 
-declare init_arch_objects_cte_wp_at[FinalCaps_assms]
-declare handle_vm_fault_cur_thread[FinalCaps_assms]
+declare init_arch_objects_cte_wp_at[Arch_assms]
+declare handle_vm_fault_cur_thread[Arch_assms]
 
-lemma arch_derive_cap_silc[FinalCaps_assms]:
+lemma arch_derive_cap_silc[Arch_assms]:
   "\<lbrace>\<lambda>s. cap = ArchObjectCap acap \<and>
         (\<not> cap_points_to_label aag cap l \<longrightarrow> R (slots_holding_overlapping_caps cap s))\<rbrace>
    arch_derive_cap acap
@@ -84,16 +84,19 @@ lemma arch_derive_cap_silc[FinalCaps_assms]:
   apply (auto simp: cap_points_to_label_def slots_holding_overlapping_caps_def)
   done
 
+lemmas FinalCaps_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation FinalCaps?: FinalCaps
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact FinalCaps_assms)?)
+    by (unfold_locales; (fact ARM.FinalCaps_assms)?)
 qed
 
 context Arch begin global_naming ARM
+
+clear_named_theorems Arch_assms (* accumulate assumptions for FinalCaps_2 locale *)
 
 lemma perform_page_table_invocation_silc_inv_get_cap_helper:
   "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_pg_cap) xa\<rbrace>
@@ -246,9 +249,9 @@ lemma perform_asid_pool_invocation_silc_inv:
 crunch perform_sgi_invocation, handle_spurious_irq
   for silc_inv: "silc_inv aag st"
 
-declare handle_spurious_irq_silc_inv[wp, FinalCaps_assms]
+declare handle_spurious_irq_silc_inv[wp, Arch_assms]
 
-lemma arch_perform_invocation_silc_inv[FinalCaps_assms]:
+lemma arch_perform_invocation_silc_inv[Arch_assms]:
   "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
    arch_perform_invocation ai
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
@@ -268,7 +271,7 @@ lemma sgi_signal_cap_points_to_label[simp, intro!]:
   "cap_points_to_label aag (ArchObjectCap (SGISignalCap irq target)) (pasSubject aag)"
   by (clarsimp simp: cap_points_to_label_def)
 
-lemma arch_invoke_irq_control_silc_inv[FinalCaps_assms]:
+lemma arch_invoke_irq_control_silc_inv[Arch_assms]:
   "\<lbrace>silc_inv aag st and pas_refined aag and arch_irq_control_inv_valid arch_irq_cinv
                     and K (arch_authorised_irq_ctl_inv aag arch_irq_cinv)\<rbrace>
    arch_invoke_irq_control arch_irq_cinv
@@ -286,9 +289,9 @@ crunch set_priority, set_flags
   (simp: tcb_cap_cases_def)
 
 crunch arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags
-  for inv[FinalCaps_assms,wp]: P
+  for inv[Arch_assms,wp]: P
 
-lemma invoke_tcb_silc_inv[FinalCaps_assms]:
+lemma invoke_tcb_silc_inv[Arch_assms]:
   notes hoare_weak_lift_imp [wp]
         hoare_weak_lift_imp_conj [wp]
   shows "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag and tcb_inv_wf tinv
@@ -342,24 +345,24 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
       | intro impI
       | rule conjI)+
 
-lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
+lemma handle_reserved_irq_non_kernel_IRQs[Arch_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
+
+lemmas FinalCaps_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation FinalCaps_2?: FinalCaps_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact FinalCaps_assms)?)
+    by (unfold_locales; (fact ARM.FinalCaps_2_assms)?)
 qed
 
 global_interpretation FinalCaps_3?: FinalCaps_3
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact FinalCaps_assms | solves \<open>wp only: FinalCaps_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.FinalCaps_3_assms | solves \<open>wp only: ARM.FinalCaps_3_assms; simp\<close>)?)
 qed
 
 end

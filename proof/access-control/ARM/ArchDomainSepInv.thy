@@ -11,18 +11,18 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DomainSepInv_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DomainSepInv locale *)
 
 crunch
   arch_post_cap_deletion, set_pd, set_pt, set_asid_pool, prepare_thread_delete, init_arch_objects
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv crunch_wps set_asid_pool_cte_wp_at set_pd_cte_wp_at set_pt_cte_wp_at)
 
 crunch arch_finalise_cap
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma arch_finalise_cap_rv[DomainSepInv_assms]:
+lemma arch_finalise_cap_rv[Arch_assms]:
   "\<lbrace>\<lambda>_. P (NullCap,NullCap)\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>rv _. P rv\<rbrace>"
   unfolding arch_finalise_cap_def by wpsimp
 
@@ -32,27 +32,30 @@ crunch
   arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread,
   arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags,
   handle_spurious_irq
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
 
-lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
+lemma arch_derive_cap_domain_sep_inv[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
   unfolding arch_derive_cap_def
   by wpsimp
 
-lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
+lemma arch_post_modify_registers_domain_sep_inv[Arch_assms, wp]:
   "arch_post_modify_registers cur x31 \<lbrace>domain_sep_inv irqs st\<rbrace>"
   unfolding arch_post_modify_registers_def by wpsimp
+
+lemmas DomainSepInv_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact DomainSepInv_assms)?)
+    by (unfold_locales; (fact ARM.DomainSepInv_assms)?)
 qed
 
 context Arch begin arch_global_naming
+
+clear_named_theorems Arch_assms (* accumulate assumptions for DomainSepInv_2 locale *)
 
 lemma perform_page_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_page_inv pgi\<rbrace>
@@ -97,7 +100,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
 crunch perform_sgi_invocation, perform_asid_pool_invocation
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
-lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:
+lemma arch_perform_invocation_domain_sep_inv[Arch_assms]:
   "\<lbrace>domain_sep_inv irqs st and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
@@ -110,11 +113,11 @@ lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:
   apply (clarsimp simp: valid_arch_inv_def split: arch_invocation.splits)
   done
 
-lemma arch_invoke_irq_handler_domain_sep_inv[DomainSepInv_assms, wp]:
+lemma arch_invoke_irq_handler_domain_sep_inv[Arch_assms, wp]:
   "arch_invoke_irq_handler ihi \<lbrace>domain_sep_inv irqs st\<rbrace>"
   by (cases ihi; wpsimp split_del: if_split)
 
-lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
+lemma arch_invoke_irq_control_domain_sep_inv[Arch_assms]:
   "\<lbrace>domain_sep_inv irqs st and arch_irq_control_inv_valid ivk\<rbrace>
    arch_invoke_irq_control ivk
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
@@ -126,13 +129,14 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
   apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def arch_irq_control_inv_valid_def)
   done
 
+lemmas DomainSepInv_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact DomainSepInv_assms | solves \<open>wp only: DomainSepInv_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.DomainSepInv_2_assms | solves \<open>wp only: ARM.DomainSepInv_2_assms; simp\<close>)?)
 qed
 
 end

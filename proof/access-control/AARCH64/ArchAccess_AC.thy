@@ -12,13 +12,13 @@ section\<open>Arch-specific AC proofs\<close>
 
 context Arch begin arch_global_naming
 
-named_theorems Access_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Access_AC locale *)
 
-lemma acap_class_reply[Access_AC_assms]:
+lemma acap_class_reply[Arch_assms]:
   "acap_class acap \<noteq> ReplyClass t"
   by (cases acap; simp)
 
-lemma arch_troa_tro_alt[Access_AC_assms, elim!]:
+lemma arch_troa_tro_alt[Arch_assms, elim!]:
   "arch_integrity_obj_atomic aag subjects l ko ko'
    \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko'"
   by (fastforce elim: arch_integrity_obj_atomic.cases intro: arch_integrity_obj_alt.intros)
@@ -36,7 +36,7 @@ lemma cap_asid'_member[simp]:
   "asid \<in> cap_asid' cap = (\<exists>acap. cap = ArchObjectCap acap \<and> asid \<in> acap_asid' acap)"
   by (cases cap; clarsimp)
 
-lemma clas_caps_of_state[Access_AC_assms]:
+lemma clas_caps_of_state[Arch_assms]:
   "\<lbrakk> caps_of_state s slot = Some cap; pas_refined aag s \<rbrakk>
    \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
   apply (clarsimp simp: cap_links_asid_slot_def label_owns_asid_slot_def pas_refined_def)
@@ -45,28 +45,31 @@ lemma clas_caps_of_state[Access_AC_assms]:
   apply (blast dest: state_asids_to_policy_aux.intros)
   done
 
-lemma arch_tro_alt_trans_spec[Access_AC_assms]:
+lemma arch_tro_alt_trans_spec[Arch_assms]:
   "\<lbrakk> arch_integrity_obj_alt aag subjects l ko ko';
      arch_integrity_obj_alt aag subjects l ko' ko'' \<rbrakk>
    \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
   by (fastforce simp: arch_integrity_obj_alt.simps)
 
-lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
+lemma tcb_hyp_refs_arch_tcb_set_registers[Arch_assms]:
   "tcb_hyp_refs (arch_tcb_set_registers regs atcb) = tcb_hyp_refs atcb"
   by (simp add: arch_tcb_set_registers_def)
+
+lemmas Access_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Access_AC?: Access_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Access_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Access_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma auth_ipc_buffers_tro[Access_AC_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for Access_AC_2 locale *)
+
+lemma auth_ipc_buffers_tro[Arch_assms]:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
      x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
    \<Longrightarrow> x \<in> auth_ipc_buffers s p"
@@ -75,63 +78,66 @@ lemma auth_ipc_buffers_tro[Access_AC_assms]:
       fastforce simp: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
                split: cap.split_asm arch_cap.split_asm if_split_asm bool.splits)
 
-lemma trasids_trans[Access_AC_assms]:
+lemma trasids_trans[Arch_assms]:
   "\<lbrakk> \<forall>x a. integrity_asids_2 aag subjects x a as as' ao ao';
      \<forall>x a. integrity_asids_2 aag subjects x a as' as'' ao' ao'' \<rbrakk>
    \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
   by (clarsimp simp: integrity_asids_def) metis
 
-lemma integrity_asids_refl[Access_AC_assms, simp]:
+lemma integrity_asids_refl[Arch_assms, simp]:
   "integrity_asids aag subjects x a s s"
   by (simp add: integrity_asids_def)
 
-lemma integrity_asids_update_autarch[Access_AC_assms]:
+lemma integrity_asids_update_autarch[Arch_assms]:
   "\<lbrakk> integrity_asids_2 aag subjects x a as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
    \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
   by (auto simp: integrity_asids_def opt_map_def)
 
-lemma integrity_hyp_refl[Access_AC_assms,simp]:
+lemma integrity_hyp_refl[Arch_assms,simp]:
   "integrity_hyp_2 aag subjects x ms ms as as ao ao"
   by (simp add: integrity_hyp_def vcpu_integrity_def)
 
-lemma trhyp_trans[Access_AC_assms]:
+lemma trhyp_trans[Arch_assms]:
   "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao';
      integrity_hyp_2 aag subjects x ms' ms'' as' as'' ao' ao'' \<rbrakk>
    \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao''"
   by (auto simp: integrity_hyp_def vcpu_integrity_def)
 
-lemma integrity_hyp_update_autarch[Access_AC_assms]:
+lemma integrity_hyp_update_autarch[Arch_assms]:
   "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
    \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(ptr := ako))"
   by (fastforce simp: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def
                split: option.splits elim!: trhyp_trans)
 
-lemma integrity_fpu_refl[Access_AC_assms,simp]:
+lemma integrity_fpu_refl[Arch_assms,simp]:
   "integrity_fpu_2 aag subjects x ms ms kh kh"
   by (simp add: integrity_fpu_def)
 
-lemma trfpu_trans[Access_AC_assms]:
+lemma trfpu_trans[Arch_assms]:
   "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh';
      integrity_fpu_2 aag subjects x ms' ms'' kh' kh'' \<rbrakk>
    \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms'' kh kh''"
   by (simp add: integrity_fpu_def)
 
-lemma integrity_fpu_update_autarch[Access_AC_assms]:
+lemma integrity_fpu_update_autarch[Arch_assms]:
   "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
    \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(ptr \<mapsto> obj))"
   unfolding integrity_fpu_def integrity_fpu_def fpu_of_state_def
   by (auto split: option.splits kernel_object.splits)
 
+lemmas Access_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Access_AC_2?: Access_AC_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Access_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Access_AC_2_assms)?)
 qed
 
 context Arch begin arch_global_naming
+
+clear_named_theorems Arch_assms (* accumulate assumptions for Access_AC_3 locale *)
 
 lemma ipcframe_subset_page:
   "\<lbrakk> valid_objs s; get_tcb p s = Some tcb;
@@ -162,7 +168,7 @@ lemma auth_ipc_buffers_member_def:
   unfolding auth_ipc_buffers_def
   by (clarsimp simp: caps_of_state_tcb' split: option.splits cap.splits arch_cap.splits bool.splits)
 
-lemma auth_ipc_buffers_member[Access_AC_assms]:
+lemma auth_ipc_buffers_member[Arch_assms]:
   "\<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
    \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
                 \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
@@ -173,37 +179,38 @@ lemma auth_ipc_buffers_member[Access_AC_assms]:
                       vspace_cap_rights_to_auth_def ipcframe_subset_page
                split: option.splits cap.splits arch_cap.splits bool.splits if_splits)
 
-lemma asid_pool_integrity_mono[Access_AC_assms]:
+lemma asid_pool_integrity_mono[Arch_assms]:
   "\<lbrakk> asid_pool_integrity S aag cont cont'; S \<subseteq> T \<rbrakk> \<Longrightarrow> asid_pool_integrity T aag cont cont'"
   unfolding asid_pool_integrity_def by fastforce
 
-lemma integrity_asids_mono[Access_AC_assms]:
+lemma integrity_asids_mono[Arch_assms]:
   "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
    \<Longrightarrow> integrity_asids aag T x a s s'"
   by (fastforce simp: integrity_asids_def)
 
-lemma integrity_hyp_mono[Access_AC_assms]:
+lemma integrity_hyp_mono[Arch_assms]:
   "\<lbrakk> integrity_hyp aag S x s s'; S \<subseteq> T \<rbrakk>
    \<Longrightarrow> integrity_hyp aag T x s s'"
   by (fastforce simp: integrity_hyp_def vcpu_integrity_def)
 
-lemma integrity_fpu_mono[Access_AC_assms]:
+lemma integrity_fpu_mono[Arch_assms]:
   "\<lbrakk> integrity_fpu aag S x s s'; S \<subseteq> T \<rbrakk>
    \<Longrightarrow> integrity_fpu aag T x s s'"
   by (fastforce simp: integrity_fpu_def)
 
-lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
+lemma arch_integrity_obj_atomic_mono[Arch_assms]:
   "\<lbrakk> arch_integrity_obj_atomic aag S l ao ao'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
    \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
   by (clarsimp simp: arch_integrity_obj_atomic.simps asid_pool_integrity_mono)
+
+lemmas Access_AC_3_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Access_AC_3?: Access_AC_3
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Access_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Access_AC_3_assms)?)
 qed
 
 locale Arch_hyp_machine_update_eq = Arch +
@@ -218,7 +225,7 @@ lemma integrity_hyp_machine_upd:
    integrity_hyp_2 aag subjects x ms (h ms') as as' ao ao'"
   by (auto simp: integrity_hyp_def vcpu)
 
-lemmas [Access_AC_assms, simp] =
+lemmas [Arch_assms, simp] =
   integrity_hyp_machine_upd[where h="\<lambda>_. _"]
   integrity_hyp_machine_upd[where h="\<lambda>_. _" and g="\<lambda>_. _"]
   integrity_hyp_machine_upd[where h=id, simplified machine_state_update_id id_apply]
@@ -238,7 +245,7 @@ lemma integrity_fpu_machine_upd:
    integrity_fpu_2 aag subjects x ms (h ms') kh kh'"
   by (auto simp: integrity_fpu_def fpu)
 
-lemmas [Access_AC_assms, simp] =
+lemmas [Arch_assms, simp] =
   integrity_fpu_machine_upd[where h="\<lambda>_. _"]
   integrity_fpu_machine_upd[where h="\<lambda>_. _" and g="\<lambda>_. _"]
   integrity_fpu_machine_upd[where h=id, simplified machine_state_update_id id_apply]
@@ -259,7 +266,7 @@ sublocale Arch \<subseteq> fpu_enabled_update: Arch_integrity_machine_update_eq 
 
 context Arch_p_arch_update_eq begin arch_global_naming
 
-lemma state_vrefs[Access_AC_assms, iff]:
+lemma state_vrefs[Arch_assms, iff]:
   "state_vrefs (f s) = state_vrefs s"
   by (simp add: state_vrefs_def pspace)
 
@@ -267,7 +274,9 @@ end (* Arch_p_arch_update_eq *)
 
 context Arch begin arch_global_naming
 
-lemma integrity_asids_kh_upd_None[Access_AC_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for Access_AC_4 locale *)
+
+lemma integrity_asids_kh_upd_None[Arch_assms]:
   "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
    \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
   "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
@@ -275,7 +284,7 @@ lemma integrity_asids_kh_upd_None[Access_AC_assms]:
   unfolding integrity_asids_def opt_map_def
   by (auto split: option.split_asm)
 
-lemma integrity_hyp_kh_upd_None[Access_AC_assms]:
+lemma integrity_hyp_kh_upd_None[Arch_assms]:
   "\<lbrakk> ao' p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
    \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p := None)) ao'"
   "\<lbrakk> ao p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
@@ -283,7 +292,7 @@ lemma integrity_hyp_kh_upd_None[Access_AC_assms]:
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def
   by (auto split: option.split_asm)
 
-lemma integrity_fpu_kh_upd[Access_AC_assms]:
+lemma integrity_fpu_kh_upd[Arch_assms]:
   "\<lbrakk> \<forall>tcb. kh p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
      integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>
    \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh'"
@@ -293,7 +302,7 @@ lemma integrity_fpu_kh_upd[Access_AC_assms]:
   by (auto simp: integrity_fpu_def fpu_of_state_def
           split: option.splits kernel_object.splits)
 
-lemma integrity_fpu_kh_upd_neq[Access_AC_assms]:
+lemma integrity_fpu_kh_upd_neq[Arch_assms]:
   assumes "x \<noteq> p"
   shows "integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh' =
          integrity_fpu_2 aag subjects x ms ms' kh kh'"
@@ -301,7 +310,7 @@ lemma integrity_fpu_kh_upd_neq[Access_AC_assms]:
          integrity_fpu_2 aag subjects x ms ms' kh kh'"
   by (auto simp: assms integrity_fpu_def fpu_of_state_def)
 
-lemma integrity_fpu_tcb_upd[Access_AC_assms]:
+lemma integrity_fpu_tcb_upd[Arch_assms]:
   "\<lbrakk> kh p = Some (TCB tcb); v = Some (TCB tcb'); tcb_arch tcb = tcb_arch tcb'\<rbrakk>
    \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p \<mapsto> TCB tcb')) kh' =
        integrity_fpu_2 aag subjects x ms ms' kh kh'"
@@ -311,7 +320,7 @@ lemma integrity_fpu_tcb_upd[Access_AC_assms]:
   unfolding integrity_fpu_def opt_map_def
   by (auto simp: fpu_of_state_def split: option.splits if_splits kernel_object.splits)
 
-lemma integrity_fpu_set_registers[Access_AC_assms]:
+lemma integrity_fpu_set_registers[Arch_assms]:
   "\<lbrakk> kh x = Some (TCB tcb); kh' x = Some (TCB tcb');
      tcb_arch tcb' = arch_tcb_set_registers regs (tcb_arch tcb) \<rbrakk>
    \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms kh kh'"
@@ -328,13 +337,14 @@ lemma integrity_hyp_ao_upd:
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_extra_lrs_def vcpu_of_state_def opt_map_def
   by (case_tac "x = p"; clarsimp; auto split: option.splits)+
 
+lemmas Access_AC_4_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Access_AC_4?: Access_AC_4
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Access_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Access_AC_4_assms)?)
 qed
 
 locale Arch_pas_refined_arch_update_eq = Arch +

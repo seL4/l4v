@@ -10,6 +10,8 @@ begin
 
 context Arch begin arch_global_naming
 
+clear_named_theorems Arch_assms (* accumulate assumptions for UserOp_IF locale *)
+
 definition ptable_lift_s where
   "ptable_lift_s s \<equiv> ptable_lift (cur_thread s) s"
 
@@ -90,33 +92,33 @@ definition do_user_op_if ::
    od"
 
 
-named_theorems UserOp_IF_assms
-
-lemma arch_globals_equiv_underlying_memory_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_underlying_memory_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (underlying_memory_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (underlying_memory_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_device_state_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (device_state_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (device_state_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-lemma no_hyp_modify[UserOp_IF_assms]:
+lemma no_hyp_modify[Arch_assms]:
   "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>underlying_memory := f ms\<rparr>))"
   "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>device_state := f ms\<rparr>))"
   "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
   by wpsimp+
 
-lemma no_fpu_modify[UserOp_IF_assms]:
+lemma no_fpu_modify[Arch_assms]:
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>underlying_memory := f ms\<rparr>))"
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>device_state := f ms\<rparr>))"
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
   by wpsimp+
+
+lemmas UserOp_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -124,9 +126,8 @@ arch_requalify_types user_transition_if
 
 global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact UserOp_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.UserOp_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming

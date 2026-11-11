@@ -10,15 +10,15 @@ begin
 
 context Arch begin global_naming RISCV64
 
-named_theorems Syscall_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Syscall_IF locale *)
 
-lemma globals_equiv_irq_state_update[Syscall_IF_assms, simp]:
+lemma globals_equiv_irq_state_update[Arch_assms, simp]:
   "globals_equiv st (s\<lparr>machine_state :=
                        machine_state s \<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
    globals_equiv st s"
   by (auto simp: globals_equiv_def idle_equiv_def)
 
-lemma thread_set_globals_equiv'[Syscall_IF_assms]:
+lemma thread_set_globals_equiv'[Arch_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
    thread_set f tptr
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -29,7 +29,7 @@ lemma thread_set_globals_equiv'[Syscall_IF_assms]:
                    dest: valid_global_arch_objs_pt_at)
   done
 
-lemma sts_authorised_for_globals_inv[Syscall_IF_assms]:
+lemma sts_authorised_for_globals_inv[Arch_assms]:
   "set_thread_state d f \<lbrace>authorised_for_globals_inv oper\<rbrace>"
   unfolding authorised_for_globals_inv_def authorised_for_globals_arch_inv_def
             authorised_for_globals_page_table_inv_def authorised_for_globals_page_inv_def
@@ -46,63 +46,63 @@ lemma sts_authorised_for_globals_inv[Syscall_IF_assms]:
       apply (simp | wp hoare_vcg_ex_lift)+
   done
 
-lemma dmo_maskInterrupt_globals_equiv[Syscall_IF_assms, wp]:
+lemma dmo_maskInterrupt_globals_equiv[Arch_assms, wp]:
   "do_machine_op (maskInterrupt b irq) \<lbrace>globals_equiv s\<rbrace>"
   unfolding maskInterrupt_def
   apply (rule dmo_no_mem_globals_equiv)
     apply (wp modify_wp | simp)+
   done
 
-lemma dmo_ackInterrupt_globals_equiv[Syscall_IF_assms, wp]:
+lemma dmo_ackInterrupt_globals_equiv[Arch_assms, wp]:
   "do_machine_op (ackInterrupt irq) \<lbrace>globals_equiv s\<rbrace>"
   unfolding ackInterrupt_def by wpsimp
 
-lemma dmo_resetTimer_globals_equiv[Syscall_IF_assms, wp]:
+lemma dmo_resetTimer_globals_equiv[Arch_assms, wp]:
   "do_machine_op resetTimer \<lbrace>globals_equiv s\<rbrace>"
   unfolding resetTimer_def by (rule dmo_mol_globals_equiv)
 
-lemma arch_mask_irq_signal_globals_equiv[Syscall_IF_assms, wp]:
+lemma arch_mask_irq_signal_globals_equiv[Arch_assms, wp]:
   "arch_mask_irq_signal irq \<lbrace>globals_equiv st\<rbrace>"
   by wpsimp
 
-lemma handle_reserved_irq_globals_equiv[Syscall_IF_assms, wp]:
+lemma handle_reserved_irq_globals_equiv[Arch_assms, wp]:
   "handle_reserved_irq irq \<lbrace>globals_equiv st\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
 
-lemma handle_vm_fault_reads_respects[Syscall_IF_assms]:
+lemma handle_vm_fault_reads_respects[Arch_assms]:
   "reads_respects aag l (K (is_subject aag thread)) (handle_vm_fault thread vmfault_type)"
   unfolding handle_vm_fault_def
   by (cases vmfault_type; wpsimp wp: dmo_read_stval_reads_respects)
 
-lemma handle_hypervisor_fault_reads_respects[Syscall_IF_assms]:
+lemma handle_hypervisor_fault_reads_respects[Arch_assms]:
   "reads_respects aag l \<top> (handle_hypervisor_fault thread hypfault_type)"
   by (cases hypfault_type; wpsimp)
 
-lemma handle_vm_fault_globals_equiv[Syscall_IF_assms]:
+lemma handle_vm_fault_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    handle_vm_fault thread vmfault_type
    \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_vm_fault_def
   by (cases vmfault_type; wpsimp wp: dmo_no_mem_globals_equiv)
 
-lemma handle_hypervisor_fault_globals_equiv[Syscall_IF_assms]:
+lemma handle_hypervisor_fault_globals_equiv[Arch_assms]:
   "handle_hypervisor_fault thread hypfault_type \<lbrace>globals_equiv st\<rbrace>"
   by (cases hypfault_type; wpsimp)
 
 crunch arch_activate_idle_thread, handle_spurious_irq
-  for globals_equiv[Syscall_IF_assms, wp]: "globals_equiv st"
+  for globals_equiv[Arch_assms, wp]: "globals_equiv st"
 
-lemma select_f_setNextPC_reads_respects[Syscall_IF_assms, wp]:
+lemma select_f_setNextPC_reads_respects[Arch_assms, wp]:
   "reads_respects aag l \<top> (select_f (setNextPC a b))"
   unfolding setNextPC_def setRegister_def
   by (wpsimp simp: select_f_returns)
 
-lemma select_f_getRestartPC_reads_respects[Syscall_IF_assms, wp]:
+lemma select_f_getRestartPC_reads_respects[Arch_assms, wp]:
   "reads_respects aag l \<top> (select_f (getRestartPC a))"
   unfolding getRestartPC_def getRegister_def
   by (wpsimp simp: select_f_returns)
 
-lemma arch_activate_idle_thread_reads_respects[Syscall_IF_assms, wp]:
+lemma arch_activate_idle_thread_reads_respects[Arch_assms, wp]:
   "reads_respects aag l \<top> (arch_activate_idle_thread t)"
   unfolding arch_activate_idle_thread_def by wpsimp
 
@@ -184,7 +184,7 @@ lemma decode_page_table_invocation_authorised_for_globals:
   apply clarsimp
   done
 
-lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
+lemma decode_arch_invocation_authorised_for_globals[Arch_assms]:
   "\<lbrace>invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
          and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)\<rbrace>
    arch_decode_invocation label msg x_slot slot cap excaps
@@ -195,15 +195,16 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
                  decode_frame_invocation_authorised_for_globals
                  decode_page_table_invocation_authorised_for_globals, fastforce)
 
-declare arch_prepare_set_domain_inv[Syscall_IF_assms]
+declare arch_prepare_set_domain_inv[Arch_assms]
+
+lemmas Syscall_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Syscall_IF?: Syscall_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Syscall_IF_assms | solves \<open>wp only: Syscall_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Syscall_IF_assms | solves \<open>wp only: RISCV64.Syscall_IF_assms; simp\<close>)?)
 qed
 
 end

@@ -10,15 +10,15 @@ begin
 
 context Arch begin global_naming RISCV64
 
-named_theorems IRQMasks_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for IRQMasks_IF locale *)
 
-declare storeWord_irq_masks_inv[IRQMasks_IF_assms]
+declare storeWord_irq_masks_inv[Arch_assms]
 
-lemma resetTimer_irq_masks[IRQMasks_IF_assms, wp]:
+lemma resetTimer_irq_masks[Arch_assms, wp]:
   "resetTimer \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
   by (simp add: resetTimer_def | wp no_irq)+
 
-lemma delete_objects_irq_masks[IRQMasks_IF_assms, wp]:
+lemma delete_objects_irq_masks[Arch_assms, wp]:
   "delete_objects ptr bits \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
@@ -30,7 +30,7 @@ lemma arch_post_reset_untyped_irq_masks[wp]:
   by (wpsimp wp: dmo_wp no_irq simp: ifence_def)
 
 crunch invoke_untyped
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
        wp: mapME_x_inv_wp preemption_point_inv
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
@@ -40,17 +40,17 @@ crunch finalise_cap
   (  wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
 
-lemma finalise_cap_irq_masks_non_kernel_IRQs_masked[IRQMasks_IF_assms]:
+lemma finalise_cap_irq_masks_non_kernel_IRQs_masked[Arch_assms]:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by wpsimp
 
 crunch send_signal, timer_tick
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
 
-lemma handle_interrupt_irq_masks[IRQMasks_IF_assms]:
+lemma handle_interrupt_irq_masks[Arch_assms]:
   notes no_irq[wp del]
   shows
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and K (irq \<le> maxIRQ)\<rbrace>
@@ -68,7 +68,7 @@ lemma handle_interrupt_irq_masks[IRQMasks_IF_assms]:
           | wp (once) hoare_drop_imp)+
   done
 
-lemma arch_invoke_irq_control_irq_masks[IRQMasks_IF_assms]:
+lemma arch_invoke_irq_control_irq_masks[Arch_assms]:
   "\<lbrace>domain_sep_inv False st and arch_irq_control_inv_valid invok\<rbrace>
    arch_invoke_irq_control invok
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
@@ -77,16 +77,16 @@ lemma arch_invoke_irq_control_irq_masks[IRQMasks_IF_assms]:
   done
 
 crunch handle_vm_fault, handle_hypervisor_fault
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp no_irq)
 
-lemma dmo_getActiveIRQ_irq_masks[IRQMasks_IF_assms, wp]:
+lemma dmo_getActiveIRQ_irq_masks[Arch_assms, wp]:
   "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   apply (rule hoare_pre, rule dmo_wp)
   apply (simp add: getActiveIRQ_def | wp | simp add: no_irq_def | clarsimp)+
   done
 
-lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
+lemma dmo_getActiveIRQ_return_axiom[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (rule hoare_pre, rule dmo_wp)
@@ -96,34 +96,37 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   done
 
 crunch activate_thread, handle_spurious_irq
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 crunch schedule
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps dxo_wp_weak simp: crunch_simps)
+
+lemmas IRQMasks_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation IRQMasks_IF?: IRQMasks_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact IRQMasks_IF_assms)?)
+    by (unfold_locales; (fact RISCV64.IRQMasks_IF_assms)?)
 qed
 
 context Arch begin global_naming RISCV64
 
+clear_named_theorems Arch_assms (* accumulate assumptions for IRQMasks_IF_2 locale *)
+
 crunch do_reply_transfer, set_priority, set_flags, arch_post_set_flags
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 
 crunch arch_perform_invocation
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps no_irq)
 
 (* FIXME: remove duplication in this proof -- requires getting the wp automation
           to do the right thing with dropping imps in validE goals *)
-lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
+lemma invoke_tcb_irq_masks[Arch_assms]:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
     non_kernel_IRQs_masked and tcb_inv_wf tinv\<rbrace>
    invoke_tcb tinv
@@ -171,18 +174,19 @@ lemma init_arch_objects_irq_masks:
   by (rule init_arch_objects_inv)
 
 crunch arch_prepare_set_domain
-  for inv[IRQMasks_IF_assms,wp]: P
+  for inv[Arch_assms,wp]: P
 
 crunch arch_prepare_next_domain
   for valid_irq_states[wp]: valid_irq_states
+
+lemmas IRQMasks_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact IRQMasks_IF_assms | solves wpsimp)?)
+    by (unfold_locales; (fact RISCV64.IRQMasks_IF_2_assms | solves wpsimp)?)
 qed
 
 requalify_facts

@@ -10,7 +10,7 @@ begin
 
 context Arch begin global_naming ARM
 
-named_theorems InfoFlow_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for InfoFlow_IF locale *)
 
 lemma asid_pool_at_kheap:
   "asid_pool_at ptr s = (\<exists>asid_pool. kheap s ptr = Some (ArchObj (ASIDPool asid_pool)))"
@@ -22,33 +22,33 @@ lemma equiv_asid:
                                            (kheap s) (kheap s')"
   by (auto simp: equiv_asid_def equiv_asid'_def asid_pool_at_kheap split: option.splits)
 
-lemma equiv_asids_refl[InfoFlow_IF_assms]:
+lemma equiv_asids_refl[Arch_assms]:
   "equiv_asids R s s"
   by (auto simp: equiv_asids_def equiv_asid_def)
 
-lemma equiv_asids_sym[InfoFlow_IF_assms]:
+lemma equiv_asids_sym[Arch_assms]:
   "equiv_asids R s t \<Longrightarrow> equiv_asids R t s"
   by (auto simp: equiv_asids_def equiv_asid_def)
 
-lemma equiv_asids_trans[InfoFlow_IF_assms]:
+lemma equiv_asids_trans[Arch_assms]:
   "\<lbrakk> equiv_asids R s t; equiv_asids R t u \<rbrakk> \<Longrightarrow> equiv_asids R s u"
   by (fastforce simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
 
-lemma equiv_asids_non_asid_pool_kheap_update[InfoFlow_IF_assms]:
+lemma equiv_asids_non_asid_pool_kheap_update[Arch_assms]:
   "\<lbrakk> equiv_asids R s s'; non_asid_pool_kheap_update s kh; non_asid_pool_kheap_update s' kh' \<rbrakk>
    \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid non_asid_pool_kheap_update_def)
   apply (fastforce simp: equiv_asid'_def split: option.splits)
   done
 
-lemma equiv_asids_identical_kheap_updates[InfoFlow_IF_assms]:
+lemma equiv_asids_identical_kheap_updates[Arch_assms]:
   "\<lbrakk> equiv_asids R s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
    \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid_def identical_kheap_updates_def asid_pool_at_kheap)
   apply (case_tac "kh pool_ptr = kh' pool_ptr"; fastforce)
   done
 
-lemma equiv_asids_trivial[InfoFlow_IF_assms]:
+lemma equiv_asids_trivial[Arch_assms]:
   "(\<And>x. P x \<Longrightarrow> False) \<Longrightarrow> equiv_asids P x y"
   by (auto simp: equiv_asids_def)
 
@@ -59,26 +59,26 @@ lemma equiv_asids_triv':
    \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_def equiv_asid equiv_asid'_def)
 
-lemma equiv_asids_triv[InfoFlow_IF_assms]:
+lemma equiv_asids_triv[Arch_assms]:
   "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
      arch_state t = arch_state s; arch_state t' = arch_state s' \<rbrakk>
    \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_triv')
 
-lemma globals_equiv_refl[InfoFlow_IF_assms]:
+lemma globals_equiv_refl[Arch_assms]:
   "globals_equiv s s"
   by (simp add: globals_equiv_def idle_equiv_refl)
 
-lemma globals_equiv_sym[InfoFlow_IF_assms]:
+lemma globals_equiv_sym[Arch_assms]:
   "globals_equiv s t \<Longrightarrow> globals_equiv t s"
   by (auto simp: globals_equiv_def idle_equiv_def)
 
-lemma globals_equiv_trans[InfoFlow_IF_assms]:
+lemma globals_equiv_trans[Arch_assms]:
   "\<lbrakk> globals_equiv s t; globals_equiv t u \<rbrakk> \<Longrightarrow> globals_equiv s u"
   unfolding globals_equiv_def arch_globals_equiv_def
   by clarsimp (metis idle_equiv_trans idle_equiv_def)
 
-lemma equiv_asids_guard_imp[InfoFlow_IF_assms]:
+lemma equiv_asids_guard_imp[Arch_assms]:
   "\<lbrakk> equiv_asids R s s'; \<And>x. Q x \<Longrightarrow> R x \<rbrakk> \<Longrightarrow> equiv_asids Q s s'"
   by (auto simp: equiv_asids_def)
 
@@ -129,6 +129,8 @@ lemmas equiv_arch_taut =
   no_hyp_taut
   no_fpu_taut
 
+lemmas InfoFlow_IF_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts
@@ -139,14 +141,15 @@ arch_requalify_consts
 
 global_interpretation InfoFlow_IF?: InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma dmo_loadWord_rev[InfoFlow_IF_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for InfoFlow_IF locale *)
+
+lemma dmo_loadWord_rev[Arch_assms]:
   "reads_equiv_valid_inv A aag (K (for_each_byte_of_word (aag_can_read aag) p))
                                (do_machine_op (loadWord p))"
   apply (rule gen_asm_ev)
@@ -171,7 +174,7 @@ lemma dmo_loadWord_rev[InfoFlow_IF_assms]:
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 
-lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
+lemma do_machine_op_reads_respects'[Arch_assms]:
   assumes equiv_dmo:
    "equiv_valid_inv (equiv_machine_state (aag_can_read aag) and equiv_irq_state)
                     (equiv_machine_state (aag_can_affect aag l)) Q f"
@@ -208,13 +211,14 @@ lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
      apply (wp | simp add: guard)+
   done
 
+lemmas InfoFlow_IF_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation InfoFlow_IF?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 end

@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems ADT_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_AC locale *)
 
 lemma ptr_offset_in_ptr_range:
   "\<lbrakk> invs s; get_vspace_of_thread (kheap s) (arch_state s) tcb \<noteq> global_pt s;
@@ -43,7 +43,7 @@ lemma ptr_offset_in_ptr_range:
   apply (clarsimp simp: is_aligned_no_overflow')
   done
 
-lemma user_op_access[ADT_AC_assms]:
+lemma user_op_access[Arch_assms]:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
    \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
@@ -97,19 +97,20 @@ lemma user_op_access[ADT_AC_assms]:
   apply (fastforce simp: image_iff ptrFromPAddr_def mult_is_add.mult_ac split: pte.splits)
   done
 
-lemma write_in_vspace_cap_rights[ADT_AC_assms]:
+lemma write_in_vspace_cap_rights[Arch_assms]:
   "AllowWrite \<in> ptable_rights (cur_thread s) s va
    \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)
                                          (ptable_exec (cur_thread s) s va)"
   by (clarsimp simp: vspace_cap_rights_to_auth_def)
 
+lemmas ADT_AC_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation ADT_AC?: ADT_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact ADT_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.ADT_AC_assms)?)
 qed
 
 end

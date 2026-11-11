@@ -10,14 +10,14 @@ begin
 
 context Arch begin global_naming ARM
 
-named_theorems Noninterference_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Noninterference locale *)
 
 lemma globals_equiv_to_exclusive_state_equiv:
   "globals_equiv s t \<Longrightarrow> cur_thread s \<noteq> idle_thread t \<Longrightarrow> exclusive_state_equiv s t"
   by (simp add: globals_equiv_def idle_equiv_def)
 
 (* clagged straight from ADT_AC.do_user_op_respects *)
-lemma do_user_op_if_integrity[Noninterference_assms]:
+lemma do_user_op_if_integrity[Arch_assms]:
   "\<lbrace>invs and integrity aag X st and is_subject aag \<circ> cur_thread and pas_refined aag\<rbrace>
    do_user_op_if uop tc
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -48,7 +48,7 @@ lemma silc_dom_equiv_exclusive_state_update[simp]:
    silc_dom_equiv aag st s"
   by (simp add: silc_dom_equiv_def equiv_for_def)
 
-lemma do_user_op_if_globals_equiv_scheduler[Noninterference_assms]:
+lemma do_user_op_if_globals_equiv_scheduler[Arch_assms]:
   "\<lbrace>globals_equiv_scheduler st and invs\<rbrace>
    do_user_op_if tc uop
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
@@ -59,10 +59,10 @@ lemma do_user_op_if_globals_equiv_scheduler[Noninterference_assms]:
   done
 
 crunch do_user_op_if
-  for silc_dom_equiv[Noninterference_assms, wp]: "silc_dom_equiv aag st"
+  for silc_dom_equiv[Arch_assms, wp]: "silc_dom_equiv aag st"
   (ignore: do_machine_op user_memory_update wp: crunch_wps)
 
-lemma sameFor_scheduler_affects_equiv[Noninterference_assms]:
+lemma sameFor_scheduler_affects_equiv[Arch_assms]:
   "\<lbrakk> (s,s') \<in> same_for aag PSched; (s,s') \<in> same_for aag (Partition l);
      invs (internal_state_if s); invs (internal_state_if s') \<rbrakk>
    \<Longrightarrow> scheduler_equiv aag (internal_state_if s) (internal_state_if s') \<and>
@@ -78,7 +78,7 @@ lemma sameFor_scheduler_affects_equiv[Noninterference_assms]:
                       globals_equiv_to_exclusive_state_equiv globals_equiv_to_cur_thread_eq)
   done
 
-lemma do_user_op_if_partitionIntegrity[Noninterference_assms]:
+lemma do_user_op_if_partitionIntegrity[Arch_assms]:
   "\<lbrace>partitionIntegrity aag st and pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace>
    do_user_op_if tc uop
    \<lbrace>\<lambda>_. partitionIntegrity aag st\<rbrace>"
@@ -92,7 +92,7 @@ lemma do_user_op_if_partitionIntegrity[Noninterference_assms]:
   apply (clarsimp simp: partitionIntegrity_def)+
   done
 
-lemma arch_activate_idle_thread_reads_respects_g[Noninterference_assms, wp]:
+lemma arch_activate_idle_thread_reads_respects_g[Arch_assms, wp]:
   "reads_respects_g aag l \<top> (arch_activate_idle_thread t)"
   unfolding arch_activate_idle_thread_def by wpsimp
 
@@ -101,7 +101,7 @@ definition arch_globals_equiv_strengthener :: "machine_state \<Rightarrow> machi
 
 declare arch_globals_equiv_strengthener_def[simp]
 
-lemma arch_globals_equiv_strengthener_thread_independent[Noninterference_assms]:
+lemma arch_globals_equiv_strengthener_thread_independent[Arch_assms]:
   "arch_globals_equiv_strengthener (machine_state s) (machine_state s')
    \<Longrightarrow> \<forall>ct ct' it it'. arch_globals_equiv ct it (kheap s) (kheap s')
                          (arch_state s) (arch_state s') (machine_state s) (machine_state s') =
@@ -171,7 +171,7 @@ next
     using assms by fastforce
 qed
 
-lemma partitionIntegrity_subjectAffects_aobj[Noninterference_assms]:
+lemma partitionIntegrity_subjectAffects_aobj[Arch_assms]:
   assumes par_inte: "partitionIntegrity aag s s'"
   assumes "kheap s x = Some (ArchObj ao)"
           "kheap s x \<noteq> kheap s' x"
@@ -199,7 +199,7 @@ next
     by (fastforce dest: partitionIntegrity_subjectAffects_aobj')
 qed
 
-lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
+lemma partitionIntegrity_subjectAffects_asid[Arch_assms]:
   "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
      valid_arch_state s; valid_arch_state s'; pas_wellformed_noninterference aag;
      silc_inv aag st s'; invs s'; \<not> equiv_asids (\<lambda>x. pasASIDAbs aag x = a) s s' \<rbrakk>
@@ -245,7 +245,7 @@ lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
   done
 
 (* clagged mostly from Scheduler_IF.dmo_storeWord_reads_respects_scheduler *)
-lemma dmo_storeWord_reads_respects_g[Noninterference_assms, wp]:
+lemma dmo_storeWord_reads_respects_g[Arch_assms, wp]:
   "reads_respects_g aag l \<top> (do_machine_op (storeWord ptr w))"
   apply (clarsimp simp: do_machine_op_def bind_def gets_def get_def return_def fail_def
                         select_f_def storeWord_def assert_def simpler_modify_def)
@@ -279,7 +279,7 @@ lemma dmo_clearExMonitor_reads_respects_g':
   apply simp
   done
 
-lemma arch_switch_to_thread_reads_respects_g'[Noninterference_assms]:
+lemma arch_switch_to_thread_reads_respects_g'[Arch_assms]:
   "equiv_valid (reads_equiv_g aag) (affects_equiv aag l)
                (\<lambda>s s'. affects_equiv aag l s s' \<and>
                        arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
@@ -290,7 +290,7 @@ lemma arch_switch_to_thread_reads_respects_g'[Noninterference_assms]:
   by (wp bind_ev_general dmo_clearExMonitor_reads_respects_g' thread_get_reads_respects_g | simp)+
 
 (* consider rewriting the return-value assumption using equiv_valid_rv_inv *)
-lemma ev2_invisible'[Noninterference_assms]:
+lemma ev2_invisible'[Arch_assms]:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
     "\<lbrakk> labels_are_invisible aag l L; labels_are_invisible aag l L';
@@ -331,25 +331,25 @@ lemma ev2_invisible'[Noninterference_assms]:
   apply fastforce
   done
 
-lemma arch_switch_to_idle_thread_reads_respects_g[Noninterference_assms, wp]:
+lemma arch_switch_to_idle_thread_reads_respects_g[Arch_assms, wp]:
   "reads_respects_g aag l \<top> (arch_switch_to_idle_thread)"
   apply (simp add: arch_switch_to_idle_thread_def)
   apply wp
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_idle_thread_ptr)
   done
 
-lemma arch_globals_equiv_threads_eq[Noninterference_assms]:
+lemma arch_globals_equiv_threads_eq[Arch_assms]:
   "arch_globals_equiv t' t'' kh kh' as as' ms ms'
    \<Longrightarrow> arch_globals_equiv t t kh kh' as as' ms ms'"
   by clarsimp
 
-lemma arch_globals_equiv_globals_equiv_scheduler[Noninterference_assms, elim]:
+lemma arch_globals_equiv_globals_equiv_scheduler[Arch_assms, elim]:
   "arch_globals_equiv (cur_thread t) (idle_thread s) (kheap s) (kheap t)
                       (arch_state s) (arch_state t) (machine_state s) (machine_state t)
    \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap t) (arch_state s) (arch_state t)"
   by (auto simp: arch_globals_equiv_scheduler_def)
 
-lemma getActiveIRQ_ret_no_dmo[Noninterference_assms, wp]:
+lemma getActiveIRQ_ret_no_dmo[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (rule hoare_pre)
@@ -359,7 +359,7 @@ lemma getActiveIRQ_ret_no_dmo[Noninterference_assms, wp]:
   done
 
 (*FIXME: Move to scheduler_if*)
-lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
+lemma dmo_getActive_IRQ_reads_respect_scheduler[Arch_assms]:
   "reads_respects_scheduler aag l (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
                             (do_machine_op (getActiveIRQ in_kernel))"
   apply (simp add: getActiveIRQ_def)
@@ -400,32 +400,32 @@ lemma dmo_handleSpuriousIRQ_mop_scheduler_affects_equiv[wp]:
   apply (clarsimp simp: arch_scheduler_affects_equiv_def)
   done
 
-lemma handle_spurious_irq_reads_respect_scheduler[Noninterference_assms]:
+lemma handle_spurious_irq_reads_respect_scheduler[Arch_assms]:
   "reads_respects_scheduler aag l \<top> handle_spurious_irq"
   apply (rule reads_respects_scheduler_unobservable)
    apply (rule scheduler_equiv_lift; wp?)
     apply (wpsimp simp: handle_spurious_irq_def)+
   done
 
-lemma integrity_asids_update_reference_state[Noninterference_assms]:
+lemma integrity_asids_update_reference_state[Arch_assms]:
   "is_subject aag t
    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>)"
   by (clarsimp simp: integrity_asids_def)
 
-lemma getActiveIRQ_no_non_kernel_IRQs[Noninterference_assms]:
+lemma getActiveIRQ_no_non_kernel_IRQs[Arch_assms]:
   "getActiveIRQ True = getActiveIRQ False"
   by (clarsimp simp: getActiveIRQ_def non_kernel_IRQs_def)
 
-lemma valid_cur_hyp_triv[Noninterference_assms]:
+lemma valid_cur_hyp_triv[Arch_assms]:
   "valid_cur_hyp s"
   by (simp add: valid_cur_hyp_def)
 
-lemma arch_tcb_get_registers_equality[Noninterference_assms]:
+lemma arch_tcb_get_registers_equality[Arch_assms]:
   "arch_tcb_get_registers (tcb_arch tcb) = arch_tcb_get_registers (tcb_arch tcb')
    \<Longrightarrow> tcb_arch tcb = tcb_arch tcb'"
   by (auto simp: arch_tcb_get_registers_def intro: arch_tcb.equality user_context.expand)
 
-lemma getActiveIRQ_ev2[Noninterference_assms]:
+lemma getActiveIRQ_ev2[Arch_assms]:
   "equiv_valid_2 (scheduler_equiv aag)
                  (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l)
                  (\<lambda>irq irq'. irq = irq' \<or> irq = None \<and> irq' \<in> Some ` non_kernel_IRQs)
@@ -446,11 +446,11 @@ lemma getActiveIRQ_ev2[Noninterference_assms]:
   apply (clarsimp simp: arch_scheduler_affects_equiv_def)
   done
 
-lemma arch_prepare_next_domain_reads_respects_g[Noninterference_assms]:
+lemma arch_prepare_next_domain_reads_respects_g[Arch_assms]:
   "reads_respects_g aag l invs arch_prepare_next_domain"
   unfolding arch_prepare_next_domain_def by wpsimp
 
-lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
+lemma partitionIntegrity_subjectAffects_tcb_fpu[Arch_assms]:
   assumes par_inte: "partitionIntegrity aag s s'"
   assumes "kheap s x = Some (TCB tcb)"
           "kheap s' x = Some (TCB tcb')"
@@ -475,6 +475,8 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
   apply (rule user_context.expand; clarsimp)
   done
 
+lemmas Noninterference_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 context begin interpretation Arch .
@@ -486,10 +488,9 @@ end
 
 global_interpretation Noninterference?: Noninterference _ arch_globals_equiv_strengthener
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>
-                                                    | solves \<open>wp only: Noninterference_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>
+                                                    | solves \<open>wp only: ARM.Noninterference_assms; simp\<close>)?)
 qed
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?:

@@ -20,6 +20,8 @@ axiomatization dmo_reads_respects where
 
 context Arch begin arch_global_naming
 
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_IF locale *)
+
 (* Define new copies of the axioms that are only visible in the Arch locale *)
 lemmas dmo_getESR_reads_respects = dmo_getESR_reads_respects
 lemmas dmo_getFAR_reads_respects = dmo_getFAR_reads_respects
@@ -36,8 +38,6 @@ hide_fact
   dmo_addressTranslateS1_reads_respects
 
 context Arch begin arch_global_naming
-
-named_theorems Arch_IF_assms
 
 (* we need to know we're not doing an asid pool update, or else this could affect
    what some other domain sees *)
@@ -78,14 +78,14 @@ lemma as_user_set_register_ev2:
   done
 
 crunch arch_post_cap_deletion
-  for valid_global_refs[Arch_IF_assms, wp]: "valid_global_refs"
+  for valid_global_refs[Arch_assms, wp]: "valid_global_refs"
 
 crunch store_word_offs
-  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: storeWord_def)
 
 crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
-  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def)
 
 crunch readVCPUHardwareReg, check_export_arch_timer, writeVCPUHardwareReg, maskInterrupt,
@@ -96,13 +96,13 @@ crunch readVCPUHardwareReg, check_export_arch_timer, writeVCPUHardwareReg, maskI
   for irq_state[wp]: "\<lambda>ms. P (irq_state ms)"
 
 crunch arch_switch_to_idle_thread, arch_switch_to_thread
-  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: machine_op_lift_def setVSpaceRoot_def
          machine_rest_lift_def crunch_simps storeWord_def)
 
 crunch arch_invoke_irq_handler
-  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp simp: maskInterrupt_def)
 
 crunch arch_perform_invocation
@@ -111,16 +111,16 @@ crunch arch_perform_invocation
    wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
 crunch arch_finalise_cap, prepare_thread_delete
-  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: modify_wp crunch_wps dmo_wp
    simp: crunch_simps)
 
-lemma equiv_asid_machine_state_update[Arch_IF_assms, simp]:
+lemma equiv_asid_machine_state_update[Arch_assms, simp]:
   "equiv_asid asid (machine_state_update f s) s' = equiv_asid asid s s'"
   "equiv_asid asid s (machine_state_update f s') = equiv_asid asid s s'"
   by (auto simp: equiv_asid_def)
 
-lemma as_user_set_register_reads_respects'[Arch_IF_assms]:
+lemma as_user_set_register_reads_respects'[Arch_assms]:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "reads_respects aag l \<top> (as_user thread (setRegister x y))"
   apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread")
@@ -133,14 +133,14 @@ lemma as_user_set_register_reads_respects'[Arch_IF_assms]:
   apply (simp add: labels_are_invisible_def)
   done
 
-lemma store_word_offs_reads_respects[Arch_IF_assms]:
+lemma store_word_offs_reads_respects[Arch_assms]:
   "reads_respects aag l \<top> (store_word_offs ptr offs v)"
   apply (simp add: store_word_offs_def storeWord_def do_machine_op_bind)
   apply (wpsimp wp: equiv_valid_get_assert do_machine_op_reads_respects assert_ev2 modify_ev
          | fastforce intro: equiv_forI elim: equiv_forE simp: upto.simps comp_def)+
   done
 
-lemma set_simple_ko_globals_equiv[Arch_IF_assms]:
+lemma set_simple_ko_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    set_simple_ko f ptr ep
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -153,7 +153,7 @@ lemma set_simple_ko_globals_equiv[Arch_IF_assms]:
 crunch set_thread_state_act
   for globals_equiv[wp]: "globals_equiv s"
 
-lemma set_thread_state_globals_equiv[Arch_IF_assms]:
+lemma set_thread_state_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    set_thread_state ref ts
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -165,7 +165,7 @@ lemma set_thread_state_globals_equiv[Arch_IF_assms]:
                     split: option.splits kernel_object.splits)+
   done
 
-lemma set_cap_globals_equiv'[Arch_IF_assms]:
+lemma set_cap_globals_equiv'[Arch_assms]:
   "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
    set_cap cap p
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -176,7 +176,7 @@ lemma set_cap_globals_equiv'[Arch_IF_assms]:
                    dest: valid_global_arch_objs_pt_at)+
   done
 
-lemma thread_set_non_idle_globals_equiv[Arch_IF_assms]:
+lemma thread_set_non_idle_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
    thread_set f tptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -186,15 +186,17 @@ lemma thread_set_non_idle_globals_equiv[Arch_IF_assms]:
                 dest: valid_global_arch_objs_pt_at)
 
 crunch arch_prepare_set_domain, arch_prepare_next_domain
-  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  for irq_state_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
 
-lemma equiv_hyp_machine_state_rest_update[Arch_IF_assms]:
+lemma equiv_hyp_machine_state_rest_update[Arch_assms]:
   "equiv_hyp P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := r\<rparr>\<rparr>) = equiv_hyp P st (s\<lparr>machine_state := ms\<rparr>)"
   by (simp add: equiv_hyp_def equiv_for_def)
 
-lemma equiv_fpu_machine_state_rest_update[Arch_IF_assms]:
+lemma equiv_fpu_machine_state_rest_update[Arch_assms]:
   "equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := r\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
   by (simp add: equiv_fpu_def equiv_for_def)
+
+lemmas Arch_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -210,9 +212,8 @@ declare
 
 global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Arch_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.Arch_IF_assms)?)
 qed
 
 lemmas invs_imps =

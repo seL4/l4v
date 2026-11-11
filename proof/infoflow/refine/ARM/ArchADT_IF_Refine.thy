@@ -10,14 +10,14 @@ begin
 
 context Arch begin global_naming ARM
 
-named_theorems ADT_IF_Refine_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_IF_Refine locale *)
 
 defs arch_extras_def:
   "arch_extras \<equiv> \<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 declare arch_extras_def[simp]
 
-lemma kernelEntry_invs'[ADT_IF_Refine_assms, wp]:
+lemma kernelEntry_invs'[Arch_assms, wp]:
   "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
           and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
           and arch_extras\<rbrace>
@@ -29,7 +29,7 @@ lemma kernelEntry_invs'[ADT_IF_Refine_assms, wp]:
          | clarsimp)+
   done
 
-lemma kernelEntry_arch_extras[ADT_IF_Refine_assms, wp]:
+lemma kernelEntry_arch_extras[Arch_assms, wp]:
   "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
           and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
           and arch_extras\<rbrace>
@@ -42,15 +42,15 @@ lemma kernelEntry_arch_extras[ADT_IF_Refine_assms, wp]:
   done
 
 crunch threadSet
-  for arch_extras[ADT_IF_Refine_assms, wp]: "arch_extras"
+  for arch_extras[Arch_assms, wp]: "arch_extras"
 
-lemma arch_tcb_context_set_tcb_relation[ADT_IF_Refine_assms]:
+lemma arch_tcb_context_set_tcb_relation[Arch_assms]:
   "tcb_relation tcb tcb'
    \<Longrightarrow> tcb_relation (tcb\<lparr>tcb_arch := arch_tcb_context_set tc (tcb_arch tcb)\<rparr>)
                     (tcbArch_update (atcbContextSet tc) tcb')"
   by (simp add: tcb_relation_def arch_tcb_relation_def arch_tcb_context_set_def atcbContextSet_def)
 
-lemma arch_tcb_context_get_atcbContextGet[ADT_IF_Refine_assms]:
+lemma arch_tcb_context_get_atcbContextGet[Arch_assms]:
   "tcb_relation tcb tcb'
    \<Longrightarrow> (arch_tcb_context_get \<circ> tcb_arch) tcb = (atcbContextGet \<circ> tcbArch) tcb'"
   by (simp add: tcb_relation_def arch_tcb_relation_def arch_tcb_context_get_def atcbContextGet_def)
@@ -117,7 +117,7 @@ lemma ptable_attrs_abs_state[simp]:
   "ptable_attrs thread (abs_state s) = ptable_attrs thread s"
   by (simp add: ptable_attrs_def abs_state_def)
 
-lemma doUserOp_if_empty_fail[ADT_IF_Refine_assms]:
+lemma doUserOp_if_empty_fail[Arch_assms]:
   "empty_fail (doUserOp_if uop tc)"
   apply (simp add: doUserOp_if_def)
   apply (wp (once))
@@ -146,7 +146,7 @@ lemma doUserOp_if_empty_fail[ADT_IF_Refine_assms]:
   apply (wp | wpc)+
   done
 
-lemma do_user_op_if_corres[ADT_IF_Refine_assms]:
+lemma do_user_op_if_corres[Arch_assms]:
   "corres (=) (einvs and ct_running and (\<lambda>_. \<forall>t pl pr pxn tcu. f t pl pr pxn tcu \<noteq> {}))
               (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running')
               (do_user_op_if f tc) (doUserOp_if f tc)"
@@ -238,7 +238,7 @@ lemma invs'_exclusive_state_update[iff]:
   "invs' (s\<lparr>ksMachineState := ksMachineState s\<lparr>exclusive_state := es\<rparr>\<rparr>) = invs' s"
   by (simp add: invs'_def)
 
-lemma doUserOp_if_invs'[ADT_IF_Refine_assms, wp]:
+lemma doUserOp_if_invs'[Arch_assms, wp]:
   "\<lbrace>invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and ex_abs (einvs)\<rbrace>
    doUserOp_if f tc
    \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -254,31 +254,31 @@ lemma doUserOp_if_invs'[ADT_IF_Refine_assms, wp]:
               simp: ptable_rights_s'_def ptable_lift_s'_def)
   done
 
-lemma doUserOp_valid_duplicates[ADT_IF_Refine_assms, wp]:
+lemma doUserOp_valid_duplicates[Arch_assms, wp]:
   "doUserOp_if f tc \<lbrace>arch_extras\<rbrace>"
   apply (simp add: doUserOp_if_def split_def)
   apply (wp dmo_setExMonitor_wp' dmo_invs' | simp)+
   done
 
-lemma doUserOp_if_schedact[ADT_IF_Refine_assms, wp]:
+lemma doUserOp_if_schedact[Arch_assms, wp]:
   "doUserOp_if f tc \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
   apply (simp add: doUserOp_if_def)
   apply (wp | wpc | simp)+
   done
 
-lemma doUserOp_if_st_tcb_at[ADT_IF_Refine_assms, wp]:
+lemma doUserOp_if_st_tcb_at[Arch_assms, wp]:
   "doUserOp_if f tc \<lbrace>st_tcb_at' st t\<rbrace>"
   apply (simp add: doUserOp_if_def)
   apply (wp | wpc | simp)+
   done
 
-lemma doUserOp_if_cur_thread[ADT_IF_Refine_assms, wp]:
+lemma doUserOp_if_cur_thread[Arch_assms, wp]:
   "doUserOp_if f tc \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
   apply (simp add: doUserOp_if_def)
   apply (wp | wpc | simp)+
   done
 
-lemma do_user_op_if_corres'[ADT_IF_Refine_assms]:
+lemma do_user_op_if_corres'[Arch_assms]:
   "corres_underlying state_relation nf False (=) (einvs and ct_running)
      (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running')
      (do_user_op_if f tc) (doUserOp_if f tc)"
@@ -336,7 +336,7 @@ lemma do_user_op_if_corres'[ADT_IF_Refine_assms]:
                 apply (rule corres_return_same_trivial)
   by wpsimp+
 
-lemma dmo_getActiveIRQ_corres[ADT_IF_Refine_assms]:
+lemma dmo_getActiveIRQ_corres[Arch_assms]:
   "corres (=) \<top> \<top> (do_machine_op (getActiveIRQ in_kernel)) (doMachineOp (getActiveIRQ in_kernel'))"
   apply (rule SubMonad_R.corres_machine_op)
   apply (rule corres_Id)
@@ -345,7 +345,7 @@ lemma dmo_getActiveIRQ_corres[ADT_IF_Refine_assms]:
   apply (rule no_fail_getActiveIRQ)
   done
 
-lemma dmo'_getActiveIRQ_wp[ADT_IF_Refine_assms]:
+lemma dmo'_getActiveIRQ_wp[Arch_assms]:
   "\<lbrace>\<lambda>s. P (irq_at (irq_state (ksMachineState s) + 1) (irq_masks (ksMachineState s)))
           (s\<lparr>ksMachineState := (ksMachineState s\<lparr>irq_state := irq_state (ksMachineState s) + 1\<rparr>)\<rparr>)\<rbrace>
    doMachineOp (getActiveIRQ in_kernel)
@@ -358,7 +358,7 @@ lemma dmo'_getActiveIRQ_wp[ADT_IF_Refine_assms]:
   apply(auto simp: irq_at_def)
   done
 
-lemma scheduler_if'_arch_extras[ADT_IF_Refine_assms, wp]:
+lemma scheduler_if'_arch_extras[Arch_assms, wp]:
   "\<lbrace>invs' and arch_extras\<rbrace>
    schedule'_if tc
    \<lbrace>\<lambda>_. arch_extras\<rbrace>"
@@ -366,19 +366,19 @@ lemma scheduler_if'_arch_extras[ADT_IF_Refine_assms, wp]:
   apply (wp hoare_drop_imps | simp)+
   done
 
-lemma handlePreemption_if_arch_extras[ADT_IF_Refine_assms, wp]:
+lemma handlePreemption_if_arch_extras[Arch_assms, wp]:
   "handlePreemption_if tc \<lbrace>arch_extras\<rbrace>"
   unfolding handlePreemption_if_def maybeHandleInterrupt_def
   by (wpsimp wp: dmo'_getActiveIRQ_wp hoare_drop_imps)
 
 crunch doUserOp_if
-  for ksDomainTime_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomainTime s)"
-  and ksDomSchedule_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
+  for ksDomainTime_inv[Arch_assms, wp]: "\<lambda>s. P (ksDomainTime s)"
+  and ksDomSchedule_inv[Arch_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
 
 crunch checkActiveIRQ_if
-  for arch_extras[ADT_IF_Refine_assms, wp]: arch_extras
+  for arch_extras[Arch_assms, wp]: arch_extras
 
-lemma valid_device_abs_state_eq[ADT_IF_Refine_assms]:
+lemma valid_device_abs_state_eq[Arch_assms]:
   "valid_machine_state s \<Longrightarrow> abs_state s = s"
   apply (simp add: abs_state_def observable_memory_def)
   apply (case_tac s)
@@ -389,7 +389,7 @@ lemma valid_device_abs_state_eq[ADT_IF_Refine_assms]:
   apply (fastforce simp: user_mem_def option_to_0_def valid_machine_state_def)
   done
 
-lemma doUserOp_if_no_interrupt[ADT_IF_Refine_assms]:
+lemma doUserOp_if_no_interrupt[Arch_assms]:
   "\<lbrace>K (uop_sane uop)\<rbrace>
    doUserOp_if uop tc
    \<lbrace>\<lambda>r s. (fst r) \<noteq> Some Interrupt\<rbrace>"
@@ -398,7 +398,7 @@ lemma doUserOp_if_no_interrupt[ADT_IF_Refine_assms]:
   apply (clarsimp simp: uop_sane_def simp del: split_paired_All)
   done
 
-lemma handleEvent_corres_arch_extras[ADT_IF_Refine_assms]:
+lemma handleEvent_corres_arch_extras[Arch_assms]:
   "corres (dc \<oplus> dc)
           (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and schact_is_rct)
           (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
@@ -418,7 +418,7 @@ lemma handle_event_valid_domain_time_IRQ:
    \<lbrace>\<lambda>_ s::det_state. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>, -"
   by (wpsimp wp: maybe_handle_interrupt_valid_domain_time wp_del: handle_event_domain_time_valid)
 
-lemma kernel_entry_if_corres[ADT_IF_Refine_assms]:
+lemma kernel_entry_if_corres[Arch_assms]:
   "corres (prod_lift (dc \<oplus> dc))
      (einvs and no_domain_caps
             and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
@@ -466,6 +466,8 @@ lemma kernel_entry_if_corres[ADT_IF_Refine_assms]:
   apply force
   done
 
+lemmas ADT_IF_Refine_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 requalify_consts
@@ -473,9 +475,8 @@ requalify_consts
 
 global_interpretation ADT_IF_Refine?: ADT_IF_Refine doUserOp_if
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact ADT_IF_Refine_assms)?)
+    by (unfold_locales; (fact ARM.ADT_IF_Refine_assms)?)
 qed
 
 sublocale valid_initial_state_noenabled \<subseteq> valid_initial_state_noenabled?:

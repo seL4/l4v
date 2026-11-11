@@ -10,6 +10,8 @@ begin
 
 context Arch begin global_naming ARM
 
+clear_named_theorems Arch_assms (* accumulate assumptions for UserOp_IF locale *)
+
 definition ptable_lift_s where
   "ptable_lift_s s \<equiv> ptable_lift (cur_thread s) s"
 
@@ -95,21 +97,21 @@ definition do_user_op_if ::
    od"
 
 
-named_theorems UserOp_IF_assms
-
-lemma arch_globals_equiv_underlying_memory_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_underlying_memory_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (underlying_memory_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (underlying_memory_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
+lemma arch_globals_equiv_device_state_update[Arch_assms, simp]:
   "arch_globals_equiv ct it kh kh' as as' (device_state_update f ms) ms' =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   "arch_globals_equiv ct it kh kh' as as' ms (device_state_update f ms') =
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
+
+lemmas UserOp_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -121,9 +123,8 @@ end
 
 global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact UserOp_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.UserOp_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 context Arch begin global_naming ARM

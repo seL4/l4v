@@ -11,7 +11,7 @@ begin
 
 context Arch begin global_naming RISCV64
 
-named_theorems Scheduler_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Scheduler_IF locale *)
 
 definition arch_globals_equiv_scheduler :: "kheap \<Rightarrow> kheap \<Rightarrow> arch_state \<Rightarrow> arch_state \<Rightarrow> bool" where
   "arch_globals_equiv_scheduler kh kh' as as' \<equiv>
@@ -20,93 +20,93 @@ definition arch_globals_equiv_scheduler :: "kheap \<Rightarrow> kheap \<Rightarr
 definition
   "arch_scheduler_affects_equiv s s' \<equiv> True"
 
-lemma arch_globals_equiv_from_scheduler[Scheduler_IF_assms]:
+lemma arch_globals_equiv_from_scheduler[Arch_assms]:
   "\<lbrakk> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s');
      cur_thread s' \<noteq> idle_thread s \<longrightarrow> arch_scheduler_affects_equiv s s' \<rbrakk>
    \<Longrightarrow> arch_globals_equiv (cur_thread s') (idle_thread s) (kheap s) (kheap s')
                           (arch_state s) (arch_state s') (machine_state s) (machine_state s')"
   by (clarsimp simp: arch_globals_equiv_scheduler_def arch_scheduler_affects_equiv_def)
 
-lemma arch_globals_equiv_scheduler_refl[Scheduler_IF_assms]:
+lemma arch_globals_equiv_scheduler_refl[Arch_assms]:
   "arch_globals_equiv_scheduler (kheap s) (kheap s) (arch_state s) (arch_state s)"
   by (simp add: idle_equiv_refl arch_globals_equiv_scheduler_def)
 
-lemma arch_globals_equiv_scheduler_sym[Scheduler_IF_assms]:
+lemma arch_globals_equiv_scheduler_sym[Arch_assms]:
   "arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s')
    \<Longrightarrow> arch_globals_equiv_scheduler (kheap s') (kheap s) (arch_state s') (arch_state s)"
   by (auto simp: arch_globals_equiv_scheduler_def)
 
-lemma arch_globals_equiv_scheduler_trans[Scheduler_IF_assms]:
+lemma arch_globals_equiv_scheduler_trans[Arch_assms]:
   "\<lbrakk> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s');
      arch_globals_equiv_scheduler (kheap s') (kheap s'') (arch_state s') (arch_state s'') \<rbrakk>
    \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap s'') (arch_state s) (arch_state s'')"
   by (clarsimp simp: arch_globals_equiv_scheduler_def)
 
-lemma arch_scheduler_affects_equiv_trans[Scheduler_IF_assms, elim]:
+lemma arch_scheduler_affects_equiv_trans[Arch_assms, elim]:
   "\<lbrakk> arch_scheduler_affects_equiv s s'; arch_scheduler_affects_equiv s' s'' \<rbrakk>
    \<Longrightarrow> arch_scheduler_affects_equiv s s''"
   by (simp add: arch_scheduler_affects_equiv_def)
 
-lemma arch_scheduler_affects_equiv_sym[Scheduler_IF_assms, elim]:
+lemma arch_scheduler_affects_equiv_sym[Arch_assms, elim]:
   "arch_scheduler_affects_equiv s s' \<Longrightarrow> arch_scheduler_affects_equiv s' s"
   by (simp add: arch_scheduler_affects_equiv_def)
 
-lemma arch_scheduler_affects_equiv_sa_update[Scheduler_IF_assms, simp]:
+lemma arch_scheduler_affects_equiv_sa_update[Arch_assms, simp]:
   "arch_scheduler_affects_equiv (scheduler_action_update f s) s' =
    arch_scheduler_affects_equiv s s'"
   "arch_scheduler_affects_equiv s (scheduler_action_update f s') =
    arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
-lemma equiv_asid_cur_thread_update[Scheduler_IF_assms, simp]:
+lemma equiv_asid_cur_thread_update[Arch_assms, simp]:
   "equiv_asid asid (cur_thread_update f s) s' = equiv_asid asid s s'"
   "equiv_asid asid s (cur_thread_update f s') = equiv_asid asid s s'"
   by (auto simp: equiv_asid_def)
 
-lemma arch_scheduler_affects_equiv_ready_queues_update[Scheduler_IF_assms, simp]:
+lemma arch_scheduler_affects_equiv_ready_queues_update[Arch_assms, simp]:
   "arch_scheduler_affects_equiv (ready_queues_update f s) s' = arch_scheduler_affects_equiv s s'"
   "arch_scheduler_affects_equiv s (ready_queues_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
-  for idle_thread[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
-  and kheap[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (kheap s)"
+  for idle_thread[Arch_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
+  and kheap[Arch_assms, wp]: "\<lambda>s :: det_state. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
-  for cur_domain[Scheduler_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
-  and domain_fields[Scheduler_IF_assms, wp]: "domain_fields P"
+  for cur_domain[Arch_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  and domain_fields[Arch_assms, wp]: "domain_fields P"
 
 crunch arch_switch_to_idle_thread
-  for globals_equiv[Scheduler_IF_assms, wp]: "globals_equiv st"
-  and states_equiv_for[Scheduler_IF_assms, wp]: "states_equiv_for P Q R S st"
-  and work_units_completed[Scheduler_IF_assms, wp]: "\<lambda>s. P (work_units_completed s)"
+  for globals_equiv[Arch_assms, wp]: "globals_equiv st"
+  and states_equiv_for[Arch_assms, wp]: "states_equiv_for P Q R S st"
+  and work_units_completed[Arch_assms, wp]: "\<lambda>s. P (work_units_completed s)"
 
 crunch arch_activate_idle_thread
-  for cur_domain[Scheduler_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
-  and idle_thread[Scheduler_IF_assms, wp]: "\<lambda>s. P (idle_thread s)"
-  and irq_state_of_state[Scheduler_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
-  and domain_fields[Scheduler_IF_assms, wp]: "domain_fields P"
+  for cur_domain[Arch_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  and idle_thread[Arch_assms, wp]: "\<lambda>s. P (idle_thread s)"
+  and irq_state_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  and domain_fields[Arch_assms, wp]: "domain_fields P"
 
-lemma arch_scheduler_affects_equiv_cur_thread_update[Scheduler_IF_assms, simp]:
+lemma arch_scheduler_affects_equiv_cur_thread_update[Arch_assms, simp]:
   "arch_scheduler_affects_equiv (cur_thread_update f s) s' = arch_scheduler_affects_equiv s s'"
   "arch_scheduler_affects_equiv s (cur_thread_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
-lemma equiv_asid_domain_time_update[Scheduler_IF_assms, simp]:
+lemma equiv_asid_domain_time_update[Arch_assms, simp]:
   "equiv_asid asid (domain_time_update f s) s' = equiv_asid asid s s'"
   "equiv_asid asid s (domain_time_update f s') = equiv_asid asid s s'"
   by (auto simp: equiv_asid_def)
 
-lemma arch_scheduler_affects_equiv_domain_time_update[Scheduler_IF_assms, simp]:
+lemma arch_scheduler_affects_equiv_domain_time_update[Arch_assms, simp]:
   "arch_scheduler_affects_equiv (domain_time_update f s) s' = arch_scheduler_affects_equiv s s'"
   "arch_scheduler_affects_equiv s (domain_time_update f s') = arch_scheduler_affects_equiv s s'"
   by (auto simp: arch_scheduler_affects_equiv_def)
 
 crunch ackInterrupt
-  for irq_state[Scheduler_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
+  for irq_state[Arch_assms, wp]: "\<lambda>s. P (irq_state s)"
 
-lemma thread_set_context_globals_equiv[Scheduler_IF_assms]:
+lemma thread_set_context_globals_equiv[Arch_assms]:
   "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>
    thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
    \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
@@ -119,18 +119,20 @@ lemma thread_set_context_globals_equiv[Scheduler_IF_assms]:
                    dest: valid_global_arch_objs_pt_at invs_arch_state)
   done
 
-lemma arch_scheduler_affects_equiv_update[Scheduler_IF_assms]:
+lemma arch_scheduler_affects_equiv_update[Arch_assms]:
   "arch_scheduler_affects_equiv st s
    \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: arch_scheduler_affects_equiv_def)
 
-lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
+lemma equiv_asid_equiv_update[Arch_assms]:
   "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
    \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
-declare arch_prepare_next_domain_inv[Scheduler_IF_assms]
-declare arch_activate_idle_thread_domain_fields_invs[Scheduler_IF_assms]
+declare arch_prepare_next_domain_inv[Arch_assms]
+declare arch_activate_idle_thread_domain_fields_invs[Arch_assms]
+
+lemmas Scheduler_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -141,12 +143,13 @@ requalify_consts
 global_interpretation Scheduler_IF?:
   Scheduler_IF arch_globals_equiv_scheduler arch_scheduler_affects_equiv
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Scheduler_IF_assms | solves \<open>wp only: Scheduler_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Scheduler_IF_assms | solves \<open>wp only: RISCV64.Scheduler_IF_assms; simp\<close>)?)
 qed
 
 context Arch begin global_naming RISCV64
+
+clear_named_theorems Arch_assms (* accumulate assumptions for Scheduler_IF_2 locale *)
 
 definition swap_things where
   "swap_things s t \<equiv>
@@ -157,7 +160,7 @@ definition swap_things where
                           (machine_state t)\<rparr>
       \<lparr>cur_thread := cur_thread s\<rparr>"
 
-lemma globals_equiv_scheduler_inv'[Scheduler_IF_assms]:
+lemma globals_equiv_scheduler_inv'[Arch_assms]:
   "(\<And>st. \<lbrace>P and globals_equiv st\<rbrace> f \<lbrace>\<lambda>_. globals_equiv st\<rbrace>)
    \<Longrightarrow> \<lbrace>P and globals_equiv_scheduler s\<rbrace> f \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
   apply atomize
@@ -171,7 +174,7 @@ lemma globals_equiv_scheduler_inv'[Scheduler_IF_assms]:
                          arch_globals_equiv_scheduler_def arch_scheduler_affects_equiv_def)+
   done
 
-lemma arch_switch_to_thread_globals_equiv_scheduler[Scheduler_IF_assms]:
+lemma arch_switch_to_thread_globals_equiv_scheduler[Arch_assms]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
    arch_switch_to_thread thread
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
@@ -179,8 +182,8 @@ lemma arch_switch_to_thread_globals_equiv_scheduler[Scheduler_IF_assms]:
   by (wpsimp wp: dmo_wp modify_wp thread_get_wp' globals_equiv_scheduler_inv'[where P="\<top>"])
 
 crunch arch_activate_idle_thread
-  for silc_dom_equiv[Scheduler_IF_assms, wp]: "silc_dom_equiv aag st"
-  and scheduler_affects_equiv[Scheduler_IF_assms, wp]: "scheduler_affects_equiv aag l st"
+  for silc_dom_equiv[Arch_assms, wp]: "silc_dom_equiv aag st"
+  and scheduler_affects_equiv[Arch_assms, wp]: "scheduler_affects_equiv aag l st"
 
 lemma set_vm_root_arch_scheduler_affects_equiv[wp]:
   "set_vm_root tcb \<lbrace>arch_scheduler_affects_equiv st\<rbrace>"
@@ -235,7 +238,7 @@ lemma arch_switch_to_thread_reads_respects_scheduler[wp]:
 
 lemmas globals_equiv_scheduler_inv = globals_equiv_scheduler_inv'[where P="\<top>",simplified]
 
-lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Scheduler_IF_assms, wp]:
+lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Arch_assms, wp]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "midstrength_reads_respects_scheduler aag l
            (invs and pas_refined aag and (\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag (cur_domain s)))
@@ -261,14 +264,14 @@ lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Scheduler_IF_as
           apply (wp cur_thread_update_not_subject_reads_respects_scheduler | simp | fastforce)+
   done
 
-lemma arch_switch_to_idle_thread_globals_equiv_scheduler[Scheduler_IF_assms, wp]:
+lemma arch_switch_to_idle_thread_globals_equiv_scheduler[Arch_assms, wp]:
   "\<lbrace>valid_arch_state and globals_equiv_scheduler sta\<rbrace>
    arch_switch_to_idle_thread
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   unfolding arch_switch_to_idle_thread_def storeWord_def
   by (wp dmo_wp modify_wp thread_get_wp' set_vm_root_globals_equiv_scheduler)
 
-lemma arch_switch_to_idle_thread_unobservable[Scheduler_IF_assms]:
+lemma arch_switch_to_idle_thread_unobservable[Arch_assms]:
   "\<lbrace>(\<lambda>s. pasDomainAbs aag (cur_domain s) \<inter> reads_scheduler aag l = {}) and
     scheduler_affects_equiv aag l st and (\<lambda>s. cur_domain st = cur_domain s) and invs\<rbrace>
    arch_switch_to_idle_thread
@@ -278,7 +281,7 @@ lemma arch_switch_to_idle_thread_unobservable[Scheduler_IF_assms]:
   apply (clarsimp simp add: scheduler_equiv_def domain_fields_equiv_def invs_def valid_state_def)
   done
 
-lemma arch_switch_to_thread_unobservable[Scheduler_IF_assms]:
+lemma arch_switch_to_thread_unobservable[Arch_assms]:
   "\<lbrace>(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
     scheduler_affects_equiv aag l st and (\<lambda>s. cur_domain st = cur_domain s) and invs\<rbrace>
    arch_switch_to_thread t
@@ -288,7 +291,7 @@ lemma arch_switch_to_thread_unobservable[Scheduler_IF_assms]:
   done
 
 (* Can split, but probably more effort to generalise *)
-lemma next_domain_midstrength_equiv_scheduler[Scheduler_IF_assms]:
+lemma next_domain_midstrength_equiv_scheduler[Arch_assms]:
   "equiv_valid (scheduler_equiv aag) (weak_scheduler_affects_equiv aag l)
                (midstrength_scheduler_affects_equiv aag l) \<top> next_domain"
   apply (simp add: next_domain_def)
@@ -303,7 +306,7 @@ lemma next_domain_midstrength_equiv_scheduler[Scheduler_IF_assms]:
                         states_equiv_for_def idle_equiv_def)
   done
 
-lemma arch_switch_to_idle_thread_midstrength_reads_respects[Scheduler_IF_assms]:
+lemma arch_switch_to_idle_thread_midstrength_reads_respects[Arch_assms]:
   "equiv_valid_inv (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
                    (valid_arch_state and valid_silc_label aag) arch_switch_to_idle_thread"
   apply (rule equiv_valid_inv_unobservable)
@@ -322,7 +325,7 @@ lemma resetTimer_irq_state[wp]:
   apply (wp | wpc| simp)+
   done
 
-lemma dmo_resetTimer_reads_respects_scheduler[Scheduler_IF_assms]:
+lemma dmo_resetTimer_reads_respects_scheduler[Arch_assms]:
   "reads_respects_scheduler aag l \<top> (do_machine_op resetTimer)"
   apply (rule reads_respects_scheduler_unobservable)
    apply (rule scheduler_equiv_lift)
@@ -335,7 +338,7 @@ lemma dmo_resetTimer_reads_respects_scheduler[Scheduler_IF_assms]:
          apply (wp | simp add: arch_scheduler_affects_equiv_def | wp dmo_wp)+
   done
 
-lemma ackInterrupt_reads_respects_scheduler[Scheduler_IF_assms]:
+lemma ackInterrupt_reads_respects_scheduler[Arch_assms]:
   "reads_respects_scheduler aag l \<top> (do_machine_op (ackInterrupt irq))"
   apply (rule reads_respects_scheduler_unobservable)
    apply (rule scheduler_equiv_lift)
@@ -352,7 +355,7 @@ lemma ackInterrupt_reads_respects_scheduler[Scheduler_IF_assms]:
          apply (wp dmo_wp | simp add: arch_scheduler_affects_equiv_def ackInterrupt_def)+
   done
 
-lemma thread_set_scheduler_affects_equiv[Scheduler_IF_assms, wp]:
+lemma thread_set_scheduler_affects_equiv[Arch_assms, wp]:
   "\<lbrace>(\<lambda>s. x \<noteq> idle_thread s \<longrightarrow> pasObjectAbs aag x \<notin> reads_scheduler aag l) and
     (\<lambda>s. x = idle_thread s \<longrightarrow> tc = idle_context s) and scheduler_affects_equiv aag l st\<rbrace>
    thread_set (tcb_arch_update (arch_tcb_context_set tc)) x
@@ -377,7 +380,7 @@ lemma thread_set_scheduler_affects_equiv[Scheduler_IF_assms, wp]:
             apply simp+
   done
 
-lemma thread_set_reads_respects_scheduler[Scheduler_IF_assms]:
+lemma thread_set_reads_respects_scheduler[Arch_assms]:
   "reads_respects_scheduler aag l (valid_arch_state and K (valid_tcb_context_update f))
                                   (thread_set f t)"
   apply (rule gen_asm_ev)
@@ -403,7 +406,7 @@ lemma thread_set_reads_respects_scheduler[Scheduler_IF_assms]:
   apply (clarsimp simp: scheduler_globals_frame_equiv_def arch_scheduler_affects_equiv_def)
   done
 
-lemma set_object_reads_respects_scheduler[Scheduler_IF_assms, wp]:
+lemma set_object_reads_respects_scheduler[Arch_assms, wp]:
   "reads_respects_scheduler aag l \<top> (set_object ptr obj)"
   unfolding equiv_valid_def2 equiv_valid_2_def
   by (auto simp: set_object_def bind_def get_def put_def return_def get_object_def assert_def
@@ -413,19 +416,19 @@ lemma set_object_reads_respects_scheduler[Scheduler_IF_assms, wp]:
                  scheduler_globals_frame_equiv_def identical_kheap_updates_def
           intro: states_equiv_for_identical_kheap_updates idle_equiv_identical_kheap_updates)
 
-lemma arch_activate_idle_thread_reads_respects_scheduler[Scheduler_IF_assms, wp]:
+lemma arch_activate_idle_thread_reads_respects_scheduler[Arch_assms, wp]:
   "reads_respects_scheduler aag l \<top> (arch_activate_idle_thread rv)"
   unfolding arch_activate_idle_thread_def by wpsimp
 
-lemma arch_prepare_next_domain_ev[Scheduler_IF_assms]:
+lemma arch_prepare_next_domain_ev[Arch_assms]:
   "equiv_valid_inv I A (\<lambda>_. True) arch_prepare_next_domain"
   unfolding arch_prepare_next_domain_def by wp
 
-lemma arch_switch_to_thread_silc_dom_equiv[Scheduler_IF_assms,wp]:
+lemma arch_switch_to_thread_silc_dom_equiv[Arch_assms,wp]:
   "arch_switch_to_thread t \<lbrace>silc_dom_equiv aag (st :: det_state)\<rbrace>"
   by (wpsimp wp: silc_dom_lift)
 
-lemma arch_switch_to_idle_thread_silc_dom_equiv[Scheduler_IF_assms,wp]:
+lemma arch_switch_to_idle_thread_silc_dom_equiv[Arch_assms,wp]:
   "arch_switch_to_idle_thread \<lbrace>silc_dom_equiv aag (st :: det_state)\<rbrace>"
   by (wpsimp wp: silc_dom_lift)
 
@@ -446,15 +449,17 @@ lemma cur_fpu_in_cur_domain_taut[intro!,simp]:
   "cur_fpu_in_cur_domain s = cur_fpu_in_cur_domain s'"
   by (simp_all add: cur_fpu_in_cur_domain_def)
 
-lemma cur_hyp_in_cur_domain_wp[Scheduler_IF_assms,wp]:
+lemma cur_hyp_in_cur_domain_wp[Arch_assms,wp]:
   "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
   unfolding cur_hyp_in_cur_domain_def by wp
 
-lemma cur_fpu_in_cur_domain_wp[Scheduler_IF_assms,wp]:
+lemma cur_fpu_in_cur_domain_wp[Arch_assms,wp]:
   "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
   unfolding cur_fpu_in_cur_domain_def by wp
 
-declare pas_wellformed_noninterference_domains_distinct[Scheduler_IF_assms]
+declare pas_wellformed_noninterference_domains_distinct[Arch_assms]
+
+lemmas Scheduler_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -465,9 +470,8 @@ arch_requalify_consts
 global_interpretation Scheduler_IF_2?:
   Scheduler_IF_2 arch_globals_equiv_scheduler arch_scheduler_affects_equiv _ cur_hyp_in_cur_domain cur_fpu_in_cur_domain
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Scheduler_IF_assms | solves \<open>wp only: Scheduler_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Scheduler_IF_2_assms | solves \<open>wp only: RISCV64.Scheduler_IF_2_assms; simp\<close>)?)
 qed
 
 hide_fact Scheduler_IF_2.globals_equiv_scheduler_inv'

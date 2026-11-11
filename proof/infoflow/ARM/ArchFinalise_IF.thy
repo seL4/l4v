@@ -10,13 +10,13 @@ begin
 
 context Arch begin global_naming ARM
 
-named_theorems Finalise_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_IF locale *)
 
 crunch arch_post_cap_deletion
-  for globals_equiv[Finalise_IF_assms, wp]: "globals_equiv st"
-  and valid_arch_state[Finalise_IF_assms,wp]: valid_arch_state
+  for globals_equiv[Arch_assms, wp]: "globals_equiv st"
+  and valid_arch_state[Arch_assms,wp]: valid_arch_state
 
-lemma dmo_maskInterrupt_reads_respects[Finalise_IF_assms]:
+lemma dmo_maskInterrupt_reads_respects[Arch_assms]:
   "reads_respects aag l \<top> (do_machine_op (maskInterrupt m irq))"
   unfolding maskInterrupt_def
   apply (rule do_machine_op_reads_respects)
@@ -26,21 +26,21 @@ lemma dmo_maskInterrupt_reads_respects[Finalise_IF_assms]:
   apply (wp modify_wp | simp)+
   done
 
-lemma arch_post_cap_deletion_read_respects[Finalise_IF_assms, wp]:
+lemma arch_post_cap_deletion_read_respects[Arch_assms, wp]:
   "reads_respects aag l \<top> (arch_post_cap_deletion acap)"
   by wpsimp
 
-lemma equiv_asid_sa_update[Finalise_IF_assms, simp]:
+lemma equiv_asid_sa_update[Arch_assms, simp]:
   "equiv_asid asid (scheduler_action_update f s) s' = equiv_asid asid s s'"
   "equiv_asid asid s (scheduler_action_update f s') = equiv_asid asid s s'"
   by (auto simp: equiv_asid_def)
 
-lemma equiv_asid_ready_queues_update[Finalise_IF_assms, simp]:
+lemma equiv_asid_ready_queues_update[Arch_assms, simp]:
   "equiv_asid asid (ready_queues_update f s) s' = equiv_asid asid s s'"
   "equiv_asid asid s (ready_queues_update f s') = equiv_asid asid s s'"
   by (auto simp: equiv_asid_def)
 
-lemma arch_finalise_cap_makes_halted[Finalise_IF_assms]:
+lemma arch_finalise_cap_makes_halted[Arch_assms]:
   "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap)
         and (\<lambda>s. ex = is_final_cap' (ArchObjectCap arch_cap) s)
         and cte_wp_at ((=) (ArchObjectCap arch_cap)) slot\<rbrace>
@@ -58,7 +58,7 @@ lemma set_object_modifies_at_most:
   apply clarsimp
   done
 
-lemma set_thread_state_reads_respects[Finalise_IF_assms]:
+lemma set_thread_state_reads_respects[Arch_assms]:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
@@ -85,7 +85,7 @@ lemma set_thread_state_reads_respects[Finalise_IF_assms]:
    apply (wp | simp)+
   done
 
-lemma set_thread_state_runnable_reads_respects[Finalise_IF_assms]:
+lemma set_thread_state_runnable_reads_respects[Arch_assms]:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "runnable ts \<Longrightarrow> reads_respects aag l \<top> (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
@@ -111,7 +111,7 @@ lemma set_thread_state_runnable_reads_respects[Finalise_IF_assms]:
    apply (wp thread_set_st_tcb_at | simp)+
    done
 
-lemma set_bound_notification_none_reads_respects[Finalise_IF_assms]:
+lemma set_bound_notification_none_reads_respects[Arch_assms]:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "reads_respects aag l \<top> (set_bound_notification ref None)"
   unfolding set_bound_notification_def fun_app_def
@@ -133,7 +133,7 @@ lemma set_bound_notification_none_reads_respects[Finalise_IF_assms]:
   apply simp
   done
 
-lemma set_tcb_queue_reads_respects[Finalise_IF_assms, wp]:
+lemma set_tcb_queue_reads_respects[Arch_assms, wp]:
   "reads_respects aag l \<top> (set_tcb_queue d prio queue)"
   unfolding equiv_valid_def2 equiv_valid_2_def
   apply (clarsimp simp: set_tcb_queue_def bind_def modify_def put_def get_def)
@@ -154,7 +154,7 @@ lemma set_tcb_queue_modifies_at_most:
   apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def)
   done
 
-lemma set_notification_equiv_but_for_labels[Finalise_IF_assms]:
+lemma set_notification_equiv_but_for_labels[Arch_assms]:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag ntfnptr \<in> L)\<rbrace>
    set_notification ntfnptr ntfn
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
@@ -163,7 +163,7 @@ lemma set_notification_equiv_but_for_labels[Finalise_IF_assms]:
   apply (clarsimp simp: asid_pool_at_kheap partial_inv_def obj_at_def split: kernel_object.splits)
   done
 
-lemma thread_set_reads_respects[Finalise_IF_assms]:
+lemma thread_set_reads_respects[Arch_assms]:
   "reads_respects aag l \<top> (thread_set f thread)"
   unfolding thread_set_def
   apply (rule equiv_valid_guard_imp)
@@ -238,11 +238,11 @@ lemmas aag_cap_auth_subject = aag_cap_auth_ASIDPoolCap_asid
                               aag_cap_auth_PageTableCap_asid
                               aag_cap_auth_PageDirectoryCap_asid
 
-lemma prepare_thread_delete_reads_respects_f[Finalise_IF_assms]:
+lemma prepare_thread_delete_reads_respects_f[Arch_assms]:
   "reads_respects_f aag l \<top> (prepare_thread_delete thread)"
   unfolding prepare_thread_delete_def by wp
 
-lemma arch_finalise_cap_reads_respects[Finalise_IF_assms]:
+lemma arch_finalise_cap_reads_respects[Arch_assms]:
   "reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
                                          and K (pas_cap_cur_auth aag (ArchObjectCap cap)))
                         (arch_finalise_cap cap final)"
@@ -300,14 +300,14 @@ lemma set_irq_state_valid_global_objs:
   apply (fastforce simp: valid_global_objs_def)
   done
 
-lemma set_irq_state_globals_equiv[Finalise_IF_assms]:
+lemma set_irq_state_globals_equiv[Arch_assms]:
   "set_irq_state state irq \<lbrace>globals_equiv st\<rbrace>"
   apply (simp add: set_irq_state_def)
   apply (wp dmo_no_mem_globals_equiv maskInterrupt_no_mem maskInterrupt_no_exclusive modify_wp)
   apply (simp add: globals_equiv_interrupt_states_update)
   done
 
-lemma set_notification_globals_equiv[Finalise_IF_assms]:
+lemma set_notification_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    set_notification ptr ntfn
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -328,7 +328,7 @@ lemma pagebitsforsize_ge_2[simp]:
   "2 \<le> pageBitsForSize vmpage_size"
   by (induct vmpage_size; simp)
 
-lemma arch_finalise_cap_globals_equiv[Finalise_IF_assms]:
+lemma arch_finalise_cap_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv st and invs and valid_arch_cap cap\<rbrace>
    arch_finalise_cap cap b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -354,10 +354,10 @@ lemma mapM_x_swp_store_kernel_base_globals_equiv:
 declare arch_get_sanitise_register_info_def[simp]
 
 crunch prepare_thread_delete
-  for globals_equiv[Finalise_IF_assms, wp]: "globals_equiv st"
+  for globals_equiv[Arch_assms, wp]: "globals_equiv st"
   (wp: dxo_wp_weak)
 
-lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:
+lemma set_bound_notification_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    set_bound_notification ref ts
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -368,13 +368,14 @@ lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:
                dest: get_tcb_SomeD
               split: option.splits kernel_object.splits)+
 
+lemmas Finalise_IF_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Finalise_IF?: Finalise_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Finalise_IF_assms | solves \<open>wp only: Finalise_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Finalise_IF_assms | solves \<open>wp only: ARM.Finalise_IF_assms; simp\<close>)?)
 qed
 
 end

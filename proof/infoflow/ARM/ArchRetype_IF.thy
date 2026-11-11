@@ -10,7 +10,7 @@ begin
 
 context Arch begin global_naming ARM
 
-named_theorems Retype_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_IF locale *)
 
 lemma do_ipc_transfer_valid_arch_no_caps[wp]:
   "do_ipc_transfer s ep bg grt r \<lbrace>valid_arch_state\<rbrace>"
@@ -57,7 +57,7 @@ lemma cleanCacheRange_RAM_ev:
             cacheRangeOp_def cleanL2Range_def dsb_def cleanByVA_def
   by (wpsimp wp: machine_op_lift_ev mapM_x_ev')
 
-lemma clearMemory_ev[Retype_IF_assms]:
+lemma clearMemory_ev[Arch_assms]:
   "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) (\<lambda>_. True) (clearMemory ptr bits)"
   unfolding clearMemory_def
   apply (rule equiv_valid_guard_imp)
@@ -65,7 +65,7 @@ lemma clearMemory_ev[Retype_IF_assms]:
    apply (rule wp_post_taut | simp)+
   done
 
-lemma freeMemory_ev[Retype_IF_assms]:
+lemma freeMemory_ev[Arch_assms]:
   "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) (\<lambda>_. True) (freeMemory ptr bits)"
   unfolding freeMemory_def
   apply (rule equiv_valid_guard_imp)
@@ -99,12 +99,12 @@ lemma set_pd_reads_respects_g:
                        set_pd_reads_respects set_pd_globals_equiv)
 
 crunch clearMemory
-  for irq_state[Retype_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
+  for irq_state[Arch_assms, wp]: "\<lambda>s. P (irq_state s)"
   (wp: crunch_wps simp: crunch_simps storeWord_def cleanByVA_PoU_def
    ignore_del: clearMemory cleanL2Range dsb cleanByVA)
 
 crunch freeMemory
-  for irq_state[Retype_IF_assms, wp]: "\<lambda>s. P (irq_state s)"
+  for irq_state[Arch_assms, wp]: "\<lambda>s. P (irq_state s)"
   (wp: crunch_wps simp: crunch_simps storeWord_def)
 
 lemma get_object_arm_global_pd_revg:
@@ -238,7 +238,7 @@ lemma storeWord_globals_equiv:
   apply (clarsimp simp: globals_equiv_def idle_equiv_def)
   done
 
-lemma dmo_clearMemory_globals_equiv[Retype_IF_assms]:
+lemma dmo_clearMemory_globals_equiv[Arch_assms]:
   "do_machine_op (clearMemory ptr (2 ^ bits)) \<lbrace>globals_equiv s\<rbrace>"
   apply (simp add: do_machine_op_def clearMemory_def split_def cleanCacheRange_PoU_def)
   apply wpsimp
@@ -247,7 +247,7 @@ lemma dmo_clearMemory_globals_equiv[Retype_IF_assms]:
            simp: cleanCacheRange_RAM_def cleanL2Range_def dsb_def
                  cleanCacheRange_PoC_def cleanByVA_def)+
 
-lemma dmo_freeMemory_globals_equiv[Retype_IF_assms]:
+lemma dmo_freeMemory_globals_equiv[Arch_assms]:
   "do_machine_op (freeMemory ptr bits) \<lbrace>globals_equiv s\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: do_machine_op_def freeMemory_def split_def)
@@ -292,7 +292,7 @@ lemma init_arch_objects_globals_equiv:
   done
 
 (* FIXME: cleanup this proof *)
-lemma retype_region_globals_equiv[Retype_IF_assms]:
+lemma retype_region_globals_equiv[Arch_assms]:
   notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
                          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
@@ -366,26 +366,29 @@ lemma retype_region_globals_equiv[Retype_IF_assms]:
   apply (auto intro!: cte_wp_at_pspace_no_overlapI simp: range_cover_def word_bits_def)[1]
   done
 
-lemma no_irq_freeMemory[Retype_IF_assms]:
+lemma no_irq_freeMemory[Arch_assms]:
   "no_irq (freeMemory ptr sz)"
   apply (simp add: freeMemory_def)
   apply (wp no_irq_mapM_x no_irq_storeWord)
   done
 
-lemma equiv_asid_detype[Retype_IF_assms]:
+lemma equiv_asid_detype[Arch_assms]:
   "equiv_asid asid s s' \<Longrightarrow> equiv_asid asid (detype N s) (detype N s')"
   by (auto simp: equiv_asid_def)
+
+lemmas Retype_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Retype_IF?: Retype_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.Retype_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 context Arch begin global_naming ARM
+
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_IF_2 locale *)
 
 lemma detype_globals_equiv:
   "\<lbrace>globals_equiv st and ((\<lambda>s. arm_global_pd (arch_state s) \<notin> S) and (\<lambda>s. idle_thread s \<notin> S))\<rbrace>
@@ -569,7 +572,7 @@ lemma init_arch_objects_reads_respects_g:
   apply clarsimp
   done
 
-lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
+lemma invoke_untyped_reads_respects_g_wcap[Arch_assms]:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
                          atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost
                          atLeastatMost_empty_iff split_paired_Ex
@@ -751,13 +754,14 @@ lemma invoke_untyped_globals_equiv:
   apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state)
   done
 
+lemmas Retype_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Retype_IF_2?: Retype_IF_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_IF_assms)?)
+    by (unfold_locales; (fact ARM.Retype_IF_2_assms)?)
 qed
 
 context begin interpretation Arch .

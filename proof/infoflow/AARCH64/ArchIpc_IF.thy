@@ -10,15 +10,15 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Ipc_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Ipc_IF locale *)
 
-lemma lookup_ipc_buffer_reads_respects[Ipc_IF_assms]:
+lemma lookup_ipc_buffer_reads_respects[Arch_assms]:
   "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread))
                   (lookup_ipc_buffer is_receiver thread)"
   unfolding lookup_ipc_buffer_def
   by (wp thread_get_reads_respects get_cap_reads_respects | wpc | simp)+
 
-lemma as_user_equiv_but_for_labels[Ipc_IF_assms]:
+lemma as_user_equiv_but_for_labels[Arch_assms]:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L)\<rbrace>
    as_user thread f
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
@@ -27,7 +27,7 @@ lemma as_user_equiv_but_for_labels[Ipc_IF_assms]:
   apply (blast dest: get_tcb_not_asid_pool_at)
   done
 
-lemma storeWord_equiv_but_for_labels[Ipc_IF_assms]:
+lemma storeWord_equiv_but_for_labels[Arch_assms]:
   "\<lbrace>\<lambda>ms. equiv_but_for_labels aag L st (s\<lparr>machine_state := ms\<rparr>) \<and>
          for_each_byte_of_word (\<lambda>x. pasObjectAbs aag x \<in> L) p\<rbrace>
    storeWord p v
@@ -59,7 +59,7 @@ lemma storeWord_equiv_but_for_labels[Ipc_IF_assms]:
   apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues])
   done
 
-lemma set_thread_state_runnable_equiv_but_for_labels[Ipc_IF_assms]:
+lemma set_thread_state_runnable_equiv_but_for_labels[Arch_assms]:
   "runnable tst
    \<Longrightarrow> \<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L)\<rbrace>
        set_thread_state thread tst
@@ -71,7 +71,7 @@ lemma set_thread_state_runnable_equiv_but_for_labels[Ipc_IF_assms]:
   apply (fastforce dest: get_tcb_not_asid_pool_at simp: st_tcb_at_def obj_at_def)
   done
 
-lemma set_endpoint_equiv_but_for_labels[Ipc_IF_assms]:
+lemma set_endpoint_equiv_but_for_labels[Arch_assms]:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag epptr \<in> L)\<rbrace>
    set_endpoint epptr ep
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
@@ -86,7 +86,7 @@ lemma conj_imp:
   by fastforce
 
 (* basically clagged directly from lookup_ipc_buffer_has_auth *)
-lemma lookup_ipc_buffer_has_read_auth[Ipc_IF_assms]:
+lemma lookup_ipc_buffer_has_read_auth[Arch_assms]:
   "\<lbrace>pas_refined aag and valid_objs\<rbrace>
    lookup_ipc_buffer is_receiver thread
    \<lbrace>\<lambda>rv s. ipc_buffer_has_read_auth aag (pasObjectAbs aag thread) rv\<rbrace>"
@@ -116,7 +116,7 @@ lemma lookup_ipc_buffer_has_read_auth[Ipc_IF_assms]:
    apply (simp_all)
   done
 
-lemma cptrs_in_ipc_buffer[Ipc_IF_assms]:
+lemma cptrs_in_ipc_buffer[Arch_assms]:
   "\<lbrakk> n \<in> set [buffer_cptr_index ..< buffer_cptr_index + unat (mi_extra_caps mi)];
      is_aligned (p :: obj_ref) msg_align_bits;
      buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
@@ -130,7 +130,7 @@ lemma cptrs_in_ipc_buffer[Ipc_IF_assms]:
      apply (simp add: msg_align_bits' word_bits_def word_size_bits_def)+
   done
 
-lemma msg_in_ipc_buffer[Ipc_IF_assms]:
+lemma msg_in_ipc_buffer[Arch_assms]:
   "\<lbrakk> n = msg_max_length \<or> n < msg_max_length; is_aligned p msg_align_bits;
      unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
    \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits
@@ -148,7 +148,7 @@ lemma msg_in_ipc_buffer[Ipc_IF_assms]:
   apply (auto simp: msg_max_length_def)
   done
 
-lemma arch_derive_cap_reads_respects[Ipc_IF_assms]:
+lemma arch_derive_cap_reads_respects[Arch_assms]:
   "reads_respects aag l \<top> (arch_derive_cap cap)"
   unfolding arch_derive_cap_def fun_app_def
   apply (rule equiv_valid_guard_imp)
@@ -156,7 +156,7 @@ lemma arch_derive_cap_reads_respects[Ipc_IF_assms]:
   apply (simp)
   done
 
-lemma arch_derive_cap_rev[Ipc_IF_assms]:
+lemma arch_derive_cap_rev[Arch_assms]:
   "reads_equiv_valid_inv aag l \<top> (arch_derive_cap cap)"
   unfolding arch_derive_cap_def fun_app_def
   apply (rule equiv_valid_guard_imp)
@@ -164,7 +164,7 @@ lemma arch_derive_cap_rev[Ipc_IF_assms]:
   apply (simp)
   done
 
-lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
+lemma captransfer_in_ipc_buffer[Arch_assms]:
   "\<lbrakk> is_aligned (buf :: obj_ref) msg_align_bits; n \<in> {0..2} \<rbrakk>
    \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps)) * word_size
                                                                                   + n * word_size)
@@ -183,7 +183,7 @@ lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
   apply (fastforce intro: unat_less_helper word_leq_minus_one_le)
   done
 
-lemma mrs_in_ipc_buffer[Ipc_IF_assms]:
+lemma mrs_in_ipc_buffer[Arch_assms]:
   "\<lbrakk> n \<in> set [length msg_registers + 1 ..< Suc n'];
      is_aligned (buf :: obj_ref) msg_align_bits; n' < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
    \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range buf msg_align_bits"
@@ -200,7 +200,7 @@ lemma mrs_in_ipc_buffer[Ipc_IF_assms]:
   apply (fastforce split: if_split_asm)
   done
 
-lemma dmo_loadWord_reads_respects[Ipc_IF_assms]:
+lemma dmo_loadWord_reads_respects[Arch_assms]:
   "reads_respects aag l (K (for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) p))
                   (do_machine_op (loadWord p))"
   apply (rule gen_asm_ev)
@@ -222,7 +222,7 @@ lemma dmo_loadWord_reads_respects[Ipc_IF_assms]:
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 
-lemma complete_signal_reads_respects[Ipc_IF_assms]:
+lemma complete_signal_reads_respects[Arch_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects aag l (K (aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr))
                         (complete_signal ntfnptr receiver)"
@@ -230,7 +230,7 @@ lemma complete_signal_reads_respects[Ipc_IF_assms]:
   by (wp set_simple_ko_reads_respects get_simple_ko_reads_respects as_user_set_register_reads_respects'
       | wpc | simp)+
 
-lemma handle_arch_fault_reply_reads_respects[Ipc_IF_assms, wp]:
+lemma handle_arch_fault_reply_reads_respects[Arch_assms, wp]:
   "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   by (simp add: handle_arch_fault_reply_def, wp)
 
@@ -241,13 +241,13 @@ lemma arch_thread_get_reads_respects[wp]:
   apply (fastforce elim: reads_equivE affects_equivE equiv_forE simp: get_tcb_def split: option.splits)
   done
 
-lemma arch_get_sanitise_register_info_reads_respects[Ipc_IF_assms, wp]:
+lemma arch_get_sanitise_register_info_reads_respects[Arch_assms, wp]:
   "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
   by wpsimp
 
-declare arch_get_sanitise_register_info_inv[Ipc_IF_assms]
+declare arch_get_sanitise_register_info_inv[Arch_assms]
 
-lemma lookup_ipc_buffer_ptr_range'[Ipc_IF_assms]:
+lemma lookup_ipc_buffer_ptr_range'[Arch_assms]:
   "\<lbrace>valid_objs\<rbrace>
    lookup_ipc_buffer True thread
    \<lbrace>\<lambda>rv s. rv = Some buf' \<longrightarrow> auth_ipc_buffers s thread = ptr_range buf' msg_align_bits\<rbrace>"
@@ -263,7 +263,7 @@ lemma lookup_ipc_buffer_ptr_range'[Ipc_IF_assms]:
   apply (simp add: vm_read_write_def valid_tcb_def valid_ipc_buffer_cap_def split: bool.splits)
   done
 
-lemma lookup_ipc_buffer_aligned'[Ipc_IF_assms]:
+lemma lookup_ipc_buffer_aligned'[Arch_assms]:
   "\<lbrace>valid_objs\<rbrace>
    lookup_ipc_buffer True thread
    \<lbrace>\<lambda>rv s. rv = Some buf' \<longrightarrow> is_aligned buf' msg_align_bits\<rbrace>"
@@ -271,34 +271,37 @@ lemma lookup_ipc_buffer_aligned'[Ipc_IF_assms]:
   apply (fastforce simp: valid_def)
   done
 
-lemma handle_arch_fault_reply_globals_equiv[Ipc_IF_assms]:
+lemma handle_arch_fault_reply_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    handle_arch_fault_reply vmf thread x y
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (wpsimp simp: handle_arch_fault_reply_def)+
 
 crunch arch_get_sanitise_register_info, handle_arch_fault_reply
-  for valid_global_objs[Ipc_IF_assms, wp]: "valid_global_objs"
+  for valid_global_objs[Arch_assms, wp]: "valid_global_objs"
 
 crunch handle_arch_fault_reply
-  for valid_arch_state[Ipc_IF_assms,wp]: "\<lambda>s :: det_state. valid_arch_state s"
+  for valid_arch_state[Arch_assms,wp]: "\<lambda>s :: det_state. valid_arch_state s"
 
-lemma transfer_caps_loop_valid_arch[Ipc_IF_assms]:
+lemma transfer_caps_loop_valid_arch[Arch_assms]:
   "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
   by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
+
+lemmas Ipc_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Ipc_IF?: Ipc_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Ipc_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.Ipc_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma copy_mrs_reads_respects[Ipc_IF_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for Ipc_IF_2 locale *)
+
+lemma copy_mrs_reads_respects[Arch_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
   "reads_respects aag (l :: 'a subject_label)
@@ -331,13 +334,13 @@ lemma copy_mrs_reads_respects[Ipc_IF_assms]:
   apply (fastforce simp: image_def)
   done
 
-lemma get_message_info_reads_respects[Ipc_IF_assms]:
+lemma get_message_info_reads_respects[Arch_assms]:
   "reads_respects aag (l :: 'a subject_label) (K (aag_can_read_or_affect aag l ptr)) (get_message_info ptr)"
   apply (simp add: get_message_info_def)
   apply (wp as_user_reads_respects | clarsimp simp: getRegister_def)+
   done
 
-lemma do_normal_transfer_reads_respects[Ipc_IF_assms]:
+lemma do_normal_transfer_reads_respects[Arch_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
   "reads_respects aag (l :: 'a subject_label)
@@ -373,14 +376,14 @@ lemma do_normal_transfer_reads_respects[Ipc_IF_assms]:
               dest: reads_read_thread_read_pages split: option.splits)
   done
 
-lemma make_arch_fault_msg_reads_respects[Ipc_IF_assms]:
+lemma make_arch_fault_msg_reads_respects[Arch_assms]:
   "reads_respects aag (l :: 'a subject_label) (\<lambda>y. aag_can_read_or_affect aag l sender)
                   (make_arch_fault_msg x4 sender)"
   apply (case_tac x4)
   apply (wp as_user_reads_respects | simp add: det_getRegister det_getRestartPC)+
   done
 
-lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
+lemma set_mrs_equiv_but_for_labels[Arch_assms]:
   "\<lbrace>equiv_but_for_labels (aag :: 'a subject_label PAS) L st and
     K (pasObjectAbs aag thread \<in> L \<and>
        (case buf of (Some buf') \<Rightarrow> is_aligned buf' msg_align_bits \<and>
@@ -433,7 +436,7 @@ lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
   apply (fastforce dest: get_tcb_not_asid_pool_at)+
   done
 
-lemma set_mrs_reads_respects'[Ipc_IF_assms]:
+lemma set_mrs_reads_respects'[Arch_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
     "reads_respects aag (l :: 'a subject_label)
@@ -464,13 +467,14 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
    apply (rule set_mrs_ret_eq)
   by simp
 
+lemmas Ipc_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Ipc_IF_2?: Ipc_IF_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Ipc_IF_assms)?)
+    by (unfold_locales; (fact AARCH64.Ipc_IF_2_assms)?)
 qed
 
 end

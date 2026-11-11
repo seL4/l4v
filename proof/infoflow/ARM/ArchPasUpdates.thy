@@ -10,7 +10,7 @@ begin
 
 context Arch begin global_naming ARM
 
-named_theorems PasUpdates_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for PasUpdates_2 locale *)
 
 lemma state_asids_to_policy_aux_pasSubject_update:
   "state_asids_to_policy_aux (aag\<lparr>pasSubject := x\<rparr>) caps asid vrefs =
@@ -28,7 +28,7 @@ lemma state_asids_to_policy_aux_pasSubject_update:
                , assumption+)+
   done
 
-lemma state_asids_to_policy_pasSubject_update[PasUpdates_assms]:
+lemma state_asids_to_policy_pasSubject_update[Arch_assms]:
   "state_asids_to_policy (aag\<lparr>pasSubject := x\<rparr>) s =
    state_asids_to_policy aag s"
   by (simp add: state_asids_to_policy_aux_pasSubject_update)
@@ -49,7 +49,7 @@ lemma state_asids_to_policy_aux_pasMayActivate_update:
                , assumption+)+
   done
 
-lemma state_asids_to_policy_pasMayActivate_update[PasUpdates_assms]:
+lemma state_asids_to_policy_pasMayActivate_update[Arch_assms]:
   "state_asids_to_policy (aag\<lparr>pasMayActivate := x\<rparr>) s =
    state_asids_to_policy aag s"
   by (simp add: state_asids_to_policy_aux_pasMayActivate_update)
@@ -70,21 +70,22 @@ lemma state_asids_to_policy_aux_pasMayEditReadyQueues_update:
                , assumption+)+
   done
 
-lemma state_asids_to_policy_pasMayEditReadyQueues_update[PasUpdates_assms]:
+lemma state_asids_to_policy_pasMayEditReadyQueues_update[Arch_assms]:
   "state_asids_to_policy (aag\<lparr>pasMayEditReadyQueues := x\<rparr>) s =
    state_asids_to_policy aag s"
   by (simp add: state_asids_to_policy_aux_pasMayEditReadyQueues_update)
 
-declare arch_post_set_flags_inv[PasUpdates_assms]
-declare arch_prepare_set_domain_inv[PasUpdates_assms]
+declare arch_post_set_flags_inv[Arch_assms]
+declare arch_prepare_set_domain_inv[Arch_assms]
+
+lemmas PasUpdates_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation PasUpdates_2?: PasUpdates
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact PasUpdates_assms)?)
+    by (unfold_locales; (fact ARM.PasUpdates_2_assms)?)
 qed
 
 end

@@ -11,7 +11,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Interrupt_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Interrupt_AC locale *)
 
 definition arch_authorised_irq_ctl_inv ::
   "'a PAS \<Rightarrow> Invocations_A.arch_irq_control_invocation \<Rightarrow> bool" where
@@ -23,7 +23,7 @@ definition arch_authorised_irq_ctl_inv ::
      | IssueSGISignal irq argets x1 x2 \<Rightarrow>
         is_subject aag (fst x1) \<and> is_subject aag (fst x2)"
 
-lemma arch_invoke_irq_control_pas_refined[Interrupt_AC_assms]:
+lemma arch_invoke_irq_control_pas_refined[Arch_assms]:
   "\<lbrace>pas_refined aag and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
                     and K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
    arch_invoke_irq_control irq_ctl_inv
@@ -35,13 +35,13 @@ lemma arch_invoke_irq_control_pas_refined[Interrupt_AC_assms]:
                       arch_irq_control_inv_valid_def)
   done
 
-lemma arch_invoke_irq_handler_pas_refined[Interrupt_AC_assms]:
+lemma arch_invoke_irq_handler_pas_refined[Arch_assms]:
   "\<lbrace>pas_refined aag and invs and (\<lambda>s. interrupt_states s x1 \<noteq> IRQInactive)\<rbrace>
    arch_invoke_irq_handler (ACKIrq x1)
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wpsimp split_del: if_split)
 
-lemma arch_invoke_irq_control_respects[Interrupt_AC_assms]:
+lemma arch_invoke_irq_control_respects[Arch_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (arch_authorised_irq_ctl_inv aag acinv)\<rbrace>
    arch_invoke_irq_control acinv
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -56,14 +56,16 @@ lemma integrity_irq_masks[iff]:
    integrity aag X st s"
   by (simp add: integrity_def integrity_arch_kh_upds)
 
-lemma arch_invoke_irq_handler_respects[Interrupt_AC_assms]:
+lemma arch_invoke_irq_handler_respects[Arch_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs\<rbrace>
    arch_invoke_irq_handler (ACKIrq x1)
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wpsimp simp: deactivateInterrupt_def maskInterrupt_def
                wp: dmo_wp mol_respects split_del: if_split)
 
-declare arch_check_irq_inv[Interrupt_AC_assms]
+declare arch_check_irq_inv[Arch_assms]
+
+lemmas Interrupt_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -71,14 +73,15 @@ arch_requalify_consts arch_authorised_irq_ctl_inv
 
 global_interpretation Interrupt_AC?: Interrupt_AC "arch_authorised_irq_ctl_inv"
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Interrupt_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Interrupt_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-lemma arch_decode_irq_control_invocation_authorised[Interrupt_AC_assms]:
+clear_named_theorems Arch_assms (* accumulate assumptions for Interrupt_AC_2 locale *)
+
+lemma arch_decode_irq_control_invocation_authorised[Arch_assms]:
   "\<lbrace>pas_refined aag and
     K (is_subject aag (fst slot) \<and> (\<forall>cap \<in> set caps. pas_cap_cur_auth aag cap) \<and>
        (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag))\<rbrace>
@@ -95,13 +98,14 @@ lemma arch_decode_irq_control_invocation_authorised[Interrupt_AC_assms]:
                     pas_refined_all_auth_is_owns aag_cap_auth_def)
   done
 
+lemmas Interrupt_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Interrupt_AC_2?: Interrupt_AC_2 "arch_authorised_irq_ctl_inv"
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Interrupt_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Interrupt_AC_2_assms)?)
 qed
 
 end

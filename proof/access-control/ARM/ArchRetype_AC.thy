@@ -65,10 +65,10 @@ end (* retype_region_proofs *)
 
 context Arch begin arch_global_naming
 
-named_theorems Retype_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_AC locale *)
 
-declare retype_region_proofs.vrefs_eq[Retype_AC_assms]
-declare retype_region_proofs'.pas_refined[Retype_AC_assms]
+declare retype_region_proofs.vrefs_eq[Arch_assms]
+declare retype_region_proofs'.pas_refined[Arch_assms]
 
 crunch set_pd
   for integrity_autarch: "integrity aag X st"
@@ -104,25 +104,25 @@ lemma copy_global_mappings_integrity:
    apply wpsimp+
   done
 
-lemma state_vrefs_detype[Retype_AC_assms, dest]:
+lemma state_vrefs_detype[Arch_assms, dest]:
   "x \<in> state_vrefs (detype R s) p \<Longrightarrow> x \<in> state_vrefs s p"
   unfolding state_vrefs_def
   by (clarsimp simp: detype_def split: if_splits)
 
-lemma sata_detype[Retype_AC_assms]:
+lemma sata_detype[Arch_assms]:
   "state_asids_to_policy aag (detype R s) \<subseteq> state_asids_to_policy aag s"
   apply (clarsimp)
   apply (erule state_asids_to_policy_aux.induct)
   apply (auto intro: state_asids_to_policy_aux.intros split: if_split_asm)
   done
 
-lemma word_size_bits_untyped_min_bits[Retype_AC_assms]: "word_size_bits \<le> untyped_min_bits"
+lemma word_size_bits_untyped_min_bits[Arch_assms]: "word_size_bits \<le> untyped_min_bits"
   by (simp add: word_size_bits_def untyped_min_bits_def)
 
-lemma word_size_bits_resetChunkBits[Retype_AC_assms]: "word_size_bits \<le> resetChunkBits"
+lemma word_size_bits_resetChunkBits[Arch_assms]: "word_size_bits \<le> resetChunkBits"
   by (simp add: word_size_bits_def Kernel_Config.resetChunkBits_def)
 
-lemma clas_default_cap[Retype_AC_assms]:
+lemma clas_default_cap[Arch_assms]:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
   unfolding cap_links_asid_slot_def
   apply (cases tp, simp_all)
@@ -130,13 +130,13 @@ lemma clas_default_cap[Retype_AC_assms]:
   apply (case_tac aobject_type, simp_all add: arch_default_cap_def)
   done
 
-lemma cli_default_cap[Retype_AC_assms]:
+lemma cli_default_cap[Arch_assms]:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_irq aag p (default_cap tp p' sz dev)"
   unfolding cap_links_irq_def
   apply (cases tp, simp_all)
   done
 
-lemma aobj_refs'_default'[Retype_AC_assms]:
+lemma aobj_refs'_default'[Arch_assms]:
   "is_aligned oref (obj_bits_api (ArchObject tp) sz)
    \<Longrightarrow> aobj_ref' (arch_default_cap tp oref sz dev) \<subseteq> ptr_range oref (obj_bits_api (ArchObject tp) sz)"
   by (cases tp; simp add: arch_default_cap_def ptr_range_memI obj_bits_api_def default_arch_object_def)
@@ -205,7 +205,7 @@ lemma copy_global_invs_mappings_restricted':
   apply (simp add: insert_absorb)
   done
 
-lemma init_arch_objects_pas_refined[Retype_AC_assms]:
+lemma init_arch_objects_pas_refined[Arch_assms]:
   "\<lbrace>pas_refined aag and post_retype_invs tp refs and (\<lambda>s. \<forall>x\<in>set refs. x \<notin> global_refs s)
                     and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api tp obj_sz))\<rbrace>
    init_arch_objects tp dev ptr bits obj_sz refs
@@ -263,7 +263,7 @@ crunch freeMemory
   for pspace_respects_device_region[wp]: "\<lambda>ms. P (device_state ms)"
   (wp: crunch_wps)
 
-lemma dmo_freeMemory_invs[Retype_AC_assms]:
+lemma dmo_freeMemory_invs[Arch_assms]:
   "do_machine_op (freeMemory ptr bits) \<lbrace>invs\<rbrace>"
   apply (simp add: do_machine_op_def invs_def valid_state_def cur_tcb_def | wp | wpc)+
   apply (clarsimp)
@@ -281,32 +281,32 @@ crunch delete_objects
   for global_refs[wp]: "\<lambda>s. P (global_refs s)"
   (ignore: do_machine_op freeMemory)
 
-lemma init_arch_objects_pas_cur_domain[Retype_AC_assms, wp]:
+lemma init_arch_objects_pas_cur_domain[Arch_assms, wp]:
   "init_arch_objects tp dev ptr n us refs \<lbrace>pas_cur_domain aag\<rbrace>"
   by wp
 
-lemma retype_region_pas_cur_domain[Retype_AC_assms, wp]:
+lemma retype_region_pas_cur_domain[Arch_assms, wp]:
   "retype_region ptr n us tp dev \<lbrace>pas_cur_domain aag\<rbrace>"
   by wp
 
-lemma reset_untyped_cap_pas_cur_domain[Retype_AC_assms, wp]:
+lemma reset_untyped_cap_pas_cur_domain[Arch_assms, wp]:
   "reset_untyped_cap src_slot \<lbrace>pas_cur_domain aag\<rbrace>"
   by wp
 
-lemma arch_post_reset_untyped_integrity[Retype_AC_assms, wp]:
+lemma arch_post_reset_untyped_integrity[Arch_assms, wp]:
   "arch_post_reset_untyped dev sz \<lbrace>integrity aag X st\<rbrace>"
   unfolding arch_post_reset_untyped_def
   by (wpsimp simp: dmo_bind_valid dsb_def invalidate_I_PoU_def isb_def)
 
-lemma arch_data_to_obj_type_not_ASIDPoolObj[Retype_AC_assms, simp]:
+lemma arch_data_to_obj_type_not_ASIDPoolObj[Arch_assms, simp]:
   "arch_data_to_obj_type v \<noteq> Some ASIDPoolObj"
   by (clarsimp simp: arch_data_to_obj_type_def)
 
-lemma data_to_nat_of_nat[Retype_AC_assms, simp]:
+lemma data_to_nat_of_nat[Arch_assms, simp]:
   "of_nat (data_to_nat x) = x"
   by simp
 
-lemma nonzero_data_to_nat_simp[Retype_AC_assms]:
+lemma nonzero_data_to_nat_simp[Arch_assms]:
   "0 < data_to_nat x \<Longrightarrow> 0 < x"
   by (auto dest: word_of_nat_less)
 
@@ -322,7 +322,7 @@ lemma storeWord_integrity_autarch:
   done
 
 (* TODO: proof has mainly been copied from dmo_clearMemory_respects *)
-lemma dmo_freeMemory_respects[Retype_AC_assms]:
+lemma dmo_freeMemory_respects[Arch_assms]:
   "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits \<and>
                               (\<forall>p \<in> ptr_range ptr bits. is_subject aag p))\<rbrace>
    do_machine_op (freeMemory ptr bits)
@@ -358,7 +358,7 @@ lemma storeWord_respects:
             intro!: trm_write ptr_range_memI ptr_range_add_memI)
   done
 
-lemma dmo_clearMemory_respects'[Retype_AC_assms]:
+lemma dmo_clearMemory_respects'[Arch_assms]:
   "\<lbrace>integrity aag X st and
     K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits \<and>
        (\<forall>p \<in> ptr_range ptr bits. aag_has_auth_to aag Write p))\<rbrace>
@@ -405,7 +405,7 @@ lemma dmo_mapM_x_cleanCacheRange_PoU_integrity:
   "do_machine_op (mapM_x (\<lambda>x. cleanCacheRange_PoU (f x) (g x) (h x)) refs) \<lbrace>integrity aag X st\<rbrace>"
   by (wp dmo_mapM_x_wp_inv)
 
-lemma init_arch_objects_integrity[Retype_AC_assms]:
+lemma init_arch_objects_integrity[Arch_assms]:
   "\<lbrace>integrity aag X st and K (\<forall>x\<in>set refs. is_subject aag x)
                        and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
    init_arch_objects new_type dev ptr num_objects obj_sz refs
@@ -417,7 +417,7 @@ lemma init_arch_objects_integrity[Retype_AC_assms]:
               simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
   done
 
-lemma integrity_asids_detype[Retype_AC_assms]:
+lemma integrity_asids_detype[Arch_assms]:
   assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
   shows
     "integrity_asids aag subjects x a (detype refs s) s' =
@@ -426,7 +426,7 @@ lemma integrity_asids_detype[Retype_AC_assms]:
      integrity_asids aag subjects x a s s'"
   by (auto simp: integrity_asids_def detype_def refs opt_map_def)
 
-lemma retype_region_integrity_asids[Retype_AC_assms]:
+lemma retype_region_integrity_asids[Arch_assms]:
   "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
      \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
    \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
@@ -435,16 +435,17 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
                           else kheap s a\<rparr>)"
   by (clarsimp simp: integrity_asids_def opt_map_def)
 
-declare state_hyp_refs_of_detype[Retype_AC_assms]
+declare state_hyp_refs_of_detype[Arch_assms]
+
+lemmas Retype_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Retype_AC?: Retype_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_AC_assms | solves \<open>rule integrity_arch_triv\<close>
-                                              | solves \<open>wp only: Retype_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Retype_AC_assms | solves \<open>rule integrity_arch_triv\<close>
+                                              | solves \<open>wp only: ARM.Retype_AC_assms; simp\<close>)?)
 qed
 
 end
