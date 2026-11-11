@@ -90,7 +90,8 @@ definition for_each_byte_of_word :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> 
 locale InfoFlow_IF =
   fixes identical_hyp_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
   and identical_fpu_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
-  \<comment> \<open>equiv_asids lemmas\<close>
+  and non_asid_pool_kheap_update :: "det_state \<Rightarrow> (obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> bool"
+ \<comment> \<open>equiv_asids lemmas\<close>
   assumes equiv_asids_refl:
     "equiv_asids R s s"
   assumes equiv_asids_sym:

@@ -347,15 +347,6 @@ lemma hoare_add_postE:
   apply (simp add: case_junk)
   done
 
-lemma store_word_offs_globals_equiv:
-  "store_word_offs ptr offs v \<lbrace>globals_equiv s\<rbrace>"
-  unfolding store_word_offs_def fun_app_def
-  apply (wp do_machine_op_globals_equiv)
-     apply clarsimp
-     apply (erule use_valid[OF _ storeWord_globals_equiv])
-     apply (wp | simp | force)+
-  done
-
 lemma restrict_eq_asn_none: "f(N := None) = f |` {s. s \<noteq> N}" by auto
 
 crunch cap_swap_for_delete
@@ -462,7 +453,21 @@ locale Arch_IF =
     "\<And>P. equiv_hyp P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_hyp P st (s\<lparr>machine_state := ms\<rparr>)"
   assumes equiv_fpu_machine_state_rest_update[simp]:
     "\<And>P. equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
+  assumes storeWord_globals_equiv:
+  "storeWord p v \<lbrace>\<lambda>ms. globals_equiv st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
+  (* used later in Interrupt_IF and Tcb_IF, defined here since Arch_IF is a common ancestor *)
+  assumes arch_post_cap_deletion_valid_global_objs:
+    "arch_post_cap_deletion ac \<lbrace>valid_global_objs\<rbrace>"
 begin
+
+lemma store_word_offs_globals_equiv:
+  "store_word_offs ptr offs v \<lbrace>globals_equiv s\<rbrace>"
+  unfolding store_word_offs_def fun_app_def
+  apply (wp do_machine_op_globals_equiv)
+     apply clarsimp
+     apply (erule use_valid[OF _ storeWord_globals_equiv])
+     apply (wp | simp | force)+
+  done
 
 crunch empty_slot
   for valid_global_refs[wp]: "\<lambda>s :: det_state. valid_global_refs s"

@@ -10,20 +10,20 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Tcb_AC_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_AC locale *)
 
-declare arch_get_sanitise_register_info_inv[Tcb_AC_assms]
+declare arch_get_sanitise_register_info_inv[Arch_assms]
 
 crunch arch_post_modify_registers
-  for pas_refined[Tcb_AC_assms, wp]: "pas_refined aag"
+  for pas_refined[Arch_assms, wp]: "pas_refined aag"
 
-lemma arch_post_modify_registers_respects[Tcb_AC_assms]:
+lemma arch_post_modify_registers_respects[Arch_assms]:
   "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
    arch_post_modify_registers cur t
    \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   by wpsimp
 
-lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
+lemma invoke_tcb_tc_respects_aag[Arch_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
                        and tcb_inv_wf (ThreadControl t sl ep mcp priority croot vroot buf)
                        and K (authorised_tcb_inv aag (ThreadControl t sl ep mcp priority croot vroot buf))\<rbrace>
@@ -93,17 +93,18 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
   done
 
 crunch arch_post_set_flags
-  for integrity[Tcb_AC_assms,wp]: "integrity aag X st"
-  and pas_refined[Tcb_AC_assms,wp]: "pas_refined aag"
+  for integrity[Arch_assms,wp]: "integrity aag X st"
+  and pas_refined[Arch_assms,wp]: "pas_refined aag"
   (simp: crunch_simps)
+
+lemmas Tcb_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Tcb_AC?: Tcb_AC
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Tcb_AC_assms)?)
+    by (unfold_locales; (fact AARCH64.Tcb_AC_assms)?)
 qed
 
 end

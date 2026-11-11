@@ -8,18 +8,18 @@ theory ArchInterrupt_IF
 imports Interrupt_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
-named_theorems Interrupt_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Interrupt_IF locale *)
 
-lemma arch_invoke_irq_handler_reads_respects[Interrupt_IF_assms, wp]:
+lemma arch_invoke_irq_handler_reads_respects[Arch_assms, wp]:
   "reads_respects_f aag l (silc_inv aag st) (arch_invoke_irq_handler irq)"
   apply (cases irq; wpsimp simp: plic_complete_claim_def)
   apply (rule reads_respects_f[OF dmo_mol_reads_respects, where Q=\<top>, simplified])
   apply wpsimp
   done
 
-lemma arch_invoke_irq_control_reads_respects[Interrupt_IF_assms]:
+lemma arch_invoke_irq_control_reads_respects[Arch_assms]:
   "reads_respects aag (l :: 'a subject_label) (K (arch_authorised_irq_ctl_inv aag i))
                   (arch_invoke_irq_control i)"
   apply (cases i)
@@ -28,7 +28,7 @@ lemma arch_invoke_irq_control_reads_respects[Interrupt_IF_assms]:
   apply (clarsimp simp: arch_authorised_irq_ctl_inv_def)
   done
 
-lemma arch_invoke_irq_control_globals_equiv[Interrupt_IF_assms]:
+lemma arch_invoke_irq_control_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    arch_invoke_irq_control ai
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -38,17 +38,18 @@ lemma arch_invoke_irq_control_globals_equiv[Interrupt_IF_assms]:
                     cap_insert_globals_equiv dmo_mol_globals_equiv)
   done
 
-lemma arch_invoke_irq_handler_globals_equiv[Interrupt_IF_assms, wp]:
+lemma arch_invoke_irq_handler_globals_equiv[Arch_assms, wp]:
   "arch_invoke_irq_handler irq \<lbrace>globals_equiv st\<rbrace>"
   by (cases irq; wpsimp wp: dmo_no_mem_globals_equiv simp: plic_complete_claim_def)
+
+lemmas Interrupt_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Interrupt_IF?: Interrupt_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Interrupt_IF_assms)?)
+    by (unfold_locales; (fact RISCV64.Interrupt_IF_assms)?)
 qed
 
 end

@@ -8,18 +8,18 @@ theory ArchDecode_IF
 imports Decode_IF
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
-named_theorems Decode_IF_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Decode_IF locale *)
 
-lemma data_to_obj_type_rev[Decode_IF_assms]:
+lemma data_to_obj_type_rev[Arch_assms]:
   "reads_equiv_valid_inv A aag \<top> (data_to_obj_type type)"
   unfolding data_to_obj_type_def fun_app_def arch_data_to_obj_type_def
   apply (wp | wpc)+
   apply simp
   done
 
-lemma check_valid_ipc_buffer_rev[Decode_IF_assms]:
+lemma check_valid_ipc_buffer_rev[Arch_assms]:
   "reads_equiv_valid_inv A aag \<top> (check_valid_ipc_buffer vptr cap)"
   unfolding check_valid_ipc_buffer_def fun_app_def
   apply (rule equiv_valid_guard_imp)
@@ -27,18 +27,18 @@ lemma check_valid_ipc_buffer_rev[Decode_IF_assms]:
   apply simp
   done
 
-lemma arch_check_irq_rev[Decode_IF_assms, wp]:
+lemma arch_check_irq_rev[Arch_assms, wp]:
   "reads_equiv_valid_inv A aag \<top> (arch_check_irq irq)"
   unfolding arch_check_irq_def
   apply (rule equiv_valid_guard_imp)
    apply wpsimp+
   done
 
-lemma vspace_cap_rights_to_auth_mono[Decode_IF_assms]:
+lemma vspace_cap_rights_to_auth_mono[Arch_assms]:
   "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R exec \<subseteq> vspace_cap_rights_to_auth S exec"
   by (auto simp: vspace_cap_rights_to_auth_def)
 
-lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
+lemma arch_decode_irq_control_invocation_rev[Arch_assms]:
   "reads_equiv_valid_inv A aag
      (pas_refined aag and
       K (is_subject aag (fst slot) \<and> (\<forall>cap\<in>set caps. pas_cap_cur_auth aag cap) \<and>
@@ -61,18 +61,22 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
   apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
   done
 
-requalify_facts check_valid_ipc_buffer_inv
+lemmas [Arch_assms] =
+  check_valid_ipc_buffer_inv
+
+lemmas Decode_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Decode_IF?: Decode_IF
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Decode_IF_assms)?)
+    by (unfold_locales; (fact ARM.Decode_IF_assms)?)
 qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
+
+clear_named_theorems Arch_assms (* accumulate assumptions for Decode_IF_2 locale *)
 
 lemma ensure_safe_mapping_reads_respects:
   "reads_respects aag l (K (authorised_slots aag entries)) (ensure_safe_mapping entries)"
@@ -204,7 +208,7 @@ lemma lookup_pd_slot_aligned_pd:
   using vaddr_segment_nonsense2
   by (simp add: lookup_pd_slot_def pd_bits_def pageBits_def)
 
-lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
+lemma arch_decode_invocation_reads_respects_f[Arch_assms]:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
   notes whenE_wps[wp_split del]
   shows
@@ -374,13 +378,14 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   apply assumption
   done
 
+lemmas Decode_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Decode_IF_2?: Decode_IF_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Decode_IF_assms)?)
+    by (unfold_locales; (fact ARM.Decode_IF_2_assms)?)
 qed
 
 end

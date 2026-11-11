@@ -72,10 +72,4 @@ definition equiv_fpu :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<
 
 end (* Arch *)
 
-requalify_consts
-  RISCV64.equiv_asid
-  RISCV64.equiv_asid'
-  RISCV64.arch_globals_equiv
-  RISCV64.non_asid_pool_kheap_update
-
 end

@@ -1711,6 +1711,29 @@ lemma as_user_tcb_in_fault_reply:
 
 end (* Ipc_AC *)
 
+context is_extended begin
+
+lemma list_integ_lift_in_ipc:
+  assumes li:
+    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
+     f
+     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
+  shows
+    "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
+     f
+     \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
+  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def])
+  apply (simp del: split_paired_All)
+  apply (rule hoare_pre)
+   apply (simp only: integrity_cdt_list_as_list_integ)
+   apply (simp add: tcb_states_of_state_def get_tcb_def)
+   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])
+  apply (simp only: integrity_cdt_list_as_list_integ)
+  apply (clarsimp simp: tcb_states_of_state_def get_tcb_def fun_upd_def)
+  done
+
+end (* is_extended *)
+
 locale Ipc_AC_2 = Ipc_AC +
   assumes store_word_offs_respects_in_ipc:
     "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -1758,13 +1781,6 @@ locale Ipc_AC_2 = Ipc_AC +
      \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
   assumes auth_ipc_buffers_machine_state_update[simp]:
     "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers (s :: det_state)"
-  assumes empty_slot_extended_list_integ_lift_in_ipc:
-    "\<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-       empty_slot_ext a b
-       \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
-         empty_slot_ext a b
-         \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   assumes handle_arch_fault_reply_integrity_tcb_in_fault_reply[wp]:
     "handle_arch_fault_reply vmf thread d ds
      \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
@@ -2562,7 +2578,7 @@ lemma empty_slot_respects_in_ipc_autarch:
   unfolding empty_slot_def post_cap_deletion_def
   apply simp
   apply (wp add: set_cap_respects_in_ipc_autarch set_original_respects_in_ipc_autarch)
-       apply (wpsimp wp: empty_slot_extended_list_integ_lift_in_ipc empty_slot_list_integrity')
+       apply (wpsimp wp: empty_slot_extended.list_integ_lift_in_ipc empty_slot_list_integrity')
           apply simp
          apply wp+
       apply (wp set_cdt_empty_slot_respects_in_ipc_autarch)

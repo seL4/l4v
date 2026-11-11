@@ -11,10 +11,10 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DomainSepInv_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DomainSepInv locale *)
 
 crunch arch_post_cap_deletion, set_pt, set_asid_pool, init_arch_objects
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv crunch_wps set_asid_pool_cte_wp_at set_pt_cte_wp_at)
 
 crunch vcpu_update
@@ -26,23 +26,23 @@ crunch vcpu_save_reg, vcpu_invalidate_active, dissociate_vcpu_tcb, fpu_release
   (wp: crunch_wps)
 
 crunch prepare_thread_delete
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv crunch_wps)
 
 crunch arch_finalise_cap
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma arch_finalise_cap_rv[DomainSepInv_assms]:
+lemma arch_finalise_cap_rv[Arch_assms]:
   "\<lbrace>\<lambda>_. P (NullCap,NullCap)\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>rv _. P rv\<rbrace>"
   unfolding arch_finalise_cap_def by wpsimp
 
-lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
+lemma arch_derive_cap_domain_sep_inv[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. domain_sep_inv_cap irqs rv\<rbrace>,-"
   unfolding arch_derive_cap_def
   by wpsimp
 
-lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
+lemma arch_post_modify_registers_domain_sep_inv[Arch_assms, wp]:
   "arch_post_modify_registers cur t \<lbrace>domain_sep_inv irqs st\<rbrace>"
   unfolding arch_post_modify_registers_def by wpsimp
 
@@ -58,19 +58,22 @@ crunch handle_vm_fault, handle_vm_fault, perform_pg_inv_unmap,
        arch_switch_to_idle_thread, arch_activate_idle_thread, store_asid_pool_entry,
        arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags,
        handle_spurious_irq
-  for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps)
+
+lemmas DomainSepInv_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact DomainSepInv_assms)?)
+    by (unfold_locales; (fact AARCH64.DomainSepInv_assms)?)
 qed
 
 context Arch begin arch_global_naming
+
+clear_named_theorems Arch_assms (* accumulate assumptions for DomainSepInv_2 locale *)
 
 crunch perform_pg_inv_map, perform_flush
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
@@ -127,7 +130,7 @@ lemma perform_vcpu_invocation_domain_sep_inv[wp]:
   unfolding perform_vcpu_invocation_def
   by wpsimp
 
-lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:
+lemma arch_perform_invocation_domain_sep_inv[Arch_assms]:
   "\<lbrace>domain_sep_inv irqs st and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
    \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs st s\<rbrace>"
@@ -139,11 +142,11 @@ lemma arch_perform_invocation_domain_sep_inv[DomainSepInv_assms]:
   apply (clarsimp simp: valid_arch_inv_def split: arch_invocation.splits)
   done
 
-lemma arch_invoke_irq_handler_domain_sep_inv[DomainSepInv_assms, wp]:
+lemma arch_invoke_irq_handler_domain_sep_inv[Arch_assms, wp]:
   "arch_invoke_irq_handler ihi \<lbrace>domain_sep_inv irqs st\<rbrace>"
   by (cases ihi; wpsimp split_del: if_split)
 
-lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
+lemma arch_invoke_irq_control_domain_sep_inv[Arch_assms]:
   "\<lbrace>domain_sep_inv irqs st and arch_irq_control_inv_valid ivk\<rbrace>
    arch_invoke_irq_control ivk
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
@@ -159,17 +162,20 @@ crunch handle_reserved_irq, handle_hypervisor_fault
   "\<lambda>s :: det_state. domain_sep_inv irqs (st :: 's :: state_ext state) s"
   (wp: crunch_wps simp: crunch_simps vcpu_update_def valid_vcpu_def valid_fault_def)
 
+declare handle_spurious_irq_domain_sep_inv[Arch_assms]
+
 \<comment> \<open>Remove the parentheses\<close>
-declare handle_reserved_irq_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
-declare handle_hypervisor_fault_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
+declare handle_reserved_irq_domain_sep_inv[simplified and_assoc, Arch_assms]
+declare handle_hypervisor_fault_domain_sep_inv[simplified and_assoc, Arch_assms]
+
+lemmas DomainSepInv_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact DomainSepInv_assms)?)
+    by (unfold_locales; (fact AARCH64.DomainSepInv_2_assms)?)
 qed
 
 end
