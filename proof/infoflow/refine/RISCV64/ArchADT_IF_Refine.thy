@@ -10,8 +10,6 @@ begin
 
 context Arch begin global_naming RISCV64
 
-clear_named_theorems Arch_assms (* accumulate assumptions for ADT_IF_Refine locale *)
-
 defs arch_extras_def:
   "arch_extras \<equiv> \<lambda>s. True"
 
@@ -419,8 +417,7 @@ lemmas ADT_IF_Refine_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-requalify_consts
-  RISCV64.doUserOp_if
+arch_requalify_consts doUserOp_if
 
 global_interpretation ADT_IF_Refine?: ADT_IF_Refine doUserOp_if
 proof goal_cases

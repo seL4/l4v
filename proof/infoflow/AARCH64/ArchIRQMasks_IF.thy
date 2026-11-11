@@ -330,15 +330,4 @@ proof goal_cases
     by (unfold_locales; (fact AARCH64.IRQMasks_IF_2_assms)?)
 qed
 
-(* FIXME AARCH64 IF: add to interface *)
-arch_requalify_facts
-  init_arch_objects_irq_masks
-  arch_activate_idle_thread_irq_masks
-  retype_region_irq_masks
-
-declare
-  init_arch_objects_irq_masks[wp]
-  arch_activate_idle_thread_irq_masks[wp]
-  retype_region_irq_masks[wp]
-
 end

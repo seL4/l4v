@@ -8,7 +8,7 @@ theory ArchTcb_IF
 imports Tcb_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_IF locale *)
 
@@ -68,6 +68,11 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Arch_assms, wp]:
   "reads_respects_f aag l \<top> (arch_get_sanitise_register_info rv)"
   by wpsimp
 
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "reads_respects_f aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
+  by wpsimp
+
 lemmas Tcb_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -75,10 +80,10 @@ end (* Arch *)
 global_interpretation Tcb_IF?: Tcb_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Tcb_IF_assms | solves \<open>wp only: RISCV64.Tcb_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Tcb_IF_assms)?)
 qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_IF_2 locale *)
 
@@ -251,11 +256,23 @@ lemma tc_reads_respects_f[Arch_assms]:
                      det_setRegister option.disc_eq_case[symmetric]
               split: cap.splits arch_cap.splits option.split)+
 
-lemma arch_post_set_flags_reads_respects_f[Arch_assms]:
+lemma arch_post_set_flags_reads_respects_f[wp]:
   "reads_respects_f aag l \<top> (arch_post_set_flags t flags)"
   unfolding arch_post_set_flags_def by wpsimp
 
-declare arch_post_set_flags_inv[Arch_assms]
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "pas_domains_distinct aag \<Longrightarrow>
+   reads_respects_f aag l (silc_inv aag st and valid_cur_fpu and K (is_subject aag t)) (arch_post_set_flags t flags)"
+  by wpsimp
+
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows arch_post_set_flags_globals_equiv[wp]:
+    "\<lbrace>globals_equiv st and invs\<rbrace>
+     arch_post_set_flags t flags
+     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  by wpsimp+
 
 lemmas Tcb_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -264,7 +281,7 @@ end (* Arch *)
 global_interpretation Tcb_IF_2?: Tcb_IF_2
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Tcb_IF_2_assms | solves \<open>wp only: RISCV64.Tcb_IF_2_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Tcb_IF_2_assms)?)
 qed
 
 end

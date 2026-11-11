@@ -52,7 +52,7 @@ end (* Arch *)
 global_interpretation Arch_AC?: Arch_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.Arch_AC_assms | solves \<open>wp only: ARM.Arch_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Arch_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -1023,7 +1023,6 @@ lemma set_thread_state_authorised_arch_inv[Arch_assms,wp]:
 lemmas Arch_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
-
 
 arch_requalify_consts authorised_arch_inv
 

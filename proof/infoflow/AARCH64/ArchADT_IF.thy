@@ -101,14 +101,14 @@ lemmas [Arch_assms] =
   activate_thread_cur_fpu_in_cur_domain
   activate_thread_valid_cur_vcpu
 
-lemmas ADT_IF_assms = Arch_assms (* extract accumulated assumptions *)
+lemmas ADT_IF_assms = Arch_assms[folded valid_cur_hyp_def cur_hyp_in_cur_domain_def] (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact AARCH64.ADT_IF_assms[folded valid_cur_hyp_def cur_hyp_in_cur_domain_def])?)
+    by (unfold_locales; (fact AARCH64.ADT_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -454,6 +454,12 @@ lemma thread_set_context_pas_refined[Arch_assms]:
 crunch init_arch_objects
   for irq_states_of_state[Arch_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp)
+
+lemmas [Arch_assms] =
+  init_arch_objects_irq_masks
+  retype_region_irq_masks
+  retype_region_irq_state_of_state
+  arch_perform_invocation_irq_state_of_state
 
 lemmas ADT_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 

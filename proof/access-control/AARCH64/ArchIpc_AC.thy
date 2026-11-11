@@ -240,30 +240,6 @@ lemmas Ipc_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-context is_extended begin interpretation Arch .
-
-lemma list_integ_lift_in_ipc[Arch_assms]:
-  assumes li:
-    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-     f
-     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  shows
-    "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
-     f
-     \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def] pool_for_asid_def
-                integrity_asids_def integrity_hyp_def integrity_fpu_def)
-  apply (simp del: split_paired_All)
-  apply (rule hoare_pre)
-   apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (simp add: tcb_states_of_state_def get_tcb_def)
-   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])
-  apply (simp only: integrity_cdt_list_as_list_integ)
-  apply (clarsimp simp: tcb_states_of_state_def get_tcb_def fun_upd_def)
-  done
-
-end (* is_extended *)
-
 global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases
   case 1 show ?case

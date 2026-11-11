@@ -96,27 +96,6 @@ lemma arch_post_cap_deletion_integrity[Arch_assms]:
   "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
   by wpsimp
 
-lemmas CNode_AC_assms = Arch_assms (* extract accumulated assumptions *)
-
-end (* Arch *)
-
-context is_extended begin interpretation Arch .
-
-lemma list_integ_lift[Arch_assms]:
-  assumes li:
-    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-     f
-     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (rule hoare_pre)
-   apply (unfold integrity_def[abs_def] integrity_asids_def)
-   apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (simp add: tcb_states_of_state_def get_tcb_def)
-   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
-  apply (simp only: integrity_cdt_list_as_list_integ)
-  apply (simp add: tcb_states_of_state_def get_tcb_def)
-  done
-
 lemma set_irq_state_respects[Arch_assms,wp]:
   "\<lbrace>integrity aag X st and K (is_subject_irq aag irq)\<rbrace>
    set_irq_state irqst irq
@@ -124,12 +103,14 @@ lemma set_irq_state_respects[Arch_assms,wp]:
   unfolding set_irq_state_def maskInterrupt_def
   by (wpsimp wp: dmo_no_mem_respects simp: integrity_subjects_def integrity_interrupts_def)
 
-end (* is_extended *)
+lemmas CNode_AC_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 global_interpretation CNode_AC?: CNode_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.CNode_AC_assms | solves \<open>wp only: ARM.CNode_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.CNode_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -150,6 +131,10 @@ crunch set_cdt_list, update_cdt_list
   and state_asids_to_policy[Arch_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
 
+lemmas [Arch_assms] =
+  integrity_hyp_post_taut
+  integrity_fpu_post_taut
+
 lemmas CNode_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -157,7 +142,7 @@ end (* Arch *)
 global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.CNode_AC_2_assms | solves \<open>rule integrity_arch_triv\<close>)?)
+    by (unfold_locales; (fact ARM.CNode_AC_2_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -184,19 +169,6 @@ lemma thread_set_arch_trivT[Arch_assms]:
 lemmas CNode_AC_3_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
-
-context is_extended begin interpretation Arch .
-
-lemma pas_refined_tcb_domain_map_wellformed[Arch_assms, wp]:
-  assumes tdmw: "f \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
-  shows "f \<lbrace>pas_refined aag\<rbrace>"
-  apply (simp add: pas_refined_def)
-  apply (wp tdmw)
-   apply (wp lift_inv)
-   apply simp+
-  done
-
-end (* is_extended *)
 
 global_interpretation CNode_AC_3?: CNode_AC_3
 proof goal_cases

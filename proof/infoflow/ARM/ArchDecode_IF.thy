@@ -8,7 +8,7 @@ theory ArchDecode_IF
 imports Decode_IF
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Decode_IF locale *)
 
@@ -61,7 +61,8 @@ lemma arch_decode_irq_control_invocation_rev[Arch_assms]:
   apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
   done
 
-requalify_facts check_valid_ipc_buffer_inv
+lemmas [Arch_assms] =
+  check_valid_ipc_buffer_inv
 
 lemmas Decode_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -73,7 +74,7 @@ proof goal_cases
     by (unfold_locales; (fact ARM.Decode_IF_assms)?)
 qed
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Decode_IF_2 locale *)
 

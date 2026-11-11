@@ -12,8 +12,6 @@ context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Syscall_AC locale *)
 
-declare prepare_thread_delete_idle_thread[Arch_assms]
-
 crunch set_original
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
@@ -39,7 +37,7 @@ lemma invs_irq_state_update[Arch_assms, simp]:
   apply (subst RISCV64.fold_congs(2); fastforce)
   done
 
-crunch prepare_thread_delete, arch_finalise_cap
+crunch arch_finalise_cap
   for cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -53,13 +51,8 @@ lemma cancel_badged_sends_cur_thread[Arch_assms, wp]:
   unfolding cancel_badged_sends_def
   by (wpsimp wp: dxo_wp_weak filterM_preserved crunch_wps)
 
-crunch arch_mask_irq_signal, handle_reserved_irq
+crunch arch_mask_irq_signal
   for pas_refined[Arch_assms, wp]: "pas_refined aag"
-
-crunch handle_hypervisor_fault
-  for pas_refined[Arch_assms, wp]: "pas_refined aag"
-  and cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
-  and integrity[Arch_assms, wp]: "integrity aag X st"
 
 crunch handle_vm_fault
   for pas_refined[Arch_assms, wp]: "pas_refined aag"
@@ -77,7 +70,7 @@ crunch ackInterrupt, resetTimer
   for underlying_memory_inv[Arch_assms, wp]: "\<lambda>s. P (underlying_memory s)"
   (simp: maskInterrupt_def)
 
-crunch arch_mask_irq_signal, handle_reserved_irq
+crunch arch_mask_irq_signal
   for integrity[Arch_assms, wp]: "integrity aag X st"
   (wp: dmo_no_mem_respects)
 
@@ -119,17 +112,31 @@ lemma arch_activate_idle_thread_pas_refined[Arch_assms, wp]:
   "arch_activate_idle_thread t \<lbrace>pas_refined aag\<rbrace>"
   unfolding arch_activate_idle_thread_def by wpsimp
 
-lemma arch_switch_to_thread_respects[Arch_assms, wp]:
+lemma arch_switch_to_thread_respects[wp]:
   "arch_switch_to_thread t \<lbrace>integrity aag X st\<rbrace>"
   unfolding arch_switch_to_thread_def by wpsimp
+
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>integrity aag X st and valid_arch_state and valid_cur_fpu\<rbrace>
+   arch_switch_to_thread t
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp
 
 lemma arch_switch_to_thread_pas_refined[Arch_assms, wp]:
   "arch_switch_to_thread t \<lbrace>pas_refined aag\<rbrace>"
   unfolding arch_switch_to_thread_def by wpsimp
 
-lemma arch_switch_to_idle_thread_respects[Arch_assms, wp]:
+lemma arch_switch_to_idle_thread_respects[wp]:
   "arch_switch_to_idle_thread \<lbrace>integrity aag X st\<rbrace>"
   unfolding arch_switch_to_idle_thread_def by wpsimp
+
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>integrity aag X st and valid_arch_state\<rbrace>
+   arch_switch_to_idle_thread
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp
 
 lemma arch_switch_to_idle_thread_pas_refined[Arch_assms, wp]:
   "arch_switch_to_idle_thread \<lbrace>pas_refined aag\<rbrace>"
@@ -139,10 +146,6 @@ lemma arch_mask_irq_signal_arch_state[Arch_assms, wp]:
   "arch_mask_irq_signal irq \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
   by wpsimp
 
-lemma handle_reserved_irq_arch_state[Arch_assms, wp]:
-  "handle_reserved_irq irq \<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace>"
-  unfolding handle_reserved_irq_def by wpsimp
-
 crunch arch_post_cap_deletion
   for ct_active[Arch_assms, wp]: "ct_active"
   (wp: crunch_wps filterM_preserved unless_wp simp: crunch_simps ignore: do_extended_op)
@@ -150,8 +153,8 @@ crunch arch_post_cap_deletion
 crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
-  handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
-  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq
+  handle_vm_fault, handle_arch_fault_reply,
+  arch_prepare_set_domain, arch_post_set_flags
   for cur_thread[Arch_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Arch_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Arch_assms, wp]: "\<lambda>s. P (cur_domain s)"
@@ -176,27 +179,21 @@ lemma resetTimer_integrity[Arch_assms,wp]:
   "do_machine_op resetTimer \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_no_mem_respects)
 
-lemma valid_cur_hyp_triv[Arch_assms]:
-  "f \<lbrace>\<lambda>s. P (valid_cur_hyp s)\<rbrace>"
+lemma valid_cur_hyp_post_taut[Arch_assms]:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. valid_cur_hyp\<rbrace>"
   by (wpsimp simp: valid_cur_hyp_def)
+
+lemmas [wp] = valid_cur_hyp_post_taut[where P=\<top>]
+
+lemma arch_prepare_next_domain_inv[Arch_assms,wp]:
+  "arch_prepare_next_domain \<lbrace>P\<rbrace>"
+  by (wpsimp simp: arch_prepare_next_domain_def)
 
 lemma valid_cur_hyp_machine_state[Arch_assms]:
   "valid_cur_hyp (machine_state_update f s) = valid_cur_hyp s"
   by (simp add: valid_cur_hyp_def)
 
-crunch arch_prepare_next_domain
-  for pas_refined[Arch_assms, wp]: "pas_refined aag"
-  and integrity[Arch_assms, wp]: "integrity aag X st"
-  and ct_not_in_q[Arch_assms, wp]: ct_not_in_q
-  and valid_sched_action[Arch_assms, wp]: valid_sched_action
-  and ct_in_cur_domain[Arch_assms, wp]: ct_in_cur_domain
-
-crunch handle_spurious_irq
-  for pas_refined[Arch_assms, wp]: "pas_refined aag"
-  and integrity[Arch_assms, wp]: "integrity aag X st"
-  (ignore: do_machine_op)
-
-crunch arch_post_cap_deletion, prepare_thread_delete
+crunch arch_post_cap_deletion
   for scheduler_action[Arch_assms, wp]: "\<lambda>s. P (scheduler_action s)"
 
 lemma arch_invoke_irq_control_in_cur_domainE[Arch_assms, wp]:
@@ -211,6 +208,42 @@ lemma arch_perform_invocation_in_cur_domainE[Arch_assms, wp]:
    -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
   by (wpsimp simp: arch_perform_invocation_def)
 
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows handle_reserved_irq_integrity_autarch:
+    "\<lbrace>integrity aag X st and pas_refined aag and invs and valid_cur_hyp and is_subject aag \<circ> cur_thread
+      and (\<lambda>s. in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s)\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and handle_reserved_irq_integrity_idle:
+    "\<lbrace>integrity aag X st and invs and valid_cur_hyp and ct_idle\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and handle_reserved_irq_pas_refined:
+    "\<lbrace>\<lambda>s. pas_refined aag s \<and> invs s \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  and handle_hypervisor_fault_integrity_autarch:
+    "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> invs s \<and> is_subject aag thread
+                               \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+     handle_hypervisor_fault thread fault
+     \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  and handle_hypervisor_fault_pas_refined:
+    "\<lbrace>\<lambda>s. pas_refined aag s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread \<and> invs s\<rbrace>
+     handle_hypervisor_fault thread fault
+     \<lbrace>\<lambda>_ s. pas_refined aag s\<rbrace>"
+  and arch_prepare_next_domain_respects:
+    "\<lbrace>integrity aag X st and valid_arch_state and valid_cur_fpu\<rbrace>
+     arch_prepare_next_domain
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp+
+
+lemmas [Arch_assms] =
+  handle_reserved_irq_inv
+  handle_hypervisor_fault_inv
+  handle_spurious_irq_inv
+  prepare_thread_delete_inv
+
 lemmas Syscall_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -218,7 +251,7 @@ end (* Arch *)
 global_interpretation Syscall_AC?: Syscall_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Syscall_AC_assms | solves \<open>wp only: RISCV64.Syscall_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Syscall_AC_assms)?)
 qed
 
 end

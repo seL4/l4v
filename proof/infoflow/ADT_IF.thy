@@ -727,6 +727,9 @@ definition global_automaton_if ::
 
 subsection \<open>do_user_op_if\<close>
 
+arch_requalify_consts
+  do_user_op_if
+
 definition do_user_op_A_if ::
   "user_transition_if
    \<Rightarrow> ((user_context \<times> det_state) \<times> event option \<times> (user_context \<times> det_state)) set" where
@@ -875,6 +878,10 @@ definition irq_state_next where
      irq_state (machine_state s) = next_irq_state (Suc (irq_state (machine_state st)))
                                                   (irq_masks (machine_state s))"
 
+(* FIXME: integrate into locales if possible *)
+arch_requalify_consts
+  valid_vspace_objs_if
+  context_matches_state
 
 locale ADT_IF =
   assumes dmo_getActiveIRQ_wp':
@@ -1049,6 +1056,14 @@ locale ADT_IF_2 = ADT_IF +
     "arch_invoke_irq_control ici \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   assumes thread_set_context_pas_refined:
     "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
+  assumes init_arch_objects_irq_masks[wp]:
+    "\<And>P. init_arch_objects type dev ptr n sz refs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  assumes retype_region_irq_masks[wp]:
+    "\<And>P. retype_region ptr n bits type dev \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  assumes retype_region_irq_state_of_state[wp]:
+    "\<And>P. retype_region ptr n bits type dev \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  assumes arch_perform_invocation_irq_state_of_state[wp]:
+    "\<And>P. arch_perform_invocation i \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
 begin
 
 lemmas do_user_op_if_no_domain_caps[wp] =
@@ -1619,10 +1634,6 @@ locale invariant_over_ADT_if =
            check_active_irq_if tc
            \<lbrace>\<lambda>rv. case (fst rv) of Some irq \<Rightarrow> det_inv (KernelEntry Interrupt) (snd rv)
                                 | None \<Rightarrow> det_inv InIdleMode (snd rv)\<rbrace>"
-
-(*
-^(context|locale) (?!begin)(\w+)(?:(?!\b(?:begin|end|context|locale)\b)[\s\S])*?\bbegin\b(?:(?!\b(?:begin|end|context|locale)\b)[\s\S])*?\bend\b
-*)
 
 
 locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch-split *)

@@ -793,6 +793,8 @@ lemmas [Arch_assms] =
   partitionIntegrity_subjectAffects_hyp[folded cur_hyp_in_cur_domain_def]
   partitionIntegrity_subjectAffects_fpu
   partitionIntegrity_subjectAffects_tcb_fpu
+  do_user_op_reads_respects_g
+  auth_ipc_buffers_mem_Write'
 
 lemmas Noninterference_assms = Arch_assms (* extract accumulated assumptions *)
 

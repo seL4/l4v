@@ -387,6 +387,8 @@ lemma invoke_tcb_silc_inv[Arch_assms]:
                      split: cap.splits option.splits pt_type.splits arch_cap.splits)+
   done
 
+declare handle_arch_fault_reply_silc_inv[Arch_assms]
+
 lemmas FinalCaps_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

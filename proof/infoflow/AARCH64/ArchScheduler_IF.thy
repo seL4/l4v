@@ -1537,7 +1537,7 @@ lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Arch_assms, wp]
 definition cur_hyp_in_cur_domain where
   "cur_hyp_in_cur_domain \<equiv> cur_vcpu_in_cur_domain"
 
-lemmas Scheduler_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
+lemmas Scheduler_IF_2_assms = Arch_assms[folded cur_hyp_in_cur_domain_def] (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -1547,10 +1547,12 @@ global_interpretation Scheduler_IF_2?:
   Scheduler_IF_2 arch_globals_equiv_scheduler arch_scheduler_affects_equiv _ cur_hyp_in_cur_domain cur_fpu_in_cur_domain
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact AARCH64.Scheduler_IF_2_assms[folded cur_hyp_in_cur_domain_def])?)
+    by (unfold_locales; (fact AARCH64.Scheduler_IF_2_assms)?)
 qed
 
-(* FIXME AARCH64 IF: add comment *)
+(* The locale assumption for globals_equiv_scheduler_inv' requires a fixed type for f.
+   We replace this assumption with its polymorphic variant. *)
+
 hide_fact Scheduler_IF_2.globals_equiv_scheduler_inv'
 arch_requalify_facts globals_equiv_scheduler_inv'
 

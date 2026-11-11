@@ -8,7 +8,7 @@ theory ArchArch_IF
 imports Arch_IF
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Arch_IF locale *)
 
@@ -150,30 +150,31 @@ lemma thread_set_non_idle_globals_equiv[Arch_assms]:
   apply (wp set_object_globals_equiv)
   by (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def)
 
-declare arch_prepare_set_domain_inv[Arch_assms]
-declare arch_prepare_next_domain_inv[Arch_assms]
+crunch arch_post_cap_deletion
+  for valid_global_objs[Arch_assms, wp]: "valid_global_objs"
+
+lemmas [Arch_assms] =
+  arch_prepare_set_domain_inv
+  arch_prepare_next_domain_inv
+  prepare_thread_delete_inv
+  storeWord_globals_equiv
+
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows equiv_hyp_machine_state_rest_update[simp]:
+    "\<And>P. equiv_hyp P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_hyp P st (s\<lparr>machine_state := ms\<rparr>)"
+  and equiv_fpu_machine_state_rest_update[simp]:
+    "\<And>P. equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
+  by auto
 
 lemmas Arch_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-context begin interpretation Arch .
-
-requalify_facts
-  set_simple_ko_globals_equiv
-  retype_region_irq_state_of_state
-  arch_perform_invocation_irq_state_of_state
-
-declare
-  retype_region_irq_state_of_state[wp]
-  arch_perform_invocation_irq_state_of_state[wp]
-
-end
-
 global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.Arch_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.Arch_IF_assms)?)
 qed
 
 lemmas invs_imps =
@@ -1591,43 +1592,6 @@ lemma perform_sgi_invocation_globals_equiv:
   apply (rule dmo_mol_globals_equiv)
   done
 
-definition authorised_for_globals_arch_inv ::
-  "arch_invocation \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
-  "authorised_for_globals_arch_inv ai \<equiv>
-    case ai of InvokePageTable oper \<Rightarrow> authorised_for_globals_page_table_inv oper
-             | InvokePage oper \<Rightarrow> authorised_for_globals_page_inv oper
-             | _ \<Rightarrow> \<top>"
-
-lemma arch_perform_invocation_globals_equiv:
-  "\<lbrace>globals_equiv s and invs and ct_active and valid_arch_inv ai
-                    and authorised_for_globals_arch_inv ai\<rbrace>
-   arch_perform_invocation ai
-   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding arch_perform_invocation_def
- apply (wpsimp wp: perform_page_table_invocation_globals_equiv
-                   perform_page_directory_invocation_globals_equiv
-                   perform_page_invocation_globals_equiv
-                   perform_asid_control_invocation_globals_equiv
-                   perform_asid_pool_invocation_globals_equiv
-                   perform_sgi_invocation_globals_equiv)+
-  apply (auto simp: authorised_for_globals_arch_inv_def
-              simp: invs_def valid_state_def valid_arch_inv_def invs_valid_vs_lookup)
-  done
-
-lemma arch_perform_invocation_reads_respects_g:
-  assumes domains_distinct: "pas_domains_distinct aag"
-  shows "reads_respects_g aag l (ct_active and authorised_arch_inv aag ai and valid_arch_inv ai
-                                           and authorised_for_globals_arch_inv ai and invs
-                                           and pas_refined aag and is_subject aag \<circ> cur_thread)
-                          (arch_perform_invocation ai)"
-  apply (rule equiv_valid_guard_imp)
-   apply (rule reads_respects_g)
-    apply (rule arch_perform_invocation_reads_respects[OF domains_distinct])
-   apply (rule doesnt_touch_globalsI)
-   apply (wp arch_perform_invocation_globals_equiv)
-   apply (simp add: invs_valid_vs_lookup invs_def valid_state_def valid_pspace_def)+
-  done
-
 lemma find_pd_for_asid_authority3:
   "\<lbrace>\<lambda>s. \<forall>pd. (pspace_aligned s \<and> valid_vspace_objs s \<longrightarrow> is_aligned pd pd_bits) \<and> (\<exists>\<rhd> pd) s
              \<longrightarrow> Q pd s\<rbrace>
@@ -1784,9 +1748,6 @@ lemma mapM_x_swp_store_pde_pas_refined_simple:
   "mapM_x (swp store_pde InvalidPDE) A \<lbrace>pas_refined aag\<rbrace>"
   by (wpsimp wp: mapM_x_wp' store_pde_pas_refined_simple)
 
-crunch arch_post_cap_deletion
-  for valid_global_objs[wp]: "valid_global_objs"
-
 lemma get_thread_state_globals_equiv[wp]:
   "get_thread_state ref \<lbrace>globals_equiv s\<rbrace>"
   unfolding get_thread_state_def
@@ -1816,30 +1777,6 @@ lemma thread_set_globals_equiv:
   done
 
 end (* Arch *)
-
-
-arch_requalify_consts
-  authorised_for_globals_arch_inv
-
-arch_requalify_facts
-  arch_post_cap_deletion_valid_global_objs
-  get_thread_state_globals_equiv
-  auth_ipc_buffers_mem_Write'
-  thread_set_globals_equiv
-  arch_post_modify_registers_cur_domain
-  arch_post_modify_registers_cur_thread
-  length_msg_lt_msg_max
-  set_mrs_globals_equiv
-  arch_perform_invocation_globals_equiv
-  check_valid_ipc_buffer_inv
-  arch_perform_invocation_reads_respects_g
-
-declare
-  arch_post_cap_deletion_valid_global_objs[wp]
-  get_thread_state_globals_equiv[wp]
-  arch_post_modify_registers_cur_domain[wp]
-  arch_post_modify_registers_cur_thread[wp]
-  prepare_thread_delete_st_tcb_at_halted[wp]
 
 axiomatization dmo_reads_respects where
   dmo_getDFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op ARM.getDFSR)" and

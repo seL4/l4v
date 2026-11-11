@@ -177,6 +177,10 @@ locale Ipc_IF =
   (* FIXME IF: This assumption precludes X64 (its valid_arch_state includes caps) *)
   and transfer_caps_loop_valid_arch[wp]:
     "transfer_caps_loop epptr_opt buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
+  assumes set_mrs_globals_equiv:
+    "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>sa. thread \<noteq> idle_thread sa)\<rbrace>
+     set_mrs thread bs msgs
+     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
 begin
 
 lemma store_word_offs_equiv_but_for_labels:
@@ -1724,8 +1728,6 @@ lemma do_normal_transfer_globals_equiv:
   apply (clarsimp)
   done
 
-end (* Ipc_IF *)
-
 lemma do_fault_transfer_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
    do_fault_transfer badge sender receiver buf
@@ -1734,11 +1736,13 @@ lemma do_fault_transfer_globals_equiv:
   apply (wp)
       apply (simp add: split_def)
       apply (wp as_user_globals_equiv set_message_info_globals_equiv
-               set_mrs_globals_equiv | wpc)+
+                set_mrs_globals_equiv | wpc)+
    apply (clarsimp)
    apply (rule hoare_drop_imps)
    apply (wp thread_get_inv, simp)
   done
+
+end (* Ipc_IF *)
 
 lemma set_collection: "a = {x. x\<in>a}"
   by simp
@@ -2009,14 +2013,14 @@ lemma handle_reply_globals_equiv:
      apply (wp | simp)+
   done
 
-end (* Ipc_IF *)
-
 lemma reply_from_kernel_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    reply_from_kernel thread x
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding reply_from_kernel_def
   by (wpsimp wp: set_message_info_globals_equiv set_mrs_globals_equiv as_user_globals_equiv)
+
+end (* Ipc_IF *)
 
 
 section "reads_respects_g"

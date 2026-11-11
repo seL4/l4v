@@ -287,6 +287,9 @@ lemma transfer_caps_loop_valid_arch[Arch_assms]:
   "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
   by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
 
+lemmas [Arch_assms] =
+  set_mrs_globals_equiv
+
 lemmas Ipc_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

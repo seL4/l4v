@@ -8,7 +8,7 @@ theory ArchPasUpdates
 imports PasUpdates
 begin
 
-context Arch begin
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for PasUpdates locale *)
 

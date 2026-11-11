@@ -27,11 +27,9 @@ lemma arch_finalise_cap_rv[Arch_assms]:
   unfolding arch_finalise_cap_def by wpsimp
 
 crunch
-  invalidate_tlb_by_asid, handle_reserved_irq, handle_vm_fault,
-  handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,
+  invalidate_tlb_by_asid, handle_vm_fault, handle_arch_fault_reply, arch_mask_irq_signal,
   arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread,
-  arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags,
-  handle_spurious_irq
+  arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags
   for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
 
 lemma arch_derive_cap_domain_sep_inv[Arch_assms, wp]:
@@ -42,6 +40,9 @@ lemma arch_derive_cap_domain_sep_inv[Arch_assms, wp]:
 lemma arch_post_modify_registers_domain_sep_inv[Arch_assms, wp]:
   "arch_post_modify_registers cur x31 \<lbrace>domain_sep_inv irqs st\<rbrace>"
   unfolding arch_post_modify_registers_def by wpsimp
+
+lemmas [Arch_assms] =
+  prepare_thread_delete_inv
 
 lemmas DomainSepInv_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -129,6 +130,24 @@ lemma arch_invoke_irq_control_domain_sep_inv[Arch_assms]:
   apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def arch_irq_control_inv_valid_def)
   done
 
+crunch handle_reserved_irq, handle_hypervisor_fault
+  for inv[wp]: P
+
+crunch handle_spurious_irq
+  for domain_sep_inv[Arch_assms, wp]: "domain_sep_inv irqs st"
+
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows handle_hypervisor_fault_domain_sep_inv:
+    "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and sym_refs \<circ> state_refs_of\<rbrace>
+     handle_hypervisor_fault t hf_t
+     \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs st s\<rbrace>"
+  and handle_reserved_irq_domain_sep_inv:
+    "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and sym_refs \<circ> state_refs_of\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs st s\<rbrace>"
+  by wpsimp+
+
 lemmas DomainSepInv_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -136,7 +155,7 @@ end (* Arch *)
 global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.DomainSepInv_2_assms | solves \<open>wp only: ARM.DomainSepInv_2_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.DomainSepInv_2_assms)?)
 qed
 
 end

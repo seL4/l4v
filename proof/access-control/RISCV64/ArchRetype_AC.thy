@@ -362,12 +362,12 @@ lemma dmo_clearMemory_respects'[Arch_assms]:
   done
 
 lemma integrity_asids_detype[Arch_assms]:
-  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  assumes refs: "\<forall>r\<in>refs. is_subject aag r"
   shows
-    "integrity_asids aag subjects x a (detype refs s) s' =
-     integrity_asids aag subjects x a s s'"
-    "integrity_asids aag subjects x a s (detype refs s') =
-     integrity_asids aag subjects x a s s'"
+    "integrity_asids aag {pasSubject aag} x a (detype refs s) s' =
+     integrity_asids aag {pasSubject aag} x a s s'"
+    "integrity_asids aag {pasSubject aag} x a s (detype refs s') =
+     integrity_asids aag {pasSubject aag} x a s s'"
   by (auto simp: integrity_asids_def detype_def refs opt_map_def)
 
 lemma retype_region_integrity_asids[Arch_assms]:
@@ -383,7 +383,45 @@ lemma retype_region_integrity_asids[Arch_assms]:
                  dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
                  simp: image_def p_assoc_help power_sub)
 
-declare init_arch_objects_inv[Arch_assms]
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows init_arch_objects_pas_refined:
+    "\<And>tp dev. \<lbrace>pas_refined aag and post_retype_invs tp refs
+                            and (\<lambda>s. \<forall>x\<in>set refs. x \<notin> global_refs s)
+                            and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api tp obj_sz))\<rbrace>
+               init_arch_objects tp dev ptr bits obj_sz refs
+               \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  and init_arch_objects_integrity:
+    "\<lbrace>integrity aag X st and K (\<forall>x\<in>set refs. is_subject aag x)
+                         and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
+     init_arch_objects new_type dev ptr num_objects obj_sz refs
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and integrity_hyp_detype:
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p (detype R s) st = integrity_hyp aag {pasSubject aag} p s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s (detype R st) = integrity_hyp aag {pasSubject aag} p s st"
+  and integrity_fpu_detype:
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p (detype R s) st = integrity_fpu aag {pasSubject aag} p s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s (detype R st) = integrity_fpu aag {pasSubject aag} p s st"
+  and retype_region_integrity_hyp:
+    "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+       \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_hyp aag {pasSubject aag} p s st \<rbrakk>
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
+  and retype_region_integrity_fpu:
+    "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+       \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_fpu aag {pasSubject aag} p s st \<rbrakk>
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
+  by wpsimp+
+
 declare state_hyp_refs_of_detype[Arch_assms]
 
 lemmas Retype_AC_assms = Arch_assms (* extract accumulated assumptions *)
@@ -393,8 +431,7 @@ end (* Arch *)
 global_interpretation Retype_AC?: Retype_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Retype_AC_assms | solves \<open>rule integrity_arch_triv\<close>
-                                              | solves \<open>wp only: RISCV64.Retype_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Retype_AC_assms)?)
 qed
 
 end

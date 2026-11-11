@@ -8,7 +8,7 @@ theory ArchInterrupt_IF
 imports Interrupt_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Interrupt_IF locale *)
 

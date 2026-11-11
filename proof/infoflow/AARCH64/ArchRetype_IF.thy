@@ -664,10 +664,4 @@ proof goal_cases
     by (unfold_locales; (fact AARCH64.Retype_IF_2_assms)?)
 qed
 
-arch_requalify_facts
-  reset_untyped_cap_reads_respects_g
-  reset_untyped_cap_globals_equiv
-  invoke_untyped_globals_equiv
-  storeWord_globals_equiv
-
 end

@@ -8,9 +8,9 @@ theory ArchRetype_IF
 imports Retype_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
-clear_named_theorems Arch_assms (* accumulate assumptions for Retype_IF locale *)
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_IF_2 locale *)
 
 lemma do_ipc_transfer_valid_arch_no_caps[wp]:
   "do_ipc_transfer s ep bg grt r \<lbrace>valid_arch_state\<rbrace>"
@@ -346,6 +346,22 @@ lemma equiv_asid_detype[Arch_assms]:
   "equiv_asid asid s s' \<Longrightarrow> equiv_asid asid (detype N s) (detype N s')"
   by (auto simp: equiv_asid_def)
 
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows machine_op_lift_no_hyp:
+    "no_hyp (machine_op_lift mop)"
+  and machine_op_lift_no_fpu:
+    "no_fpu (machine_op_lift mop)"
+  and clearMemory_no_hyp:
+    "no_hyp (clearMemory ptr bits)"
+  and clearMemory_no_fpu:
+    "no_fpu (clearMemory ptr bits)"
+  and freeMemory_no_hyp:
+    "no_hyp (freeMemory ptr bits)"
+  and freeMemory_no_fpu:
+    "no_fpu (freeMemory ptr bits)"
+  by auto
+
 lemmas Retype_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -353,7 +369,7 @@ end (* Arch *)
 global_interpretation Retype_IF?: Retype_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Retype_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact RISCV64.Retype_IF_assms)?)
 qed
 
 context Arch begin global_naming RISCV64
@@ -681,11 +697,5 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact RISCV64.Retype_IF_2_assms)?)
 qed
-
-requalify_facts
-  RISCV64.reset_untyped_cap_reads_respects_g
-  RISCV64.reset_untyped_cap_globals_equiv
-  RISCV64.invoke_untyped_globals_equiv
-  RISCV64.storeWord_globals_equiv
 
 end

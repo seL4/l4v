@@ -9,7 +9,7 @@ imports Scheduler_IF
 
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Scheduler_IF locale *)
 
@@ -129,6 +129,11 @@ lemma equiv_asid_equiv_update[Arch_assms]:
    \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>valid_arch_state and globals_equiv st\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  by wpsimp
+
 declare arch_prepare_next_domain_inv[Arch_assms]
 declare arch_activate_idle_thread_domain_fields_invs[Arch_assms]
 
@@ -136,18 +141,18 @@ lemmas Scheduler_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-requalify_consts
-  RISCV64.arch_globals_equiv_scheduler
-  RISCV64.arch_scheduler_affects_equiv
+arch_requalify_consts
+  arch_globals_equiv_scheduler
+  arch_scheduler_affects_equiv
 
 global_interpretation Scheduler_IF?:
   Scheduler_IF arch_globals_equiv_scheduler arch_scheduler_affects_equiv
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Scheduler_IF_assms | solves \<open>wp only: RISCV64.Scheduler_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Scheduler_IF_assms)?)
 qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Scheduler_IF_2 locale *)
 
@@ -238,10 +243,13 @@ lemma arch_switch_to_thread_reads_respects_scheduler[wp]:
 
 lemmas globals_equiv_scheduler_inv = globals_equiv_scheduler_inv'[where P="\<top>",simplified]
 
-lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Arch_assms, wp]:
-  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Arch_assms]:
+  assumes wellformed: "pas_wellformed_noninterference aag"
+  notes domains_distinct[wp] = pas_wellformed_noninterference_domains_distinct[OF wellformed]
   shows "midstrength_reads_respects_scheduler aag l
-           (invs and pas_refined aag and (\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag (cur_domain s)))
+           (invs and pas_refined aag and valid_silc_label aag
+                 and cur_hyp_in_cur_domain and cur_fpu_in_cur_domain
+                 and (\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag (cur_domain s)))
            (do _ <- arch_switch_to_thread t;
                _ <- modify (cur_thread_update (\<lambda>_. t));
                modify (scheduler_action_update (\<lambda>_. resume_cur_thread))
@@ -271,9 +279,44 @@ lemma arch_switch_to_idle_thread_globals_equiv_scheduler[Arch_assms, wp]:
   unfolding arch_switch_to_idle_thread_def storeWord_def
   by (wp dmo_wp modify_wp thread_get_wp' set_vm_root_globals_equiv_scheduler)
 
+definition cur_hyp_in_cur_domain :: "det_state \<Rightarrow> bool" where
+  "cur_hyp_in_cur_domain s \<equiv> True"
+
+definition cur_fpu_in_cur_domain :: "det_state \<Rightarrow> bool" where
+  "cur_fpu_in_cur_domain s \<equiv> True"
+
+lemma cur_hyp_in_cur_domain_taut[intro!,simp]:
+  "cur_hyp_in_cur_domain s"
+  "cur_hyp_in_cur_domain s = cur_hyp_in_cur_domain s'"
+  by (simp_all add: cur_hyp_in_cur_domain_def)
+
+lemma cur_fpu_in_cur_domain_taut[intro!,simp]:
+  "cur_fpu_in_cur_domain s"
+  "cur_fpu_in_cur_domain s = cur_fpu_in_cur_domain s'"
+  by (simp_all add: cur_fpu_in_cur_domain_def)
+
+lemma cur_hyp_in_cur_domain_wp[wp]:
+  "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
+  unfolding cur_hyp_in_cur_domain_def by wp
+
+lemma cur_hyp_in_cur_domain_post_taut[Arch_assms]:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
+  by wp
+
+lemma cur_fpu_in_cur_domain_wp[wp]:
+  "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
+  unfolding cur_fpu_in_cur_domain_def by wp
+
+lemma cur_fpu_in_cur_domain_post_taut[Arch_assms]:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
+   by wp
+
 lemma arch_switch_to_idle_thread_unobservable[Arch_assms]:
-  "\<lbrace>(\<lambda>s. pasDomainAbs aag (cur_domain s) \<inter> reads_scheduler aag l = {}) and
-    scheduler_affects_equiv aag l st and (\<lambda>s. cur_domain st = cur_domain s) and invs\<rbrace>
+  assumes "pas_wellformed_noninterference aag"
+  shows
+    "\<lbrace>(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s)
+      and scheduler_affects_equiv aag l st and (\<lambda>s. cur_domain st = cur_domain s)
+      and invs and cur_hyp_in_cur_domain and valid_silc_label aag and pas_refined aag\<rbrace>
    arch_switch_to_idle_thread
    \<lbrace>\<lambda>_ s. scheduler_affects_equiv aag l st s\<rbrace>"
   apply (simp add: arch_switch_to_idle_thread_def)
@@ -282,8 +325,13 @@ lemma arch_switch_to_idle_thread_unobservable[Arch_assms]:
   done
 
 lemma arch_switch_to_thread_unobservable[Arch_assms]:
-  "\<lbrace>(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
-    scheduler_affects_equiv aag l st and (\<lambda>s. cur_domain st = cur_domain s) and invs\<rbrace>
+  assumes "pas_wellformed_noninterference aag"
+  shows
+    "\<lbrace>(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s)
+      and (\<lambda>s. pasObjectAbs aag t \<notin> reads_scheduler aag l)
+      and scheduler_affects_equiv aag l st and (\<lambda>s. cur_domain st = cur_domain s)
+      and invs and cur_hyp_in_cur_domain and cur_fpu_in_cur_domain
+      and valid_silc_label aag and pas_refined aag\<rbrace>
    arch_switch_to_thread t
    \<lbrace>\<lambda>_ s. scheduler_affects_equiv aag l st s\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
@@ -424,40 +472,45 @@ lemma arch_prepare_next_domain_ev[Arch_assms]:
   "equiv_valid_inv I A (\<lambda>_. True) arch_prepare_next_domain"
   unfolding arch_prepare_next_domain_def by wp
 
-lemma arch_switch_to_thread_silc_dom_equiv[Arch_assms,wp]:
+lemma arch_switch_to_thread_silc_dom_equiv[wp]:
   "arch_switch_to_thread t \<lbrace>silc_dom_equiv aag (st :: det_state)\<rbrace>"
   by (wpsimp wp: silc_dom_lift)
 
-lemma arch_switch_to_idle_thread_silc_dom_equiv[Arch_assms,wp]:
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>silc_dom_equiv aag st and valid_silc_label aag\<rbrace>
+   arch_switch_to_thread t
+   \<lbrace>\<lambda>_. silc_dom_equiv aag (st :: det_state)\<rbrace>"
+  by wpsimp
+
+lemma arch_switch_to_idle_thread_silc_dom_equiv[wp]:
   "arch_switch_to_idle_thread \<lbrace>silc_dom_equiv aag (st :: det_state)\<rbrace>"
   by (wpsimp wp: silc_dom_lift)
 
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>silc_dom_equiv aag st and valid_silc_label aag\<rbrace>
+   arch_switch_to_idle_thread
+   \<lbrace>\<lambda>_. silc_dom_equiv aag (st :: det_state)\<rbrace>"
+  by wpsimp
 
-definition cur_hyp_in_cur_domain :: "det_state \<Rightarrow> bool" where
-  "cur_hyp_in_cur_domain s \<equiv> True"
+lemma arch_prepare_next_domain_evinv[Arch_assms]:
+  "equiv_valid_inv I A P arch_prepare_next_domain"
+  unfolding arch_prepare_next_domain_def by wpsimp
 
-definition cur_fpu_in_cur_domain :: "det_state \<Rightarrow> bool" where
-  "cur_fpu_in_cur_domain s \<equiv> True"
+lemmas [Arch_assms] =
+  pas_wellformed_noninterference_domains_distinct
+  arch_prepare_next_domain_inv
 
-lemma cur_hyp_in_cur_domain_taut[intro!,simp]:
-  "cur_hyp_in_cur_domain s"
-  "cur_hyp_in_cur_domain s = cur_hyp_in_cur_domain s'"
-  by (simp_all add: cur_hyp_in_cur_domain_def)
-
-lemma cur_fpu_in_cur_domain_taut[intro!,simp]:
-  "cur_fpu_in_cur_domain s"
-  "cur_fpu_in_cur_domain s = cur_fpu_in_cur_domain s'"
-  by (simp_all add: cur_fpu_in_cur_domain_def)
-
-lemma cur_hyp_in_cur_domain_wp[Arch_assms,wp]:
-  "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
-  unfolding cur_hyp_in_cur_domain_def by wp
-
-lemma cur_fpu_in_cur_domain_wp[Arch_assms,wp]:
-  "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
-  unfolding cur_fpu_in_cur_domain_def by wp
-
-declare pas_wellformed_noninterference_domains_distinct[Arch_assms]
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows arch_prepare_next_domain_globals_equiv_scheduler:
+    "\<lbrace>invs and globals_equiv_scheduler st\<rbrace> arch_prepare_next_domain \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
+  and arch_prepare_next_domain_silc_dom_equiv:
+    "\<lbrace>silc_dom_equiv aag st and valid_silc_label aag\<rbrace>
+     arch_prepare_next_domain
+     \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
+  by wpsimp+
 
 lemmas Scheduler_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -471,10 +524,13 @@ global_interpretation Scheduler_IF_2?:
   Scheduler_IF_2 arch_globals_equiv_scheduler arch_scheduler_affects_equiv _ cur_hyp_in_cur_domain cur_fpu_in_cur_domain
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Scheduler_IF_2_assms | solves \<open>wp only: RISCV64.Scheduler_IF_2_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Scheduler_IF_2_assms)?)
 qed
 
+
+(* The locale assumption for globals_equiv_scheduler_inv' requires a fixed type for f.
+   We replace this assumption with its polymorphic variant. *)
 hide_fact Scheduler_IF_2.globals_equiv_scheduler_inv'
-requalify_facts RISCV64.globals_equiv_scheduler_inv'
+arch_requalify_facts globals_equiv_scheduler_inv'
 
 end

@@ -783,12 +783,18 @@ definition context_matches_state where
           {y. \<exists>x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not>pxn x)}"
 
 
+definition valid_vspace_objs_if where
+  "valid_vspace_objs_if \<equiv> \<top>"
+
+declare valid_vspace_objs_if_def[simp]
+
 lemma do_user_op_reads_respects_g:
   notes split_paired_All[simp del]
   shows
     "(\<forall>pl pr pxn tc ms s. P tc s \<and> context_matches_state pl pr pxn ms s
                           \<longrightarrow> (\<exists>x. uop (cur_thread s) pl pr pxn (tc, ms) = {x}))
-     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and is_subject aag \<circ> cur_thread
+     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and valid_vspace_objs_if
+                                                 and is_subject aag \<circ> cur_thread
                                                  and (\<lambda>s. cur_thread s \<noteq> idle_thread s) and P tc)
                           (do_user_op_if uop tc)"
   apply (simp add: do_user_op_if_def)
@@ -840,22 +846,6 @@ lemma do_user_op_reads_respects_g:
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 
-definition valid_vspace_objs_if where
-  "valid_vspace_objs_if \<equiv> \<top>"
-
-declare valid_vspace_objs_if_def[simp]
-
 end (* Arch *)
-
-arch_requalify_consts
-  do_user_op_if
-  valid_vspace_objs_if
-  context_matches_state
-
-(* FIXME AARCH64 IF: this is currently used in do_user_op_if_reads_respects_g
-   where aag contains a free type variable, so this can't be a locale assumption.
-   Investigate whether we can tweak the interface, or otherwise add a comment. *)
-arch_requalify_facts
-  do_user_op_reads_respects_g
 
 end

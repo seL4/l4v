@@ -181,6 +181,8 @@ locale Decode_IF =
            (\<forall>cap\<in>set caps. pas_cap_cur_auth aag cap) \<and>
            (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag)))
        (arch_decode_irq_control_invocation label args slot caps)"
+  assumes check_valid_ipc_buffer_inv:
+    "\<And>P. check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
 begin
 
 lemma decode_untyped_invocation_rev:

@@ -27,7 +27,7 @@ lemma arch_post_modify_registers_respects[Arch_assms]:
   by wpsimp
 
 lemma arch_post_set_flags_respects[Arch_assms]:
-  "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
+  "\<lbrace>integrity aag X st and valid_cur_fpu\<rbrace>
    arch_post_set_flags t flags
    \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   by (wpsimp simp: arch_post_set_flags_def)
@@ -112,7 +112,7 @@ end (* Arch *)
 global_interpretation Tcb_AC?: Tcb_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Tcb_AC_assms | solves \<open>wp only: RISCV64.Tcb_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Tcb_AC_assms)?)
 qed
 
 end

@@ -95,6 +95,14 @@ lemma invoke_tcb_tc_respects_aag[Arch_assms]:
          | rule conjI | erule pas_refined_refl)+
   done
 
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows arch_post_set_flags_respects:
+    "\<lbrace>integrity aag X st and valid_cur_fpu\<rbrace>
+     arch_post_set_flags t flags
+     \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  by wpsimp
+
 lemmas Tcb_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -102,7 +110,7 @@ end (* Arch *)
 global_interpretation Tcb_AC?: Tcb_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.Tcb_AC_assms | solves \<open>wp only: ARM.Tcb_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Tcb_AC_assms)?)
 qed
 
 end

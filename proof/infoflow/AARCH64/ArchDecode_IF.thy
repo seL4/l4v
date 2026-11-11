@@ -62,6 +62,9 @@ lemma arch_decode_irq_control_invocation_rev[Arch_assms]:
   apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
   done
 
+lemmas [Arch_assms] =
+  check_valid_ipc_buffer_inv
+
 lemmas Decode_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

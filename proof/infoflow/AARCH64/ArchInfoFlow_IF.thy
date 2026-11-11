@@ -184,8 +184,10 @@ end (* Arch *)
 arch_requalify_consts
   identical_hyp_state_updates
   identical_fpu_state_updates
+  non_asid_pool_kheap_update
 
-global_interpretation InfoFlow_IF?: InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates
+global_interpretation InfoFlow_IF?:
+  InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates non_asid_pool_kheap_update
 proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact AARCH64.InfoFlow_IF_assms)?)
@@ -550,7 +552,8 @@ end (* Arch *)
 arch_requalify_consts
   no_hyp no_fpu
 
-global_interpretation InfoFlow_IF_2?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
+global_interpretation InfoFlow_IF_2?:
+  InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates non_asid_pool_kheap_update no_hyp no_fpu
 proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact AARCH64.InfoFlow_IF_2_assms)?)

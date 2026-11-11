@@ -8,7 +8,7 @@ theory ArchIRQMasks_IF
 imports IRQMasks_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for IRQMasks_IF locale *)
 
@@ -36,7 +36,7 @@ crunch invoke_untyped
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
 crunch finalise_cap
-  for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (  wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
 
@@ -95,12 +95,14 @@ lemma dmo_getActiveIRQ_return_axiom[Arch_assms, wp]:
   apply clarsimp
   done
 
-crunch activate_thread, handle_spurious_irq
+crunch activate_thread
   for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 crunch schedule
   for irq_masks[Arch_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps dxo_wp_weak simp: crunch_simps)
+
+declare handle_spurious_irq_inv[Arch_assms]
 
 lemmas IRQMasks_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -112,7 +114,7 @@ proof goal_cases
     by (unfold_locales; (fact RISCV64.IRQMasks_IF_assms)?)
 qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for IRQMasks_IF_2 locale *)
 
@@ -174,10 +176,38 @@ lemma init_arch_objects_irq_masks:
   by (rule init_arch_objects_inv)
 
 crunch arch_prepare_set_domain
-  for inv[Arch_assms,wp]: P
+  for inv[wp]: P
 
-crunch arch_prepare_next_domain
-  for valid_irq_states[wp]: valid_irq_states
+lemma arch_prepare_next_domain_triv[Arch_assms,wp]:
+  "arch_prepare_next_domain \<lbrace>P\<rbrace>"
+  unfolding arch_prepare_next_domain_def by wpsimp
+
+(* strengthen preconditions for locale assumptions *)
+lemma [Arch_assms]:
+  shows
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and non_kernel_IRQs_masked\<rbrace>
+     arch_perform_invocation i
+     \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  and
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+     arch_switch_to_idle_thread
+     \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  and
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+     arch_switch_to_thread t
+     \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  and
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
+     arch_prepare_set_domain t new_dom
+     \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
+  and
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and non_kernel_IRQs_masked\<rbrace>
+     arch_prepare_next_domain
+     \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
+  by wpsimp+
+
+lemmas [Arch_assms] =
+  handle_hypervisor_fault_inv
 
 lemmas IRQMasks_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -186,17 +216,7 @@ end (* Arch *)
 global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.IRQMasks_IF_2_assms | solves wpsimp)?)
+    by (unfold_locales; (fact RISCV64.IRQMasks_IF_2_assms)?)
 qed
-
-requalify_facts
-  RISCV64.init_arch_objects_irq_masks
-  RISCV64.arch_activate_idle_thread_irq_masks
-  RISCV64.retype_region_irq_masks
-
-declare
-  init_arch_objects_irq_masks[wp]
-  arch_activate_idle_thread_irq_masks[wp]
-  retype_region_irq_masks[wp]
 
 end

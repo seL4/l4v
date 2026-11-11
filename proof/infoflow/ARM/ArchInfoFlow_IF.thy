@@ -8,7 +8,7 @@ theory ArchInfoFlow_IF
 imports InfoFlow_IF
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for InfoFlow_IF locale *)
 
@@ -121,13 +121,45 @@ lemma no_fpu_taut[intro!,simp]:
   "no_fpu f"
   by (simp add: no_fpu_def)
 
-lemmas equiv_arch_taut =
-  equiv_hyp_taut
-  equiv_fpu_taut
-  identical_hyp_states_updates_taut
-  identical_fpu_states_updates_taut
-  no_hyp_taut
-  no_fpu_taut
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows equiv_hyp_refl:
+    "equiv_hyp P s s"
+  and equiv_hyp_sym:
+    "equiv_hyp P s t \<Longrightarrow> equiv_hyp P t s"
+  and equiv_hyp_trans:
+    "\<lbrakk> equiv_hyp P s t; equiv_hyp P t u \<rbrakk> \<Longrightarrow> equiv_hyp P s u"
+  and equiv_hyp_guard_imp:
+    "\<lbrakk> equiv_hyp P s s'; \<And>x. P' x \<Longrightarrow> P x \<rbrakk> \<Longrightarrow> equiv_hyp P' s s'"
+  and equiv_hypI:
+    "\<lbrakk> \<And>x. P x \<Longrightarrow> equiv_hyp ((=) x) s t \<rbrakk>
+     \<Longrightarrow> equiv_hyp P s t"
+  and equiv_hyp_triv:
+    "\<lbrakk> equiv_hyp P s s'; arch_state t = arch_state s; arch_state t' = arch_state s';
+       machine_state t = machine_state s; machine_state t' = machine_state s' \<rbrakk>
+     \<Longrightarrow> equiv_hyp P t t'"
+  and equiv_hyp_machine_state_update:
+    "\<lbrakk> equiv_hyp P s s'; identical_hyp_state_updates P s s' ms ms' \<rbrakk>
+     \<Longrightarrow> equiv_hyp P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
+  and equiv_fpu_refl:
+    "equiv_fpu P s s"
+  and equiv_fpu_sym:
+    "equiv_fpu P s t \<Longrightarrow> equiv_fpu P t s"
+  and equiv_fpu_trans:
+    "\<lbrakk> equiv_fpu P s t; equiv_fpu P t u \<rbrakk> \<Longrightarrow> equiv_fpu P s u"
+  and equiv_fpu_guard_imp:
+    "\<lbrakk> equiv_fpu P s s'; \<And>x. P' x \<Longrightarrow> P x \<rbrakk> \<Longrightarrow> equiv_fpu P' s s'"
+  and equiv_fpuI:
+    "\<lbrakk> \<And>x. P x \<Longrightarrow> equiv_fpu ((=) x) s t \<rbrakk>
+     \<Longrightarrow> equiv_fpu P s t"
+  and equiv_fpu_triv:
+    "\<lbrakk> equiv_fpu P s s'; arch_state t = arch_state s; arch_state t' = arch_state s';
+       machine_state t = machine_state s; machine_state t' = machine_state s' \<rbrakk>
+     \<Longrightarrow> equiv_fpu P t t'"
+  and equiv_fpu_machine_state_update:
+    "\<lbrakk> equiv_fpu P s s'; identical_fpu_state_updates P s s' ms ms' \<rbrakk>
+     \<Longrightarrow> equiv_fpu P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
+  by auto
 
 lemmas InfoFlow_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -136,13 +168,15 @@ end (* Arch *)
 arch_requalify_consts
   identical_hyp_state_updates
   identical_fpu_state_updates
+  non_asid_pool_kheap_update
   no_hyp
   no_fpu
 
-global_interpretation InfoFlow_IF?: InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates
+global_interpretation InfoFlow_IF?:
+  InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates non_asid_pool_kheap_update
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.InfoFlow_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -211,14 +245,15 @@ lemma do_machine_op_reads_respects'[Arch_assms]:
      apply (wp | simp add: guard)+
   done
 
-lemmas InfoFlow_IF_assms = Arch_assms (* extract accumulated assumptions *)
+lemmas InfoFlow_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-global_interpretation InfoFlow_IF?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
+global_interpretation InfoFlow_IF_2?:
+  InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates non_asid_pool_kheap_update no_hyp no_fpu
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.InfoFlow_IF_2_assms)?)
 qed
 
 end

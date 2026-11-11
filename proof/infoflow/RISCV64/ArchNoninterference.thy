@@ -8,7 +8,7 @@ theory ArchNoninterference
 imports Noninterference
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Noninterference locale *)
 
@@ -190,8 +190,11 @@ lemma partitionIntegrity_subjectAffects_aobj[Arch_assms]:
   assumes "kheap s x = Some (ArchObj ao)"
           "kheap s x \<noteq> kheap s' x"
           "silc_inv aag st s"
-          "pas_refined aag s"
           "pas_wellformed_noninterference aag"
+          "pas_refined aag s" "pas_refined aag s'"
+          "pas_cur_domain aag s" "pas_cur_domain aag s'"
+          "cur_vcpu_in_cur_domain s" "cur_vcpu_in_cur_domain s'"
+          "invs s" "invs s'"
   notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
                             THEN spec[where x=x], simplified integrity_obj_def, simplified]
   shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"
@@ -304,7 +307,7 @@ lemma arch_switch_to_thread_reads_respects_g'[Arch_assms]:
   "equiv_valid (reads_equiv_g aag) (affects_equiv aag l)
                (\<lambda>s s'. affects_equiv aag l s s' \<and>
                        arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
-               (\<lambda>s. is_subject aag t)
+               (\<lambda>s. invs s \<and> is_subject aag t)
                (arch_switch_to_thread t)"
   apply (simp add: arch_switch_to_thread_def)
   apply (rule equiv_valid_guard_imp)
@@ -343,7 +346,7 @@ lemma ev2_invisible'[Arch_assms]:
   done
 
 lemma arch_switch_to_idle_thread_reads_respects_g[Arch_assms, wp]:
-  "reads_respects_g aag l \<top> (arch_switch_to_idle_thread)"
+  "reads_respects_g aag l valid_arch_state (arch_switch_to_idle_thread)"
   apply (simp add: arch_switch_to_idle_thread_def)
   apply wp
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_idle_thread_ptr)
@@ -451,6 +454,34 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu[Arch_assms]:
   apply (rule user_context.expand; clarsimp)
   done
 
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows integrity_hyp_update_reference_state:
+   "is_subject aag t
+    \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  and integrity_fpu_update_reference_state:
+   "is_subject aag t
+    \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  and partitionIntegrity_subjectAffects_hyp:
+    "\<lbrakk> partitionIntegrity aag s s'; invs s; invs s';
+       cur_hyp_in_cur_domain s; cur_hyp_in_cur_domain s';
+       pas_refined aag s; pas_refined aag s'; pas_cur_domain aag s;
+       pas_cur_domain aag s'; pas_domains_distinct aag;
+       \<not> equiv_hyp (\<lambda>x. pasObjectAbs aag x = a) s s'\<rbrakk>
+     \<Longrightarrow> subject_can_affect_label_directly aag a"
+  and partitionIntegrity_subjectAffects_fpu:
+    "\<lbrakk> partitionIntegrity aag s s'; invs s; invs s';
+       cur_fpu_in_cur_domain s; cur_fpu_in_cur_domain s'; pas_refined aag s;
+       pas_refined aag s'; pas_cur_domain aag s; pas_cur_domain aag s';
+       pas_domains_distinct aag;
+       \<not> equiv_fpu (\<lambda>x. pasObjectAbs aag x = a) s s' \<rbrakk>
+     \<Longrightarrow> subject_can_affect_label_directly aag a"
+  by auto
+
+lemmas [Arch_assms] =
+  do_user_op_reads_respects_g
+  auth_ipc_buffers_mem_Write'
+
 lemmas Noninterference_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -461,8 +492,7 @@ requalify_facts RISCV64.arch_globals_equiv_strengthener_thread_independent
 global_interpretation Noninterference?: Noninterference _ arch_globals_equiv_strengthener
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>
-                                                    | solves \<open>wp only: RISCV64.Noninterference_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Noninterference_assms)?)
 qed
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?:

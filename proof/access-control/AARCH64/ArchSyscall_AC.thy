@@ -280,7 +280,7 @@ lemma vppi_event_pas_refined:
       apply (wpsimp wp: maskInterrupt_invs hoare_vcg_imp_lift)+
   done
 
-lemma handle_reserved_irq_integrity_autarch[Arch_assms]:
+lemma handle_reserved_irq_integrity_autarch:
   "\<lbrace>integrity aag X st and pas_refined aag and invs and valid_cur_vcpu
                        and is_subject aag \<circ> cur_thread
                        and (\<lambda>s. in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s)\<rbrace>
@@ -384,10 +384,6 @@ lemma valid_cur_vcpu_machine_state[simp]:
   "valid_cur_vcpu (machine_state_update f s) = valid_cur_vcpu s"
   by (simp add: valid_cur_vcpu_def active_cur_vcpu_of_def)
 
-declare valid_cur_vcpu_machine_state[Arch_assms]
-        handle_event_valid_cur_vcpu[Arch_assms]
-        valid_cur_vcpu_machine_state[Arch_assms]
-
 \<comment> \<open>These aren't proved in the previous crunch, and hence need to be declared\<close>
 declare handle_arch_fault_reply_it[Arch_assms]
 declare handle_arch_fault_reply_cur_thread[Arch_assms]
@@ -459,14 +455,20 @@ lemma arch_perform_invocation_in_cur_domainE[Arch_assms, wp]:
    -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
   by (wpsimp simp: arch_perform_invocation_def)
 
-lemmas Syscall_AC_assms = Arch_assms (* extract accumulated assumptions *)
+lemmas [Arch_assms] =
+  valid_cur_vcpu_machine_state
+  handle_event_valid_cur_vcpu
+  handle_reserved_irq_integrity_autarch
+  handle_reserved_irq_idle
+
+lemmas Syscall_AC_assms = Arch_assms[folded valid_cur_hyp_def] (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 global_interpretation Syscall_AC?: Syscall_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact AARCH64.Syscall_AC_assms[folded valid_cur_hyp_def])?)
+    by (unfold_locales; (fact AARCH64.Syscall_AC_assms)?)
 qed
 
 end

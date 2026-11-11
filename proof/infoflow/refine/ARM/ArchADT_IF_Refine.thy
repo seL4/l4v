@@ -10,8 +10,6 @@ begin
 
 context Arch begin global_naming ARM
 
-clear_named_theorems Arch_assms (* accumulate assumptions for ADT_IF_Refine locale *)
-
 defs arch_extras_def:
   "arch_extras \<equiv> \<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
@@ -470,8 +468,7 @@ lemmas ADT_IF_Refine_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-requalify_consts
-  ARM.doUserOp_if
+arch_requalify_consts doUserOp_if
 
 global_interpretation ADT_IF_Refine?: ADT_IF_Refine doUserOp_if
 proof goal_cases

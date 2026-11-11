@@ -12,6 +12,13 @@ context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Syscall_IF locale *)
 
+definition authorised_for_globals_arch_inv ::
+  "arch_invocation \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
+  "authorised_for_globals_arch_inv ai \<equiv>
+    case ai of InvokePageTable oper \<Rightarrow> authorised_for_globals_page_table_inv oper
+             | InvokePage oper \<Rightarrow> authorised_for_globals_page_inv oper
+             | _ \<Rightarrow> \<top>"
+
 lemma globals_equiv_irq_state_update[Arch_assms, simp]:
   "globals_equiv st (s\<lparr>machine_state :=
                        machine_state s \<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
@@ -29,21 +36,19 @@ lemma thread_set_globals_equiv'[Arch_assms]:
                    dest: valid_global_arch_objs_pt_at)
   done
 
-lemma sts_authorised_for_globals_inv[Arch_assms]:
-  "set_thread_state d f \<lbrace>authorised_for_globals_inv oper\<rbrace>"
-  unfolding authorised_for_globals_inv_def authorised_for_globals_arch_inv_def
-            authorised_for_globals_page_table_inv_def authorised_for_globals_page_inv_def
+lemma sts_authorised_for_globals_arch_inv[Arch_assms]:
+  "set_thread_state d f \<lbrace>authorised_for_globals_arch_inv oper\<rbrace>"
+  unfolding authorised_for_globals_arch_inv_def
+            authorised_for_globals_page_table_inv_def
+            authorised_for_globals_page_inv_def
   apply (case_tac oper)
-           apply (wp | simp)+
-  apply (rename_tac arch_invocation)
-  apply (case_tac arch_invocation)
-     apply simp
-     apply (rename_tac page_table_invocation)
-     apply (case_tac page_table_invocation)
-      apply wpsimp+
-    apply (rename_tac page_invocation)
-    apply (case_tac page_invocation)
-      apply (simp | wp hoare_vcg_ex_lift)+
+         apply simp
+         apply (rename_tac page_table_invocation)
+         apply (case_tac page_table_invocation)
+          apply wpsimp+
+       apply (rename_tac page_invocation)
+       apply (case_tac page_invocation)
+          apply (simp | wp hoare_vcg_ex_lift)+
   done
 
 lemma dmo_maskInterrupt_globals_equiv[Arch_assms, wp]:
@@ -365,11 +370,57 @@ crunch arch_prepare_set_domain
   for valid_arch_state[Arch_assms,wp]: valid_arch_state
   (wp: hoare_drop_imps)
 
+lemma arch_perform_invocation_reads_respects_g[Arch_assms]:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects_g aag l (ct_active and authorised_arch_inv aag ai and valid_arch_inv ai
+                                           and authorised_for_globals_arch_inv ai and invs
+                                           and pas_refined aag and is_subject aag \<circ> cur_thread)
+                          (arch_perform_invocation ai)"
+  unfolding arch_perform_invocation_def fun_app_def
+  apply (case_tac ai; clarsimp)
+  by (wpsimp wp: doesnt_touch_globalsI
+                 reads_respects_g[OF perform_page_table_invocation_reads_respects]
+                 reads_respects_g[OF perform_page_invocation_reads_respects]
+                 reads_respects_g[OF perform_asid_control_invocation_reads_respects]
+                 reads_respects_g[OF perform_vspace_invocation_reads_respects]
+                 reads_respects_g[OF perform_vcpu_invocation_reads_respects]
+                 reads_respects_g[OF perform_sgi_invocation_reads_respects]
+                 reads_respects_g[OF perform_smc_invocation_reads_respects]
+                 perform_asid_pool_invocation_reads_respects_g
+                 perform_page_table_invocation_globals_equiv
+                 perform_page_invocation_globals_equiv
+                 perform_asid_control_invocation_globals_equiv
+                 perform_asid_pool_invocation_globals_equiv
+                 perform_vcpu_invocation_globals_equiv
+                 perform_sgi_invocation_globals_equiv
+           simp: authorised_arch_inv_def valid_arch_inv_def authorised_for_globals_arch_inv_def
+                 invs_psp_aligned invs_valid_objs invs_vspace_objs invs_valid_asid_table | simp)+
+
+lemma arch_perform_invocation_globals_equiv[Arch_assms]:
+  "\<lbrace>globals_equiv s and invs and ct_active and valid_arch_inv ai
+                    and authorised_for_globals_arch_inv ai\<rbrace>
+   arch_perform_invocation ai
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding arch_perform_invocation_def
+  apply (wpsimp wp: perform_page_table_invocation_globals_equiv
+                    perform_page_invocation_globals_equiv
+                    perform_asid_control_invocation_globals_equiv
+                    perform_asid_pool_invocation_globals_equiv
+                    perform_vcpu_invocation_globals_equiv)+
+  apply (auto simp: authorised_for_globals_arch_inv_def invs_def valid_state_def valid_arch_inv_def)
+  done
+
+lemmas [Arch_assms] =
+  invoke_untyped_globals_equiv
+
 lemmas Syscall_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-global_interpretation Syscall_IF?: Syscall_IF
+arch_requalify_consts
+  authorised_for_globals_arch_inv
+
+global_interpretation Syscall_IF?: Syscall_IF _ authorised_for_globals_arch_inv
 proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact AARCH64.Syscall_IF_assms)?)

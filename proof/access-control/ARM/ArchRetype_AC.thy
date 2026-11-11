@@ -418,12 +418,12 @@ lemma init_arch_objects_integrity[Arch_assms]:
   done
 
 lemma integrity_asids_detype[Arch_assms]:
-  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  assumes refs: "\<forall>r\<in>refs. is_subject aag r"
   shows
-    "integrity_asids aag subjects x a (detype refs s) s' =
-     integrity_asids aag subjects x a s s'"
-    "integrity_asids aag subjects x a s (detype refs s') =
-     integrity_asids aag subjects x a s s'"
+    "integrity_asids aag {pasSubject aag} x a (detype refs s) s' =
+     integrity_asids aag {pasSubject aag} x a s s'"
+    "integrity_asids aag {pasSubject aag} x a s (detype refs s') =
+     integrity_asids aag {pasSubject aag} x a s s'"
   by (auto simp: integrity_asids_def detype_def refs opt_map_def)
 
 lemma retype_region_integrity_asids[Arch_assms]:
@@ -435,6 +435,34 @@ lemma retype_region_integrity_asids[Arch_assms]:
                           else kheap s a\<rparr>)"
   by (clarsimp simp: integrity_asids_def opt_map_def)
 
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows integrity_hyp_detype:
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p (detype R s) st = integrity_hyp aag {pasSubject aag} p s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s (detype R st) = integrity_hyp aag {pasSubject aag} p s st"
+  and integrity_fpu_detype:
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p (detype R s) st = integrity_fpu aag {pasSubject aag} p s st"
+    "\<forall>r \<in> R. is_subject aag r
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s (detype R st) = integrity_fpu aag {pasSubject aag} p s st"
+  and retype_region_integrity_hyp:
+    "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+       \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_hyp aag {pasSubject aag} p s st \<rbrakk>
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
+  and retype_region_integrity_fpu:
+    "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
+       \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_fpu aag {pasSubject aag} p s st \<rbrakk>
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
+  by auto
+
 declare state_hyp_refs_of_detype[Arch_assms]
 
 lemmas Retype_AC_assms = Arch_assms (* extract accumulated assumptions *)
@@ -444,8 +472,7 @@ end (* Arch *)
 global_interpretation Retype_AC?: Retype_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.Retype_AC_assms | solves \<open>rule integrity_arch_triv\<close>
-                                              | solves \<open>wp only: ARM.Retype_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Retype_AC_assms)?)
 qed
 
 end

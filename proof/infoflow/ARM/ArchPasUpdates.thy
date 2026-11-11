@@ -8,9 +8,9 @@ theory ArchPasUpdates
 imports PasUpdates
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
-clear_named_theorems Arch_assms (* accumulate assumptions for PasUpdates_2 locale *)
+clear_named_theorems Arch_assms (* accumulate assumptions for PasUpdates locale *)
 
 lemma state_asids_to_policy_aux_pasSubject_update:
   "state_asids_to_policy_aux (aag\<lparr>pasSubject := x\<rparr>) caps asid vrefs =
@@ -78,14 +78,14 @@ lemma state_asids_to_policy_pasMayEditReadyQueues_update[Arch_assms]:
 declare arch_post_set_flags_inv[Arch_assms]
 declare arch_prepare_set_domain_inv[Arch_assms]
 
-lemmas PasUpdates_2_assms = Arch_assms (* extract accumulated assumptions *)
+lemmas PasUpdates_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-global_interpretation PasUpdates_2?: PasUpdates
+global_interpretation PasUpdates?: PasUpdates
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.PasUpdates_2_assms)?)
+    by (unfold_locales; (fact ARM.PasUpdates_assms)?)
 qed
 
 end

@@ -1219,6 +1219,9 @@ lemma set_bound_notification_globals_equiv[Arch_assms]:
                 dest: get_tcb_SomeD valid_global_arch_objs_pt_at
                split: option.splits kernel_object.splits)+
 
+lemmas [Arch_assms] =
+  thread_set_globals_equiv
+
 lemmas Finalise_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

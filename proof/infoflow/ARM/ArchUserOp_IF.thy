@@ -8,7 +8,7 @@ theory ArchUserOp_IF
 imports UserOp_IF
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for UserOp_IF locale *)
 
@@ -111,20 +111,28 @@ lemma arch_globals_equiv_device_state_update[Arch_assms, simp]:
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows no_hyp_modify:
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"
+  and no_fpu_modify:
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"
+  by auto
+
 lemmas UserOp_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-context begin interpretation Arch .
-
-requalify_types user_transition_if
-
-end
+arch_requalify_types user_transition_if
 
 global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.UserOp_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+    by (unfold_locales; (fact ARM.UserOp_IF_assms)?)
 qed
 
 context Arch begin global_naming ARM
@@ -996,17 +1004,5 @@ lemma do_user_op_reads_respects_g:
   done
 
 end (* Arch *)
-
-context begin interpretation Arch .
-
-requalify_consts
-  do_user_op_if
-  valid_vspace_objs_if
-  context_matches_state
-
-requalify_facts
-  do_user_op_reads_respects_g
-
-end
 
 end

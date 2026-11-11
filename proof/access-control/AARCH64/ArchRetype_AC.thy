@@ -361,33 +361,33 @@ lemma dmo_clearMemory_respects'[Arch_assms]:
   done
 
 lemma integrity_asids_detype[Arch_assms]:
-  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  assumes refs: "\<forall>r\<in>refs. is_subject aag r"
   shows
-    "integrity_asids aag subjects x a (detype refs s) s' =
-     integrity_asids aag subjects x a s s'"
-    "integrity_asids aag subjects x a s (detype refs s') =
-     integrity_asids aag subjects x a s s'"
+    "integrity_asids aag {pasSubject aag} x a (detype refs s) s' =
+     integrity_asids aag {pasSubject aag} x a s s'"
+    "integrity_asids aag {pasSubject aag} x a s (detype refs s') =
+     integrity_asids aag {pasSubject aag} x a s s'"
   by (auto simp: integrity_asids_def detype_def refs opt_map_def)
 
 lemma integrity_hyp_detype[Arch_assms]:
-  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  assumes refs: "\<forall>r\<in>refs. is_subject aag r"
   shows
-    "integrity_hyp aag subjects x (detype refs s) s' =
-     integrity_hyp aag subjects x s s'"
-    "integrity_hyp aag subjects x s (detype refs s') =
-     integrity_hyp aag subjects x s s'"
+    "integrity_hyp aag {pasSubject aag} x (detype refs s) s' =
+     integrity_hyp aag {pasSubject aag} x s s'"
+    "integrity_hyp aag {pasSubject aag} x s (detype refs s') =
+     integrity_hyp aag {pasSubject aag} x s s'"
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_of_state_def atomize_conj
   apply (safe elim!: allEI; clarsimp)
   apply (all \<open>case_tac "x \<in> refs"\<close>)
   by (auto simp: refs detype_def opt_map_def split: option.splits)
 
 lemma integrity_fpu_detype[Arch_assms]:
-  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  assumes refs: "\<forall>r\<in>refs. is_subject aag r"
   shows
-    "integrity_fpu aag subjects x (detype refs s) s' =
-     integrity_fpu aag subjects x s s'"
-    "integrity_fpu aag subjects x s (detype refs s') =
-     integrity_fpu aag subjects x s s'"
+    "integrity_fpu aag {pasSubject aag} x (detype refs s) s' =
+     integrity_fpu aag {pasSubject aag} x s s'"
+    "integrity_fpu aag {pasSubject aag} x s (detype refs s') =
+     integrity_fpu aag {pasSubject aag} x s s'"
   unfolding integrity_fpu_def integrity_fpu_def fpu_of_state_def
   by (auto simp: refs detype_def opt_map_def split: option.splits kernel_object.splits)
 
@@ -430,6 +430,23 @@ lemma retype_region_integrity_fpu[Arch_assms]:
                     simp: image_def p_assoc_help power_sub)
   done
 
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>pas_refined aag and post_retype_invs tp refs
+    and (\<lambda>s. \<forall>x\<in>set refs. x \<notin> global_refs s)
+    and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api tp obj_sz))\<rbrace>
+   init_arch_objects tp dev ptr bits obj_sz refs
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  by wpsimp
+
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "\<lbrace>integrity aag X st and K (\<forall>x\<in>set refs. is_subject aag x)
+                       and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
+   init_arch_objects new_type dev ptr num_objects obj_sz refs
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp
+
 declare state_hyp_refs_of_detype[Arch_assms]
 
 lemmas Retype_AC_assms = Arch_assms (* extract accumulated assumptions *)
@@ -439,7 +456,7 @@ end (* Arch *)
 global_interpretation Retype_AC?: Retype_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact AARCH64.Retype_AC_assms | solves \<open>wp only: AARCH64.Retype_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact AARCH64.Retype_AC_assms)?)
 qed
 
 end

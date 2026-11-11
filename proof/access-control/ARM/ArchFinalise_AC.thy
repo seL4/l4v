@@ -12,12 +12,6 @@ context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_AC locale *)
 
-crunch arch_finalise_cap, prepare_thread_delete
-  for pas_refined[wp]: "pas_refined aag"
-
-crunch prepare_thread_delete
-  for respects[Arch_assms, wp]: "integrity aag X st"
-
 lemma sbn_st_vrefs[Arch_assms, wp]:
   "set_bound_notification t st \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
@@ -61,12 +55,39 @@ lemma arch_finalise_cap_respects[Arch_assms, wp]:
              intro: pas_refined_Control_into_is_subject_asid)
   done
 
-declare finalise_cap_replaceable[Arch_assms]
-declare finalise_cap_valid_list[Arch_assms]
-declare arch_finalise_cap_pas_refined[Arch_assms]
-declare prepare_thread_delete_st_tcb_at_halted[Arch_assms]
-declare prepare_thread_delete_pas_refined[Arch_assms]
-declare valid_cur_fpu_lift_arch[Arch_assms]
+crunch prepare_thread_delete
+  for inv[Arch_assms,wp]: P
+
+crunch arch_finalise_cap
+  for pas_refined[wp]: "pas_refined aag"
+
+(* strengthen preconditions for locale assumptions *)
+lemma [Arch_assms]:
+  shows
+    "\<lbrace>pas_refined aag and invs and valid_arch_cap acap\<rbrace>
+     arch_finalise_cap acap ex
+     \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  and
+    "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s \<and> valid_cur_fpu s \<and>
+          cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s) \<and>
+          (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s) \<and>
+          (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and> pspace_distinct s \<and> valid_vspace_objs s \<and>
+                               valid_arch_state s \<and> valid_arch_caps s)\<rbrace>
+     finalise_cap cap x
+     \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
+  by (wpsimp wp: finalise_cap_replaceable)+
+
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows prepare_thread_delete_respects:
+    "\<lbrace>integrity aag X st and pas_refined aag and valid_cur_fpu and K (is_subject aag p)\<rbrace>
+     prepare_thread_delete p
+     \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by wpsimp
+
+lemmas [Arch_assms] =
+  finalise_cap_valid_list
+  valid_cur_fpu_lift_arch
 
 lemmas Finalise_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -75,7 +96,7 @@ end (* Arch *)
 global_interpretation Finalise_AC?: Finalise_AC
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.Finalise_AC_assms | solves \<open>wp only: ARM.Finalise_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Finalise_AC_assms)?)
 qed
 
 context Arch begin arch_global_naming

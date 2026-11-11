@@ -162,6 +162,8 @@ crunch handle_reserved_irq, handle_hypervisor_fault
   "\<lambda>s :: det_state. domain_sep_inv irqs (st :: 's :: state_ext state) s"
   (wp: crunch_wps simp: crunch_simps vcpu_update_def valid_vcpu_def valid_fault_def)
 
+declare handle_spurious_irq_domain_sep_inv[Arch_assms]
+
 \<comment> \<open>Remove the parentheses\<close>
 declare handle_reserved_irq_domain_sep_inv[simplified and_assoc, Arch_assms]
 declare handle_hypervisor_fault_domain_sep_inv[simplified and_assoc, Arch_assms]

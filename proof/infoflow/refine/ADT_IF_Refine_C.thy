@@ -107,7 +107,7 @@ definition
 
 end (* kernel_m *)
 
-locale ADT_IF_Refine = kernel_m +
+locale ADT_IF_Refine_C = kernel_m +
   fixes doUserOp_C_if ::
     "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
   and handleHypervisorFault_C_body_if :: "machine_word \<Rightarrow> (globals myvars, int, strictc_errortype) com"
@@ -578,7 +578,7 @@ definition kernel_exit_C_if where
      {(s, m, s'). s' \<in> fst (split kernelExit_C_if s) \<and>
                   m = (if ct_running_C (snd s') then InUserMode else InIdleMode)}"
 
-end (* ADT_IF_Refine *)
+end (* ADT_IF_Refine_C *)
 
 lemma corres_underlying_nf_imp2:
   "corres_underlying rf_sr nf True a b c d e \<Longrightarrow> corres_underlying rf_sr nf nf' a b c d e"
@@ -619,7 +619,7 @@ lemma absKState_crelation:
 
 end (* kernel_m *)
 
-context ADT_IF_Refine begin
+context ADT_IF_Refine_C begin
 
 definition do_user_op_C_if where
   "do_user_op_C_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_C_if uop) s)}"
@@ -761,6 +761,6 @@ theorem infoflow_refinement_A: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp u
   apply (erule sim_imp_refines[OF infoflow_fw_sim_A])
   done
 
-end (* ADT_IF_Refine *)
+end (* ADT_IF_Refine_C *)
 
 end

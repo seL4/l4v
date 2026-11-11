@@ -8,7 +8,7 @@ theory ArchFinalise_IF
 imports Finalise_IF
 begin
 
-context Arch begin global_naming ARM
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_IF locale *)
 
@@ -238,13 +238,14 @@ lemmas aag_cap_auth_subject = aag_cap_auth_ASIDPoolCap_asid
                               aag_cap_auth_PageTableCap_asid
                               aag_cap_auth_PageDirectoryCap_asid
 
-lemma prepare_thread_delete_reads_respects_f[Arch_assms]:
+lemma prepare_thread_delete_reads_respects_f[wp]:
   "reads_respects_f aag l \<top> (prepare_thread_delete thread)"
   unfolding prepare_thread_delete_def by wp
 
 lemma arch_finalise_cap_reads_respects[Arch_assms]:
-  "reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
-                                         and K (pas_cap_cur_auth aag (ArchObjectCap cap)))
+  assumes "pas_domains_distinct aag" (* included for locale assumption *)
+  shows "reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
+                               and K (pas_cap_cur_auth aag (ArchObjectCap cap)))
                         (arch_finalise_cap cap final)"
   unfolding arch_finalise_cap_def
   apply (rule gen_asm_ev)
@@ -354,8 +355,7 @@ lemma mapM_x_swp_store_kernel_base_globals_equiv:
 declare arch_get_sanitise_register_info_def[simp]
 
 crunch prepare_thread_delete
-  for globals_equiv[Arch_assms, wp]: "globals_equiv st"
-  (wp: dxo_wp_weak)
+  for inv[wp]: P
 
 lemma set_bound_notification_globals_equiv[Arch_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
@@ -368,6 +368,23 @@ lemma set_bound_notification_globals_equiv[Arch_assms]:
                dest: get_tcb_SomeD
               split: option.splits kernel_object.splits)+
 
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "pas_domains_distinct aag
+   \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and pas_refined aag and valid_arch_state
+                               and valid_cur_fpu and K (is_subject aag thread))
+                        (prepare_thread_delete thread)"
+  by wpsimp
+
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows prepare_thread_delete_globals_equiv:
+    "\<lbrace>globals_equiv s and invs\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  by wpsimp
+
+lemmas [Arch_assms] =
+  thread_set_globals_equiv
+
 lemmas Finalise_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -375,7 +392,7 @@ end (* Arch *)
 global_interpretation Finalise_IF?: Finalise_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.Finalise_IF_assms | solves \<open>wp only: ARM.Finalise_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.Finalise_IF_assms)?)
 qed
 
 end

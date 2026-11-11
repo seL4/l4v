@@ -8,7 +8,7 @@ theory ArchCNode_IF
 imports CNode_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for CNode_IF locale *)
 
@@ -72,7 +72,7 @@ lemmas CNode_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-requalify_consts RISCV64.irq_at
+arch_requalify_consts irq_at
 
 global_interpretation CNode_IF?: CNode_IF _ irq_at
 proof goal_cases
@@ -80,7 +80,7 @@ proof goal_cases
     by (unfold_locales; (fact RISCV64.CNode_IF_assms)?)
 qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for CNode_IF_2 locale *)
 
@@ -108,7 +108,7 @@ proof goal_cases
     by (unfold_locales; (fact RISCV64.CNode_IF_2_assms)?)
 qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for CNode_IF_3 locale *)
 

@@ -213,6 +213,14 @@ proof goal_cases
     by (unfold_locales; (fact AARCH64.Access_AC_3_assms)?)
 qed
 
+context Arch_p_arch_update_eq begin arch_global_naming
+
+lemma state_vrefs[iff]:
+  "state_vrefs (f s) = state_vrefs s"
+  by (simp add: state_vrefs_def pspace)
+
+end (* Arch_p_arch_update_eq *)
+
 locale Arch_hyp_machine_update_eq = Arch +
   fixes f :: "('a \<Rightarrow> 'a) \<Rightarrow> machine_state \<Rightarrow> machine_state"
   assumes vcpu: "vcpu_state (f g ms) = vcpu_state ms"
@@ -225,7 +233,7 @@ lemma integrity_hyp_machine_upd:
    integrity_hyp_2 aag subjects x ms (h ms') as as' ao ao'"
   by (auto simp: integrity_hyp_def vcpu)
 
-lemmas [Arch_assms, simp] =
+lemmas integrity_hyp_machine_upds[simp] =
   integrity_hyp_machine_upd[where h="\<lambda>_. _"]
   integrity_hyp_machine_upd[where h="\<lambda>_. _" and g="\<lambda>_. _"]
   integrity_hyp_machine_upd[where h=id, simplified machine_state_update_id id_apply]
@@ -245,7 +253,7 @@ lemma integrity_fpu_machine_upd:
    integrity_fpu_2 aag subjects x ms (h ms') kh kh'"
   by (auto simp: integrity_fpu_def fpu)
 
-lemmas [Arch_assms, simp] =
+lemmas integrity_fpu_machine_upds[simp] =
   integrity_fpu_machine_upd[where h="\<lambda>_. _"]
   integrity_fpu_machine_upd[where h="\<lambda>_. _" and g="\<lambda>_. _"]
   integrity_fpu_machine_upd[where h=id, simplified machine_state_update_id id_apply]
@@ -255,26 +263,50 @@ end (* Arch_fpu_machine_update_eq *)
 
 locale Arch_integrity_machine_update_eq = Arch_fpu_machine_update_eq + Arch_hyp_machine_update_eq
 
-sublocale Arch \<subseteq> irq_state_update: Arch_integrity_machine_update_eq irq_state_update by unfold_locales auto
-sublocale Arch \<subseteq> underlying_memory_update: Arch_integrity_machine_update_eq underlying_memory_update by unfold_locales auto
-sublocale Arch \<subseteq> device_state_update: Arch_integrity_machine_update_eq device_state_update by unfold_locales auto
-sublocale Arch \<subseteq> rest_update: Arch_integrity_machine_update_eq machine_state_rest_update by unfold_locales auto
-sublocale Arch \<subseteq> irq_masks_update: Arch_integrity_machine_update_eq irq_masks_update by unfold_locales auto
-sublocale Arch \<subseteq> vcpu_state_update: Arch_fpu_machine_update_eq vcpu_state_update by unfold_locales auto
-sublocale Arch \<subseteq> fpu_state_update: Arch_hyp_machine_update_eq fpu_state_update by unfold_locales auto
-sublocale Arch \<subseteq> fpu_enabled_update: Arch_integrity_machine_update_eq fpu_enabled_update by unfold_locales auto
-
-context Arch_p_arch_update_eq begin arch_global_naming
-
-lemma state_vrefs[Arch_assms, iff]:
-  "state_vrefs (f s) = state_vrefs s"
-  by (simp add: state_vrefs_def pspace)
-
-end (* Arch_p_arch_update_eq *)
-
 context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Access_AC_4 locale *)
+
+sublocale irq_state_update: Arch_integrity_machine_update_eq irq_state_update by unfold_locales auto
+sublocale underlying_memory_update: Arch_integrity_machine_update_eq underlying_memory_update by unfold_locales auto
+sublocale device_state_update: Arch_integrity_machine_update_eq device_state_update by unfold_locales auto
+sublocale rest_update: Arch_integrity_machine_update_eq machine_state_rest_update by unfold_locales auto
+sublocale irq_masks_update: Arch_integrity_machine_update_eq irq_masks_update by unfold_locales auto
+sublocale vcpu_state_update: Arch_fpu_machine_update_eq vcpu_state_update by unfold_locales auto
+sublocale fpu_state_update: Arch_hyp_machine_update_eq fpu_state_update by unfold_locales auto
+sublocale fpu_enabled_update: Arch_integrity_machine_update_eq fpu_enabled_update by unfold_locales auto
+
+lemmas [Arch_assms] =
+  cdt_update.state_vrefs
+  cur_domain_update.state_vrefs
+  cur_thread_update.state_vrefs
+  domain_index_update.state_vrefs
+  domain_list_update.state_vrefs
+  domain_start_index_update.state_vrefs
+  domain_time_update.state_vrefs
+  irq_node_update_arch.state_vrefs
+  interrupt_update.state_vrefs
+  revokable_update.state_vrefs
+  machine_state_update.state_vrefs
+  ready_queues_update.state_vrefs
+  scheduler_action_update.state_vrefs
+  more_update.state_vrefs
+
+lemmas [Arch_assms] =
+  irq_state_update.integrity_hyp_machine_upds
+  underlying_memory_update.integrity_hyp_machine_upds
+  device_state_update.integrity_hyp_machine_upds
+  rest_update.integrity_hyp_machine_upds
+  irq_masks_update.integrity_hyp_machine_upds
+  fpu_state_update.integrity_hyp_machine_upds
+  fpu_enabled_update.integrity_hyp_machine_upds
+  irq_state_update.integrity_fpu_machine_upds
+  underlying_memory_update.integrity_fpu_machine_upds
+  device_state_update.integrity_fpu_machine_upds
+  rest_update.integrity_fpu_machine_upds
+  irq_masks_update.integrity_fpu_machine_upds
+  vcpu_state_update.integrity_fpu_machine_upds
+  fpu_enabled_update.integrity_fpu_machine_upds
 
 lemma integrity_asids_kh_upd_None[Arch_assms]:
   "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
@@ -375,15 +407,15 @@ lemmas [simp] =
 
 end (* Arch_pas_refined_arch_update_eq *)
 
-sublocale Arch \<subseteq> kernel_vspace_update: Arch_pas_refined_arch_update_eq arm_kernel_vspace_update by unfold_locales auto
-sublocale Arch \<subseteq> vmid_table_update: Arch_pas_refined_arch_update_eq arm_vmid_table_update by unfold_locales auto
-sublocale Arch \<subseteq> next_vmid_update: Arch_pas_refined_arch_update_eq arm_next_vmid_update by unfold_locales auto
-sublocale Arch \<subseteq> global_vspace_update: Arch_pas_refined_arch_update_eq arm_us_global_vspace_update by unfold_locales auto
-sublocale Arch \<subseteq> current_vcpu_update: Arch_pas_refined_arch_update_eq arm_current_vcpu_update by unfold_locales auto
-sublocale Arch \<subseteq> numlistregs_update: Arch_pas_refined_arch_update_eq arm_gicvcpu_numlistregs_update by unfold_locales auto
-sublocale Arch \<subseteq> current_fpu_update: Arch_pas_refined_arch_update_eq arm_current_fpu_owner_update by unfold_locales auto
-
 context Arch begin arch_global_naming
+
+sublocale kernel_vspace_update: Arch_pas_refined_arch_update_eq arm_kernel_vspace_update by unfold_locales auto
+sublocale vmid_table_update: Arch_pas_refined_arch_update_eq arm_vmid_table_update by unfold_locales auto
+sublocale next_vmid_update: Arch_pas_refined_arch_update_eq arm_next_vmid_update by unfold_locales auto
+sublocale global_vspace_update: Arch_pas_refined_arch_update_eq arm_us_global_vspace_update by unfold_locales auto
+sublocale current_vcpu_update: Arch_pas_refined_arch_update_eq arm_current_vcpu_update by unfold_locales auto
+sublocale numlistregs_update: Arch_pas_refined_arch_update_eq arm_gicvcpu_numlistregs_update by unfold_locales auto
+sublocale current_fpu_update: Arch_pas_refined_arch_update_eq arm_current_fpu_owner_update by unfold_locales auto
 
 lemma pas_refined_irq_state_independent[intro!, simp]:
   "pas_refined x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =

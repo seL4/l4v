@@ -20,8 +20,6 @@ axiomatization dmo_reads_respects where
 
 context Arch begin arch_global_naming
 
-clear_named_theorems Arch_assms (* accumulate assumptions for Arch_IF locale *)
-
 (* Define new copies of the axioms that are only visible in the Arch locale *)
 lemmas dmo_getESR_reads_respects = dmo_getESR_reads_respects
 lemmas dmo_getFAR_reads_respects = dmo_getFAR_reads_respects
@@ -38,6 +36,8 @@ hide_fact
   dmo_addressTranslateS1_reads_respects
 
 context Arch begin arch_global_naming
+
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_IF locale *)
 
 (* we need to know we're not doing an asid pool update, or else this could affect
    what some other domain sees *)
@@ -196,19 +196,15 @@ lemma equiv_fpu_machine_state_rest_update[Arch_assms]:
   "equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := r\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
   by (simp add: equiv_fpu_def equiv_for_def)
 
+crunch arch_post_cap_deletion
+  for valid_global_objs[Arch_assms, wp]: "valid_global_objs"
+
+lemmas [Arch_assms] =
+  storeWord_globals_equiv
+
 lemmas Arch_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
-
-(* FIXME AARCH64 IF: add to interface *)
-arch_requalify_facts
-  set_simple_ko_globals_equiv
-  retype_region_irq_state_of_state
-  arch_perform_invocation_irq_state_of_state
-
-declare
-  retype_region_irq_state_of_state[wp]
-  arch_perform_invocation_irq_state_of_state[wp]
 
 global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
@@ -3507,57 +3503,6 @@ lemma perform_smc_invocation_reads_respects:
   unfolding perform_smc_invocation_def
   by (case_tac api; wpsimp wp: dmo_doSMC_mop_reads_respects)
 
-
-definition authorised_for_globals_arch_inv ::
-  "arch_invocation \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
-  "authorised_for_globals_arch_inv ai \<equiv>
-    case ai of InvokePageTable oper \<Rightarrow> authorised_for_globals_page_table_inv oper
-             | InvokePage oper \<Rightarrow> authorised_for_globals_page_inv oper
-             | _ \<Rightarrow> \<top>"
-
-lemma arch_perform_invocation_reads_respects_g:
-  assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows "reads_respects_g aag l (ct_active and authorised_arch_inv aag ai and valid_arch_inv ai
-                                           and authorised_for_globals_arch_inv ai and invs
-                                           and pas_refined aag and is_subject aag \<circ> cur_thread)
-                          (arch_perform_invocation ai)"
-  unfolding arch_perform_invocation_def fun_app_def
-  apply (case_tac ai; clarsimp)
-  by (wpsimp wp: doesnt_touch_globalsI
-                 reads_respects_g[OF perform_page_table_invocation_reads_respects]
-                 reads_respects_g[OF perform_page_invocation_reads_respects]
-                 reads_respects_g[OF perform_asid_control_invocation_reads_respects]
-                 reads_respects_g[OF perform_vspace_invocation_reads_respects]
-                 reads_respects_g[OF perform_vcpu_invocation_reads_respects]
-                 reads_respects_g[OF perform_sgi_invocation_reads_respects]
-                 reads_respects_g[OF perform_smc_invocation_reads_respects]
-                 perform_asid_pool_invocation_reads_respects_g
-                 perform_page_table_invocation_globals_equiv
-                 perform_page_invocation_globals_equiv
-                 perform_asid_control_invocation_globals_equiv
-                 perform_asid_pool_invocation_globals_equiv
-                 perform_vcpu_invocation_globals_equiv
-                 perform_sgi_invocation_globals_equiv
-           simp: authorised_arch_inv_def valid_arch_inv_def authorised_for_globals_arch_inv_def
-                 invs_psp_aligned invs_valid_objs invs_vspace_objs invs_valid_asid_table | simp)+
-
-lemma arch_perform_invocation_globals_equiv:
-  "\<lbrace>globals_equiv s and invs and ct_active and valid_arch_inv ai
-                    and authorised_for_globals_arch_inv ai\<rbrace>
-   arch_perform_invocation ai
-   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding arch_perform_invocation_def
-  apply (wpsimp wp: perform_page_table_invocation_globals_equiv
-                    perform_page_invocation_globals_equiv
-                    perform_asid_control_invocation_globals_equiv
-                    perform_asid_pool_invocation_globals_equiv
-                    perform_vcpu_invocation_globals_equiv)+
-  apply (auto simp: authorised_for_globals_arch_inv_def invs_def valid_state_def valid_arch_inv_def)
-  done
-
-crunch arch_post_cap_deletion
-  for valid_global_objs[wp]: "valid_global_objs"
-
 (* generalises auth_ipc_buffers_mem_Write *)
 lemma auth_ipc_buffers_mem_Write':
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s \<rbrakk>
@@ -3572,28 +3517,5 @@ lemma auth_ipc_buffers_mem_Write':
   done
 
 end (* Arch *)
-
-(* FIXME AARCH64 IF: add to interface *)
-
-arch_requalify_consts
-  authorised_for_globals_arch_inv
-
-arch_requalify_facts
-  arch_post_cap_deletion_valid_global_objs
-  auth_ipc_buffers_mem_Write'
-  thread_set_globals_equiv
-  arch_post_modify_registers_cur_domain
-  arch_post_modify_registers_cur_thread
-  length_msg_lt_msg_max
-  set_mrs_globals_equiv
-  arch_perform_invocation_globals_equiv
-  check_valid_ipc_buffer_inv
-  arch_perform_invocation_reads_respects_g
-
-declare
-  arch_post_cap_deletion_valid_global_objs[wp]
-  arch_post_modify_registers_cur_domain[wp]
-  arch_post_modify_registers_cur_thread[wp]
-  prepare_thread_delete_st_tcb_at_halted[wp]
 
 end

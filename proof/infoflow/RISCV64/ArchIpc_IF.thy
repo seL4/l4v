@@ -8,7 +8,7 @@ theory ArchIpc_IF
 imports Ipc_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Ipc_IF locale *)
 
@@ -233,7 +233,7 @@ lemma handle_arch_fault_reply_reads_respects[Arch_assms, wp]:
   "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   by (simp add: handle_arch_fault_reply_def, wp)
 
-lemma arch_get_sanitise_register_info_reads_respects[Arch_assms, wp]:
+lemma arch_get_sanitise_register_info_reads_respects[wp]:
   "reads_respects aag l \<top> (arch_get_sanitise_register_info t)"
   by wpsimp
 
@@ -279,6 +279,14 @@ lemma transfer_caps_loop_valid_arch[Arch_assms]:
   "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
   by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
 
+(* strengthen precondition for locale assumption *)
+lemma [Arch_assms]:
+  "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
+  by wpsimp
+
+lemmas [Arch_assms] =
+  set_mrs_globals_equiv
+
 lemmas Ipc_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -286,10 +294,10 @@ end (* Arch *)
 global_interpretation Ipc_IF?: Ipc_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.Ipc_IF_assms | solves \<open>wp only: RISCV64.Ipc_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact RISCV64.Ipc_IF_assms)?)
 qed
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Ipc_IF_2 locale *)
 

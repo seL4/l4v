@@ -72,7 +72,16 @@ lemmas [Arch_assms] =
   cur_fpu_in_cur_domain_taut
   cur_hyp_in_cur_domain_wp
   cur_fpu_in_cur_domain_wp
-  valid_cur_hyp_triv
+  valid_cur_hyp_post_taut
+  prepare_thread_delete_inv
+
+(* trivial assumptions *)
+lemma [Arch_assms]:
+  shows thread_set_no_etcb_change_cur_fpu_in_cur_domain:
+    "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
+  and thread_set_no_etcb_change_cur_hyp_in_cur_domain:
+    "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
+  by wpsimp+
 
 lemmas ADT_IF_assms = Arch_assms (* extract accumulated assumptions *)
 
@@ -81,7 +90,7 @@ end (* Arch *)
 global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact ARM.ADT_IF_assms | solves \<open>wp only: ARM.ADT_IF_assms; simp\<close>)?)
+    by (unfold_locales; (fact ARM.ADT_IF_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -491,6 +500,13 @@ lemma thread_set_context_pas_refined[Arch_assms]:
   apply simp
   done
 
+lemmas [Arch_assms] =
+  handle_hypervisor_fault_inv
+  init_arch_objects_irq_masks
+  retype_region_irq_masks
+  retype_region_irq_state_of_state
+  arch_perform_invocation_irq_state_of_state
+
 lemmas ADT_IF_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -502,9 +518,5 @@ proof goal_cases
 qed
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?: ADT_valid_initial_state ..
-
-hide_fact ADT_IF_2.do_user_op_silc_inv
-requalify_facts ARM.do_user_op_silc_inv
-declare do_user_op_silc_inv[wp]
 
 end

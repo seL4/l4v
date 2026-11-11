@@ -10,6 +10,8 @@ begin
 
 context kernel_m begin
 
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_IF_Refine_C locale *)
+
 lemma handleInvocation_ccorres'[Arch_assms]:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and arch_extras and ct_active' and sch_act_simple)
@@ -315,13 +317,12 @@ lemma checkInterrupt_ccorres'[Arch_assms]:
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
-end (* kernel_m *)
-
-sublocale kernel_m \<subseteq> ADT_IF_Refine?: ADT_IF_Refine _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
+sublocale ADT_IF_Refine_C?: ADT_IF_Refine_C _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
 proof goal_cases
-  interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Arch_assms)?)
 qed
+
+end (* kernel_m *)
 
 end

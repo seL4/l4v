@@ -128,25 +128,6 @@ lemmas CNode_AC_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
-context is_extended begin interpretation Arch .
-
-lemma list_integ_lift[Arch_assms]:
-  assumes li:
-    "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
-     f
-     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (rule hoare_pre)
-   apply (unfold integrity_def[abs_def] integrity_asids_def)
-   apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (simp add: tcb_states_of_state_def get_tcb_def)
-   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
-  apply (simp only: integrity_cdt_list_as_list_integ)
-  apply (simp add: tcb_states_of_state_def get_tcb_def)
-  done
-
-end (* is_extended *)
-
 global_interpretation CNode_AC?: CNode_AC
 proof goal_cases
   case 1 show ?case
@@ -180,6 +161,10 @@ lemma thread_set_arch_trivT[Arch_assms]:
   apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
   done
 
+lemmas [Arch_assms] =
+  integrity_hyp_post_taut
+  integrity_fpu_post_taut
+
 lemmas CNode_AC_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
@@ -187,7 +172,7 @@ end (* Arch *)
 global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
   case 1 show ?case
-    by (unfold_locales; (fact RISCV64.CNode_AC_2_assms | solves \<open>rule integrity_arch_triv\<close>)?)
+    by (unfold_locales; (fact RISCV64.CNode_AC_2_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -205,22 +190,11 @@ lemma aobj_ref'_same_aobject[Arch_assms]:
 crunch set_untyped_cap_as_full
   for valid_arch_state[Arch_assms, wp]: valid_arch_state
 
+declare thread_set_arch_trivT[Arch_assms]
+
 lemmas CNode_AC_3_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
-
-context is_extended begin interpretation Arch .
-
-lemma pas_refined_tcb_domain_map_wellformed[Arch_assms, wp]:
-  assumes tdmw: "f \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
-  shows "f \<lbrace>pas_refined aag\<rbrace>"
-  apply (simp add: pas_refined_def)
-  apply (wp tdmw)
-   apply (wp lift_inv)
-   apply simp+
-  done
-
-end (* is_extended *)
 
 global_interpretation CNode_AC_3?: CNode_AC_3
 proof goal_cases
