@@ -1422,6 +1422,43 @@ lemma hoare_gets_sp:
   "\<lbrace>P\<rbrace> gets f \<lbrace>\<lambda>rv s. rv = f s \<and> P s\<rbrace>"
   by (simp add: valid_def simpler_gets_def)
 
+lemma select_sp:
+  "\<lbrace>P\<rbrace> select S \<lbrace>\<lambda>rv s. rv \<in> S \<and> P s\<rbrace>"
+  by (simp add: hoare_weaken_pre[OF select_wp])
+
+lemma select_f_sp:
+  "\<lbrace>P\<rbrace> select_f S \<lbrace>\<lambda>rv s. rv \<in> fst S \<and> P s\<rbrace>"
+  by (simp add: hoare_weaken_pre[OF select_f_wp])
+
+lemma state_select_sp:
+  "\<lbrace>P\<rbrace> state_select f \<lbrace>\<lambda>rv s. (s, rv) \<in> f \<and> P s\<rbrace>"
+  by (fastforce intro: hoare_weaken_pre[OF state_select_wp])
+
+lemma fail_sp:
+  "\<lbrace>P\<rbrace> fail \<lbrace>\<lambda>_ _. False\<rbrace>"
+  by (rule hoare_fail_any)
+
+lemma chaos_sp:
+  "\<lbrace>P\<rbrace> chaos \<lbrace>\<lambda>_ _. True\<rbrace>"
+  by (fastforce intro: hoare_weaken_pre[OF chaos_wp])
+
+lemma modify_sp:
+  "\<lbrace>P\<rbrace> modify f \<lbrace>\<lambda>_ s'. \<exists>s. P s \<and> s' = f s\<rbrace>"
+  by (fastforce intro: hoare_weaken_pre[OF modify_wp])
+
+lemma if_sp:
+  "\<lbrakk> \<lbrace>\<lambda>s. P s \<and> b\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>\<lambda>s. P s \<and> \<not> b\<rbrace> g \<lbrace>Q'\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace> if b then f else g \<lbrace>\<lambda>rv s. Q rv s \<or> Q' rv s\<rbrace>"
+  apply (clarsimp split: if_splits)
+  apply (intro conjI impI)
+   apply (fastforce intro: hoare_weaken_pre[OF hoare_disjI1])
+  apply (fastforce intro: hoare_weaken_pre[OF hoare_disjI2])
+  done
+
+lemma when_sp:
+  "\<lbrace>\<lambda>s. P s \<and> b\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> when b f \<lbrace>\<lambda>rv s. (b \<and> Q rv s) \<or> (\<not> b \<and> P s)\<rbrace>"
+  by (clarsimp simp: when_def)
+
 lemma hoare_returnOk_sp:
   "\<lbrace>P\<rbrace> returnOk x \<lbrace>\<lambda>rv s. rv = x \<and> P s\<rbrace>, \<lbrace>Q\<rbrace>"
   by (simp add: valid_def validE_def returnOk_def return_def)
