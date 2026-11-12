@@ -68,8 +68,7 @@ definition
    cdl_tcb_intent = \<lparr>cdl_intent_op = None,
                      cdl_intent_error = False,
                      cdl_intent_cap = 0,
-                     cdl_intent_extras = [],
-                     cdl_intent_recv_slot = None\<rparr>,
+                     cdl_intent_extras = []\<rparr>,
    cdl_tcb_has_fault = False,
    cdl_tcb_domain = minBound,
    cdl_tcb_extra = default_tcb_extra_data\<rparr>"

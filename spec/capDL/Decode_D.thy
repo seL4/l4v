@@ -37,14 +37,17 @@ definition get_page_intent :: "cdl_intent \<Rightarrow> cdl_page_intent option" 
 definition get_page_table_intent :: "cdl_intent \<Rightarrow> cdl_page_table_intent option" where
   "get_page_table_intent intent \<equiv> case intent of PageTableIntent x \<Rightarrow> Some x | _ \<Rightarrow> None"
 
-definition get_page_directory_intent :: "cdl_intent \<Rightarrow> cdl_page_directory_intent option" where
-  "get_page_directory_intent intent \<equiv> case intent of PageDirectoryIntent x \<Rightarrow> Some x | _ \<Rightarrow> None"
-
 definition get_untyped_intent :: "cdl_intent \<Rightarrow> cdl_untyped_intent option" where
   "get_untyped_intent intent \<equiv> case intent of UntypedIntent x \<Rightarrow> Some x | _ \<Rightarrow> None"
 
 definition get_domain_intent :: "cdl_intent \<Rightarrow> cdl_domain_intent option" where
   "get_domain_intent intent \<equiv> case intent of DomainIntent x \<Rightarrow> Some x | _ \<Rightarrow> None"
+
+text \<open>
+  Invocations that are not needed for system initialisation are not modelled. Decoding them does
+  not change the state and it either fails with an error or produces @{const OtherInvocation}.\<close>
+abbreviation other_invocation :: "cdl_invocation except_monad" where
+  "other_invocation \<equiv> returnOk OtherInvocation \<sqinter> throw"
 
 (* Decode and validate the given intent, turning it into a invocation. *)
 definition decode_invocation ::
@@ -52,18 +55,12 @@ definition decode_invocation ::
    cdl_invocation except_monad"
   where
   "decode_invocation invoked_cap invoked_cap_ref caps intent \<equiv>
+     if intent = OtherIntent then other_invocation else
      case invoked_cap of
-       EndpointCap o_id badge rights \<Rightarrow>
-         if Write \<in> rights
-         then returnOk $ InvokeEndpoint (SyncMessage badge (Grant \<in> rights)
-                                                     (GrantReply \<in> rights) o_id)
-         else throw
-     | NotificationCap o_id badge rights \<Rightarrow>
-         if Write \<in> rights
-         then returnOk $ InvokeNotification (Signal badge o_id)
-         else throw
-     | ReplyCap o_id rights \<Rightarrow>
-         returnOk $ InvokeReply (ReplyMessage o_id invoked_cap_ref (Grant \<in> rights))
+       EndpointCap _ _ _ \<Rightarrow> other_invocation
+     | NotificationCap _ _ _ \<Rightarrow> other_invocation
+     | ReplyCap _ _ \<Rightarrow> other_invocation
+     | SGISignalCap _ _ \<Rightarrow> other_invocation
 
      \<comment> \<open>For non-endpoint operations, we only perform the user's intent if it matches up with
          the cap.
@@ -88,8 +85,6 @@ definition decode_invocation ::
          liftME InvokeIrqHandler $ decode_irq_handler_invocation invoked_cap invoked_cap_ref caps
                                                                  irq_handler_intent
        odE
-     | SGISignalCap _ _ \<Rightarrow>
-         returnOk $ InvokeSGISignal SGISignalGenerate
      | AsidPoolCap _ _\<Rightarrow> doE
          asid_pool_intent \<leftarrow> throw_opt undefined $ get_asid_pool_intent intent;
          liftME InvokeAsidPool $ decode_asid_pool_invocation invoked_cap invoked_cap_ref caps
@@ -122,12 +117,7 @@ definition decode_invocation ::
                                                                    page_table_intent
            odE
            else if pt_t = PD
-           then doE
-             page_directory_intent \<leftarrow> throw_opt undefined $ get_page_directory_intent intent;
-             liftME InvokePageDirectory $
-               decode_page_directory_invocation invoked_cap invoked_cap_ref caps
-                                                page_directory_intent
-           odE
+           then throw
            else fail
          else doE
            page_table_intent \<leftarrow> throw_on_none $ get_page_table_intent intent;

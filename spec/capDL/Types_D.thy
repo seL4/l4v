@@ -461,21 +461,8 @@ definition update_cap_rights :: "cdl_right set \<Rightarrow> cdl_cap \<Rightarro
      | ReplyCap f1 _ \<Rightarrow> ReplyCap f1 (r - {Read, GrantReply} \<union> {Write})
      | _ \<Rightarrow> c"
 
-definition update_mapping_cap_status :: "cdl_frame_cap_type \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
- "update_mapping_cap_status r c \<equiv>
-    case c of
-      FrameCap dev f1 f2 f3 _ f4 \<Rightarrow> FrameCap dev f1 f2 f3 r f4
-    | PageTableCap l pt1 _ pt2 \<Rightarrow> PageTableCap l pt1 r pt2
-    | _ \<Rightarrow> c"
-
 primrec (nonexhaustive) cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard" where
   "cap_guard (CNodeCap _ x _ _) = x"
-
-definition update_cap_guard :: "cdl_cap_guard \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
-  "update_cap_guard x c \<equiv>
-     case c of
-       CNodeCap f1 _ f3 f4 \<Rightarrow> CNodeCap f1 x f3 f4
-     | _ \<Rightarrow> c"
 
 primrec (nonexhaustive) cap_guard_size :: "cdl_cap \<Rightarrow> cdl_cap_guard_size" where
   "cap_guard_size (CNodeCap _ _ x _ ) = x"
@@ -485,12 +472,6 @@ definition cnode_cap_size :: "cdl_cap \<Rightarrow> cdl_size_bits" where
      case cap of
        CNodeCap _ _ _ x \<Rightarrow> x
      | _ \<Rightarrow> 0"
-
-definition update_cap_guard_size :: "cdl_cap_guard_size \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
-  "update_cap_guard_size x c \<equiv>
-     case c of
-       CNodeCap f1 f2 _ f3 \<Rightarrow> CNodeCap f1 f2 x f3
-     | _ \<Rightarrow> c"
 
 definition cap_vmattrs :: "cdl_cap \<Rightarrow> cdl_raw_vmattrs" where
   "cap_vmattrs cap \<equiv>
@@ -613,18 +594,6 @@ lemma cap_type_update_cap_rights [simp]:
   "cap_type (update_cap_rights x cap) = cap_type cap"
   by (clarsimp simp: update_cap_rights_def cap_type_def split: cdl_cap.splits)
 
-lemma cap_type_update_mapping_cap_status [simp]:
-  "cap_type (update_mapping_cap_status x cap) = cap_type cap"
-  by (clarsimp simp: update_mapping_cap_status_def cap_type_def split: cdl_cap.splits)
-
-lemma cap_type_update_cap_guard [simp]:
-  "cap_type (update_cap_guard x cap) = cap_type cap"
-  by (clarsimp simp: update_cap_guard_def cap_type_def split: cdl_cap.splits)
-
-lemma update_cap_guard_size [simp]:
-  "cap_type (update_cap_guard_size x cap) = cap_type cap"
-  by (clarsimp simp: update_cap_guard_size_def cap_type_def split: cdl_cap.splits)
-
 
 
 definition is_pending_cap :: "cdl_cap \<Rightarrow> bool" where
@@ -667,8 +636,7 @@ definition default_tcb :: "domain \<Rightarrow> cdl_tcb" where
        cdl_intent_op = None,
        cdl_intent_error = False,
        cdl_intent_cap = 0,
-       cdl_intent_extras = [],
-       cdl_intent_recv_slot = None
+       cdl_intent_extras = []
      \<rparr>,
      cdl_tcb_has_fault = False,
      cdl_tcb_domain = current_domain,

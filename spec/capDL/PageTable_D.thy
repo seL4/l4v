@@ -11,13 +11,6 @@ theory PageTable_D
     CSpace_D
 begin
 
-(* Return the set of all PD/PT slots in the given PD. *)
-definition all_pd_pt_slots :: "cdl_object \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set" where
-  "all_pd_pt_slots pd pd_id state \<equiv>
-     {(pd_id, y). y \<in> dom (object_slots pd)} \<union>
-     {(x, y). \<exists>a b c. object_slots pd a = Some (PageTableCap PT x b c) \<and>
-                      x \<in> dom (cdl_objects state)}"
-
 definition cdl_get_pt_mapped_addr :: "cdl_cap \<Rightarrow> cdl_mapped_addr option" where
   "cdl_get_pt_mapped_addr cap \<equiv> case cap of PageTableCap _ pid ctype maddr \<Rightarrow> maddr | _ \<Rightarrow> None"
 
@@ -50,26 +43,7 @@ definition decode_page_table_invocation ::
            PageTableMap
              (PageTableCap PT (cap_object target) Real (Some (asid,vaddr && ~~ mask sectionBits)))
              (PageTableCap PT (cap_object target) (Fake new_attribs) None) target_ref target_slot
-       odE \<sqinter> throw
-     \<comment> \<open>Unmap this PageTable.\<close>
-     | PageTableUnmapIntent \<Rightarrow>
-        (case target of
-           PageTableCap PT pid ctype maddr \<Rightarrow> returnOk $ PageTableUnmap maddr pid target_ref
-         | _ \<Rightarrow> throw)
-        \<sqinter> throw"
-
-(* Decode a page table intent into an invocation. *)
-definition decode_page_directory_invocation ::
-  "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_page_directory_intent \<Rightarrow>
-   cdl_page_directory_invocation except_monad"
-  where
-  "decode_page_directory_invocation target target_ref caps intent \<equiv>
-     returnOk PageDirectoryNothing \<sqinter>
-     returnOk (PageDirectoryFlush Unify) \<sqinter>
-     returnOk (PageDirectoryFlush Clean) \<sqinter>
-     returnOk (PageDirectoryFlush CleanInvalidate) \<sqinter>
-     returnOk (PageDirectoryFlush Invalidate) \<sqinter>
-     throw "
+       odE \<sqinter> throw"
 
 (* Decode a page intent into an invocation. *)
 definition decode_page_invocation ::
@@ -126,10 +100,6 @@ definition decode_page_invocation ::
     | PageGetAddressIntent \<Rightarrow> returnOk PageGetAddress"
 
 (* Invoke a page table. *)
-definition invoke_page_directory :: "cdl_page_directory_invocation \<Rightarrow> unit k_monad" where
-  "invoke_page_directory params \<equiv> return ()"
-
-(* Invoke a page table. *)
 definition invoke_page_table :: "cdl_page_table_invocation \<Rightarrow> unit k_monad" where
   "invoke_page_table params \<equiv>
      case params of
@@ -138,17 +108,7 @@ definition invoke_page_table :: "cdl_page_table_invocation \<Rightarrow> unit k_
           \<comment> \<open>We install the Page Table into the Page Directory.  The concrete kernel uses
               hardware-defined Page Directory Entries. capDL just uses caps.\<close>
           insert_cap_orphan pt_cap pd_target_slot
-       od
-    | PageTableUnmap mapped_addr pt_id pt_cap_ref \<Rightarrow> do
-        case mapped_addr of
-          Some maddr \<Rightarrow> do
-            unmap_page_table maddr pt_id;
-            clear_object_caps pt_id \<sqinter> return ()
-          od
-        | _ \<Rightarrow> return ();
-        cap \<leftarrow> get_cap pt_cap_ref;
-        set_cap pt_cap_ref (reset_mem_mapping cap)
-      od"
+       od"
 
 (* Invoke a page. *)
 definition invoke_page :: "cdl_page_invocation \<Rightarrow> unit k_monad" where

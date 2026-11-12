@@ -8,17 +8,6 @@ theory KHeap_DP
 imports ProofHelpers_DP
 begin
 
-lemma has_slots_simps:
-  "has_slots (Tcb tcb)"
-  "has_slots (CNode cnode)"
-  "has_slots (AsidPool ap)"
-  "has_slots (PageTable l pt)"
-  "\<not> has_slots Endpoint"
-  "\<not> has_slots Notification"
-  "\<not> has_slots (Frame f)"
-  "\<not> has_slots Untyped"
-  by (simp add: has_slots_def)+
-
 lemma reset_cap_asid_id:
   "reset_cap_asid cap = reset_cap_asid cap'
   \<Longrightarrow> cap = cap'
@@ -83,10 +72,6 @@ lemma sep_map_c_any:
   "(p \<mapsto>c cap \<and>* R) s \<Longrightarrow> (p \<mapsto>c - \<and>* R) s"
   by (fastforce simp: sep_any_def sep_conj_exists)
 
-lemma pure_extract:
-  "\<lbrakk> <P \<and>* Q> s; pure P \<rbrakk> \<Longrightarrow> <P> s"
-  by (fastforce simp: pure_def sep_state_projection_def sep_conj_def)
-
 lemma throw_on_none_rv:
   "\<lbrace>\<lambda>s. case x of Some y \<Rightarrow> P y s | otherwise \<Rightarrow> False\<rbrace> throw_on_none x \<lbrace>P\<rbrace>, \<lbrace>Q\<rbrace>"
   apply (clarsimp simp: throw_on_none_def split: option.splits)
@@ -99,23 +84,6 @@ lemma throw_on_none_wp:
   by wpsimp
      auto
 
-lemma oseq:
-  "\<lbrakk> \<lbrace>P\<rbrace> gets_the f \<lbrace>Q\<rbrace>; \<forall>x. \<lbrace>Q x\<rbrace> gets_the $ g x \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> gets_the (f |>> g) \<lbrace>R\<rbrace>"
-  apply (fastforce simp: gets_def fail_def get_def return_def gets_the_def obind_def valid_def split_def
-    Let_def bind_def assert_opt_def split:option.splits)
-  done
-
-lemma hoare_ex_all:
-     "(\<forall>x. \<lbrace>P x\<rbrace> f \<lbrace>Q\<rbrace>) = \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>Q\<rbrace>"
-  apply (rule iffI)
-  apply (fastforce simp: valid_def)+
-done
-
-
-lemma sep_any_All: "\<lbrace><ptr \<mapsto>c - \<and>* R>\<rbrace> f \<lbrace>Q\<rbrace> = (\<forall>x. \<lbrace><ptr \<mapsto>c x \<and>* R>\<rbrace> f \<lbrace>Q\<rbrace>)"
-  apply (clarsimp simp: sep_any_def sep_conj_exists hoare_ex_all)
-done
-
 (* validE reasoning *)
 
 lemma gets_the_wpE:
@@ -125,87 +93,21 @@ lemma gets_the_wpE:
   apply (clarsimp)
   done
 
-lemma gets_the_invE : "\<lbrace>P\<rbrace> gets_the f \<lbrace>\<lambda>_. P\<rbrace>, -"
-  apply (wp)
-  apply (clarsimp)
-  done
-
-lemma return_rv :"\<lbrace>P r\<rbrace> return (Inr r) \<lbrace>\<lambda>rv s. P rv s\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
-  by (clarsimp simp: validE_def, wp, simp split: option.splits)
-
 crunch throw_on_none
   for inv[wp]: P
 
-lemma hoare_if_simp:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (if x then (\<lambda>rv s. Q rv s) else (\<lambda>rv s. Q rv s)) rv s\<rbrace>"
-  by (clarsimp)
-
-lemma hoare_if_simpE:
-  "\<lbrakk>\<And>x. Q x = R x; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-\<rbrakk>
-  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (if x rv s then (\<lambda>s. Q rv s) else (\<lambda>s. R rv s)) s\<rbrace>,-"
-  by (clarsimp simp: validE_R_def validE_def split: sum.splits)
-
 lemma hoare_gen_asmEx: "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (fastforce simp: valid_def validE_def)
-
-lemma unless_wp_not: "\<lbrace>\<lambda>s. P s \<and> Q\<rbrace> unless Q f \<lbrace>\<lambda>_. P\<rbrace>"
-  by (clarsimp simp: unless_def when_def)
 
 lemma false_e_explode:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>_ _ . False\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace>"
   by (fastforce simp: validE_def valid_def split: sum.splits)
 
-(* sep rules *)
-lemma sep_any_map_c_imp: "(dest \<mapsto>c cap) s \<Longrightarrow> (dest \<mapsto>c -) s"
-  by (fastforce simp: sep_any_def)
-
-lemma obj_exists_map_i:
-  "<obj_id \<mapsto>o obj \<and>* R> s \<Longrightarrow> \<exists>obj'. (cdl_objects s obj_id = Some obj'
-                                       \<and> object_clean obj = object_clean obj')"
-  apply (clarsimp simp: sep_map_o_conj)
-  apply (case_tac "cdl_objects s obj_id")
-   apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
-    apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
-      object_at_heap_def sep_state_projection_def
-      sep_conj_def Let_unfold)
-  apply (rule_tac x = a in exI,simp)
-  apply (rule object_eqI)
-   apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
-   apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
-      object_at_heap_def sep_state_projection_def
-      Let_unfold)
-  apply (rule ext)
-  apply (drule_tac x= "(obj_id,Slot x)" in fun_cong)
-  apply (clarsimp simp: lift_def object_to_sep_state_def
-      object_project_def sep_state_projection_def
-      Let_unfold)
-  done
-
-lemma obj_exists_map_f:
-  "<obj_id \<mapsto>f obj \<and>* R> s \<Longrightarrow>
-  \<exists>obj'. (cdl_objects s obj_id = Some obj' \<and> object_type obj = object_type obj')"
-  apply (clarsimp simp: sep_map_f_conj Let_def)
-  apply (case_tac "cdl_objects s obj_id")
-   apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
-      object_at_heap_def sep_state_projection_def
-      sep_conj_def Let_unfold)
-  apply (rule_tac x = a in exI,simp)
-  apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
-      object_at_heap_def sep_state_projection_def
-      Let_unfold)
-  apply (drule_tac f = object_type in arg_cong)
-  apply simp
-  done
-
-lemma object_slots_asid_reset:
-  "object_slots (asid_reset obj) = reset_cap_asid \<circ>\<^sub>M (object_slots obj)"
-  by (clarsimp simp: object_slots_def asid_reset_def update_slots_def
-              split: cdl_object.splits)
-
 lemma reset_cap_asid_idem [simp]:
   "reset_cap_asid (reset_cap_asid cap) = reset_cap_asid cap"
   by (simp add: reset_cap_asid_def split: cdl_cap.splits)
 
+(* sep rules *)
 lemma opt_cap_sep_imp:
   "\<lbrakk><p \<mapsto>c cap \<and>* R> s\<rbrakk>
   \<Longrightarrow> \<exists>cap'. opt_cap p s = Some cap' \<and> reset_cap_asid cap' = reset_cap_asid cap"
@@ -215,17 +117,6 @@ lemma opt_cap_sep_imp:
     sep_any_def sep_map_general_def slots_of_def
     sep_state_projection_def object_project_def
     object_slots_object_clean
-    Let_unfold split:sep_state.splits option.splits)
-done
-
-lemma opt_cap_sep_any_imp:
-  "\<lbrakk><dest \<mapsto>c - \<and>* R> s\<rbrakk> \<Longrightarrow> \<exists>cap. opt_cap (dest) s = Some cap"
-  apply (clarsimp simp: sep_any_exist
-    opt_cap_def sep_map_c_conj Let_def)
-  apply (clarsimp simp:  sep_map_c_def lift_def
-    split_def object_slots_object_clean
-    sep_any_def sep_map_general_def slots_of_def
-    sep_state_projection_def object_project_def
     Let_unfold split:sep_state.splits option.splits)
 done
 
@@ -271,15 +162,6 @@ lemma move_cap_wp:
 done
 
 
-lemma swap_cap_wp:
-  "\<lbrace><dest \<mapsto>c cap \<and>*  src \<mapsto>c cap' \<and>* R>\<rbrace>
-    swap_cap cap' src cap dest
-   \<lbrace>\<lambda>_.<dest \<mapsto>c cap' \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>"
-  apply (clarsimp simp add: swap_cap_def)
-  apply (wp add: swap_parents_wp sep_wand: set_cap_wp)
-  apply (sep_solve)
-  done
-
 lemma set_parent_wp:
   "\<lbrace><P>\<rbrace>
     set_parent child parent
@@ -320,14 +202,6 @@ lemma remove_parent_wp:
    \<lbrace>\<lambda>_.  <P>\<rbrace>"
    by (wpsimp simp: remove_parent_def lift_def sep_state_projection_def)
 
-lemma get_cap_wp:
-  "\<lbrace>P\<rbrace>
-    get_cap obj
-   \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (wp)
-  apply (clarsimp simp: opt_cap_def)
-done
-
 lemma get_cap_rv:
   "\<lbrace>\<lambda>s. <ptr \<mapsto>c cap \<and>* R> s \<and>
    (\<forall>c. ((reset_cap_asid c = reset_cap_asid cap ) \<longrightarrow> Q c s)) \<rbrace>
@@ -336,50 +210,6 @@ lemma get_cap_rv:
    apply (wp)
    apply (safe)
    apply (clarsimp simp: split_def dest!: opt_cap_sep_imp)
-  done
-
-lemma get_cap_rv':
-  "\<lbrace>\<lambda>s. <ptr \<mapsto>c cap \<and>* R> s \<and> Q cap s \<and> \<not>is_memory_cap cap\<rbrace>
-    get_cap ptr
-   \<lbrace>Q\<rbrace>"
-  by (wp get_cap_rv, fastforce)
-
-lemma decode_tcb_invocation:
-  "\<lbrace>P\<rbrace>decode_tcb_invocation cap cap_ref caps (TcbWriteRegistersIntent resume flags count regs)
-  \<lbrace>\<lambda>_. P\<rbrace>"
-apply (clarsimp simp: decode_tcb_invocation_def)
-apply wp
-apply (clarsimp)
-done
-
-lemma get_object_wp:
-  "\<lbrace>P\<rbrace>
-    get_object ptr
-   \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (wp gets_the_inv)
-done
-
-lemma empty_slot_wp:
-  "\<lbrace><dest \<mapsto>c - \<and>* R>\<rbrace>
-    empty_slot dest
-   \<lbrace>\<lambda>_. <dest \<mapsto>c NullCap \<and>* R>\<rbrace>"
-  apply (clarsimp simp: empty_slot_def sep_any_def sep_conj_exists)
-  apply (subst hoare_ex_all [THEN sym], clarsimp)
-  apply (wp set_cap_wp remove_parent_wp get_cap_rv[where R=R])
-  apply (rule conjI, assumption)
-  apply safe
-   apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
-  apply sep_solve
-  done
-
-lemma invoke_cnode_insert_wp:
-  "\<lbrace><dest \<mapsto>c - \<and>* R> and K (\<not> is_untyped_cap cap)\<rbrace>
-     invoke_cnode (InsertCall cap src dest)
-   \<lbrace>\<lambda>_. <dest \<mapsto>c cap \<and>* R>\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (clarsimp simp: invoke_cnode_def)
-  apply (wp insert_cap_sibling_wp insert_cap_child_wp)
-  apply (clarsimp)
   done
 
 lemma invoke_cnode_move_cap:
@@ -392,36 +222,6 @@ lemma invoke_cnode_move_cap:
   apply simp
   done
 
-lemma invoke_cnode_rotate1_wp:
-  "\<lbrace><dest \<mapsto>c cap1 \<and>* src \<mapsto>c cap2 \<and>* R> \<rbrace>
-     invoke_cnode (RotateCall cap1 cap2 dest src dest)
-   \<lbrace>\<lambda>_. <dest \<mapsto>c cap2 \<and>* src \<mapsto>c cap1 \<and>* R>\<rbrace>"
-  apply (clarsimp simp: invoke_cnode_def)
-  apply (wp sep_wand: swap_cap_wp)
-  apply sep_solve
-  done
-
-lemma invoke_cnode_rotate2_wp:
-   "(dest) \<noteq> (rnd) \<Longrightarrow>
-  \<lbrace><dest \<mapsto>c cap1 \<and>* src \<mapsto>c cap2 \<and>*
-    rnd \<mapsto>c - \<and>* R>\<rbrace>
-     invoke_cnode (RotateCall cap1 cap2 dest src rnd)
-  \<lbrace>\<lambda>_. <dest \<mapsto>c NullCap \<and>* src \<mapsto>c cap1 \<and>*
-    rnd \<mapsto>c cap2 \<and>* R>\<rbrace>"
-  apply (clarsimp simp: invoke_cnode_def)
-  apply (wp sep_wand: move_cap_wp)
-  apply sep_solve
-  done
-
-lemma get_cnode_wp [wp]:
-  "\<lbrace> \<lambda>s. case (cdl_objects s a) of Some (CNode x) \<Rightarrow> P x s | _ \<Rightarrow> False \<rbrace>
-     get_cnode a
-   \<lbrace> P \<rbrace>"
-  apply (clarsimp simp: get_cnode_def)
-  apply (wp | wpc)+
-  apply (clarsimp split: cdl_object.splits)
-  done
-
 lemma resolve_address_bits_wp:
  "\<lbrace> \<lambda>s. P s \<rbrace>
   resolve_address_bits cnode_cap cap_ptr remaining_size
@@ -430,12 +230,6 @@ lemma resolve_address_bits_wp:
   apply (wp)
   apply simp
 done
-
-lemma resolve_cap_wp [wp]:
-  "\<lbrace> P \<rbrace>
-    gets_the (resolve_cap cnode_cap cap_ptr remaining_size)
-  \<lbrace> \<lambda>_. P \<rbrace>"
-  by (wp gets_the_inv)
 
 lemma lookup_slot_for_cnode_op_wp [wp]:
   "\<lbrace>P\<rbrace>
@@ -448,48 +242,6 @@ lemma lookup_slot_for_cnode_op_wp [wp]:
    apply (clarsimp simp: gets_the_resolve_cap[symmetric])
    apply (wp gets_the_wpE whenE_wp)+
   apply (clarsimp split: option.splits sum.splits)
-done
-
-lemma lookup_slot_for_cnode_op_wpE:
-  "\<lbrace>P\<rbrace>
-    lookup_slot_for_cnode_op cnode_cap cap_ptr remaining_size
-  \<lbrace>\<lambda>_. P \<rbrace>,\<lbrace>\<lambda>_. P \<rbrace>"
-  apply (clarsimp simp: lookup_slot_for_cnode_op_def split_def)
-  apply (wp)
-   apply (clarsimp simp: gets_the_resolve_cap[symmetric])
-   apply (clarsimp simp: fault_to_except_def)
-   apply (wp gets_the_wpE whenE_wp)+
-  apply (clarsimp split: option.splits split: sum.splits)
-done
-
-lemma resolve_cap_rv1:
-   "\<lbrace>\<lambda>s. Q ((c,slot),0) s \<and> cap_object cnode_cap = c \<and> slot = offset cap_ptr r \<and>
-    < c \<mapsto>f CNode (empty_cnode r)  \<and>* (c, slot) \<mapsto>c cap \<and>* R> s \<and>
-    one_lvl_lookup cnode_cap remaining_size r\<rbrace>
-         gets_the (resolve_cap cnode_cap cap_ptr remaining_size)
-  \<lbrace>\<lambda>rv s. Q rv s\<rbrace>,\<lbrace>\<lambda>_ _ . True\<rbrace>"
-  apply (wp gets_the_wpE)
-  apply (clarsimp simp: one_lvl_lookup_def offset_def)
-  apply (clarsimp simp: split_def split: sum.splits option.splits)
-  apply (simp add: split_def resolve_cap.simps split: if_split_asm)
-  apply (simp add: obind_def split:option.splits)
-  apply (drule sep_f_size_opt_cnode)
-   apply (simp split: if_split_asm)+
-done
-
-lemma resolve_cap_u:
-   "\<lbrace>\<lambda>s. Q (((cap_object cnode_cap), offset cap_ptr r), 0) s \<and>
-         < user_pointer_at (r,r_s) cnode_cap cap_ptr cap  \<and>* R> s \<rbrace>
-         gets_the (resolve_cap cnode_cap cap_ptr r_s)
-    \<lbrace>Q\<rbrace>,\<lbrace>\<lambda> _ _.  True\<rbrace>"
-  apply (wp gets_the_wpE)
-  apply (clarsimp simp:
-    user_pointer_at_def Let_unfold one_lvl_lookup_def
-    offset_def  split:option.splits sum.splits)
-  apply (simp add: split_def resolve_cap.simps split: if_split_asm)
-  apply (simp add: obind_def sep_conj_assoc split:option.splits)
-  apply (sep_drule (direct) sep_f_size_opt_cnode)
-  apply (fastforce split: if_split_asm)+
 done
 
 lemma resolve_cap_u_nf:
@@ -512,37 +264,6 @@ lemma resolve_cap_u_nf:
     apply (fastforce split: if_split_asm)+
 done
 
-lemma resolve_cap_rv:
- "\<lbrace>\<lambda>s. cap_object cnode_cap = c \<and> slot = offset cap_ptr r \<and>
-    < c \<mapsto>f CNode (empty_cnode r) \<and>* (c, slot) \<mapsto>c cap \<and>* R> s \<and>
-    one_lvl_lookup cnode_cap remaining_size r\<rbrace>
-         gets_the (resolve_cap cnode_cap cap_ptr remaining_size)
-  \<lbrace>\<lambda>rv s. (fst rv) = (c,slot) \<and> <
-  c \<mapsto>f CNode (empty_cnode r)  \<and>* (c,slot) \<mapsto>c cap \<and>* R> s \<and> (snd rv) = 0\<rbrace>,\<lbrace>\<lambda>_ _ . True\<rbrace>"
-  apply (wp resolve_cap_rv1 gets_the_invE)
-  apply (clarsimp)
-  apply (safe|fastforce)+
-done
-
-lemma lookup_slot_for_cnode_op_rv':
-    "\<lbrace>\<lambda>s. Q (c,slot) s \<and> cap_object cnode_cap = c \<and> slot = offset cap_ptr r \<and>
-    < c \<mapsto>f CNode (empty_cnode r)  \<and>* (c, slot) \<mapsto>c cap \<and>* R> s \<and>
-    one_lvl_lookup cnode_cap remaining_size r\<rbrace>
-      lookup_slot_for_cnode_op cnode_cap cap_ptr remaining_size
-     \<lbrace>\<lambda>rv s. Q rv s\<rbrace>,-"
-  apply (clarsimp simp: lookup_slot_for_cnode_op_def gets_the_resolve_cap[symmetric] split_def fault_to_except_def)
-  apply (wp resolve_cap_rv1 whenE_wp)
-  apply (fastforce)
-done
-
-lemma reset_cap_asid_cap_has_object:
-  "reset_cap_asid cap = reset_cap_asid cap'
-  \<Longrightarrow> cap_has_object cap = cap_has_object cap'"
-  apply (frule reset_cap_asid_id)
-  apply (safe, (clarsimp simp: reset_cap_asid_def cap_has_object_def
-                        split: cdl_cap.splits)+)
-  done
-
 lemma cap_object_reset_cap_asid:
   "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'\<rbrakk> \<Longrightarrow> cap_object cap = cap_object cap'"
   apply (case_tac cap',simp_all add:reset_cap_asid_def split:cdl_cap.split_asm)
@@ -551,11 +272,6 @@ lemma cap_object_reset_cap_asid:
 lemma cap_type_reset_cap_asid[simp]:
   "cap_type (reset_cap_asid cap) = cap_type cap"
   by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
-
-lemma cap_guard_reset_cap_asid:
-  "is_cnode_cap cap \<Longrightarrow> cap_guard (reset_cap_asid cap) = cap_guard cap"
-  "is_cnode_cap cap \<Longrightarrow> cap_guard_size (reset_cap_asid cap) = cap_guard_size cap"
-  by (case_tac cap,simp_all add:reset_cap_asid_def cap_guard_def)+
 
 lemma lookup_slot_for_cnode_op_rvu':
      "\<lbrace>\<lambda>s. Q ((cap_object cnode_cap), offset cap_ptr r) s \<and> remaining_size \<le> word_bits
@@ -566,26 +282,7 @@ lemma lookup_slot_for_cnode_op_rvu':
   apply (clarsimp simp: lookup_slot_for_cnode_op_def gets_the_resolve_cap[symmetric] split_def fault_to_except_def)
   apply (wp resolve_cap_u_nf[where r=r and R=R and cap=cap] whenE_wp)
   apply (clarsimp simp add:user_pointer_at_def Let_def guard_equal_def
-    cap_guard_reset_cap_asid one_lvl_lookup_def)
-done
-
-lemma lookup_slot_for_cnode_op_rv_2:
-  "\<lbrace>\<lambda>s. cap_object cnode_cap = c \<and> slot = offset cap_ptr r \<and>
-    < c \<mapsto>f CNode (empty_cnode r)  \<and>* (c, slot) \<mapsto>c cap \<and>* R> s \<and>
-    one_lvl_lookup cnode_cap remaining_size r\<rbrace>
-      lookup_slot_for_cnode_op cnode_cap cap_ptr remaining_size
-  \<lbrace>\<lambda>rv s. rv = (c,slot) \<and> < c \<mapsto>f CNode (empty_cnode r) \<and>* (c,slot) \<mapsto>c cap \<and>* R> s\<rbrace>,-"
-  apply (wp lookup_slot_for_cnode_op_rv')
-  apply (fastforce)
-done
-
-
-lemma derive_cap_rv:
-"\<lbrace>\<lambda>s. case cap of FrameCap dev p r sz b x \<Rightarrow> False | otherwise \<Rightarrow> P s\<rbrace>
-     derive_cap slot cap
- \<lbrace>\<lambda>rv s. P s \<and> ( rv = cap \<or> rv = NullCap )\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
-  apply (clarsimp simp: derive_cap_def returnOk_def split: cdl_cap.splits,safe)
-                        apply (wp return_rv whenE_wp | clarsimp simp: ensure_no_children_def)+
+     one_lvl_lookup_def)
 done
 
 lemma derive_cap_wp [wp]:
@@ -595,33 +292,12 @@ lemma derive_cap_wp [wp]:
     apply ((wp whenE_wp)|(clarsimp simp: ensure_no_children_def))+
       done
 
-
-lemma derive_cap_wpE:
-"\<lbrace>P\<rbrace> derive_cap slot cap \<lbrace>\<lambda>_.P\<rbrace>,\<lbrace>\<lambda>_.P\<rbrace>"
-  apply (clarsimp simp: derive_cap_def)
-  apply (case_tac cap, (wp whenE_wp |
-                        simp add: ensure_no_children_def)+)
-  done
-
-lemma derive_cap_wp2: "\<lbrace>P\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. if rv = NullCap then True else P s\<rbrace>, -"
-  apply (rule hoare_strengthen_postE_R)
-   apply (wp (once) derive_cap_wpE)
-  apply (clarsimp)
-  done
-
 lemma ensure_empty_wpE [wp]: "\<lbrace>P\<rbrace>
      ensure_empty x
      \<lbrace> \<lambda>_. P \<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: ensure_empty_def)
   apply (wp liftE_wp unlessE_wp)
   apply (clarsimp)
-  done
-
-lemma decode_cnode_copy_wp: "\<lbrace>P\<rbrace>
-     decode_cnode_invocation target target_ref caps (CNodeCopyIntent dest_index dest_depth src_index src_depth rights)
-     \<lbrace> \<lambda>_. P \<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
-  apply (clarsimp simp: decode_cnode_invocation_def split_def)
-  apply (wp whenE_wp hoare_drop_imps | simp cong: if_cong)+
   done
 
 lemma ensure_empty_wp [wp]: "\<lbrace>P\<rbrace> ensure_empty slot \<lbrace>\<lambda>_. P\<rbrace>"
@@ -769,23 +445,7 @@ lemma decode_cnode_move_rvu:
 
 crunch  decode_cnode_invocation
   for preserve[wp]: "P"
-  (wp: derive_cap_wpE unlessE_wp whenE_wp hoare_drop_imps simp: if_apply_def2 throw_on_none_def)
-
-lemma decode_invocation_wp:
-  "\<lbrace>P\<rbrace> decode_invocation (CNodeCap x y z sz) ref caps (CNodeIntent intent) \<lbrace>\<lambda>_. P\<rbrace>, -"
-  apply (clarsimp simp: decode_invocation_def)
-  apply (wp)
-    apply (clarsimp simp: comp_def)
-    apply (wpsimp simp: throw_opt_def)+
-done
-
-lemma lookup_slot_wp:
-  "\<lbrace>P\<rbrace> lookup_slot cnode_ptr ptr \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (clarsimp simp: lookup_slot_def)
-  apply (clarsimp simp: gets_the_resolve_cap[symmetric] split_def)
-  apply (wp get_cap_wp)
-  apply (clarsimp)
-done
+  (wp: unlessE_wp whenE_wp hoare_drop_imps simp: if_apply_def2 throw_on_none_def)
 
 lemma always_empty_wp:
   "\<lbrace><ptr  \<mapsto>c - \<and>* R>\<rbrace>
@@ -794,24 +454,25 @@ lemma always_empty_wp:
   by (clarsimp simp: always_empty_slot_def, wp remove_parent_wp set_cap_wp)
 
 lemma fast_finalise_cap_non_ep_wp:
-  "\<lbrace><P> and K (\<not> ep_related_cap cap') \<rbrace> fast_finalise cap' final \<lbrace>\<lambda>y. <P>\<rbrace>"
+  "\<lbrace><P> and K (\<not> ep_related_cap cap') \<rbrace> fast_finalise cap' \<lbrace>\<lambda>y. <P>\<rbrace>"
   by (case_tac cap',simp_all add:ep_related_cap_def)
 
 lemma delete_cap_simple_wp:
  "\<lbrace>\<lambda>s. <ptr  \<mapsto>c cap  \<and>* R> s \<and> \<not> ep_related_cap cap\<rbrace>
     delete_cap_simple ptr
   \<lbrace>\<lambda>_. < ptr  \<mapsto>c NullCap \<and>* R>\<rbrace>"
-  apply (clarsimp simp: delete_cap_simple_def is_final_cap_def)
-  apply (wp unless_wp always_empty_wp fast_finalise_cap_non_ep_wp)
+  apply (clarsimp simp: delete_cap_simple_def)
+  apply (wp unless_wp always_empty_wp fast_finalise_cap_non_ep_wp hoare_pre_cont[where f=chaos])
   apply clarsimp
   apply (frule opt_cap_sep_imp)
   apply (clarsimp, rule conjI)
-   apply clarsimp
+   apply (clarsimp simp: ep_related_cap_def)
    apply (metis reset_cap_asid_simps2(1))
   apply clarsimp
   apply (rule conjI)
-   apply sep_solve
-  apply (metis reset_cap_asid_ep_related_cap)
+   apply (metis reset_cap_asid_ep_related_cap)
+  apply clarsimp
+  apply sep_solve
   done
 
 lemma is_cnode_cap_has_object [simp]:
@@ -854,30 +515,6 @@ lemma lookup_slot_rvu:
   apply fastforce
   done
 
-lemma lookup_cap_rvu :
-"\<lbrace>\<lambda>s. (\<forall>c. reset_cap_asid c = reset_cap_asid cap' \<longrightarrow> Q c s) \<and>
-    < (thread,tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-    \<box> (r, word_bits) : cnode_cap cap_ptr \<mapsto>u cap' \<and>* R> s\<rbrace>
-     lookup_cap thread cap_ptr
-   \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>_ _. False\<rbrace>"
-  apply (clarsimp simp: lookup_cap_def)
-  using hoare_vcg_prop[wp del]
-  apply (wp lookup_slot_rvu [where cnode_cap=cnode_cap] get_cap_rv)
-  apply (clarsimp)
-  apply safe
-    apply (clarsimp simp: user_pointer_at_def sep_conj_assoc Let_unfold)
-    apply (sep_solve)
-   apply clarsimp
-  apply sep_solve
-  done
-
-lemma lookup_cap_wp:
-  "\<lbrace>P\<rbrace> lookup_cap thread cap_ptr \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_ .P \<rbrace> "
-  apply (clarsimp simp: lookup_cap_def)
-  apply (wp lookup_slot_wp get_cap_wp)
-  done
-
-
 lemma lookup_cap_and_slot_rvu:
   "\<lbrace>\<lambda>s. (\<forall>c. reset_cap_asid c = reset_cap_asid cap' \<longrightarrow>
              Q (c, (cap_object cap, offset cap_ptr r) ) s) \<and>
@@ -909,23 +546,6 @@ lemma update_cap_data:
   apply (clarsimp simp: Let_def valid_src_cap_def cnode_cap_size_def guard_update_def)
   done
 
-lemma is_exclusive_cap_update_cap_data:
-  "safe_for_derive (update_cap_data_det badge cap) = safe_for_derive cap"
-  apply (rule iffI)
-   apply (simp_all add: safe_for_derive_def update_cap_data_def update_cap_data_det_def)
-   apply (case_tac cap, simp_all add: safe_for_derive_def badge_update_def
-                               split: if_split_asm)
-  apply (case_tac cap, simp_all add: badge_update_def guard_update_def
-                                     update_cap_badge_def
-                              split: if_split_asm)
-  done
-
-lemma cap_object_update_cap_rights:
-  "cap_object (update_cap_rights rights src_cap) = cap_object src_cap"
-  apply (simp add: cap_object_def update_cap_rights_def
-            split: cdl_cap.splits)
-  done
-
 lemma derived_cap_update_cap_data_det_NullCap [simp]:
   "(derived_cap (update_cap_data_det badge cap) = NullCap)
  = (derived_cap cap = NullCap)"
@@ -938,19 +558,6 @@ lemma derived_cap_update_cap_rights_NullCap [simp]:
  = (derived_cap cap = NullCap)"
   by (clarsimp simp: derived_cap_def update_cap_rights_def
               split: cdl_cap.splits if_split_asm)
-
-lemma derived_cap_reset_cap_asid_NullCap:
-  "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'; derived_cap cap = NullCap\<rbrakk>
-  \<Longrightarrow> derived_cap cap' = NullCap"
-  by (clarsimp simp: derived_cap_def reset_cap_asid_def split: cdl_cap.splits)
-
-lemma derived_cap_update_cap_data_det:
-  "derived_cap (update_cap_data_det badge cap) =
-   update_cap_data_det badge (derived_cap cap)"
-  apply (clarsimp simp: derived_cap_def update_cap_data_det_def)
-  apply (case_tac cap, simp_all add: update_cap_data_det_def badge_update_def
-                                     derived_cap_def update_cap_badge_def guard_update_def)
-  done
 
 lemma cnode_cap_size_upd_cap_rights[simp]:
   "is_cnode_cap src_cap
@@ -969,16 +576,6 @@ lemma ep_related_cap_default_cap:
   ep_related_cap (default_cap type ids sz dev) = ep_related_cap cap"
   by (fastforce simp: cap_type_def ep_related_cap_def default_cap_def
                split: cdl_cap.splits cdl_object_type.splits)
-
-lemma cap_has_type_update_rights[simp]:
-  "cap_has_type (update_cap_rights rights cap) = cap_has_type cap"
-  by (clarsimp simp: cap_type_def update_cap_rights_def
-              split: cdl_cap.splits)
-
-lemma cap_has_type_asid_cong:
-  "reset_cap_asid cap' = reset_cap_asid src_cap
-  \<Longrightarrow> cap_has_type cap' = cap_has_type src_cap"
-  by (drule reset_cap_asid_cap_type, simp)
 
 (* FIXME: MOVE *)
 fun is_reply_cap
@@ -1037,8 +634,7 @@ lemma decode_cnode_mint_rvu:
     apply (clarsimp simp: sep_conj_assoc)
     apply (sep_erule sep_cancel, assumption)
    apply (clarsimp dest!: mapu_dest_opt_cap
-                   simp: conj_comms is_exclusive_cap_update_cap_data safe_for_derive_not_non
-                         valid_src_cap_def)
+                   simp: conj_comms valid_src_cap_def)
    apply (intro conjI impI allI)
         apply (clarsimp simp add: is_smc_cap_def)
         apply (metis reset_cap_asid_simps2(25))
@@ -1139,22 +735,6 @@ lemma get_thread_inv:
   unfolding get_thread_def
   by wpsimp
 
-lemma get_thread_sep_wp_precise:
-  "\<lbrace>\<lambda>s. tcb_at' (\<lambda>tcb. Q tcb s) thread s \<rbrace>
-    get_thread thread
-   \<lbrace>\<lambda>rv. Q rv\<rbrace>"
-  apply (simp add:get_thread_def | wp | wpc)+
-  apply (auto simp: object_at_def)
-  done
-
-(* We are not interested in ep related invocation *)
-definition nonep_invocation :: "cdl_invocation \<Rightarrow> bool"
-where "nonep_invocation iv \<equiv>  case iv of
-       InvokeEndpoint cdl_endpoint_invocation \<Rightarrow> False
-     | InvokeNotification cdl_notification_invocation \<Rightarrow> False
-     | InvokeReply cdl_reply_invocation \<Rightarrow> False
-     | _ \<Rightarrow> True"
-
 lemma has_restart_cap_sep_wp:
   "\<lbrace>\<lambda>s. < (thread,tcb_pending_op_slot) \<mapsto>c cap \<and>* sep_true> s \<and> Q (cap = RestartCap) s\<rbrace>
     has_restart_cap thread
@@ -1168,32 +748,6 @@ lemma has_restart_cap_sep_wp:
   apply (erule rsubst)
   apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
   done
-
-lemma lift_do_kernel_op':
-  "\<lbrace>\<lambda>s'. P s'\<rbrace> f \<lbrace>\<lambda>_ s'. Q s'\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (kernel_state s)\<rbrace> do_kernel_op f \<lbrace>\<lambda>_ s. Q (kernel_state s)\<rbrace>"
-  apply (simp add: do_kernel_op_def split_def)
-  apply wp
-  apply (simp add: valid_def split_def)
-  done
-
-lemma lift_do_kernel_op:
-  "\<lbrace>\<lambda>s. s = s'\<rbrace> f \<lbrace>\<lambda>_ s. s = s'\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. (kernel_state s) = s'\<rbrace> do_kernel_op f \<lbrace>\<lambda>_ s. (kernel_state s) = s'\<rbrace>"
-  apply (simp add: do_kernel_op_def split_def)
-  apply wp
-  apply (simp add: valid_def split_def)
-  done
-
-lemma switch_to_thread_wp:
-  "\<lbrace>\<lambda>s. P (cdl_objects s)\<rbrace>
-   switch_to_thread t
-   \<lbrace>\<lambda>r s. P (cdl_objects s)\<rbrace>"
-  by (wpsimp simp: switch_to_thread_def)
-
-lemma switch_to_thread_current_thread_wp:
-  "\<lbrace>\<lambda>s. P t\<rbrace>
-   switch_to_thread t
-   \<lbrace>\<lambda>r s. P (cdl_current_thread s)\<rbrace>"
-  by (wpsimp simp: switch_to_thread_def)
 
 lemma schedule_no_choice_wp:
   "\<lbrace>\<lambda>s.  cdl_current_thread s = Some current_thread \<and> cdl_current_domain s = current_domain \<and> P s \<rbrace>

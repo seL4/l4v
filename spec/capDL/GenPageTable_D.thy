@@ -15,9 +15,10 @@ begin
 
 section \<open>Decode\<close>
 
-text \<open>
-  We model decoding of mapping invocations only, because these are the only ones relevant
-  for system initialisation.\<close>
+text \<open>We model decoding of mapping invocations only. All other invocations are nondeterministic.\<close>
+
+(* FIXME AARCH64: Page Unmap is used by the C and Rust capDL initialisers and is modelled for ARM.
+   We should add a generic unmap here. *)
 
 definition cdl_check_vspace_root :: "cdl_cap \<Rightarrow> (cdl_object_id \<times> cdl_asid) option" where
   "cdl_check_vspace_root vspace_cap \<equiv>
@@ -105,9 +106,7 @@ definition gen_decode_page_table_invocation ::
                     (PageTableCap pt_t p (Fake new_attribs) None)
                     target_ref
                     slot
-     odE \<sqinter> throw
-   \<comment> \<open>Other intents are not needed for system initialisation and not modelled here.\<close>
-   | _ \<Rightarrow> select UNIV"
+     odE \<sqinter> throw"
 
 definition gen_decode_page_invocation ::
   "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_page_intent \<Rightarrow>
@@ -128,7 +127,7 @@ definition gen_decode_page_invocation ::
                     target_ref
                     slot
      odE \<sqinter> throw
-   \<comment> \<open>Other intents are not needed for system initialisation and not modelled here.\<close>
+   \<comment> \<open>Page Unmap is not modelled yet, see the start of this section.\<close>
    | _ \<Rightarrow> select UNIV"
 
 
@@ -139,8 +138,7 @@ definition gen_invoke_page_table :: "cdl_page_table_invocation \<Rightarrow> uni
      PageTableMap real_pt_cap mapping_cap pt_cap_ref target_slot \<Rightarrow> do
        set_cap pt_cap_ref real_pt_cap;            \<comment> \<open>update real PT cap in CSpace\<close>
        insert_cap_orphan mapping_cap target_slot  \<comment> \<open>store mapping cap in page table\<close>
-     od
-   | _ \<Rightarrow> chaos"
+     od"
 
 definition gen_invoke_page :: "cdl_page_invocation \<Rightarrow> unit k_monad" where
   "gen_invoke_page params \<equiv> case params of
@@ -148,6 +146,7 @@ definition gen_invoke_page :: "cdl_page_invocation \<Rightarrow> unit k_monad" w
        set_cap frame_cap_ref frame_cap;  \<comment> \<open>update real page cap in CSpace\<close>
        set_cap pt_slot pseudo_frame_cap  \<comment> \<open>store mapping cap in page table\<close>
      od
+   \<comment> \<open>Frame Unmap is not modelled yet, see the decode section.\<close>
    | _ \<Rightarrow> chaos"
 
 end

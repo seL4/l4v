@@ -25,27 +25,11 @@ definition get_thread :: "cdl_object_id \<Rightarrow> cdl_tcb k_monad" where
      case t of Tcb tcb \<Rightarrow> return tcb | _ \<Rightarrow> fail
    od"
 
-(* Get a thread from the given pointer. *)
-definition get_thread_fault :: "cdl_object_id \<Rightarrow> bool k_monad" where
-  "get_thread_fault p \<equiv> do
-     t \<leftarrow> get_object p;
-     case t of Tcb tcb \<Rightarrow> return (cdl_tcb_has_fault tcb) | _ \<Rightarrow> fail
-   od"
-
 (* Update a thread on the heap. *)
 definition update_thread :: "cdl_object_id \<Rightarrow> (cdl_tcb \<Rightarrow> cdl_tcb) \<Rightarrow> unit k_monad" where
   "update_thread p f \<equiv> do
      t \<leftarrow> get_object p;
      case t of Tcb tcb \<Rightarrow> set_object p (Tcb (f tcb)) | _ \<Rightarrow> fail
-   od"
-
-(* Update the fault field in a thread on the heap. *)
-definition update_thread_fault :: "cdl_object_id \<Rightarrow> (bool\<Rightarrow>bool) \<Rightarrow> unit k_monad" where
-  "update_thread_fault p f \<equiv> do
-     t \<leftarrow> get_object p;
-     case t of
-       Tcb tcb \<Rightarrow> set_object p (Tcb (tcb\<lparr>cdl_tcb_has_fault := f (cdl_tcb_has_fault tcb)\<rparr>))
-     | _ \<Rightarrow> fail
    od"
 
 (* Get a CNode from the given pointer. *)
@@ -100,9 +84,6 @@ definition set_cap :: "cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> unit k_mo
 definition opt_parent :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref option" where
   "opt_parent p \<equiv> \<lambda>s. cdl_cdt s p"
 
-abbreviation get_parent :: "cdl_cap_ref \<Rightarrow> cdl_cap_ref k_monad" where
-  "get_parent p \<equiv> gets_the (opt_parent p)"
-
 (* setting a cap derivation of a specific cap_ref  *)
 definition set_parent :: "cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad" where
   "set_parent child parent \<equiv> do
@@ -131,28 +112,6 @@ definition swap_parents :: "cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> 
 
 definition is_cdt_parent :: "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool" where
   "is_cdt_parent s p c \<equiv> cdl_cdt s c = Some p"
-
-definition cdt_parent_rel :: "cdl_state \<Rightarrow> (cdl_cap_ref \<times> cdl_cap_ref) set" where
-  "cdt_parent_rel \<equiv> \<lambda>s. {(p,c). is_cdt_parent s p c}"
-
-abbreviation parent_of ::
-  "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool" ("_ \<turnstile> _ cdt'_parent'_of _" [60,0,60] 61)
-  where
-  "s \<turnstile> p cdt_parent_of c \<equiv> (p,c) \<in> cdt_parent_rel s"
-
-abbreviation parent_of_trancl ::
-  "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool" ("_ \<turnstile> _ cdt'_parent'_of\<^sup>+ _" [60,0,60] 61)
-  where
-  "s \<turnstile> x cdt_parent_of\<^sup>+ y \<equiv> (x, y) \<in> (cdt_parent_rel s)\<^sup>+"
-
-abbreviation parent_of_rtrancl ::
-  "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool" ("_ \<turnstile> _ cdt'_parent'_of\<^sup>* _" [60,0,60] 61)
-  where
-  "s \<turnstile> x cdt_parent_of\<^sup>* y \<equiv> (x, y) \<in> (cdt_parent_rel s)\<^sup>*"
-
-definition descendants_of :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set" where
-  "descendants_of p s \<equiv> {q. (p,q) \<in> (cdt_parent_rel s)\<^sup>+}"
-
 
 definition tcb_ipcframe_id :: "cdl_tcb \<Rightarrow> cdl_object_id option" where
   "tcb_ipcframe_id tcb \<equiv>

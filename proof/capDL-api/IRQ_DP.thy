@@ -22,23 +22,6 @@ lemma sep_map_i_cdl_irq:
   apply (clarsimp simp: sep_disj_sep_state_def sep_state_disj_def split: option.splits)
   by (metis (lifting) fun_upd_same map_disj_None_left' option.distinct(1))
 
-lemma sep_map_i_map_c:
-  "<irq \<mapsto>irq irq_obj \<and>* (irq_obj, 0) \<mapsto>c cap \<and>* R> s \<Longrightarrow>
-   <irq \<mapsto>irq irq_obj \<and>* (get_irq_slot irq s \<mapsto>c cap) \<and>* R> s"
-  by (frule sep_map_i_cdl_irq, clarsimp simp: get_irq_slot_def)
-
-lemma invoke_irq_handler_clear_handler_wp:
-  "\<lbrace>< irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap \<and>* R> and K (\<not> ep_related_cap cap)\<rbrace>
-   invoke_irq_handler (ClearIrqHandler irq)
-   \<lbrace>\<lambda>_. < irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c NullCap \<and>* R> \<rbrace>"
-  unfolding invoke_irq_handler_def
-  apply clarsimp
-  apply (wp sep_wp: delete_cap_simple_format[where cap=cap])
-  apply clarsimp
-  apply (frule sep_map_i_cdl_irq, clarsimp simp: get_irq_slot_def)
-  apply sep_solve
-  done
-
 lemma invoke_irq_handler_set_handler_wp:
   "\<lbrace><irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap' \<and>* R> and K (\<not> ep_related_cap cap' \<and> \<not> is_untyped_cap cap)\<rbrace>
    invoke_irq_handler (SetIrqHandler irq cap slot)
@@ -52,23 +35,62 @@ lemma invoke_irq_handler_set_handler_wp:
   apply sep_solve
   done
 
+crunch fast_finalise, always_empty_slot
+  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
+  and cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
+  (wp: crunch_wps ignore: fail)
+
+text \<open>
+  @{const delete_cap_simple} is only specified for caps that are not endpoint-related, so
+  invariants hold only for slots that are known to contain such caps.\<close>
+lemma delete_cap_simple_non_ep_inv:
+  assumes "\<And>cap. \<lbrace>P\<rbrace> fast_finalise cap \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes "\<And>ptr. \<lbrace>P\<rbrace> always_empty_slot ptr \<lbrace>\<lambda>_. P\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P s \<and> <ptr \<mapsto>c cap \<and>* R> s \<and> \<not> ep_related_cap cap\<rbrace>
+         delete_cap_simple ptr
+         \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding delete_cap_simple_def
+  apply (wpsimp wp: assms hoare_pre_cont[where f=chaos])
+  apply (frule opt_cap_sep_imp)
+  apply (fastforce simp: ep_related_cap_def
+                   dest: reset_cap_asid_ep_related_cap split: cdl_cap.splits)
+  done
+
+lemma invoke_irq_handler_set_handler_inv:
+  assumes "\<And>cap. \<lbrace>P\<rbrace> fast_finalise cap \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes "\<And>ptr. \<lbrace>P\<rbrace> always_empty_slot ptr \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes "\<And>dest. \<lbrace>P\<rbrace> insert_cap_child cap slot dest \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes "\<And>dest. \<lbrace>P\<rbrace> insert_cap_sibling cap slot dest \<lbrace>\<lambda>_. P\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P s \<and> <irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap' \<and>* \<top>> s \<and> \<not> ep_related_cap cap'\<rbrace>
+         invoke_irq_handler (SetIrqHandler irq cap slot)
+         \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding invoke_irq_handler_def
+  apply (wpsimp wp: assms(3,4)
+                    delete_cap_simple_non_ep_inv[OF assms(1,2), where cap=cap' and
+                                                 R="irq \<mapsto>irq obj \<and>* \<top>"])
+  apply (frule sep_map_i_cdl_irq, clarsimp simp: get_irq_slot_def)
+  apply sep_solve
+  done
+
+lemma invoke_irq_handler_set_handler_cdl_current_thread:
+  "\<lbrace>\<lambda>s. P (cdl_current_thread s) \<and> <irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap' \<and>* \<top>> s \<and>
+        \<not> ep_related_cap cap'\<rbrace>
+   invoke_irq_handler (SetIrqHandler irq cap slot)
+   \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
+  by (rule invoke_irq_handler_set_handler_inv; wp)
+
+lemma invoke_irq_handler_set_handler_cdl_current_domain:
+  "\<lbrace>\<lambda>s. P (cdl_current_domain s) \<and> <irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap' \<and>* \<top>> s \<and>
+        \<not> ep_related_cap cap'\<rbrace>
+   invoke_irq_handler (SetIrqHandler irq cap slot)
+   \<lbrace>\<lambda>_ s. P (cdl_current_domain s)\<rbrace>"
+  by (rule invoke_irq_handler_set_handler_inv; wp)
+
 lemma invoke_irq_control_issue_handler_wp:
   "\<lbrace> <dest_slot \<mapsto>c cap \<and>* R> \<rbrace>
    invoke_irq_control (IssueIrqHandler irq control_slot dest_slot)
    \<lbrace>\<lambda>_. <dest_slot \<mapsto>c IrqHandlerCap irq \<and>* R> \<rbrace>"
   by (clarsimp simp: invoke_irq_control_def | wp sep_wp: insert_cap_child_wp | sep_solve)+
-
-lemma decode_invocation_irq_ack_rv':
-  "\<lbrace>\<lambda>s. P (AckIrq (the $ cdl_cap_irq cap)) s \<rbrace>
-   decode_irq_handler_invocation cap cap_ref caps IrqHandlerAckIntent
-   \<lbrace>P\<rbrace>, -"
-  by (wpsimp simp: decode_irq_handler_invocation_def)
-
-lemma decode_invocation_irq_clear_rv':
-  "\<lbrace>\<lambda>s. P (ClearIrqHandler (the $ cdl_cap_irq cap)) s \<rbrace>
-   decode_irq_handler_invocation cap cap_ref caps IrqHandlerClearIntent
-   \<lbrace>P\<rbrace>, -"
-  by (wpsimp simp: decode_irq_handler_invocation_def)
 
 (* Move next to hoare_gen_asm_conj *)
 lemma validE_R_gen_asm_conj:
@@ -129,14 +151,6 @@ schematic_goal lookup_extra_caps_once_wp:
 lemma reset_cap_cdl_cap_irq:
   "reset_cap_asid c = IrqHandlerCap irq \<Longrightarrow> the (cdl_cap_irq c) = irq"
   by (clarsimp simp: reset_cap_asid_def cdl_cap_irq_def the_def split: cdl_cap.splits)
-
-lemma not_memory_reset:
-  "\<not> is_memory_cap (reset_cap_asid cap) \<Longrightarrow> reset_cap_asid cap = cap "
-  by (clarsimp simp: is_memory_cap_def reset_cap_asid_def split:cdl_cap.splits)
-
-lemma not_ep_related_reset_cap_asid:
-  "reset_cap_asid c = IrqControlCap \<Longrightarrow> \<not>ep_related_cap c"
-  by (clarsimp simp: reset_cap_asid_def ep_related_cap_def split: cdl_cap.splits)
 
 lemma reset_cap_asid_control:
   "reset_cap_asid c = reset_cap_asid cap \<Longrightarrow> is_irqcontrol_cap cap \<Longrightarrow> is_irqcontrol_cap c"
@@ -454,6 +468,8 @@ lemma seL4_IRQHandler_SetEndpoint_wp_helper:
                                                                    endpoint_cap endpoint_ptr)"
                          in hoare_gen_asmEx)
          apply clarsimp
+         supply invoke_irq_handler_set_handler_cdl_current_thread[where obj=obj and cap'=cap', wp]
+                invoke_irq_handler_set_handler_cdl_current_domain[where obj=obj and cap'=cap', wp]
          apply (wp sep_wp: invoke_irq_handler_set_handler_wp set_cap_wp)+
        apply (rule_tac P = "c=irq_cap" in hoare_gen_asmEx)
        apply (simp add: unify decode_invocation_def)
@@ -476,6 +492,9 @@ lemma seL4_IRQHandler_SetEndpoint_wp_helper:
     apply (intro impI conjI allI)
           apply sep_solve
          apply sep_cancel+
+         apply (frule reset_cap_cdl_cap_irq, clarsimp)
+         apply sep_solve
+         apply sep_cancel+
          apply (intro impI conjI allI)
           apply sep_cancel+
           apply (frule reset_cap_cdl_cap_irq)
@@ -487,7 +506,7 @@ lemma seL4_IRQHandler_SetEndpoint_wp_helper:
          apply (erule sep_map_c_asid_reset'')
          apply fastforce
         apply clarsimp
-       apply (fastforce simp: not_memory_reset)
+       apply fastforce
       apply (clarsimp dest!: reset_cap_asid_simps2)
      apply (clarsimp simp: user_pointer_at_def Let_unfold sep_conj_assoc unify)
      apply sep_solve
