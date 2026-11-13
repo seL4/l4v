@@ -944,6 +944,10 @@ crunch setExtraBadge, doIPCTransfer
   for sch_act [wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps mapME_wp' simp: zipWithM_x_mapM)
 
+crunch makeFaultMessage
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+
 crunch setExtraBadge
   for if_unsafe'[wp]: if_unsafe_then_cap'
 
@@ -1621,17 +1625,6 @@ lemma lec_valid_cap'[wp]:
   apply simp
   done
 
-context begin interpretation Arch . (*FIXME: rt arch-split*)
-
-crunch makeFaultMessage
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-
-end (* Arch *)
-
-global_interpretation makeFaultMessage: gen_typ_at_all_props' "makeFaultMessage x t"
-  by typ_at_props'
-
 context Ipc_R begin
 
 lemma makeFaultMessage_corres:
@@ -1673,10 +1666,9 @@ lemma makeFaultMessage_corres:
   apply (corresKsimp corres: makeArchFaultMessage_corres)
   done
 
-context begin interpretation Arch . (*FIXME: rt arch-split, needs make_fault_msg lemmmas*)
-
 crunch make_fault_msg
   for in_user_frame[wp]: "in_user_frame buffer"
+  and tcb_at[wp]: "tcb_at t"
 
 lemma makeFaultMessage_valid_ipc_buffer_ptr'[wp]:
   "makeFaultMessage x thread \<lbrace>valid_ipc_buffer_ptr' p\<rbrace>"
@@ -1732,7 +1724,6 @@ lemma doFaultTransfer_corres:
          apply (wp | simp)+
   done
 
-end (* Arch *)
 
 crunch makeFaultMessage
   for invs'[wp]: invs'
@@ -2641,8 +2632,6 @@ crunch do_ipc_transfer
   (rule: in_correct_ready_q_lift ready_qs_distinct_lift ready_queues_runnable_lift ep_queued_lift
          ntfn_queued_lift ep_queues_blocked_lift ntfn_queues_blocked_lift)
 
-context begin interpretation Arch . (*FIXME: rt arch-split*)
-
 crunch doIPCTransfer
   for reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
@@ -2652,9 +2641,7 @@ crunch doIPCTransfer
   and pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
   and pspace_bounded'[wp]: pspace_bounded'
-  (wp: crunch_wps simp: crunch_simps rule: sym_heap_sched_pointers_lift)
-
-end (* Arch *)
+  (wp: threadSet_field_inv crunch_wps simp: crunch_simps rule: sym_heap_sched_pointers_lift)
 
 crunch set_thread_state
   for ntfn_queued[wp]: "\<lambda>s. P (ntfn_queued t s)"
@@ -5433,7 +5420,7 @@ lemma receiveIPC_corres:
                apply (clarsimp simp: obj_at_def is_ep)
               apply (frule (1) valid_objs_ko_at[OF invs_valid_objs])
               apply (clarsimp simp: valid_obj_def)
-             apply (wpsimp wp: hoare_vcg_ball_lift RISCV64.maybe_return_sc_valid_list) (* FIXME: rt arch-split *)
+             apply (wpsimp wp: hoare_vcg_ball_lift)
             apply (wpsimp wp: maybeReturnSc_invs' valid_case_option_post_wp)
            apply simp
            apply (wpsimp wp: get_simple_ko_wp)
@@ -6935,7 +6922,8 @@ crunch replyRemove
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps wp: crunch_wps wp_comb: hoare_weaken_pre)
 
-context begin interpretation Arch . (*FIXME: rt arch-split*)
+crunch handle_fault_reply
+  for valid_list[wp]: valid_list
 
 crunch handleFaultReply
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -6944,8 +6932,6 @@ lemma handleFaultReply_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> handleFaultReply x t label msg \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding handleFaultReply_def
   by wpsimp
-
-end (* Arch *)
 
 lemma doReplyTransfer_corres:
   "corres dc
@@ -7246,7 +7232,7 @@ lemma doReplyTransfer_corres:
                                        thread_set_no_change_tcb_state
                                        thread_set_pred_tcb_at_sets_true simp: ran_tcb_cap_cases)
                     apply (simp del: comp_apply)
-                    apply (wpsimp wp: hoare_drop_imp RISCV64.handle_fault_reply_valid_list) (* FIXME: rt arch-split *)
+                    apply (wpsimp wp: hoare_drop_imp)
                    apply wpsimp
                   apply wpsimp
                  apply wpsimp

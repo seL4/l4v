@@ -539,7 +539,7 @@ proof -
     done
 qed
 
-end (* FIXME rt arch-split: end tag for anonymous context? *)
+end (* private methods *)
 
 lemmas ADT_H_2_assms = Arch_assms (* extract accumulated assumptions *)
 

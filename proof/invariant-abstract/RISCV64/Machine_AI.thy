@@ -188,17 +188,24 @@ lemma getActiveIRQ_inv [wp]:
   apply (simp add: irq_state_independent_def)
   done
 
-lemma no_fail_ackInterrupt[wp]: "no_fail \<top> (ackInterrupt irq)"
+lemma no_fail_ackInterrupt[wp]:
+  "no_fail \<top> (ackInterrupt irq)"
   by (simp add: ackInterrupt_def)
 
+lemma no_fail_ackDeadlineIRQ[wp]:
+  "no_fail \<top> ackDeadlineIRQ"
+  by (wpsimp simp: ackDeadlineIRQ_def)
 
-lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
+lemma no_fail_maskInterrupt[wp]:
+  "no_fail \<top> (maskInterrupt irq bool)"
   by (simp add: maskInterrupt_def)
 
-lemma no_fail_setDeadline: "no_fail \<top>(setDeadline t)"
+lemma no_fail_setDeadline:
+  "no_fail \<top>(setDeadline t)"
   by (simp add: setDeadline_def)
 
-lemma empty_fail_setDeadline: "empty_fail (setDeadline t)"
+lemma empty_fail_setDeadline:
+  "empty_fail (setDeadline t)"
   by (simp add: setDeadline_def)
 
 lemma no_irq_use:
@@ -230,36 +237,45 @@ lemma no_irq_gets [simp]:
   by (simp add: no_irq_def)
 
 
-lemma no_irq_resetTimer: "no_irq resetTimer"
+lemma no_irq_resetTimer:
+  "no_irq resetTimer"
   by (simp add: resetTimer_def)
 
-
-lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
+lemma no_irq_debugPrint:
+  "no_irq (debugPrint $ xs)"
   by (simp add: no_irq_def)
 
-lemma no_irq_setDeadline: "no_irq (setDeadline t)"
+lemma no_irq_setDeadline:
+  "no_irq (setDeadline t)"
   by (wpsimp simp: setDeadline_def)
 
 context notes no_irq[wp] begin
 
-lemma no_irq_ackInterrupt: "no_irq (ackInterrupt irq)"
+lemma no_irq_ackInterrupt:
+  "no_irq (ackInterrupt irq)"
   by (wp | clarsimp simp: no_irq_def ackInterrupt_def)+
 
-lemma no_irq_setIRQTrigger: "no_irq (setIRQTrigger irq bool)"
+lemma no_irq_ackDeadlineIRQ:
+  "no_irq ackDeadlineIRQ"
+  unfolding ackDeadlineIRQ_def
+  by (wpsimp wp: no_irq_ackInterrupt)
+
+lemma no_irq_setIRQTrigger:
+  "no_irq (setIRQTrigger irq bool)"
   by (wp | clarsimp simp: no_irq_def setIRQTrigger_def)+
 
-lemma no_irq_loadWord: "no_irq (loadWord x)"
+lemma no_irq_loadWord:
+  "no_irq (loadWord x)"
   apply (clarsimp simp: no_irq_def)
   apply (rule loadWord_inv)
   done
 
-
-lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
+lemma no_irq_getActiveIRQ:
+  "no_irq (getActiveIRQ in_kernel)"
   apply (clarsimp simp: no_irq_def)
   apply (rule getActiveIRQ_inv)
   apply (simp add: irq_state_independent_def)
   done
-
 
 lemma no_irq_mapM:
   "(\<And>x. x \<in> set xs \<Longrightarrow> no_irq (f x)) \<Longrightarrow> no_irq (mapM f xs)"

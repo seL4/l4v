@@ -288,6 +288,10 @@ lemma minUntypedSizeBits_le_resetChunkBits[Arch_assms]:
   "minUntypedSizeBits \<le> resetChunkBits"
   by (simp add: minUntypedSizeBits_def Kernel_Config.resetChunkBits_def)
 
+lemma minUntypedSizeBits_le_minSchedContextBits[Arch_assms]:
+  "minUntypedSizeBits \<le> minSchedContextBits"
+  by (simp add: minUntypedSizeBits_def minSchedContextBits_def)
+
 (* FIXME arch-split: candidate for Kernel_Config lemmas *)
 lemma word_size_bits_le_resetChunkBits[Arch_assms]:
   "word_size_bits \<le> resetChunkBits"

@@ -534,6 +534,20 @@ lemma arch_tcb_relation_default[Arch_assms]:
   by (clarsimp simp: new_context_def newContext_def initContext_def
                      default_arch_tcb_def newArchTCB_def arch_tcb_relation_def)
 
+lemma reply_relation_retype[Arch_assms]:
+  "obj_relation_retype
+     (default_object Structures_A.ReplyObject dev n d) (KOReply makeObject)"
+  by (simp add: default_object_def reply_relation_def default_reply_def
+                makeObject_reply obj_relation_retype_def gen_objBits_simps replySizeBits_def)
+
+lemma ntfn_relation_retype[Arch_assms]:
+  "obj_relation_retype
+     (default_object Structures_A.NotificationObject dev n d) (KONotification makeObject)"
+  by (clarsimp simp: default_object_def obj_relation_retype_def ntfn_relation_def
+                     default_ntfn_def default_notification_def
+                     makeObject_notification ntfn_relation_cut_def
+                     ntfnSizeBits_def gen_objBits_simps)
+
 lemma pagetable_relation_retype:
   "obj_relation_retype (default_object (ArchObject PageTableObj) dev n d)
                        (KOArch (KOPTE makeObject))"
