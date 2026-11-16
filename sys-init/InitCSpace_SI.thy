@@ -175,7 +175,7 @@ lemma default_cap_data_if_cnode:
   \<Longrightarrow> (default_cap type m sz dev)
    =  (default_cap type m (cnode_cap_size spec_cap) dev)"
   by (case_tac spec_cap,
-      (clarsimp simp: default_cap_def cap_type_def is_cnode_cap_simps)+)
+      (clarsimp simp: default_cap_def cap_type_def)+)
 
 
 (************************************************************

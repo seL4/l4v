@@ -203,7 +203,7 @@ lemma seL4_CNode_Mint_sep:
          apply (simp)
         apply (rule_tac x = cap'' in exI)
         apply (simp add:reset_cap_asid_derived)
-       apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
+       apply (wp set_cap_wp)[1]
       apply (rule_tac P = "is_cnode_cap (fst (c,ref))" in hoare_gen_asmEx)
       apply (clarsimp simp: decode_invocation_simps split_def)
       apply (rule liftME_wp)
@@ -222,7 +222,7 @@ lemma seL4_CNode_Mint_sep:
     apply (wp hoare_vcg_ball_lift
               sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
               hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-              is_cnode_cap_guard_equal update_thread_intent_update update_thread_cnode_at
+               update_thread_intent_update
             | clarsimp)+
    apply (intro conjI impI)
     apply (sep_solve)
@@ -366,7 +366,7 @@ lemma seL4_CNode_Mutate_sep:
          apply (intro conjI)
           apply (sep_solve)
          apply fastforce
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)
+        apply (wp set_cap_wp)
        apply (rule_tac P = "is_cnode_cap c" in hoare_gen_asmEx)
        apply (simp add:decode_invocation_simps)
        apply (rule liftME_wp)
@@ -383,7 +383,7 @@ lemma seL4_CNode_Mutate_sep:
     defer
     apply (wp hoare_vcg_ball_lift sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
       hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-      update_thread_intent_update update_thread_cnode_at | clarsimp simp:Let_def)+
+      update_thread_intent_update | clarsimp simp:Let_def)+
    apply (clarsimp simp:conj_comms)
    apply (intro conjI impI ballI)[1]
      apply (clarsimp dest!:sep_map_f_tcb_at simp:object_at_def)
@@ -523,7 +523,7 @@ lemma seL4_CNode_Move_sep:
           in hoare_strengthen_post[rotated])
          apply (clarsimp)
            apply (sep_select 3,assumption)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)
+        apply (wp set_cap_wp)
        apply (rule_tac P = "is_cnode_cap c" in hoare_gen_asmEx)
        apply (simp add:decode_invocation_simps)
        apply (rule liftME_wp)
@@ -541,7 +541,7 @@ lemma seL4_CNode_Move_sep:
    defer
    apply (wp hoare_vcg_ball_lift sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
      hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-     update_thread_intent_update update_thread_cnode_at | clarsimp simp:Let_def)+
+     update_thread_intent_update | clarsimp simp:Let_def)+
   apply (clarsimp simp:conj_comms)
   apply (intro conjI impI ballI)
         apply (clarsimp dest!:sep_map_f_tcb_at simp:object_at_def)
@@ -562,7 +562,7 @@ lemma seL4_CNode_Move_sep:
     apply sep_solve[1]
    apply (clarsimp cong: cap_type_bad_cong)
    apply sep_solve
-   apply (simp add:sep_any_map_c_imp)
+   apply simp
   apply (clarsimp simp:user_pointer_at_def
           Let_def word_bits_def cnode_cap_non_ep_related)
   apply (clarsimp simp:sep_conj_assoc)
@@ -678,7 +678,7 @@ lemma seL4_CNode_Copy_sep:
            apply (simp)
           apply (rule_tac x = cap'' in exI)
           apply (simp add:reset_cap_asid_derived)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
+        apply (wp set_cap_wp)[1]
        apply (rule_tac P = "(fst (c,ref)) = cnode_cap'
          \<and> get_index cs 0 = Some (cnode_cap',(cap_object cnode_cap',
           offset src_root root_size))" in hoare_gen_asmEx)
@@ -703,8 +703,8 @@ lemma seL4_CNode_Copy_sep:
      defer
    apply (clarsimp simp:Let_def)
    apply (wp hoare_vcg_ball_lift sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
-     hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift is_cnode_cap_guard_equal
-     update_thread_intent_update update_thread_cnode_at | clarsimp simp:Let_def)+
+     hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
+     update_thread_intent_update | clarsimp simp:Let_def)+
   apply (intro conjI impI)
     apply sep_solve
    apply sep_solve

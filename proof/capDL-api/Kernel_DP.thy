@@ -118,8 +118,7 @@ where
       \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer_addr,
        cdl_intent_error = False,
        cdl_intent_cap = tcb_cap,
-       cdl_intent_extras = [cspace_root, vspace_root, buffer_frame],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [cspace_root, vspace_root, buffer_frame]\<rparr> True"
 
 definition seL4_TCB_SetIPCBuffer :: "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> cdl_cptr
   \<Rightarrow> bool u_monad"
@@ -129,18 +128,7 @@ where
       \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbSetIPCBufferIntent buffer_addr,
        cdl_intent_error = False,
        cdl_intent_cap = tcb_cap,
-       cdl_intent_extras = [buffer_frame],
-       cdl_intent_recv_slot = None\<rparr> False"
-
-definition seL4_TCB_SetPriority :: "cdl_cptr \<Rightarrow> word8 \<Rightarrow> bool u_monad"
-where
-  "seL4_TCB_SetPriority tcb_cap priority \<equiv>
-    do_kernel_op $ call_kernel_with_intent
-      \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbSetPriorityIntent priority,
-       cdl_intent_error = False,
-       cdl_intent_cap = tcb_cap,
-       cdl_intent_extras = [],
-       cdl_intent_recv_slot = None\<rparr> False"
+       cdl_intent_extras = [buffer_frame]\<rparr> False"
 
 definition seL4_TCB_SetSchedParams :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> word64 \<Rightarrow> word64 \<Rightarrow> bool u_monad" where
   "seL4_TCB_SetSchedParams tcb_cap auth_tcb_cap mcp priority \<equiv> dummy_syscall"
@@ -149,16 +137,6 @@ definition seL4_TCB_SetSchedParams :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightar
 definition seL4_TCB_SetSchedParams' :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> word8 \<Rightarrow> word8 \<Rightarrow> bool u_monad" where
   "seL4_TCB_SetSchedParams' tcb_cap auth_tcb_cap mcp priority \<equiv>
      seL4_TCB_SetSchedParams tcb_cap auth_tcb_cap (UCAST(8\<rightarrow>64) mcp) (UCAST(8\<rightarrow>64) priority)"
-
-definition seL4_TCB_SetSpace :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow>  bool u_monad"
-where
-  "seL4_TCB_SetSpace tcb_cap fault_ep cspace_root cspace_root_data vspace_root vspace_root_data \<equiv>
-    do_kernel_op $ call_kernel_with_intent
-      \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbSetSpaceIntent fault_ep cspace_root_data vspace_root_data,
-       cdl_intent_error = False,
-       cdl_intent_cap = tcb_cap,
-       cdl_intent_extras = [cspace_root, vspace_root],
-       cdl_intent_recv_slot = None\<rparr> False"
 
 definition seL4_TCBFlag_fpuDisabled :: machine_word where
   "seL4_TCBFlag_fpuDisabled \<equiv> 1"
@@ -169,8 +147,7 @@ definition seL4_TCB_SetFlags :: "cdl_cptr \<Rightarrow> machine_word \<Rightarro
      \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbSetFlagsIntent flags_set flags_clear,
       cdl_intent_error = False,
       cdl_intent_cap = tcb_cap,
-      cdl_intent_extras = [],
-      cdl_intent_recv_slot = None\<rparr> False"
+      cdl_intent_extras = []\<rparr> False"
 
 definition seL4_TCB_Resume :: "cdl_cptr \<Rightarrow> bool u_monad"
 where
@@ -179,8 +156,7 @@ where
       \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbResumeIntent,
        cdl_intent_error = False,
        cdl_intent_cap = tcb_cap,
-       cdl_intent_extras = [],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = []\<rparr> True"
 
 definition seL4_TCB_Suspend :: "cdl_cptr \<Rightarrow> bool u_monad"
 where
@@ -189,8 +165,7 @@ where
       \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbSuspendIntent,
        cdl_intent_error = False,
        cdl_intent_cap = tcb_cap,
-       cdl_intent_extras = [],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = []\<rparr> True"
 
 definition seL4_TCB_WriteRegisters :: "cdl_cptr \<Rightarrow> bool \<Rightarrow> arch_flags \<Rightarrow> machine_word \<Rightarrow> cdl_raw_usercontext \<Rightarrow> bool u_monad"
 where
@@ -199,8 +174,7 @@ where
       \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbWriteRegistersIntent resume_target arch_flags count regs,
        cdl_intent_error = False,
        cdl_intent_cap = tcb_cap,
-       cdl_intent_extras = [],
-       cdl_intent_recv_slot = None\<rparr> False"
+       cdl_intent_extras = []\<rparr> False"
 
 definition seL4_Untyped_Retype ::
   "cdl_cptr \<Rightarrow> cdl_object_type \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
@@ -212,8 +186,7 @@ definition seL4_Untyped_Retype ::
                                                                   node_depth node_offset node_window,
        cdl_intent_error = False,
        cdl_intent_cap = untyped_cap,
-       cdl_intent_extras = [croot],
-       cdl_intent_recv_slot = None\<rparr> False"
+       cdl_intent_extras = [croot]\<rparr> False"
 
 definition seL4_IRQControl_Get ::
   "cdl_cptr \<Rightarrow> cdl_irq \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool u_monad"
@@ -223,8 +196,7 @@ definition seL4_IRQControl_Get ::
       \<lparr>cdl_intent_op = Some $ IrqControlIntent $ IrqControlIssueIrqHandlerIntent irq node_index node_depth,
        cdl_intent_error = False,
        cdl_intent_cap = control_cap,
-       cdl_intent_extras = [croot],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [croot]\<rparr> True"
 
 definition seL4_IssueSGISignal ::
   "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
@@ -236,8 +208,7 @@ definition seL4_IssueSGISignal ::
                          ARMIssueSGISignalIntent irq target node_index node_depth,
        cdl_intent_error = False,
        cdl_intent_cap = control_cap,
-       cdl_intent_extras = [croot],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [croot]\<rparr> True"
 
 definition seL4_IRQHandler_SetEndpoint :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad"
 where
@@ -246,8 +217,7 @@ where
       \<lparr>cdl_intent_op = Some $ IrqHandlerIntent $ IrqHandlerSetEndpointIntent,
        cdl_intent_error = False,
        cdl_intent_cap = handler_cap,
-       cdl_intent_extras = [endpoint_cap],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [endpoint_cap]\<rparr> True"
 
 definition seL4_ASIDPool_Assign :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad"
 where
@@ -256,8 +226,7 @@ where
       \<lparr>cdl_intent_op = Some $ AsidPoolIntent $ AsidPoolAssignIntent,
        cdl_intent_error = False,
        cdl_intent_cap = asid_pool_cap,
-       cdl_intent_extras = [pd],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [pd]\<rparr> True"
 
 definition seL4_PageTable_Map :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> vptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> bool u_monad"
 where
@@ -266,8 +235,7 @@ where
       \<lparr>cdl_intent_op = Some $ PageTableIntent $ PageTableMapIntent vaddr vmattribs,
        cdl_intent_error = False,
        cdl_intent_cap = sel4_page_table,
-       cdl_intent_extras = [sel4_page_directory],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [sel4_page_directory]\<rparr> True"
 
 definition seL4_Page_Map :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> vptr \<Rightarrow> cdl_right set \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> bool u_monad"
 where
@@ -276,8 +244,7 @@ where
       \<lparr>cdl_intent_op = Some $ PageIntent $ PageMapIntent vaddr perms vmattribs,
        cdl_intent_error = False,
        cdl_intent_cap = sel4_page,
-       cdl_intent_extras = [sel4_page_directory],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [sel4_page_directory]\<rparr> True"
 
 definition seL4_CNode_Move ::
   "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
@@ -288,8 +255,7 @@ definition seL4_CNode_Move ::
       \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeMoveIntent dest_index dest_depth src_index src_depth,
        cdl_intent_error = False,
        cdl_intent_cap = dest_root,
-       cdl_intent_extras = [src_root],
-       cdl_intent_recv_slot = None\<rparr> False"
+       cdl_intent_extras = [src_root]\<rparr> False"
 
 definition seL4_CNode_Copy ::
   "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
@@ -300,8 +266,7 @@ definition seL4_CNode_Copy ::
       \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeCopyIntent dest_index dest_depth src_index src_depth rights,
        cdl_intent_error = False,
        cdl_intent_cap = dest_root,
-       cdl_intent_extras = [src_root],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [src_root]\<rparr> True"
 
 definition seL4_CNode_Mint ::
   "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
@@ -312,8 +277,7 @@ definition seL4_CNode_Mint ::
        \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeMintIntent dest_index dest_depth src_index src_depth rights data,
        cdl_intent_error = False,
        cdl_intent_cap = dest_root,
-       cdl_intent_extras = [src_root],
-       cdl_intent_recv_slot = None\<rparr> True"
+       cdl_intent_extras = [src_root]\<rparr> True"
 
 definition seL4_CNode_Mutate ::
   "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
@@ -324,8 +288,7 @@ definition seL4_CNode_Mutate ::
       \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeMutateIntent dest_index dest_depth src_index src_depth data,
        cdl_intent_error = False,
        cdl_intent_cap = dest_root,
-       cdl_intent_extras = [src_root],
-       cdl_intent_recv_slot = None\<rparr> False"
+       cdl_intent_extras = [src_root]\<rparr> False"
 
 definition seL4_ARM_VCPU_SetTCB :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad" where
   "seL4_ARM_VCPU_SetTCB sel4_vcpu sel4_tcb \<equiv>
@@ -333,8 +296,7 @@ definition seL4_ARM_VCPU_SetTCB :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow
       \<lparr>cdl_intent_op = Some $ VCPUIntent,
        cdl_intent_error = False,
        cdl_intent_cap = sel4_vcpu,
-       cdl_intent_extras = [sel4_tcb],
-       cdl_intent_recv_slot = None\<rparr> False"
+       cdl_intent_extras = [sel4_tcb]\<rparr> False"
 
 (* End of kernel call funtions *)
 

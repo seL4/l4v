@@ -21,11 +21,6 @@ definition
   | cdl_cap.FrameCap dev oid rghts sz _ mp \<Rightarrow> cdl_cap.FrameCap dev oid rghts sz (Fake attr) None"
 
 definition
-  "get_pt_mapped_addr cap \<equiv>
-    case cap of (cap.ArchObjectCap (arch_cap.PageTableCap p asid)) \<Rightarrow> transform_mapping asid
-    | _ \<Rightarrow> None"
-
-definition
   "get_pt_vm_attributes pde \<equiv> case pde of
       PageTablePDE _ vm_attributes _ \<Rightarrow> attribs_to_word vm_attributes
     | SectionPDE _ vm_attributes _ _ \<Rightarrow> attribs_to_word vm_attributes
@@ -40,9 +35,7 @@ definition
                       (make_arch_duplicate (transform_cap cap) (get_pt_vm_attributes pde))
                       (transform_cslot_ptr slot) (transform_pd_slot_ref slot'))
       else None
-  | ARM_A.PageTableUnmap cap slot \<Rightarrow>
-         Some (cdl_page_table_invocation.PageTableUnmap (get_pt_mapped_addr cap)
-                 (obj_ref_of cap) (transform_cslot_ptr slot))"
+  | ARM_A.PageTableUnmap cap slot \<Rightarrow> None"
 
 definition flush_type_map :: "ARM_A.flush_type \<Rightarrow> flush"
  where "flush_type_map f \<equiv> case f of
@@ -50,14 +43,6 @@ definition flush_type_map :: "ARM_A.flush_type \<Rightarrow> flush"
         | ARM_A.Clean \<Rightarrow> flush.Clean
         | ARM_A.Invalidate \<Rightarrow> flush.Invalidate
         | ARM_A.CleanInvalidate \<Rightarrow> flush.CleanInvalidate"
-
-definition transform_page_dir_inv :: "ARM_A.page_directory_invocation \<Rightarrow> cdl_page_directory_invocation option"
-where "transform_page_dir_inv invok \<equiv> case invok of
-     ARM_A.page_directory_invocation.PageDirectoryFlush flush _ _ _ _ _ \<Rightarrow>
-                       Some (cdl_page_directory_invocation.PageDirectoryFlush (flush_type_map flush))
-    |ARM_A.page_directory_invocation.PageDirectoryNothing  \<Rightarrow>
-                       Some (cdl_page_directory_invocation.PageDirectoryNothing) "
-
 
 definition transform_page_inv :: "ARM_A.page_invocation \<Rightarrow> cdl_page_invocation option"
 where "transform_page_inv invok \<equiv> case invok of
@@ -74,15 +59,12 @@ where "transform_page_inv invok \<equiv> case invok of
 | ARM_A.page_invocation.PageGetAddr base \<Rightarrow> Some (cdl_page_invocation.PageGetAddress)
 | _ \<Rightarrow> None"
 
-definition transform_sgi_inv :: "sgi_signal_invocation \<Rightarrow> cdl_sgi_signal_invocation" where
-  "transform_sgi_inv iv \<equiv> cdl_sgi_signal_invocation.SGISignalGenerate"
-
 definition translate_arch_invocation :: "arch_invocation \<Rightarrow> cdl_invocation option"
 where "translate_arch_invocation invo \<equiv> case invo of
     arch_invocation.InvokePageTable oper \<Rightarrow> option_map cdl_invocation.InvokePageTable (transform_page_table_inv oper)
   | arch_invocation.InvokePage oper \<Rightarrow> option_map cdl_invocation.InvokePage (transform_page_inv oper)
-  | arch_invocation.InvokePageDirectory oper \<Rightarrow> option_map cdl_invocation.InvokePageDirectory (transform_page_dir_inv oper)
-  | arch_invocation.InvokeSGISignal oper \<Rightarrow> Some (cdl_invocation.InvokeSGISignal (transform_sgi_inv oper))
+  | arch_invocation.InvokePageDirectory oper \<Rightarrow> None
+  | arch_invocation.InvokeSGISignal oper \<Rightarrow> None
   | arch_invocation.InvokeASIDControl oper \<Rightarrow>
       Some (case oper of ARM_A.MakePool frame slot parent base
         \<Rightarrow> cdl_invocation.InvokeAsidControl
@@ -111,24 +93,6 @@ lemma corres_symb_exec_in_gets:
     = (\<forall>v. corres_underlying sr nf nf' r (P and (\<lambda>s. g' s = v)) P' (j' v) f')"
   by (auto simp add: corres_underlying_def exec_gets split_def)
 
-lemma select_ignored:
-  "select S >>= (\<lambda>_. f) = (if S = {} then select {} else f)"
-  apply (intro ext)
-  apply (simp add: select_def bind_def cart_singleton_image
-                   image_image image_constant_conv)
-  done
-
-lemma liftM_select:
-  "liftM f (select S) = select (f ` S)"
-  apply (rule ext)
-  apply (auto simp add: select_def bind_def liftM_def return_def split_def
-                        cart_singleton_image image_image)
-  done
-
-lemma gets_bind_alternative:
-  "((gets f >>= g) \<sqinter> h) = gets f >>= (\<lambda>x. g x \<sqinter> h)"
-  by (rule ext, simp add: alternative_def exec_gets)
-
 lemma corres_from_rdonly:
   assumes rdonly: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. P\<rbrace>" "\<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes rv: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
@@ -141,13 +105,6 @@ lemma corres_from_rdonly:
   apply clarsimp
   apply (frule in_inv_by_hoareD[OF rdonly(1)], simp)
   apply fastforce
-  done
-
-lemma get_pde_sp:
-  "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>pde s. \<exists>pd. ko_at (ArchObj (arch_kernel_obj.PageDirectory pd)) (p && ~~ mask pd_bits) s
-                                   \<and> pde = (pd (ucast (p && mask pd_bits >> 2))) \<and> P s\<rbrace>"
-  apply (wp get_pde_wp)
-  apply auto
   done
 
 lemmas less_kernel_base_mapping_slots = less_kernel_base_mapping_slots_both[where x=0, simplified]
@@ -322,190 +279,6 @@ proof -
     qed
   qed
 
-lemma create_mapping_entries_dcorres_select:
-  assumes pdid: "pdid = pd_ptr"
-      and pd_aligned: "is_aligned pd_ptr pd_bits"
-      and vp_aligned: "vmsz_aligned vptr pgsz"
-      and kb: "vptr < kernel_base"
-  shows
-  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
-                                 (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
-                     \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
-                           = FrameCap False (ptrFromPAddr base)
-                               vm_rights (pageBitsForSize pgsz) (Fake (transform_vm_attributes attrib pgsz)) None))
-     (\<lambda>s. frslots = all_pd_pt_slots pd pdid s
-              \<and> cdl_objects s pdid = Some pd)
-     (page_directory_at pd_ptr and valid_idle and valid_vspace_objs and pspace_aligned
-             and (\<exists>\<rhd> (lookup_pd_slot pd_ptr vptr && ~~ mask pd_bits)))
-     (liftE (select {M. set M \<subseteq> frslots \<and> distinct M}) \<sqinter> Monads_D.throw)
-     (create_mapping_entries base vptr pgsz vm_rights attrib pd_ptr)"
-proof -
-  have lookup_pd_slot_offs_times_4_mask_2[simp]:
-    "\<And>x. lookup_pd_slot pd_ptr vptr + of_nat x * 4 && mask 2 = 0"
-    apply (subst is_aligned_mask[symmetric])
-    apply (rule aligned_add_aligned[where n=2], simp_all add: word_bits_conv)
-     apply (simp add: lookup_pd_slot_def)
-     apply (rule aligned_add_aligned[OF pd_aligned],
-            simp_all add: pd_bits_def pageBits_def word_bits_conv)
-     apply (simp_all add: is_aligned_shiftl word_shift_by_2)
-    done
-  have inj_on_pd:
-    "inj_on (\<lambda>x. transform_pd_slot_ref (lookup_pd_slot pd_ptr vptr + toEnum x * 4)) {0 ..< 16}"
-    apply (rule inj_onI, clarsimp simp: transform_pd_slot_ref_def)
-    apply (drule bits_low_high_eq[rotated])
-     apply (simp add: mask_twice pd_bits_def pageBits_def)
-    apply (drule(1) mask_eqI[rotated])
-    apply (simp add: word_shift_by_2)
-    apply (rule ccontr, erule(3) of_nat_shift_distinct_helper)
-     apply (simp_all add: word_bits_conv)
-    done
-
-  have map_includedI:
-   "\<And>S g xs. \<lbrakk>set (map g xs) \<subseteq> S;xs \<noteq> []\<rbrakk> \<Longrightarrow> g (hd xs) \<in> S"
-    by (clarsimp simp:hd_map_simp neq_Nil_conv)
-
-  show ?thesis using pdid vp_aligned
-    apply clarsimp
-    proof (induct pgsz)
-      case ARMSmallPage
-      show ?case using ARMSmallPage.prems
-        apply (simp add: liftME_def[symmetric] o_def transform_pte_def
-                                     lookup_error_injection dc_def[symmetric])
-        apply (rule dcorres_injection_handler_rhs)
-        apply (simp add: lookup_pt_slot_def liftE_bindE)
-        apply (rule corres_symb_exec_r[OF _ get_pde_sp get_pde_inv], simp_all)[1]
-        apply (clarsimp simp add: corres_alternate2 split: ARM_A.pde.split)
-        apply (rule corres_alternate1)
-        apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp | simp)+
-        apply (simp add: returnOk_def in_monad select_def, wp)
-        apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
-                              opt_object_page_directory
-                              obj_at_def object_slots_def transform_page_directory_contents_def
-                              unat_map_def kernel_pde_mask_def lookup_pd_slot_pd
-                              pd_aligned
-                       dest!: a_type_pdD
-                         del: disjCI)
-        apply (drule valid_vspace_objsD, simp add: obj_at_def, simp+)
-        apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
-        apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
-         apply simp
-        apply (drule_tac t="pda v" for v in sym, simp)
-        apply (clarsimp simp: obj_at_def transform_vm_attributes_def del: disjCI)
-        apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
-        apply (rule disjI2, rule conjI)
-         apply (rule_tac x="unat (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)"
-                    in exI)
-         apply (simp add: transform_pde_def ucast_nat_def)
-         apply (subst is_aligned_add_helper, simp add: pt_bits_def pageBits_def)
-          apply (rule shiftl_less_t2n)
-           apply (rule order_le_less_trans, rule word_and_le1, simp add: pt_bits_def pageBits_def)
-          apply (simp add: pt_bits_def pageBits_def)
-         apply simp
-         apply (simp add: kernel_mapping_slots_def)
-        apply (subst is_aligned_add_helper, simp add: pt_bits_def pageBits_def)
-         apply (rule shiftl_less_t2n)
-          apply (rule order_le_less_trans, rule word_and_le1, simp add: pt_bits_def pageBits_def)
-         apply (simp add: pt_bits_def pageBits_def)
-        apply (simp add: dom_def transform_def transform_objects_def
-                         restrict_map_def map_add_def)
-        apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-        done
-    next
-      case ARMLargePage
-      show ?case using ARMLargePage.prems
-        apply (simp add: liftME_def[symmetric] o_def transform_pte_def largePagePTE_offsets_def
-                                     lookup_error_injection dc_def[symmetric])
-        apply (rule dcorres_injection_handler_rhs)
-        apply (simp add: lookup_pt_slot_def liftE_bindE)
-        apply (rule corres_symb_exec_r[OF _ get_pde_sp get_pde_inv], simp_all)[1]
-        apply (clarsimp simp add: corres_alternate2 split: ARM_A.pde.split)
-        apply (rename_tac word1 set word2)
-        apply (rule corres_alternate1)
-        apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp | simp)+
-        apply (simp add: returnOk_def in_monad select_def, wp)
-        apply (clarsimp simp: pd_aligned obj_at_def lookup_pd_slot_pd
-                              a_type_simps)
-        apply (drule valid_vspace_objsD, simp add: obj_at_def, simp+)
-        apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
-        apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
-         apply simp
-        apply (drule_tac t="pda v" for v in sym, simp)
-        apply (clarsimp simp: obj_at_def transform_vm_attributes_def del: disjCI)
-        apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
-        apply (rule map_includedI)
-         apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
-                               opt_object_page_directory
-                               object_slots_def transform_page_directory_contents_def
-                               unat_map_def kernel_pde_mask_def
-                          del: disjCI UnCI)
-         apply (subgoal_tac "x + (ptrFromPAddr word1 + ((vptr >> 12) && 0xFF << 2)) && ~~ mask pt_bits = ptrFromPAddr word1")
-          apply (rule disjI2, rule conjI)
-           apply (rule_tac x="unat (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)"
-                      in exI)
-           apply (simp add: transform_pde_def ucast_nat_def)
-           apply (simp add: kernel_mapping_slots_def)
-          apply (simp add: dom_def transform_def transform_objects_def
-                           restrict_map_def)
-          apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-         apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def
-                        split: if_split_asm)
-         apply (subst add.commute, subst add.assoc, subst is_aligned_add_helper, assumption)
-          apply (simp only: word_shift_by_2 word_shiftl_add_distrib[symmetric])
-          apply (rule shiftl_less_t2n)
-           apply (rule is_aligned_add_less_t2n[where n=4])
-              apply (rule is_aligned_andI1)
-              apply (rule is_aligned_shiftr)
-              apply (simp add: vmsz_aligned_def)
-             apply (simp add: word_leq_minus_one_le)
-            apply simp
-           apply (rule order_le_less_trans, rule word_and_le1, simp)
-          apply simp
-         apply simp
-        apply (simp add: upto_enum_step_def not_less upto_enum_def)
-        done
-    next
-      case ARMSection
-      show ?case using ARMSection.prems
-        apply (simp add: liftME_def[symmetric] o_def transform_pte_def
-                                     lookup_error_injection dc_def[symmetric])
-        apply (rule corres_alternate1)
-        apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp | simp)+
-        apply (simp add: returnOk_def in_monad select_def, wp)
-        apply (clarsimp simp: transform_pde_def obj_at_def
-                              opt_object_page_directory transform_vm_attributes_def
-                       dest!: a_type_pdD)
-        apply (simp add: transform_pd_slot_ref_def lookup_pd_slot_def
-                         all_pd_pt_slots_def object_slots_def
-                         transform_page_directory_contents_def
-                         dom_def unat_map_def)
-        done
-
-    next
-      case ARMSuperSection
-      show ?case using ARMSuperSection.prems
-        using pd_aligned
-        apply (simp add: liftME_def[symmetric] o_def transform_pte_def
-                                     lookup_error_injection dc_def[symmetric])
-        apply (rule corres_alternate1)
-        apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp | simp)+
-        apply (simp add: returnOk_def in_monad select_def, wp)
-        apply (clarsimp simp: transform_pde_def obj_at_def
-                              opt_object_page_directory transform_vm_attributes_def
-                       dest!: a_type_pdD)
-        apply (rule map_includedI)
-         apply clarsimp
-         apply (clarsimp simp: all_pd_pt_slots_def transform_pd_slot_ref_def
-                               object_slots_def transform_page_directory_contents_def
-                               dom_def unat_map_def)
-        apply (simp add: not_less upto_enum_step_def upto_enum_def superSectionPDE_offsets_def)
-        done
-    qed
-qed
-
 schematic_goal get_master_pde_invalid_sp:
   "\<lbrace>P\<rbrace> get_master_pde p
   \<lbrace>\<lambda>pde s. pde = ARM_A.pde.InvalidPDE \<longrightarrow>
@@ -530,73 +303,6 @@ lemma shiftl_mod:
   apply (simp add:power_add[symmetric])
   done
 
-definition
-  select_ret_or_throw :: "'a set \<Rightarrow> 'x set \<Rightarrow> ('s, ('x + 'a)) nondet_monad"
-where
-  "select_ret_or_throw S X = alternative (select S >>= returnOk) (select X >>= throwError)"
-
-lemma to_select_ret_or_throw:
-  "returnOk x = select_ret_or_throw {x} {}"
-  "throwError e = select_ret_or_throw {} {e}"
-  "alternative (select_ret_or_throw S X) (select_ret_or_throw S' X')
-    = select_ret_or_throw (S \<union> S') (X \<union> X')"
-  apply (simp_all add: select_ret_or_throw_def alternative_def returnOk_def return_def
-                       select_def bind_def throwError_def)
-  apply (simp add: Sigma_def return_def Un_ac)
-  done
-
-lemma whenE_to_select_ret_or_throw:
-  "whenE P (select_ret_or_throw S X)
-    = select_ret_or_throw ({x. P \<longrightarrow> x \<in> S}) ({x. P \<and> x \<in> X})"
-  apply (simp add: whenE_def to_select_ret_or_throw UNIV_unit)
-  apply (strengthen arg_cong2[where f=select_ret_or_throw])
-  apply (simp add: set_eq_iff)
-  done
-
-lemma select_ret_or_throw_twice:
-  "(do _ \<leftarrow> select_ret_or_throw S X; select_ret_or_throw S X od)
-    = select_ret_or_throw S X"
-  apply (simp add: select_ret_or_throw_def alternative_def returnOk_def return_def
-                       select_def bind_def throwError_def Sigma_def)
-  apply (rule ext, auto)
-  done
-
-lemma select_ret_or_throw_twiceE:
-  "(doE _ \<leftarrow> select_ret_or_throw S X; select_ret_or_throw S X odE)
-    = select_ret_or_throw S X"
-  apply (simp add: select_ret_or_throw_def alternative_def returnOk_def return_def
-                       select_def bind_def throwError_def Sigma_def
-                       bindE_def)
-  apply (rule ext, auto simp: throwError_def return_def)
-  done
-
-crunch select_ret_or_throw
-  for inv[wp]: "P"
-
-lemma corres_initial_bindE_rdonly_select_ret_or_throw:
-  assumes y: "\<And>rv'. corres_underlying sr nf nf' (e \<oplus> r) P P' (select_ret_or_throw S X) (d rv')"
-  assumes x: "corres_underlying sr nf nf' (e \<oplus> dc) P P' (select_ret_or_throw S X) c"
-  assumes z: "\<lbrace>P'\<rbrace> c \<lbrace>\<lambda>_. P'\<rbrace>,-"
-  shows      "corres_underlying sr nf nf' (e \<oplus> r) P P' (select_ret_or_throw S X) (c >>=E (\<lambda>rv'. d rv'))"
-  apply (subst select_ret_or_throw_twiceE[symmetric])
-  apply (rule corres_initial_splitE[OF x y])
-   apply wp
-  apply (wp z)
-  done
-
-lemma corres_select_ret_or_throw:
-  "\<forall>v \<in> S'. \<exists>v' \<in> S. r v' v
-    \<Longrightarrow> \<forall>x \<in> X'. \<exists>x' \<in> X. e x' x
-    \<Longrightarrow> corres_underlying sr nf nf' (e \<oplus> r) \<top> \<top>
-        (select_ret_or_throw S X) (select_ret_or_throw S' X')"
-  apply (simp add: select_ret_or_throw_def)
-  apply (rule corres_alternate_match)
-   apply (simp add: returnOk_def liftM_def[symmetric] o_def)
-   apply (rule corres_select, simp)
-  apply (simp add: throwError_def liftM_def[symmetric] o_def)
-  apply (rule corres_select, simp)
-  done
-
 (*
  * Decoding Arch invocations is equivalent.
  *)
@@ -609,15 +315,23 @@ lemma transform_vm_attribs_from_word:
   unfolding transform_vm_attributes_def validate_vm_attributes_def
   by (cases pgsz; simp)
 
+(* Page directory invocations are not modelled: they are all OtherIntent. *)
+lemma transform_intent_no_page_directory:
+  "\<lbrakk> Some intent = transform_intent label args; intent \<noteq> OtherIntent \<rbrakk> \<Longrightarrow>
+   \<not> isPDFlushLabel label"
+  by (auto simp: isPDFlushLabel_def transform_intent_def map_option_Some_eq2
+           split: invocation_label.split_asm gen_invocation_labels.split_asm
+                  arch_invocation_label.split_asm)
+
 lemma decode_invocation_archcap_corres:
   notes label_split_asm = invocation_label.split_asm gen_invocation_labels.split_asm
                           arch_invocation_label.split_asm
   shows
-  "\<lbrakk> Some intent = transform_intent (invocation_type label') args';
+  "\<lbrakk> Some intent = transform_intent (invocation_type label') args'; intent \<noteq> OtherIntent;
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
      invoked_cap = transform_cap invoked_cap';
      excaps = transform_cap_list excaps';
-     invoked_cap' = cap.ArchObjectCap x \<rbrakk> \<Longrightarrow>
+     invoked_cap' = cap.ArchObjectCap x; \<not> is_SGISignalCap x \<rbrakk> \<Longrightarrow>
     dcorres (dc \<oplus> (\<lambda>rv rv'. \<exists>ai. rv' = Invocations_A.InvokeArchObject ai
                        \<and> arch_invocation_relation rv ai))
          \<top> (invs and valid_cap invoked_cap'
@@ -700,7 +414,6 @@ next
                      liftE_bindE corres_symb_exec_in_gets
                      corres_whenE_throwError_split_rhs
                      transform_cnode_index_and_depth_def
-                     select_ignored
               split: cap.split arch_cap.split option.split)
     apply (clarsimp simp: get_index_def transform_cap_list_def
                           throw_on_none_def split_beta bindE_assoc
@@ -780,7 +493,7 @@ next
                           liftE_bindE corres_symb_exec_in_gets
                           corres_whenE_throwError_split_rhs
                           transform_cnode_index_and_depth_def
-                          select_ignored throw_on_none_def
+                          throw_on_none_def
                           get_index_def transform_cap_list_def
                           dc_def[symmetric]
                    split: cap.split arch_cap.split option.split)
@@ -823,7 +536,7 @@ next
                   apply (simp add: conj_disj_distribR cong: conj_cong)
                   apply (simp add: arch_invocation_relation_def translate_arch_invocation_def
                                    transform_page_inv_def update_cap_rights_def
-                                   update_mapping_cap_status_def Types_D.cap_rights_def
+                                   Types_D.cap_rights_def
                                    mask_vm_rights_def transform_mapping_def
                                    transform_vm_attribs_from_word)
                  apply wp+
@@ -868,7 +581,7 @@ next
                  apply (simp add: conj_disj_distribR cong: conj_cong)
                  apply (simp add: arch_invocation_relation_def translate_arch_invocation_def
                                   transform_page_inv_def update_cap_rights_def
-                                  update_mapping_cap_status_def Types_D.cap_rights_def
+                                  Types_D.cap_rights_def
                                   mask_vm_rights_def transform_mapping_def
                                   transform_vm_attribs_from_word)
                 apply wp+
@@ -942,126 +655,59 @@ next
                           transform_intent_page_table_map_def
                split del: if_split
                split: label_split_asm list.split_asm)
-     apply (simp add: throw_on_none_def transform_cap_list_def
-       get_index_def split_beta alternative_refl
-       transform_mapping_def corres_whenE_throwError_split_rhs corres_alternate2
-       split: cap.split arch_cap.split option.split cdl_frame_cap_type.splits)
-     apply (clarsimp simp: dc_def[symmetric] liftE_bindE
-       gets_the_def bind_assoc transform_mapping_def
-       corres_symb_exec_in_gets gets_bind_alternative)
-      apply (rule_tac r'=dc and P'="I" and Q'="\<lambda>rv. I and (\<exists>\<rhd> (lookup_pd_slot rv ab && ~~ mask pd_bits))"
-               for I in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
-         apply (rule corres_from_rdonly, simp_all)[1]
-           apply (wp | simp)+
-         apply (rule hoare_strengthen_post, rule hoare_TrueI)
-         apply (rename_tac rv s)
-         apply (case_tac rv, auto simp add: in_monad)[1]
-        apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
-                         check_vp_alignment_def unlessE_whenE)
-        apply clarsimp
-        apply (rule corres_symb_exec_r
-          [OF _ get_master_pde_invalid_sp get_master_pde_inv],simp_all)[1]
-        apply (clarsimp simp add: corres_whenE_throwError_split_rhs
-             corres_alternate2)
-        apply (rule corres_alternate1)
-        apply (rule corres_from_rdonly,simp_all)[1]
+    apply (simp add: throw_on_none_def transform_cap_list_def get_index_def split_beta
+                     alternative_refl transform_mapping_def
+                     corres_whenE_throwError_split_rhs corres_alternate2
+                split: cap.split arch_cap.split option.split cdl_frame_cap_type.splits)
+    apply (clarsimp simp: dc_def[symmetric] liftE_bindE gets_the_def bind_assoc
+                          transform_mapping_def corres_symb_exec_in_gets)
+    apply (rule_tac r'=dc
+                and P'=I
+                and Q'="\<lambda>rv. I and (\<exists>\<rhd> (lookup_pd_slot rv ab && ~~ mask pd_bits))" for I
+                 in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
+        apply (rule corres_from_rdonly, simp_all)[1]
           apply (wp | simp)+
-        apply (simp add: returnOk_def, wp)
-        apply (clarsimp simp: in_monad select_def arch_invocation_relation_def
-          translate_arch_invocation_def transform_page_table_inv_def
-          addrFromPPtr_def is_cap_simps cap_object_def
-          cdl_lookup_pd_slot_def cap_has_object_def
-          neq_Nil_conv cap_aligned_def)
-        apply (simp add: make_arch_duplicate_def transform_pd_slot_ref_def)
-        apply (clarsimp simp add: opt_object_page_directory
-                                  obj_at_def invs_valid_idle pd_shifting
-                                  object_slots_def transform_page_directory_contents_def
-                                  unat_map_def kernel_pde_mask_def
-                                  transform_pde_def transform_mapping_def
-                                  get_pt_vm_attributes_def transform_vm_attributes_def)
-        apply (simp add: pd_shifting_dual ucast_nat_def shiftr_20_less triple_shift_fun
-                         le_shiftr linorder_not_le attribs_to_word_def
-                         attribs_from_word_def validate_pt_vm_attributes_def)
-       apply (rule hoare_pre, wp, auto)[1]
-      apply (wp weak_if_wp | simp)+
-    apply (clarsimp simp: is_final_cap'_def is_final_cap_def split:list.splits)
-    apply (simp add: liftE_bindE is_final_cap_def corres_symb_exec_in_gets
-                     unlessE_whenE corres_whenE_throwError_split_rhs
-                     corres_alternate2)
-    apply (rule corres_alternate1, simp add: returnOk_def)
-    apply (clarsimp simp: arch_invocation_relation_def translate_arch_invocation_def
-                          get_pt_mapped_addr_def transform_page_table_inv_def is_cap_simps)
+        apply (rule hoare_strengthen_post, rule hoare_TrueI)
+        apply (rename_tac rv s)
+        apply (case_tac rv, auto simp add: in_monad)[1]
+       apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
+                        check_vp_alignment_def unlessE_whenE)
+       apply clarsimp
+       apply (rule corres_symb_exec_r[OF _ get_master_pde_invalid_sp get_master_pde_inv],
+              simp_all)[1]
+       apply (clarsimp simp add: corres_whenE_throwError_split_rhs corres_alternate2)
+       apply (rule corres_alternate1)
+       apply (rule corres_from_rdonly, simp_all)[1]
+         apply (wp | simp)+
+       apply (simp add: returnOk_def, wp)
+       apply (clarsimp simp: in_monad select_def arch_invocation_relation_def
+                             translate_arch_invocation_def transform_page_table_inv_def
+                             addrFromPPtr_def is_cap_simps cap_object_def
+                             cdl_lookup_pd_slot_def cap_has_object_def
+                             neq_Nil_conv cap_aligned_def)
+       apply (simp add: make_arch_duplicate_def transform_pd_slot_ref_def)
+       apply (clarsimp simp add: opt_object_page_directory
+                                 obj_at_def invs_valid_idle pd_shifting
+                                 object_slots_def transform_page_directory_contents_def
+                                 unat_map_def kernel_pde_mask_def
+                                 transform_pde_def transform_mapping_def
+                                 get_pt_vm_attributes_def transform_vm_attributes_def)
+       apply (simp add: pd_shifting_dual ucast_nat_def shiftr_20_less triple_shift_fun
+                        le_shiftr linorder_not_le attribs_to_word_def
+                        attribs_from_word_def validate_pt_vm_attributes_def)
+      apply (rule hoare_pre, wp, auto)[1]
+     apply (wp weak_if_wp | simp)+
     done
 next
   case (PageDirectoryCap pd_ptr asid)
   thus ?case
-  (* abandon hope, all who enter here *)
-  apply (simp add: Decode_D.decode_invocation_def cdl_ARCH_AARCH32
-                   decode_invocation_def arch_decode_invocation_def
-                   get_page_directory_intent_def transform_intent_def isPDFlushLabel_def
-              split del: if_split)
-  apply (clarsimp simp: get_page_directory_intent_def transform_intent_def
-           map_option_Some_eq2 throw_opt_def decode_page_directory_invocation_def
-    split: label_split_asm  cdl_intent.splits
-           InvocationLabels_H.invocation_label.splits arch_invocation_label.splits)
-     apply (simp_all add: Let_def)
-     apply (all \<open>(intro conjI impI allI)\<close>)
-         apply (all \<open>(simp add: to_select_ret_or_throw whenE_to_select_ret_or_throw split_def
-                           del: Collect_const;
-            intro corres_initial_bindE_rdonly_select_ret_or_throw
-                  corres_select_ret_or_throw[THEN corres_guard_imp];
-            (wpsimp simp: if_apply_def2 ex_disj_distrib)?)?\<close>)
-
-  (* 20-odd subgoals, not going to indent *)
-
-    apply (all \<open>(simp split: option.split)?;
-        (intro conjI impI allI corres_initial_bindE_rdonly_select_ret_or_throw
-                  corres_select_ret_or_throw[THEN corres_guard_imp])?;
-        (wpsimp simp: arch_invocation_relation_def translate_arch_invocation_def
-                  transform_page_dir_inv_def flush_type_map_def
-                  label_to_flush_type_def
-                  ex_disj_distrib)?\<close>)
-
-           apply ((rule corres_from_rdonly; wpsimp?),
-              rule validE_cases_valid, wpsimp,
-              simp add: ex_disj_distrib split_sum_ex
-                        select_ret_or_throw_def in_monad in_select)+
-    done
-
+    by (simp add: Decode_D.decode_invocation_def cdl_ARCH_AARCH32 decode_invocation_def
+                  arch_decode_invocation_def transform_intent_no_page_directory throw_opt_def)
 next
   case (SGISignalCap irq target)
-  thus ?case
-    apply (simp add: Decode_D.decode_invocation_def
-                     Decode_A.decode_invocation_def arch_decode_invocation_def
-                     decode_sgi_signal_invocation_def)
-    apply (rule corres_returnOk)
-    apply (simp add: arch_invocation_relation_def translate_arch_invocation_def
-                     transform_sgi_inv_def)
-    done
+  thus ?case by simp
 qed
 
-
-lemma set_object_simple_corres:
-  "\<lbrakk> obj = transform_object undefined 0 obj' \<rbrakk> \<Longrightarrow>
-   dcorres dc \<top> (not_idle_thread ptr
-             and obj_at (\<lambda>obj. \<not> is_tcb obj \<and> same_caps obj' obj \<and> obj_bits obj = obj_bits obj') ptr)
-      (KHeap_D.set_object ptr obj) (KHeap_A.set_object ptr obj')"
-  apply (clarsimp simp: KHeap_D.set_object_def set_object_def)
-  apply (rule dcorres_symb_exec_r)
-    apply (rule corres_assert_rhs[where P'="not_idle_thread ptr and
-           obj_at (\<lambda>obj. \<not> is_tcb obj \<and> same_caps obj' obj \<and> obj_bits obj = obj_bits obj') ptr"])
-    apply (fold modify_def)
-    apply (rule corres_modify)
-    apply (clarsimp simp: transform_def transform_objects_def not_idle_thread_def obj_at_def
-                          transform_current_thread_def
-                    cong: if_cong)
-    apply (rule ext, simp split: if_split)
-    apply (intro conjI impI allI)
-     apply (clarsimp simp: transform_object_def
-                    split: Structures_A.kernel_object.split)
-    apply (clarsimp simp: restrict_map_def map_add_def)
-   apply (wpsimp wp: get_object_wp)+
-  done
 
 lemma pde_unat_less_helper[simplified]:
   "unat ((p && mask pd_bits >> 2) :: word32) < 2 ^ 12"
@@ -1144,7 +790,6 @@ shows "dcorres dc \<top>
            (\<lambda>s. P cap' s \<and> valid_idle s \<and> fst slot' \<noteq> idle_thread s)
            (KHeap_D.set_cap slot cap)
            (CSpaceAcc_A.set_cap cap' slot')"
-(* corres_req2 *)
   apply (rule corres_req[rotated])
   apply (rule corres_req[rotated])
   apply (rule stronger_corres_guard_imp, erule(1) set_cap_corres)
@@ -1159,94 +804,38 @@ lemma invoke_page_table_corres:
   apply (clarsimp simp: transform_page_table_inv_def
             split: ARM_A.page_table_invocation.split_asm
                    if_split_asm)
-   apply (rename_tac word oref attribs)
-   apply (clarsimp simp: is_pt_cap_def valid_pti_def make_arch_duplicate_def)
-   apply (rule stronger_corres_guard_imp)
-     apply (rule corres_split)
-        apply (rule set_cap_corres; simp)
-       apply (rule corres_split_noop_rhs2)
-          apply (simp add:insert_cap_orphan_def)
-          apply (rule corres_add_noop_rhs)
-          apply (rule corres_split[OF gets_the_noop_dcorres])
-            apply (rule corres_assert_lhs)
-            apply (rule_tac F ="ucast (word && mask pd_bits >> 2) \<notin> kernel_mapping_slots" in corres_gen_asm2)
-            apply (rule store_pde_set_cap_corres)
-              apply (simp add:transform_pde_def addrFromPPtr_def)+
-             apply (wp | clarsimp simp: ptrFromPAddr_def get_pt_vm_attributes_def)+
-         apply (rule dcorres_machine_op_noop)
-         apply (wp set_cap_opt_cap)+
-    apply (clarsimp simp: empty_pde_at_def)
-    apply (frule pde_opt_cap_eq, clarsimp+)
-    apply (clarsimp simp:transform_pde_def kernel_pde_mask_def pde_at_def
-                         transform_pd_slot_ref_def transform_cslot_ptr_def)
-    apply (drule page_directory_not_in_cdt, simp+)
-   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
-                         cap_master_cap_simps
-                  dest!: cap_master_cap_eqDs)
-   apply (clarsimp simp: invs_valid_idle not_idle_thread_def)
-   apply (intro conjI)
-    apply (rule ccontr)
-    apply (clarsimp)
-    apply (drule valid_idle_has_null_cap[rotated -1])
-        apply (clarsimp simp:invs_def valid_state_def)+
-   apply (clarsimp simp:kernel_vsrefs_kernel_mapping_slots)
-  apply (clarsimp simp: get_pt_mapped_addr_def bind_assoc)
-  apply (rule dcorres_expand_pfx)
-  apply (clarsimp simp:valid_pti_def transform_mapping_def is_pt_cap_def)
-  apply (case_tac asid)
-   apply (clarsimp simp: liftM_def)
-   apply (rule corres_guard_imp)
+  apply (rename_tac word oref attribs)
+  apply (clarsimp simp: is_pt_cap_def valid_pti_def make_arch_duplicate_def)
+  apply (rule stronger_corres_guard_imp)
     apply (rule corres_split)
-        apply (rule get_cap_corres; simp)
-       apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
-        apply clarsimp
-        apply (drule cte_wp_at_eqD2, simp)
-        apply (clarsimp simp: transform_mapping_def update_map_data_def)
-       apply (wp get_cap_cte_wp_at_rv | clarsimp)+
-   apply (clarsimp simp:cte_wp_at_def is_arch_cap_def is_pt_cap_def)
-   apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
-   apply (frule valid_idle_has_null_cap,simp+)
-    apply (rule sym)
-    apply (simp add:get_cap_caps_of_state)+
-  apply (clarsimp simp:bind_assoc liftM_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply (rule dcorres_unmap_page_table;
-              clarsimp simp: valid_cap_def vmsz_aligned_def mask_2pm1)
-      apply (rule_tac a2 = a and b2 = b and option2 = "Some (aa,ba)" in
-                 corres_split[OF corres_alternate1[OF dcorres_clear_object_caps_pt]])
-        apply (rule dcorres_symb_exec_r)
-          apply (rule corres_split)
-             apply (rule get_cap_corres; simp)
-            apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) xb) (a,b) s \<and>
-                                caps_of_state s' = caps_of_state s" in set_cap_corres_stronger)
-             apply (clarsimp simp:cte_wp_at_caps_of_state)
-             apply (clarsimp simp: transform_mapping_def update_map_data_def)
-            apply (wp get_cap_cte_wp_at_rv | clarsimp)+
-         apply (wp do_machine_op_wp | clarsimp simp:not_idle_thread_def)+
-      apply (wp mapM_x_wp)
-       apply clarsimp
-       apply (wp store_pte_cte_wp_at)
-      apply fastforce
-     apply wpsimp+
-    apply (rule_tac Q'="\<lambda>rv s. invs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
-                              caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
-     apply wp
-    apply (clarsimp simp:invs_def valid_state_def)
-   apply simp
-  apply (simp add:valid_cap_def vmsz_aligned_def mask_2pm1)
-  apply (simp add:cte_wp_at_def transform_cap_def update_map_data_def transform_mapping_def
-                  is_arch_cap_def mask_cap_def cap_rights_update_def is_pt_cap_def cap_aligned_def)
-  apply (rule ccontr,clarsimp simp:invs_def valid_state_def)
-  apply (drule valid_idle_has_null_cap,simp+)
-   apply (clarsimp simp:get_cap_caps_of_state)
-   apply (rule sym, simp+)
+       apply (rule set_cap_corres; simp)
+      apply (rule corres_split_noop_rhs2)
+         apply (simp add:insert_cap_orphan_def)
+         apply (rule corres_add_noop_rhs)
+         apply (rule corres_split[OF gets_the_noop_dcorres])
+           apply (rule corres_assert_lhs)
+           apply (rule_tac F ="ucast (word && mask pd_bits >> 2) \<notin> kernel_mapping_slots" in corres_gen_asm2)
+           apply (rule store_pde_set_cap_corres)
+             apply (simp add:transform_pde_def addrFromPPtr_def)+
+            apply (wp | clarsimp simp: ptrFromPAddr_def get_pt_vm_attributes_def)+
+        apply (rule dcorres_machine_op_noop)
+        apply (wp set_cap_opt_cap)+
+   apply (clarsimp simp: empty_pde_at_def)
+   apply (frule pde_opt_cap_eq, clarsimp+)
+   apply (clarsimp simp:transform_pde_def kernel_pde_mask_def pde_at_def
+                        transform_pd_slot_ref_def transform_cslot_ptr_def)
+   apply (drule page_directory_not_in_cdt, simp+)
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
+                        cap_master_cap_simps
+                 dest!: cap_master_cap_eqDs)
+  apply (clarsimp simp: invs_valid_idle not_idle_thread_def)
+  apply (intro conjI)
+   apply (rule ccontr)
+   apply (clarsimp)
+   apply (drule valid_idle_has_null_cap[rotated -1])
+       apply (clarsimp simp:invs_def valid_state_def)+
+  apply (clarsimp simp:kernel_vsrefs_kernel_mapping_slots)
   done
-
-lemma case_sum_eq: "case_sum a a x = a (case x of Inl a \<Rightarrow> a | Inr a \<Rightarrow> a)"
-  apply (case_tac x)
-  apply (clarsimp)+
-done
 
 lemma set_vm_root_for_flush_dwp[wp]:
   "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_vm_root_for_flush word1 word2 \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
@@ -1413,31 +1002,6 @@ lemma do_flush_underlying_memory[wp]:
 
 declare cleanCacheRange_PoU_underlying_memory[wp]
 
-lemma invoke_page_directory_corres:
-  "transform_page_dir_inv ip' = Some ip  \<Longrightarrow>
-   dcorres dc \<top> (invs  and valid_pdpt_objs)
-    (invoke_page_directory ip) (perform_page_directory_invocation ip')"
-  apply (clarsimp simp:invoke_page_directory_def)
-  apply (case_tac ip')
-   apply (simp_all add:perform_page_invocation_def)
-   apply (simp_all add: when_def  transform_page_dir_inv_def)
-   apply safe
-   apply (rule corres_dummy_return_r)
-   apply (rule dcorres_symb_exec_r[OF corres_free_return[where P=\<top> and P'=\<top>]])
-    apply wp
-   apply (clarsimp simp: perform_page_directory_invocation_def)
-   apply (wp)
-       apply (rule dcorres_to_wp, rule dcorres_set_vm_root)
-      apply (wp)
-     apply (clarsimp cong: if_cong)
-     apply (wp do_machine_op_wp, clarsimp, wp+)
-   apply (clarsimp)
-  apply (rule corres_dummy_return_r)
-  apply (rule dcorres_symb_exec_r[OF corres_free_return[where P=\<top> and P'=\<top>]])
-   apply wp
-  apply (clarsimp simp: perform_page_directory_invocation_def)
-  done
-
 lemma pte_check_if_mapped_corres:
   "dcorres dc \<top> \<top> (return a) (pte_check_if_mapped pte)"
   apply (clarsimp simp add: pte_check_if_mapped_def get_master_pte_def get_pte_def get_pt_def
@@ -1460,14 +1024,6 @@ lemma if_invalidate_equiv_return:
   apply (rule wp_to_dcorres)
   apply (wp invalidate_tlb_by_asid_dwp)
   apply clarsimp
-  done
-
-lemma ct_active_not_idle_etc:
-  "\<lbrakk> invs s; ct_active s \<rbrakk> \<Longrightarrow> not_idle_thread (cur_thread s) s"
-  apply (simp add: not_idle_thread_def ct_in_state_def)
-  apply (subgoal_tac "valid_idle s")
-   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: invs_def valid_state_def)
   done
 
 lemma invoke_page_corres:
@@ -1615,24 +1171,6 @@ lemma unat_map_upd:
   done
 
 declare descendants_of_empty[simp]
-
-lemma word_upto_Cons_eq':
-  "\<lbrakk>x = z; x \<le> y; Suc (unat x) < 2 ^ LENGTH('a)\<rbrakk> \<Longrightarrow>
-   [x::'a::len word .e. y] = z # [x + 1 .e. y]"
-  apply (subst upto_enum_red)
-  apply (subst upt_conv_Cons)
-   apply simp
-   apply unat_arith
-  apply (simp only: list.map)
-  apply (subst list.inject)
-  apply rule
-   apply (rule to_from_enum)
-  apply (subst upto_enum_red)
-  apply (rule map_cong [OF _ refl])
-  apply (rule arg_cong2 [where f = "\<lambda>x y. [x ..< y]"])
-   apply (simp add: unat_add_lem')
-  apply simp
-  done
 
 lemma Min_atLeastAtMost:
   "(a :: _ :: finite) \<le> b \<Longrightarrow> Min {a .. b} = a"
@@ -1823,14 +1361,6 @@ proof -
     done
 qed
 
-lemma corres_return_r:
-  "corres_underlying st nf nf' dc P P' a (do b; return () od) \<Longrightarrow> corres_underlying st nf nf' dc P P' a b"
-  by (fastforce simp: bind_def dc_def return_def corres_underlying_def)
-
-lemma dcorres_assert_assume:
-  "\<lbrakk> P' \<Longrightarrow> dcorres rr P Q f (g ()) \<rbrakk> \<Longrightarrow> dcorres rr P Q f (assert P' >>= g)"
-  by (clarsimp simp: assert_def) (rule corres_free_fail)
-
 lemma invoke_asid_pool_corres:
   "arch_invocation_relation (InvokeAsidPool ap_inv)
                             (arch_invocation.InvokeASIDPool ap_inv') \<Longrightarrow>
@@ -1872,48 +1402,32 @@ lemma invoke_arch_corres:
   apply (clarsimp simp: arch_perform_invocation_def valid_arch_inv_def)
   apply (case_tac arch_invok)
        apply (simp_all add:arch_invocation_relation_def translate_arch_invocation_def)
-       apply (clarsimp simp:liftE_def bind_assoc cdl_ARCH_AARCH32)
-       apply (rule corres_guard_imp)
-         apply (rule corres_split)
-            apply (rule invoke_page_table_corres; simp)
-           apply (rule corres_trivial, simp)
-          apply (wp | clarsimp)+
-      apply (rule corres_dummy_return_l)
-      apply (rule corres_guard_imp)
-        apply (rule corres_split)
-           apply (rule invoke_page_directory_corres; simp)
-          apply (rule corres_trivial[OF corres_free_return])
-         apply (wp | clarsimp simp: cdl_ARCH_AARCH32)+
+     apply (clarsimp simp:liftE_def bind_assoc cdl_ARCH_AARCH32)
      apply (rule corres_guard_imp)
-       apply (rule invoke_page_corres)
-       apply (wp | clarsimp simp:invocation_duplicates_valid_def)+
-    apply (clarsimp split: asid_control_invocation.split)
-    apply (rule corres_dummy_return_l)
+       apply (rule corres_split)
+          apply (rule invoke_page_table_corres; simp)
+         apply (rule corres_trivial, simp)
+        apply (wp | clarsimp)+
+    apply (clarsimp simp: cdl_ARCH_AARCH32)
     apply (rule corres_guard_imp)
-      apply (rule corres_split)
-         apply (rule invoke_asid_control_corres)
-         apply (simp add: arch_invocation_relation_def translate_arch_invocation_def)
-        apply (rule corres_trivial, simp)
-       apply (wp | simp)+
-   apply (clarsimp split: asid_pool_invocation.split)
+      apply (rule invoke_page_corres)
+      apply (wp | clarsimp simp:invocation_duplicates_valid_def)+
+   apply (clarsimp split: asid_control_invocation.split)
    apply (rule corres_dummy_return_l)
    apply (rule corres_guard_imp)
      apply (rule corres_split)
-        apply (rule invoke_asid_pool_corres)
+        apply (rule invoke_asid_control_corres)
         apply (simp add: arch_invocation_relation_def translate_arch_invocation_def)
-       apply (rule corres_trivial[OF corres_free_return])
-      apply (wp | clarsimp)+
-  apply (rename_tac iv; case_tac iv)
-  apply (clarsimp simp: perform_sgi_invocation_def transform_sgi_inv_def
-                       invoke_sgi_signal_generate_def)
-  apply (rule corres_add_noop_lhs)
+       apply (rule corres_trivial, simp)
+      apply (wp | simp)+
+  apply (clarsimp split: asid_pool_invocation.split)
+  apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
     apply (rule corres_split)
-       apply (rule dcorres_machine_op_noop)
-       apply (wpsimp simp: sendSGI_def)
-      apply (rule corres_inst[where P=\<top> and P'=\<top>])
-      apply simp
-     apply wpsimp+
+       apply (rule invoke_asid_pool_corres)
+       apply (simp add: arch_invocation_relation_def translate_arch_invocation_def)
+      apply (rule corres_trivial[OF corres_free_return])
+     apply (wp | clarsimp)+
   done
 
 end

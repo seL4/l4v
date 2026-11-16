@@ -10,26 +10,13 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma arch_decode_irq_control_error_corres:
-  "\<not>(\<exists> ui. Some (IrqControlIntent ui) = transform_intent (invocation_type label) args) \<Longrightarrow>
-     dcorres (dc \<oplus> anyrel) \<top> \<top>
-      (throwError e)
-      (Decode_A.arch_decode_irq_control_invocation label args slot (map fst excaps))"
-  unfolding arch_decode_irq_control_invocation_def
-  apply (cases "invocation_type label"; simp add: arch_decode_irq_control_invocation_def)
-  apply (simp add: transform_intent_def arch_transform_intent_issue_irq_handler_def
-                   arch_transform_intent_issue_sgi_signal_def
-              split: list.splits arch_invocation_label.splits)
-  done
-
 lemma decode_irq_control_error_corres:
   "\<not> (\<exists> ui. (Some (IrqControlIntent ui)) = (transform_intent (invocation_type label) args)) \<Longrightarrow>
      dcorres (dc \<oplus> anyrel) \<top> \<top>
       (throwError e)
       (Decode_A.decode_irq_control_invocation label args slot (map fst excaps))"
   unfolding decode_irq_control_invocation_def
-  apply (cases "invocation_type label"; simp add: arch_decode_irq_control_invocation_def
-                                                  arch_decode_irq_control_error_corres)
+  apply (cases "invocation_type label"; simp add: arch_decode_irq_control_invocation_def)
    apply (clarsimp simp: transform_intent_def transform_intent_issue_irq_handler_def
                          arch_transform_intent_issue_irq_handler_def
                          arch_transform_intent_issue_sgi_signal_def
@@ -207,29 +194,20 @@ lemma decode_irq_control_corres:
 
 (* Interrupt Handler Invocations *)
 
-lemma decode_irq_handler_error_corres:
-  "\<not> (\<exists> ui. (Some (IrqHandlerIntent ui)) = (transform_intent (invocation_type label') undefined)) \<Longrightarrow>
-     dcorres (dc \<oplus> anyrel) \<top> \<top>
-      (throwError e)
-      (Decode_A.decode_irq_handler_invocation label' x' excaps')"
-  by (auto simp: Decode_A.decode_irq_handler_invocation_def transform_intent_def
-           simp flip: gen_invocation_type_eq split: list.splits )
-
 primrec
-  translate_irq_handler_invocation :: "Invocations_A.irq_handler_invocation \<Rightarrow> cdl_irq_handler_invocation"
+  translate_irq_handler_invocation ::
+    "Invocations_A.irq_handler_invocation \<Rightarrow> cdl_irq_handler_invocation option"
 where
-  "translate_irq_handler_invocation (ACKIrq irq) =
-     AckIrq irq"
+  "translate_irq_handler_invocation (ACKIrq irq) = None"
 | "translate_irq_handler_invocation (Invocations_A.SetIRQHandler irq cap slot) =
-     SetIrqHandler irq (transform_cap cap) (transform_cslot_ptr slot)"
-| "translate_irq_handler_invocation (Invocations_A.ClearIRQHandler irq) =
-     ClearIrqHandler irq"
+     Some (SetIrqHandler irq (transform_cap cap) (transform_cslot_ptr slot))"
+| "translate_irq_handler_invocation (Invocations_A.ClearIRQHandler irq) = None"
 
 
 definition
   cdl_irq_handler_invocation_relation :: "cdl_irq_handler_invocation \<Rightarrow> Invocations_A.irq_handler_invocation \<Rightarrow> bool"
 where
-  "cdl_irq_handler_invocation_relation x y \<equiv> x = translate_irq_handler_invocation y"
+  "cdl_irq_handler_invocation_relation x y \<equiv> translate_irq_handler_invocation y = Some x"
 
 lemma decode_irq_handler_corres:
   "\<And> slot. \<lbrakk> Some (IrqHandlerIntent ui) = transform_intent (invocation_type label') args';
@@ -239,13 +217,6 @@ lemma decode_irq_handler_corres:
      (Interrupt_D.decode_irq_handler_invocation cap slot excaps ui)
      (Decode_A.decode_irq_handler_invocation label' x' excaps')"
   apply (unfold Interrupt_D.decode_irq_handler_invocation_def Decode_A.decode_irq_handler_invocation_def)
-  apply (cases "invocation_type label' = GenInvocationLabel IRQAckIRQ")
-   apply (simp add: transform_intent_def cdl_cap_irq_def assert_opt_def
-               flip: returnOk_liftE gen_invocation_type_eq)
-   apply (rule corres_alternate1)
-   apply (rule dcorres_returnOk)
-   apply (simp add: cdl_irq_handler_invocation_relation_def
-                    translate_irq_handler_invocation_def)
   apply (cases "invocation_type label' = GenInvocationLabel IRQSetIRQHandler")
    apply (simp add: transform_intent_def cdl_cap_irq_def flip: gen_invocation_type_eq)
    apply (rule conjI)
@@ -264,39 +235,9 @@ lemma decode_irq_handler_corres:
    apply (rule dcorres_returnOk)
    apply (simp add: cdl_irq_handler_invocation_relation_def
                     translate_irq_handler_invocation_def)
-  apply (cases "invocation_type label' = GenInvocationLabel IRQClearIRQHandler")
-   apply (simp add: transform_intent_def cdl_cap_irq_def assert_opt_def
-               flip: gen_invocation_type_eq returnOk_liftE)
-   apply (rule corres_alternate1)
-   apply (rule dcorres_returnOk)
-   apply (simp add: cdl_irq_handler_invocation_relation_def
-                    translate_irq_handler_invocation_def)
-  apply (cases ui, auto simp: dcorres_alternative_throw simp flip: gen_invocation_type_eq)
-  done
-
-lemma option_get_cap_corres:
-  "ptr' = transform_cslot_ptr ptr \<Longrightarrow>
-   dcorres (\<lambda>rv rv'. rv = Some (transform_cap rv')) \<top>
-   (valid_idle and not_idle_thread (fst ptr))
-     (gets (KHeap_D.opt_cap ptr'))
-     (CSpaceAcc_A.get_cap ptr)"
-  apply (case_tac ptr)
-  apply (clarsimp simp:CSpaceAcc_A.get_cap_def[simplified tcb_cnode_map_def] gets_def get_object_def gets_the_def bind_assoc)
-  apply (rule dcorres_get)
-  apply (clarsimp simp:assert_def corres_free_fail assert_opt_def)
-  apply (case_tac y)
-      apply (simp_all add:assert_def corres_free_fail)
-   apply (rename_tac "fun")
-   apply (case_tac "fun b")
-    apply (simp add:corres_free_fail)
-   apply clarsimp
-   apply (subst cap_slot_cnode_property_lift, assumption, simp_all)[1]
-   apply fastforce
-  apply (clarsimp simp:transform_tcb_slot_simp[simplified])
-  apply (rename_tac tcb)
-  apply (subgoal_tac "get_tcb a x = Some tcb")
-   apply (clarsimp simp:lift_simp not_idle_thread_def)
-  apply (clarsimp simp: get_tcb_def)
+  apply (clarsimp simp: transform_intent_def map_option_Some_eq2 simp flip: gen_invocation_type_eq
+                  split: gen_invocation_labels.split_asm invocation_label.split_asm
+                         arch_invocation_label.split_asm)
   done
 
 lemma maskInterrupt_underlying_memory[wp]:
@@ -315,15 +256,6 @@ lemma resetTimer_underlying_memory[wp]:
   apply (clarsimp simp:valid_def simpler_modify_def)
   done
 
-lemma valid_state_get_cap_wp:
-  "\<lbrace>valid_state\<rbrace> CSpaceAcc_A.get_cap xa \<lbrace>\<lambda>rv s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)\<rbrace>"
-  apply (wp get_cap_wp)
-  apply (clarsimp simp: is_cap_simps)
-  apply (drule cte_wp_valid_cap)
-   apply (fastforce simp: valid_state_def)
-  apply (clarsimp simp: valid_cap_def)
-  done
-
 lemma handle_interrupt_corres_branch:
   "dcorres dc \<top> \<top> (return ())
              (do y \<leftarrow> do_machine_op (maskInterrupt True x);
@@ -340,25 +272,6 @@ lemma handle_maybe_interrupt_corres_branch:
               od)"
   apply (cases "config_ARM_GIC_V3"; simp add: handle_interrupt_corres_branch)
   apply (corres corres: dcorres_machine_op_noop)
-  done
-
-lemma irq_state_IRQSignal_NullCap:
-  "\<lbrakk> caps_of_state s (interrupt_irq_node s irq, []) \<noteq> None;
-     interrupt_states s irq \<noteq> irq_state.IRQSignal;
-     if_unsafe_then_cap s; valid_global_refs s;
-     valid_irq_node s; valid_irq_handlers s \<rbrakk>
-      \<Longrightarrow> caps_of_state s (interrupt_irq_node s irq, []) = Some cap.NullCap"
-  apply (rule ccontr, clarsimp)
-  apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
-    apply simp
-  apply (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
-  apply (frule(1) valid_global_refsD2)
-  apply (case_tac cap, simp_all add: cap_range_def global_refs_def)
-  apply (safe, simp_all)
-  apply (clarsimp simp: valid_irq_node_def inj_on_eq_iff[where f="interrupt_irq_node s"])
-  apply (simp add: valid_irq_handlers_def)
-  apply (drule bspec, erule ranI)
-  apply (simp add: irq_issued_def)
   done
 
 lemma transform_domain_time_update[iff]:
@@ -388,87 +301,83 @@ lemma timer_tick_dcorres: "dcorres dc P P' (return ()) timer_tick"
    apply (simp add: timer_tick_def reschedule_required_def set_scheduler_action_def split: option.splits | wp tcb_sched_action_transform dec_domain_time_transform thread_set_time_slice_transform | wpc | wp (once) hoare_vcg_all_lift hoare_drop_imps)+
   done
 
-lemma handle_interrupt_corres:
-  "dcorres dc \<top> invs (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
-  apply (clarsimp simp:Interrupt_A.handle_interrupt_def)
-  apply (clarsimp simp:get_irq_state_def gets_def bind_assoc)
+lemma handle_interrupt_no_waiters_dcorres:
+  "dcorres dc \<top> (invs and no_signal_waiters) (return ()) (Interrupt_A.handle_interrupt irq)"
+  unfolding Interrupt_A.handle_interrupt_def
+  apply (clarsimp simp: get_irq_state_def gets_def bind_assoc)
   apply (rule conjI; rule impI)
-   apply (subst Interrupt_D.handle_interrupt_def, simp)
    apply (subst Retype_AI.do_machine_op_bind)
      apply (rule maskInterrupt_empty_fail)
     apply (rule ackInterrupt_empty_fail)
-  using corres_guard2_imp handle_interrupt_corres_branch apply blast
-  apply (rule dcorres_absorb_get_r)+
-  apply (clarsimp split:irq_state.splits simp:corres_free_fail | rule conjI)+
-   apply (simp add:Interrupt_D.handle_interrupt_def bind_assoc)
-   apply (rule corres_guard_imp)
-     apply (rule_tac Q'="(=) s'" in corres_split[OF dcorres_get_irq_slot])
-       apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs"
-               in corres_split)
-          apply (rule option_get_cap_corres; simp)
-         apply (rename_tac cap')
-         apply (case_tac cap')
-                    prefer 4
-                    apply (simp_all add: when_def split del: if_split)
-                  apply (clarsimp simp: transform_cap_def when_def is_ntfn_cap_def split del: if_split)
-                  apply (rule corres_dummy_return_l)
-                  apply (rule corres_split_forwards' [where Q'="\<lambda>rv. \<top>" and Q = "\<lambda>rv. \<top>"])
-                     apply (simp, rule conjI; clarsimp)
-                      apply (rule corres_guard_imp[OF send_signal_corres]; simp)
-                     apply simp
-                    apply wp+
-                  apply (clarsimp simp: handle_maybe_interrupt_corres_branch dc_def[symmetric]
-                                        corres_guard_imp[OF handle_maybe_interrupt_corres_branch]
-                                  split del: if_split)+
-              apply (clarsimp, rule conjI; clarsimp)
-               apply (simp add: corres_guard_imp[OF handle_interrupt_corres_branch])+
-              apply (corres corres: dcorres_machine_op_noop)
-             apply (clarsimp simp: corres_guard_imp[OF handle_maybe_interrupt_corres_branch]
-                             split del: if_split)+
-       apply (clarsimp simp: transform_cap_def split: arch_cap.splits)
-       apply (intro conjI impI corres_guard_imp[OF handle_interrupt_corres_branch] TrueI)
-           apply (corres corres: dcorres_machine_op_noop)+
-      apply (wp hoare_vcg_prop[where P=True] valid_state_get_cap_wp|simp add:get_irq_slot_def)+
-   apply (clarsimp simp:invs_def )
-   apply (strengthen irq_node_image_not_idle,simp add:valid_state_def)
-  apply (clarsimp simp:Interrupt_D.handle_interrupt_def gets_def)
-  apply (rule conjI; rule impI)
-   apply (rule dcorres_absorb_get_l)+
-   apply (clarsimp simp:CSpace_D.get_irq_slot_def)
-   apply (subgoal_tac "caps_of_state s'b (interrupt_irq_node s'b x,[])\<noteq> None")
-    apply (drule irq_state_IRQSignal_NullCap)
-         apply ((simp add:invs_def valid_state_def)+)
-    apply (frule caps_of_state_transform_opt_cap)
-     apply clarsimp
-     apply (drule(1) irq_node_image_not_idle[where y = x])
-     apply (clarsimp simp:not_idle_thread_def)
-    apply (clarsimp simp:transform_cslot_ptr_def)
-    apply (subgoal_tac "cdl_irq_node (transform s'b) x = (interrupt_irq_node s'b x)")
-     apply clarsimp
-     apply (rule corres_guard_imp,rule corres_dummy_return_pl)
-       apply (simp add: bind_assoc)
-       apply (rule dcorres_rhs_noop_above[OF timer_tick_dcorres])
-         apply (rule dcorres_symb_exec_r[OF dcorres_machine_op_noop])
-           apply (wp dmo_dwp hoare_TrueI| simp)+
-    apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
-   apply (simp add:cte_wp_at_caps_of_state)
-  apply (rule dcorres_absorb_get_l)+
-  apply (clarsimp simp:CSpace_D.get_irq_slot_def handle_reserved_irq_def)
-  apply (subgoal_tac "caps_of_state s'b (interrupt_irq_node s'b x,[])\<noteq> None")
-   apply (drule irq_state_IRQSignal_NullCap)
-        apply ((simp add:invs_def valid_state_def)+)
-   apply (frule caps_of_state_transform_opt_cap)
-    apply clarsimp
-    apply (drule(1) irq_node_image_not_idle[where y = x])
-    apply (clarsimp simp:not_idle_thread_def)
-   apply (clarsimp simp:transform_cslot_ptr_def)
-   apply (subgoal_tac "cdl_irq_node (transform s'b) x = (interrupt_irq_node s'b x)")
-    apply clarsimp
+   apply (rule corres_guard2_imp[OF handle_interrupt_corres_branch], simp)
+  apply (rule dcorres_absorb_get_r)
+  apply (clarsimp split: irq_state.splits simp: corres_free_fail)
+  apply (intro conjI impI)
+    apply (clarsimp simp: KHeap_A.get_irq_slot_def gets_def bind_assoc)
+    apply (rule dcorres_absorb_get_r)
     apply (rule corres_guard_imp)
-      apply (rule dcorres_machine_op_noop)
-      apply wp
-     apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
-  apply (simp add:cte_wp_at_caps_of_state)
+      apply (rule dcorres_symb_exec_r)
+        apply (rule dcorres_rhs_noop_above[OF _ _ hoare_TrueI hoare_TrueI])
+         apply (clarsimp simp: when_def split: if_split)
+         apply (rule conjI, clarsimp)
+          apply (rule send_signal_no_waiters_dcorres)
+         apply (clarsimp, rule corres_trivial, simp)
+        apply (rule handle_maybe_interrupt_corres_branch[unfolded when_def[symmetric]])
+       apply wp+
+     apply simp
+   apply (rule corres_guard_imp, rule corres_dummy_return_pl)
+     apply (simp add: bind_assoc)
+     apply (rule dcorres_rhs_noop_above[OF timer_tick_dcorres])
+       apply (rule dcorres_symb_exec_r[OF dcorres_machine_op_noop])
+         apply (wp dmo_dwp hoare_TrueI | simp)+
+  apply (clarsimp simp: handle_reserved_irq_def)
+  apply (rule corres_guard_imp)
+    apply (rule dcorres_machine_op_noop)
+    apply wp
+   apply simp+
+  done
+
+lemma dcorres_handle_spurious_irq:
+  "dcorres dc \<top> \<top> (return ()) handle_spurious_irq"
+  unfolding handle_spurious_irq_def
+  apply clarsimp
+  apply (rule dcorres_machine_op_noop)
+  apply (wpsimp simp: handleSpuriousIRQ_mop_def)
+  done
+
+lemma no_signal_waiters_irq_state_independent[intro!, simp]:
+  "irq_state_independent_A no_signal_waiters"
+  by (simp add: irq_state_independent_A_def no_signal_waiters_def pred_tcb_at_def obj_at_def)
+
+lemma dmo_getActiveIRQ_dcorres:
+  "dcorres dc \<top> \<top> (return ()) (do_machine_op (getActiveIRQ in_kernel))"
+  by (rule dcorres_machine_op_noop)
+     (wpsimp simp: getActiveIRQ_def irq_state_independent_def)
+
+lemma maybe_handle_interrupt_no_waiters_dcorres:
+  "dcorres dc \<top> (invs and no_signal_waiters) (return ()) (maybe_handle_interrupt in_kernel)"
+  unfolding maybe_handle_interrupt_def fun_app_def
+  apply (rule corres_add_noop_lhs)
+  apply (rule corres_split_forwards'[where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. invs and no_signal_waiters"])
+     apply (rule dmo_getActiveIRQ_dcorres[THEN corres_guard_imp]; simp)
+    apply wp
+   apply (rule getActiveIRQ_wp)
+   apply (rule irq_state_independent_A_conjI; simp)
+  apply (rename_tac irq_opt)
+  apply (case_tac irq_opt; clarsimp)
+   apply (rule dcorres_handle_spurious_irq[THEN corres_guard_imp]; simp)
+  apply (rule handle_interrupt_no_waiters_dcorres)
+  done
+
+lemma handle_pending_interrupts_corres:
+  "dcorres dc \<top> invs handle_pending_interrupts (maybe_handle_interrupt in_kernel)"
+  unfolding handle_pending_interrupts_def
+  apply (rule dcorres_expand_pfx)
+  apply (clarsimp simp: gets_def bind_assoc)
+  apply (rule dcorres_absorb_get_l)
+  apply (clarsimp simp: dcorres_chaos_dc split: if_split)
+  apply (rule corres_guard_imp[OF maybe_handle_interrupt_no_waiters_dcorres]; simp?)
+  apply (clarsimp elim!: no_pending_transform_no_signal_waiters simp: invs_valid_idle)
   done
 
 lemma set_irq_state_original:
@@ -594,31 +503,6 @@ lemma get_irq_slot_not_idle_wp:
    apply simp+
   done
 
-lemma get_irq_slot_ex_cte_cap_wp_to:
-  "\<lbrace>\<lambda>s. valid_irq_node s \<and> (\<exists>slot. cte_wp_at ((=) (cap.IRQHandlerCap w)) slot s)\<rbrace> KHeap_A.get_irq_slot w
-           \<lbrace>\<lambda>rv s. (ex_cte_cap_wp_to (\<lambda>a. True) rv s) \<rbrace>"
-  apply (wpsimp simp:get_irq_slot_def)
-  apply (clarsimp simp:ex_cte_cap_wp_to_def valid_irq_node_def)
-  apply (rule exI)+
-  apply (erule cte_wp_at_weakenE)
-  apply clarsimp
-  done
-
-crunch fast_finalise
-  for is_original[wp]: "\<lambda>s::'z::state_ext state. is_original_cap s slot"
-  (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
-
-lemma cap_delete_one_original:
-  "slot \<noteq> slot' \<Longrightarrow> \<lbrace>\<lambda>s. is_original_cap s slot\<rbrace> cap_delete_one slot'
-            \<lbrace>\<lambda>r s. is_original_cap s slot\<rbrace>"
-  apply (clarsimp simp:cap_delete_one_def unless_def)
-  apply (wp when_wp)
-     apply (clarsimp simp:empty_slot_def)
-     apply wp
-         apply (clarsimp simp:set_cdt_def)
-         apply (wp dxo_wp_weak | clarsimp)+
-  done
-
 lemma cte_wp_at_neq_slot_set_cap:
   "slot\<noteq> slot'  \<Longrightarrow> \<lbrace>cte_wp_at P slot and cte_at slot'\<rbrace>
             CSpaceAcc_A.set_cap cap.NullCap slot' \<lbrace>\<lambda>rv. cte_wp_at P slot\<rbrace>"
@@ -656,51 +540,39 @@ lemma is_ntfn_capD:
   by (case_tac cap,simp_all)
 
 lemma dcorres_invoke_irq_handler:
-  "dcorres dc \<top> (invs and irq_handler_inv_valid irq_handler_invocation)
-          (Interrupt_D.invoke_irq_handler
-            (translate_irq_handler_invocation irq_handler_invocation))
+  "translate_irq_handler_invocation irq_handler_invocation = Some cdl_inv \<Longrightarrow>
+   dcorres dc \<top> (invs and irq_handler_inv_valid irq_handler_invocation)
+          (Interrupt_D.invoke_irq_handler cdl_inv)
           (Interrupt_A.invoke_irq_handler irq_handler_invocation)"
-  apply (case_tac irq_handler_invocation)
-    (* ACKIrq *)
-    apply (clarsimp simp:Interrupt_D.invoke_irq_handler_def deactivateInterrupt_def)
-    apply (corres corres: dcorres_machine_op_noop)
-   (* SetIRQHandler *)
-   apply (clarsimp simp: Interrupt_D.invoke_irq_handler_def)
-   apply (rule dcorres_expand_pfx)
-   apply (clarsimp dest!:is_ntfn_capD simp:valid_cap_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split[OF dcorres_get_irq_slot])
-       apply (rule_tac F="irq_slot\<noteq> (a,b)" in corres_gen_asm2)
-       apply simp
-       apply (rule corres_split[OF delete_cap_simple_corres])
-         apply (subst alternative_com)
-         apply (rule dcorres_insert_cap_combine,simp)
-        apply wp
-       apply (wp delete_one_deletes[unfolded op_eq_simp[symmetric]])
-       apply (wp cte_wp_at_neq_slot_cap_delete_one)
-        apply simp
-       apply (wp cte_wp_at_neq_slot_cap_delete_one)
-       apply (strengthen invs_valid_idle invs_valid_objs)
-       apply (wp delete_one_invs)
-     apply (simp add:valid_cap_def)
-     apply (wp get_irq_slot_not_idle_wp get_irq_slot_ex_cte_cap_wp_to)
-     apply (wp get_irq_slot_different get_irq_slot_not_idle_wp)
-    apply simp+
-   apply (clarsimp simp:invs_valid_idle interrupt_derived_def)
-   apply (frule_tac p = "(a,b)" in if_unsafe_then_capD)
-     apply clarsimp+
-    apply (clarsimp simp: cte_wp_at_caps_of_state invs_valid_global_refs is_cap_simps
-                          cap_master_cap_simps interrupt_derived_def dest!:cap_master_cap_eqDs)+
-   apply (drule ex_cte_cap_wp_to_not_idle)
-       apply clarsimp+
-  (* ClearIRQHandler *)
+  apply (case_tac irq_handler_invocation; simp)
   apply (clarsimp simp: Interrupt_D.invoke_irq_handler_def)
+  apply (rule dcorres_expand_pfx)
+  apply (clarsimp dest!:is_ntfn_capD simp:valid_cap_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF dcorres_get_irq_slot])
-      apply (clarsimp)
-      apply (rule delete_cap_simple_corres)
-     apply (wp get_irq_slot_not_idle_wp,clarsimp)+
-  apply (clarsimp simp:invs_def valid_state_def)
+      apply (rule_tac F="irq_slot\<noteq> (a,b)" in corres_gen_asm2)
+      apply simp
+      apply (rule corres_split[OF delete_cap_simple_corres])
+        apply (subst alternative_com)
+        apply (rule dcorres_insert_cap_combine,simp)
+       apply wp
+      apply (wp delete_one_deletes[unfolded op_eq_simp[symmetric]])
+      apply (wp cte_wp_at_neq_slot_cap_delete_one)
+       apply simp
+      apply (wp cte_wp_at_neq_slot_cap_delete_one)
+      apply (strengthen invs_valid_idle invs_valid_objs)
+      apply (wp delete_one_invs)
+    apply (simp add:valid_cap_def)
+    apply (wp get_irq_slot_not_idle_wp)
+    apply (wp get_irq_slot_different get_irq_slot_not_idle_wp)
+   apply simp+
+  apply (clarsimp simp:invs_valid_idle interrupt_derived_def)
+  apply (frule_tac p = "(a,b)" in if_unsafe_then_capD)
+    apply clarsimp+
+   apply (clarsimp simp: cte_wp_at_caps_of_state invs_valid_global_refs is_cap_simps
+                         cap_master_cap_simps interrupt_derived_def dest!:cap_master_cap_eqDs)+
+  apply (drule ex_cte_cap_wp_to_not_idle)
+      apply clarsimp+
   done
 
 end

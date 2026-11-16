@@ -9,16 +9,7 @@
 theory Interrupt_D
   imports
     Endpoint_D
-    ExecSpec.Platform
 begin
-
-(* Return the currently pending IRQ. *)
-definition get_active_irq :: "(cdl_irq option) k_monad" where
-  "get_active_irq \<equiv> do
-     irq \<leftarrow> select UNIV;
-     return $ Some irq
-   od
-   \<sqinter> return None"
 
 definition arch_decode_irq_control_invocation ::
   "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_arch_irq_control_intent \<Rightarrow>
@@ -66,21 +57,7 @@ definition decode_irq_handler_invocation ::
   where
   "decode_irq_handler_invocation target target_ref caps intent \<equiv>
      case intent of
-       IrqHandlerAckIntent \<Rightarrow> doE
-         \<comment> \<open>Acknowledge an IRQ.\<close>
-         irq \<leftarrow> liftE $ assert_opt $ cdl_cap_irq target;
-         returnOk $ AckIrq irq
-       odE
-       \<sqinter> throw
-
-     | IrqHandlerClearIntent \<Rightarrow> doE
-         \<comment> \<open>Modify the IRQ so that it no longer sends to an endpoint.\<close>
-         irq \<leftarrow> liftE $ assert_opt $ cdl_cap_irq target;
-         returnOk $ ClearIrqHandler irq
-       odE
-       \<sqinter> throw
-
-     | IrqHandlerSetEndpointIntent \<Rightarrow> doE
+       IrqHandlerSetEndpointIntent \<Rightarrow> doE
          \<comment> \<open>Setup an IRQ to cause an endpoint to be sent to.\<close>
          endpoint \<leftarrow> throw_on_none $ get_index caps 0;
          endpoint_cap \<leftarrow> returnOk $ fst endpoint;
@@ -111,45 +88,27 @@ definition invoke_irq_control :: "cdl_irq_control_invocation \<Rightarrow> unit 
 definition invoke_irq_handler :: "cdl_irq_handler_invocation \<Rightarrow> unit k_monad" where
   "invoke_irq_handler params \<equiv>
      case params of
-       AckIrq irq \<Rightarrow> return () \<comment> \<open>Acknowledge and unmask an IRQ.\<close>
-
-     | SetIrqHandler irq cap slot \<Rightarrow> do
+       SetIrqHandler irq cap slot \<Rightarrow> do
          \<comment> \<open>Attach an IRQ handler to write to an endpoint.\<close>
          irqslot \<leftarrow> gets (get_irq_slot irq);
          delete_cap_simple irqslot;
          insert_cap_child cap slot irqslot \<sqinter> insert_cap_sibling cap slot irqslot
-       od
-
-     | ClearIrqHandler irq \<Rightarrow> do
-         \<comment> \<open>Dissociate this handler from all endpoints.\<close>
-         irqslot \<leftarrow> gets (get_irq_slot irq);
-         delete_cap_simple irqslot
        od"
 
-(* performs machine op only *)
-definition invoke_sgi_signal_generate :: "cdl_sgi_signal_invocation \<Rightarrow> unit k_monad" where
-  "invoke_sgi_signal_generate params \<equiv> return ()"
+text \<open>
+  No thread is blocked on an endpoint, notification, or reply. This is true during system
+  initialisation.\<close>
+definition no_pending :: "cdl_state \<Rightarrow> bool" where
+  "no_pending s \<equiv>
+     \<forall>oid cap. opt_cap (oid, tcb_pending_op_slot) s = Some cap \<longrightarrow> \<not> is_pending_cap cap"
 
-(* Handle an interrupt. *)
-definition handle_interrupt :: "cdl_irq \<Rightarrow> unit k_monad" where
-  "handle_interrupt irq \<equiv>
-     if irq > maxIRQ
-     then return ()
-     else do
-       irq_slot \<leftarrow> gets $ get_irq_slot irq;
-       c \<leftarrow> gets $ opt_cap irq_slot;
-       case c of
-         Some (NotificationCap obj _ rights) \<Rightarrow>
-           if Write \<in> rights then send_signal obj else return ()
-       | _ \<Rightarrow> return ()
-   od"
-
+text \<open>
+  An interrupt can at most signal a notification, and a signal is only visible when it wakes up a
+  blocked thread, which cannot happen during system initialisation.\<close>
 definition handle_pending_interrupts :: "unit k_monad" where
   "handle_pending_interrupts \<equiv> do
-     active \<leftarrow> get_active_irq;
-     case active of
-       Some irq \<Rightarrow> handle_interrupt irq
-     | None \<Rightarrow> return ()
+     unblocked \<leftarrow> gets no_pending;
+     if unblocked then return () else chaos
    od"
 
 end

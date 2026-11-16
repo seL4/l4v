@@ -9,38 +9,13 @@ imports KHeap_DP RWHelper_DP
 begin
 
 crunch update_available_range, update_thread, mark_tcb_intent_error, corrupt_ipc_buffer,
-       insert_cap_sibling, insert_cap_child, move_cap, invoke_irq_control, invoke_irq_handler
+       insert_cap_sibling, insert_cap_child, move_cap, invoke_irq_control
   for cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
   (wp: crunch_wps simp: split_def corrupt_intents_def)
 
 crunch corrupt_ipc_buffer, mark_tcb_intent_error
   for cdl_irq_node[wp]: "\<lambda>s. P (cdl_irq_node s)"
   (wp: crunch_wps simp: corrupt_intents_def)
-
-lemma all_scheduable_tcbs_corrupt[simp]:
-  "all_scheduable_tcbs (cdl_objects (corrupt_intents xa x s)) = all_scheduable_tcbs (cdl_objects s)"
-  apply (simp add:all_scheduable_tcbs_def object_at_heap_def)
-  apply (intro set_eqI iffI)
-   apply (clarsimp simp:corrupt_intents_def tcb_scheduable_def
-     split:option.splits cdl_object.splits if_splits)
-  apply (clarsimp simp:corrupt_intents_def
-    map_add_def tcb_scheduable_def)
-  done
-
-lemma single_scheduable_tcb:
-  "all_scheduable_tcbs (cdl_objects s) = {cur_thread}
-  \<Longrightarrow> \<exists>tcb. cdl_objects s cur_thread = Some tcb \<and> (
-    (object_slots tcb) tcb_pending_op_slot = Some RunningCap
-    \<or> (object_slots tcb) tcb_pending_op_slot = Some RestartCap)"
-  by (fastforce simp: all_scheduable_tcbs_def slots_of_def
-                      tcb_scheduable_def object_slots_def opt_cap_def
-                      object_at_heap_def
-               dest!: singleton_eqD)
-
-(*FIXME: dup *)
-lemma intent_reset_projection[simp]:
-  "intent_reset (intent_reset a) = intent_reset a"
-  by (simp add:intent_reset_def split:cdl_object.splits)
 
 lemma asid_reset_intent_reset_switch:
   "asid_reset (intent_reset x) = intent_reset (asid_reset x)"
@@ -183,15 +158,6 @@ lemma liftE_wp_no_exception:
   apply simp
   done
 
-lemma handle_event_no_exception:
-  "\<lbrace>P\<rbrace> handle_event  (SyscallEvent SysCall) \<lbrace>\<lambda>r. Q\<rbrace>,\<lbrace>\<lambda>r s. False\<rbrace>
-   \<Longrightarrow> \<lbrace>P\<rbrace> handle_event (SyscallEvent SysCall) <handle> handler \<lbrace>\<lambda>r. Q\<rbrace>"
-  apply (rule validE_cases_valid)
-  including no_pre apply (wp)
-   apply (rule hoare_FalseE)
-  apply simp
-  done
-
 lemma syscall_valid_helper:
   "\<lbrakk> \<And>x xa. \<lbrace>Qa x xa\<rbrace> perform_syscall_fn xa \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>r. Inv\<rbrace>;
      \<And>r. \<lbrace>Qi r\<rbrace>arg_decode_fn r \<lbrace>Qa r\<rbrace>,\<lbrace>\<lambda>r s. False\<rbrace>;
@@ -268,13 +234,6 @@ lemma decode_page_table_invocation_inv[wp]:
    apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
-lemma decode_page_directory_invocation_inv[wp]:
-  "\<lbrace>P\<rbrace> decode_page_directory_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add:decode_page_directory_invocation_def)
-  apply (rule hoare_pre)
-   apply (wpc|wp |simp add:throw_on_none_def)+
-  done
-
 lemma decode_asid_pool_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_asid_pool_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add:decode_asid_pool_invocation_def)
@@ -295,19 +254,6 @@ lemma decode_invocation_inv[wp]:
 crunch lookup_extra_caps
   for inv[wp]: P
   (wp:crunch_wps mapME_wp' resolve_address_bits_wp ignore: mapME)
-
-lemma nonep_invocation_simps:
-  "nonep_invocation (InvokeUntyped a) = True"
-  by (simp add:nonep_invocation_def)
-
-lemma decode_invocation_nonep:
-  "\<lbrace>\<lambda>s. \<not> ep_related_cap cap \<rbrace>
-   decode_invocation cap cap_ref extra_caps intent
-   \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
-  apply (simp add: decode_invocation_def cdl_ARCH_AARCH32)
-  apply (wpsimp simp: o_def nonep_invocation_def wp: wp_post_tauts)
-  apply (auto simp: ep_related_cap_def)
-  done
 
 lemma ep_related_cap_reset_simp[simp]:
   "ep_related_cap (reset_cap_asid x) = ep_related_cap x"
@@ -430,10 +376,6 @@ lemma handle_event_syscall_no_decode_exception:
    apply (clarsimp simp:object_at_def)
   done
 
-crunch  delete_cap_simple
-  for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
-  (wp: crunch_wps simp: split_def unless_def)
-
 crunch  mark_tcb_intent_error
   for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: crunch_wps simp: split_def unless_def)
@@ -442,8 +384,9 @@ crunch  corrupt_ipc_buffer
   for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
   (wp: crunch_wps simp: split_def unless_def corrupt_frame_def corrupt_intents_def)
 
-crunch  invoke_irq_control, invoke_irq_handler
+crunch  invoke_irq_control, insert_cap_sibling, insert_cap_child
   for cdl_current_thread[wp]: "\<lambda>s. P (cdl_current_thread s)"
+  (wp: crunch_wps simp: split_def unless_def)
 
 
 lemma corrupt_tcb_intent_all_active_tcbs[wp]:
@@ -477,48 +420,11 @@ crunch thread_has_error
 crunch has_restart_cap
   for inv[wp]: P
 
-definition
-  "no_pending s \<equiv> \<forall>oid cap.
-     opt_cap (oid,tcb_pending_op_slot) s = Some cap \<longrightarrow> \<not> is_pending_cap cap"
-
-lemma send_signal_no_pending:
+lemma handle_pending_interrupts_no_pending:
   "\<lbrace>P and no_pending\<rbrace>
-     send_signal thread
-  \<lbrace>\<lambda>r. P\<rbrace>"
-  apply (simp add: send_signal_def send_signal_bound_def)
-  apply (rule hoare_pre)
-  apply (wp | wpc)+
-     apply (rule hoare_pre_cont)
-    apply (rule_tac P = "waiters = {}" in hoare_gen_asm)
-    apply (clarsimp simp: option_select_def)
-    apply wp+
-      apply (rule hoare_pre_cont)
-     apply wp+
-  apply (clarsimp simp: get_waiting_ntfn_recv_threads_def get_waiting_sync_bound_ntfn_threads_def
-                        no_pending_def opt_cap_def)
-  apply (intro allI impI conjI)
-   apply (drule_tac x = x in spec)
-   apply (clarsimp simp: slots_of_def object_slots_def is_pending_cap_def)
-  apply (drule_tac x = x in spec)
-  apply (clarsimp simp: slots_of_def object_slots_def is_pending_cap_def)
-  done
-
-crunch get_active_irq
-  for invs[wp]: P
-  (wp: crunch_wps)
-
-lemma handle_pending_interrupts_no_ntf_cap:
-  "\<lbrace>P and no_pending\<rbrace>
-     handle_pending_interrupts
-  \<lbrace>\<lambda>r. P\<rbrace>"
-  apply (simp add: handle_pending_interrupts_def)
-  apply (rule hoare_pre)
-   apply (wp send_signal_no_pending
-           | wpc
-           | simp add: option_select_def handle_interrupt_def split del: if_split)+
-   apply (wp hoare_drop_imps hoare_vcg_all_lift)
-  apply simp
-  done
+   handle_pending_interrupts
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wpsimp simp: handle_pending_interrupts_def)
 
 lemma call_kernel_with_intent_no_fault_helper:
   assumes unify: "cdl_intent_op intent = Some intent_op \<and>
@@ -596,14 +502,13 @@ lemma call_kernel_with_intent_no_fault_helper:
                 | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
          apply (case_tac r, simp_all)[1]
         apply (simp add: validE_def[symmetric])
-        apply (wp handle_pending_interrupts_no_ntf_cap)
+        apply (wp handle_pending_interrupts_no_pending)
          apply (rule handle_event_syscall_no_decode_exception
                    [where cur_thread = root_tcb_id
                       and intent_op = intent_op
                       and intent_cptr = intent_cptr
                       and intent_extra = intent_extra])
-                 apply (wp set_cap_wp set_cap_all_scheduable_tcbs
-                         set_cap_hold delete_cap_simple_wp[where cap = RestartCap])[1]
+                 apply (wp set_cap_wp set_cap_hold delete_cap_simple_wp[where cap = RestartCap])[1]
                 apply (rule decode_invocation_no_exception)
                apply (rule lookup_extra_caps_exec)
               apply (rule lookup_cap_and_slot_exec)
@@ -620,24 +525,6 @@ lemma call_kernel_with_intent_no_fault_helper:
        apply simp
        apply (wp upd_thread update_thread_wp)+
   apply auto
-  done
-
-
-lemma invoke_cnode_insert_cap:
-  "\<lbrace>\<lambda>s. < dest_slot \<mapsto>c - \<and>* R> s \<and> \<not> is_untyped_cap cap'  \<rbrace>
-  invoke_cnode (InsertCall cap' src_slot dest_slot)
-  \<lbrace>\<lambda>rv s. <dest_slot \<mapsto>c cap' \<and>* R> s\<rbrace>,\<lbrace>\<lambda>r s. Q\<rbrace>"
-  apply (simp add:validE_def)
-  apply (rule hoare_name_pre_state)
-  apply (clarsimp simp:invoke_cnode_def liftE_bindE validE_def[symmetric])
-  apply (wpsimp wp: insert_cap_sibling_wp insert_cap_child_wp)
-  done
-
-lemma invoke_cnode_move_wp:
-  "\<lbrace><dest \<mapsto>c - \<and>* src \<mapsto>c cap \<and>* R>\<rbrace> invoke_cnode (MoveCall cap' src dest)
-  \<lbrace>\<lambda>_. <dest \<mapsto>c cap' \<and>* src \<mapsto>c NullCap \<and>* R>\<rbrace>"
-  apply (simp add:invoke_cnode_def)
-  apply (wp move_cap_wp)
   done
 
 lemma decode_invocation_simps:
@@ -669,15 +556,6 @@ lemma sep_normal_conj_absorb':
 lemma cnode_cap_non_ep_related:
   "is_cnode_cap cap \<Longrightarrow> \<not> ep_related_cap cap"
   by (clarsimp simp: cap_type_def ep_related_cap_def split:cdl_cap.splits)
-
-lemma update_thread_cnode_at:
-  "\<lbrace>object_at(\<lambda>x. x = CNode cnode) ptr\<rbrace>
-  update_thread cur_thread content
-  \<lbrace>\<lambda>rv. object_at (\<lambda>x. x = CNode cnode) ptr \<rbrace>"
-  apply (simp add:update_thread_def get_thread_def set_object_def)
-  apply (wp|wpc|simp add: object_at_def set_object_def)+
-  apply auto
-  done
 
 lemma cdl_cur_thread_detype:
   "cdl_current_thread (detype m s) = cdl_current_thread s"
@@ -737,41 +615,11 @@ lemma reset_cap_asid_cnode_cap_cong:
        simp_all add: cap_type_def reset_cap_asid_def
               split: cdl_cap.splits)
 
-lemma is_exclusive_cap_update_cap[simp]:
-  "safe_for_derive (update_cap_data_det data cap) = safe_for_derive cap"
-  by (case_tac cap,
-      simp_all add: update_cap_data_det_def update_cap_badge_def
-                    safe_for_derive_def badge_update_def guard_update_def)
-
 lemma cnode_cap_reset_asid:
   "is_cnode_cap cap \<Longrightarrow> (reset_cap_asid cap) = cap"
   by (unfold cap_type_def,
       simp add: reset_cap_asid_def
          split: cdl_cap.splits cdl_object_type.splits)
-
-lemma is_cnode_cap_guard_equal:
-  "is_cnode_cap x \<Longrightarrow> guard_equal (reset_cap_asid x) = guard_equal x"
-  apply (rule ext)+
-  by (unfold cap_type_def, simp add:guard_equal_def  Let_def cap_guard_size_def
-    reset_cap_asid_def split:cdl_cap.splits)
-
-lemma valid_src_cap_has_type[simp]:
-  "cap_type cap = Some type
-  \<Longrightarrow> valid_src_cap (default_cap type ids (cnode_cap_size cap) dev)
-  = valid_src_cap cap"
-  apply (rule ext)
-  apply (clarsimp simp: default_cap_def valid_src_cap_def
-                        is_cnode_cap_simps
-                  split: cdl_cap.splits cdl_object_type.splits)
-  apply (clarsimp simp: cap_type_def cnode_cap_size_def)
-  done
-
-lemma exclusive_cap_has_type[simp]:
-  "cap_type cap = Some type
-  \<Longrightarrow> safe_for_derive (default_cap type ids sz dev) = safe_for_derive cap"
-  by (fastforce simp: default_cap_def
-                      cap_type_def safe_for_derive_def
-               split: cdl_cap.splits)
 
 lemma is_untyped_cap_derived[simp]:
   "is_untyped_cap (derived_cap cap) = (is_untyped_cap cap)"
@@ -794,11 +642,6 @@ lemma cap_type_update_cap_data_det [simp]:
   by (auto simp: update_cap_data_det_def
           split: cdl_cap.splits)
 
-lemma safe_for_derive_not_untyped:
-  "safe_for_derive cap \<Longrightarrow> \<not> is_untyped_cap cap"
-  by (clarsimp simp: safe_for_derive_def cap_type_def
-              split: cdl_cap.splits)
-
 (* These lemmas are not cong rules,
    but were declared as such and sometimes work as cong rules.
    This should get deleted, eventually.
@@ -806,7 +649,7 @@ lemma safe_for_derive_not_untyped:
 lemmas cap_type_bad_cong =
  cap_object_reset_cap_asid reset_cap_asid_cap_type
  reset_cap_asid_ep_related_cap cap_rights_reset_cap_asid
- valid_src_cap_asid_cong cap_has_type_asid_cong
+ valid_src_cap_asid_cong
  reset_cap_asid_cnode_cap_cong
 
 
@@ -1089,7 +932,7 @@ lemma call_kernel_with_intent_allow_error_helper:
                 | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
          apply (case_tac r, simp_all)[1]
         apply (simp add: validE_def[symmetric])
-        apply (wp handle_pending_interrupts_no_ntf_cap)
+        apply (wp handle_pending_interrupts_no_pending)
          apply (rule handle_event_syscall_allow_error
                        [where cur_thread = root_tcb_id
                           and intent_op = intent_op

@@ -16,48 +16,6 @@ definition not_idle_thread:: "obj_ref \<Rightarrow> 'z::state_ext state \<Righta
 
 (*Some trivial lemmas rule out irq_node and idle_thread*)
 
-lemma ep_not_idle:
-  "\<lbrakk>valid_idle s;obj_at is_ep epptr s\<rbrakk> \<Longrightarrow> not_idle_thread epptr s"
-  by (clarsimp simp:valid_idle_def obj_at_def is_cap_table_def pred_tcb_at_def is_ep_def not_idle_thread_def)
-
-lemma ntfn_not_idle:
-  "\<lbrakk>valid_idle s;obj_at is_ntfn epptr s\<rbrakk> \<Longrightarrow> not_idle_thread epptr s"
-  by (clarsimp simp:valid_idle_def obj_at_def is_cap_table_def pred_tcb_at_def is_ntfn_def not_idle_thread_def)
-
-lemma cte_wp_at_zombie_not_idle:
-  "\<lbrakk>cte_wp_at ((=) (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread (fst ptr) s"
-  "\<lbrakk>cte_wp_at ((=) (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread ptr' s"
-  by (auto dest!: zombie_cap_two_nonidles simp: cte_wp_at_caps_of_state not_idle_thread_def)
-
-(* FIXME: MOVE *)
-lemma tcb_cap_casesE:
-  assumes cs: "tcb_cap_cases p = Some (gf, sf, restr)"
-  and  rules: "\<lbrakk> p = tcb_cnode_index 0; gf = tcb_ctable; sf = tcb_ctable_update; restr = (\<lambda>_ _. \<top>) \<rbrakk> \<Longrightarrow> R"
-              "\<lbrakk> p = tcb_cnode_index 1; gf = tcb_vtable; sf = tcb_vtable_update;
-                 restr = (\<lambda>_ _. is_valid_vtable_root or ((=) cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
-              "\<lbrakk> p = tcb_cnode_index 2; gf = tcb_reply; sf = tcb_reply_update;
-                 restr = (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t
-                                        \<and> AllowGrant \<in> cap_rights c)
-                                    \<or> (halted st \<and> (c = cap.NullCap))) \<rbrakk> \<Longrightarrow> R"
-              "\<lbrakk> p = tcb_cnode_index 3; gf = tcb_caller; sf = tcb_caller_update;
-                 restr = (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e data \<Rightarrow>
-                                         ((=) cap.NullCap)
-                                     | _ \<Rightarrow> is_reply_cap or ((=) cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
-              "\<lbrakk> p = tcb_cnode_index 4; gf = tcb_ipcframe; sf = tcb_ipcframe_update; restr =
-                                     (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
-  shows "R"
-  using cs
-  unfolding tcb_cap_cases_def
-  apply (simp split: if_split_asm del: One_nat_def)
-  apply (erule rules, fastforce+)+
-  done
-
-lemma tcb_cnode_index_def2:
-  "n < 8 \<Longrightarrow> tcb_cnode_index n = bin_to_bl 3 (int n)"
-  unfolding tcb_cnode_index_def to_bl_def
-  by (simp add: uint_nat unat_of_nat)
-
 lemma bl_to_bin_tcb_cnode_index:
   "n < 8 \<Longrightarrow> nat (bl_to_bin (tcb_cnode_index n)) = n"
   unfolding tcb_cnode_index_def
@@ -142,24 +100,9 @@ lemma transform_objects_cnode:
   apply (clarsimp simp add: valid_idle_def obj_at_def pred_tcb_at_def split:nat.split)+
   done
 
-lemma transform_objects_irq_node:
-  "\<lbrakk> kheap s' y = Some (CNode 0 obj'); valid_idle s'\<rbrakk> \<Longrightarrow> transform_objects s' y =
-    Some (cdl_object.IRQNode \<lparr>cdl_irq_node_caps = transform_cnode_contents 0 obj'\<rparr>)"
-  apply (subgoal_tac "y \<noteq> idle_thread s'")
-  apply (simp add: transform_objects_def)
-  apply (clarsimp simp add: valid_idle_def obj_at_def pred_tcb_at_def split:nat.split)+
-  done
-
 lemmas lift_simp =
   transform_objects_tcb transform_objects_cnode transform_objects_kheap cdl_objects_cnode
   opt_cap_tcb opt_object_tcb
-
-lemma transform_objects_update_other:
-  "\<lbrakk> kh ptr = Some ko; caps_of_object ko = caps_of_object ko'; a_type ko = a_type ko'; ref \<noteq> ptr \<rbrakk>
-  \<Longrightarrow> transform_objects (update_kheap (kh(ptr \<mapsto> ko')) s) ref = transform_objects (update_kheap kh s) ref"
-  unfolding transform_objects_def
-  by (cases ref, simp_all add: restrict_map_def caps_of_state_update_same_caps
-                               cap_installed_at_irq_def map_add_def)
 
 lemma caps_of_object_update_state [simp]:
   "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_state_update stf tcb)) (tcb_cap_cases n)) =
@@ -182,64 +125,15 @@ lemma caps_of_object_update_context [simp]:
   apply (simp add: tcb_cap_cases_def split: if_split)
   done
 
-definition
-  generates_pending :: "Structures_A.thread_state \<Rightarrow> bool"
-where
-  "generates_pending st \<equiv> case st of
-            Structures_A.BlockedOnReceive ptr payload \<Rightarrow> True
-          | Structures_A.BlockedOnSend ptr payload \<Rightarrow> True
-          | Structures_A.BlockedOnReply \<Rightarrow> True
-          | Structures_A.BlockedOnNotification ptr \<Rightarrow> True
-          | Structures_A.Restart                 \<Rightarrow> True
-          | Structures_A.Running                 \<Rightarrow> True
-          | _ \<Rightarrow> False"
-
-lemmas generates_pending_simps [simp]  = generates_pending_def [split_simps Structures_A.thread_state.split]
-
 lemmas infer_tcb_pending_op_simps [simp]  = infer_tcb_pending_op_def [split_simps Structures_A.thread_state.split]
-
-(* Is actually iff *)
-lemma not_generates_pending_is_null:
-  "\<not> generates_pending st \<Longrightarrow> (infer_tcb_pending_op ptr st = Types_D.NullCap)"
-  unfolding generates_pending_def infer_tcb_pending_op_def
-  by (simp split: Structures_A.thread_state.splits)
-
-lemma transform_tcb_upd_state_no_pending:
-  "\<lbrakk> \<not> generates_pending (tcb_state tcb); \<not> generates_pending (f (tcb_state tcb)) \<rbrakk>
-  \<Longrightarrow> transform_tcb ms ptr (tcb_state_update f tcb) = transform_tcb ms ptr tcb"
-  unfolding transform_tcb_def
-  by (simp add: not_generates_pending_is_null cong: transform_full_intent_cong)
-
-lemmas transform_objects_tcb_state =
-  transform_objects_update_kheap_same_caps transform_objects_update_same
-  transform_tcb_upd_state_no_pending
 
 lemma transform_objects_dummy_set_original_cap [simp]:
   "transform_objects (b\<lparr>is_original_cap := x\<rparr>) = transform_objects b"
-  by (clarsimp simp: cap_installed_at_irq_def transform_objects_def)
+  by (clarsimp simp: transform_objects_def)
 
 lemma transform_objects_dummy_update_cdt [simp]:
   "transform_objects (b\<lparr>cdt := x\<rparr>) = transform_objects b"
-  by (clarsimp simp: cap_installed_at_irq_def transform_objects_def)
-
-lemma update_tcb_cxt_eq_dupdate_tcb_intent:
-  "\<lbrakk>
-    cdl_objects (transform b) y = Some (Tcb t);
-    kheap b y = Some (TCB obj);
-    obj' = tcb_arch_update (arch_tcb_context_set cxt) obj;
-    not_idle_thread y b;
-    intent = transform_full_intent (machine_state (update_kheap ((kheap b)(y\<mapsto>(TCB obj'))) b)) y obj'
-   \<rbrakk>
-    \<Longrightarrow> dupdate_cdl_object y (Tcb (dupdate_tcb_intent intent t)) (transform b)
-    = transform (update_kheap ((kheap b)(y\<mapsto> (TCB obj'))) b)"
-  apply (clarsimp simp:transform_def transform_current_thread_def
-                       not_idle_thread_def transform_objects_def)
-  apply (rule ext, clarsimp)
-  apply (rule conjI)
-   apply (clarsimp simp:restrict_map_Some_iff)
-   apply (clarsimp simp:transform_tcb_def restrict_map_def map_add_def)
-  apply (clarsimp simp:transform_tcb_def restrict_map_def map_add_def)
-  done
+  by (clarsimp simp: transform_objects_def)
 
 lemma duplicate_corrupt_tcb_intent:
   "do corrupt_tcb_intent epptr; corrupt_tcb_intent epptr od = corrupt_tcb_intent epptr"
@@ -265,24 +159,6 @@ lemma corres_corrupt_tcb_intent_dupl:
   "\<lbrakk> dcorres dc P P' (do corrupt_tcb_intent x; corrupt_tcb_intent x od) g \<rbrakk> \<Longrightarrow>
    dcorres dc P P' (corrupt_tcb_intent x) g"
   by (subst duplicate_corrupt_tcb_intent[symmetric], simp)
-
-(*
- * Doing nothing at the abstract level corresponds to corrupting a TCB intent.
- * (In particular, it is the "null" corruption.)
- *)
-lemma corres_corrupt_tcb_intent_return:
-  "dcorres dc \<top> (tcb_at ptr and not_idle_thread ptr) (corrupt_tcb_intent ptr) (return x)"
-  supply option.case_cong[cong]
-  apply (clarsimp simp: corres_underlying_def return_def corrupt_tcb_intent_def update_thread_def
-                        select_def gets_the_def fail_def gets_def get_def assert_opt_def bind_def
-                        put_def modify_def KHeap_D.set_object_def)
-  apply (clarsimp split: option.splits
-                  simp: transform_def tcb_at_def transform_objects_def not_idle_thread_def
-                  dest!: get_tcb_SomeD)
-  apply (force simp: transform_def transform_tcb_def transform_objects_def not_idle_thread_def
-                     tcb_at_def obj_at_def
-               split: cdl_object.splits)
-  done
 
 lemma dcorres_set_object_tcb:
   "\<lbrakk> transform_tcb (machine_state s') p' tcb' = Tcb tcb;
@@ -390,40 +266,9 @@ lemma dummy_corrupt_tcb_intent_corres:
    apply (clarsimp simp:transform_def)+
   done
 
-lemma neq_Nil_conv':
-  "(a \<noteq> []) =  (\<exists>h x. a = h@[x])"
-  by (auto | drule append_butlast_last_id)+
-
 lemma not_idle_thread_as_usr[wp]:
   "\<lbrace>not_idle_thread y\<rbrace> as_user p q \<lbrace>\<lambda>rv. not_idle_thread y\<rbrace>"
   by (simp add:not_idle_thread_def,wp)
-
-lemma set_registers_corres:
-  "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y)
-  (corrupt_tcb_intent y)
-  (mapM (%r. do v \<leftarrow> as_user thread (getRegister r);
-                as_user y (setRegister r (f r v))
-             od) (x)
-  )"
-  apply (induct_tac "x")
-   apply (clarsimp simp:bind_assoc mapM_def sequence_def)
-   apply (rule corres_guard_imp)
-     apply (rule dummy_corrupt_tcb_intent_corres[unfolded dc_def])
-    apply simp+
-  apply (clarsimp simp:mapM_def)
-  apply (subst duplicate_corrupt_tcb_intent[symmetric])
-  apply (clarsimp simp:sequence_def)
-  apply (rule_tac Q'="%r. tcb_at y and valid_idle and not_idle_thread y"
-                  in corres_split_forwards' [where Q="%r. \<top>"])
-     apply (rule corres_symb_exec_r)
-        apply (rule set_register_corres)
-       apply (wp|simp)+
-  apply (simp add:bind_assoc dc_def[symmetric])
-  apply (rule corres_dummy_return_l)
-  apply (rule corres_split_forwards' [where r'="dc" and Q="%x. \<top>" and Q'="%x. \<top>"])
-     apply (rule corres_guard_imp)
-       apply simp+
-  done
 
 lemma set_mrs_corres_no_recv_buffer:
   "dcorres dc \<top> (valid_idle and not_idle_thread y)
@@ -565,10 +410,6 @@ lemma det_spec_get:
   "det_spec P (get)"
   by (clarsimp simp:get_def det_spec_def)
 
-lemma det_spec_put:
-  "det_spec P (put t)"
-  by (clarsimp simp:put_def det_spec_def)
-
 lemma det_spec_modify:
   "det_spec P (modify f)"
   by (clarsimp simp:simpler_modify_def det_spec_def)
@@ -703,14 +544,6 @@ lemmas weak_det_spec_simps = weak_det_spec_fail weak_det_spec_assert weak_det_sp
                              det_imply_weak_det[OF det_spec_return] det_imply_weak_det[OF det_spec_get]
                              det_imply_weak_det[OF det_spec_gets] det_imply_weak_det[OF det_spec_modify]
 
-lemma weak_det_spec_storeWord:
-  "weak_det_spec P (storeWord a b)"
-  apply (simp add:storeWord_def)
-    apply (rule weak_det_spec_compose)+
-    apply (simp_all add:weak_det_spec_simps)
-done
-
-
 lemma weak_det_spec_thread_get:
   "weak_det_spec P (thread_get f x)"
   apply (simp add:thread_get_def)
@@ -735,10 +568,6 @@ done
 lemma empty_when_fail_fail:
   "empty_when_fail fail"
   by (clarsimp simp:empty_when_fail_def fail_def)
-
-lemma empty_when_fail_get:
-  "empty_when_fail get"
-  by (clarsimp simp:empty_when_fail_def get_def return_def)
 
 lemma empty_when_fail_gets:
   "empty_when_fail (gets x)"
@@ -766,7 +595,7 @@ lemma empty_when_fail_modify:
   by (clarsimp simp:empty_when_fail_def simpler_modify_def)
 
 
-lemmas empty_when_fail_simps = empty_when_fail_fail empty_when_fail_return empty_when_fail_get empty_when_fail_gets
+lemmas empty_when_fail_simps = empty_when_fail_fail empty_when_fail_return empty_when_fail_gets
                                empty_when_fail_gets_the empty_when_fail_assert empty_when_fail_assert_opt empty_when_fail_modify
 
 lemma empty_when_fail_loadWord:
@@ -775,13 +604,6 @@ lemma empty_when_fail_loadWord:
   apply (rule empty_when_fail_compose[OF _ empty_when_fail_gets])
     apply (rule empty_when_fail_compose[OF empty_when_fail_return])
   apply (simp_all add: weak_det_spec_simps empty_when_fail_simps)+
-done
-
-lemma empty_when_fail_storeWord:
-  "empty_when_fail (storeWord a b)"
-  apply (simp add:storeWord_def)
-  apply (rule empty_when_fail_compose)+
-  apply (simp_all add:empty_when_fail_simps weak_det_spec_simps)
 done
 
 lemma empty_when_fail_select_f:
@@ -883,7 +705,6 @@ lemma evalMonad_wp:
   apply (drule_tac x = pres in spec)
   apply (clarsimp simp:evalMonad_def notemptyI det_spec_def)
   done
-
 
 
 lemma evalMonad_compose:
@@ -1061,35 +882,6 @@ lemma get_ipc_buffer_words:
     apply (clarsimp simp:weak_det_spec_load_word_offs empty_when_fail_load_word_offs)
 done
 
-lemma get_tcb_mrs_wp:
-  "\<lbrace>(=) sa and ko_at (TCB obj) thread and K_bind (evalMonad (lookup_ipc_buffer False thread) sa = Some (op_buf))\<rbrace>
-    get_mrs thread (op_buf) (data_to_message_info (arch_tcb_get_registers (tcb_arch obj) msg_info_register))
-            \<lbrace>\<lambda>rv s. rv = get_tcb_mrs (machine_state sa) obj\<rbrace>"
-  apply (case_tac op_buf)
-    apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
-    apply (wp|wpc)+
-    apply (clarsimp simp:get_tcb_mrs_def Let_def)
-    apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
-    apply (clarsimp simp:get_tcb_message_info_def get_ipc_buffer_words_empty)
-    apply (clarsimp dest!:get_tcb_SomeD
-                    simp:obj_at_def arch_tcb_get_registers_def arch_tcb_context_get_def)
-  apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def arch_tcb_get_registers_def
-                       arch_tcb_context_get_def)
-  apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
-  apply (wp|wpc)+
-  apply (rule_tac P = "tcb = obj" in hoare_gen_asm)
-   apply (clarsimp simp: get_tcb_mrs_def Let_def get_tcb_message_info_def Suc_leI[OF msg_registers_lt_msg_max_length]
-                   split del:if_split)
-    apply (rule_tac Q'="\<lambda>buf_mrs s. buf_mrs =
-      (get_ipc_buffer_words (machine_state sa) obj ([Suc (length msg_registers)..<msg_max_length] @ [msg_max_length]))"
-      in hoare_strengthen_post)
-    apply (rule get_ipc_buffer_words[where thread=thread ])
-    apply (simp add: arch_tcb_context_get_def)
-  apply wp
-  apply (fastforce simp:get_tcb_SomeD obj_at_def)
-done
-
-
 (* Following is the proof of set_mrs *)
 
 declare pbfs_less_wb' [simp]
@@ -1126,11 +918,6 @@ definition
   "ipc_buffer_wp_at w \<equiv> obj_at (%ko. \<exists>tcb. ko = TCB tcb \<and>
   tcb_ipc_buffer tcb = w)"
 
-
-lemma ipc_frame_wp_at_cte_at:
-  "ipc_frame_wp_at P a s\<Longrightarrow> \<exists>buf sz rs. ipc_frame_cte_at a buf sz rs s"
-  by (clarsimp simp:ipc_frame_wp_at_def obj_at_def cte_wp_at_cases
-    ,simp add: split:cap.splits arch_cap.splits)
 
 abbreviation
   "ipc_frame_ptr_at ptr \<equiv> ipc_frame_wp_at (\<lambda>ptr' _ _ _. ptr = ptr')"
@@ -1312,74 +1099,6 @@ lemma valid_tcb_obj_ipc_align_etc:
     apply simp+
 done
 
-lemma mask_neg_mask_cancel:
-  "a&& mask n && ~~ mask n = 0 "
- by (simp add:mask_out_sub_mask)
-
-lemma get_ipc_buffer_words_helper:
-  "\<lbrakk>valid_objs s;
-    get_tcb thread s = Some tcb_type;
-    ipc_frame_ptr_at obuf thread s;ipc_frame_sz_at osz thread s;
-    ko_at (ArchObj (DataPage dev sz)) buf s;
-    is_aligned ptr 2;
-    pspace_aligned s; pspace_distinct s;
-    within_page buf ptr sz;
-    \<forall>x \<in> set xs. within_page obuf (obuf + (tcb_ipc_buffer tcb_type && mask (pageBitsForSize osz)) +of_nat x* of_nat word_size) osz;
-    obuf \<noteq> buf\<rbrakk> \<Longrightarrow>
-    get_ipc_buffer_words (storeWord_ms ptr b ms) tcb_type xs= get_ipc_buffer_words ms tcb_type xs"
-  apply (clarsimp dest!:get_tcb_SomeD simp:get_ipc_buffer_words_def split:cap.splits arch_cap.splits)
-  apply (frule ipc_frame_ptr_at_frame_at[where buf = obuf],simp+)
-  apply (frule valid_tcb_obj_ipc_align_etc[where buf = obuf],simp+)
-   apply (erule get_tcb_rev)
-  apply (rule arg_cong[where f = the])
-  apply (rule evalMonad_mapM)
-        defer
-        apply (simp_all add:empty_when_fail_loadWord weak_det_spec_loadWord)
-    apply (wp loadWord_inv)+
-  apply (clarsimp simp:obj_at_def ipc_frame_wp_at_def)
-  apply (drule_tac x = r in bspec,simp)
-  apply (clarsimp simp:evalMonad_loadWord get_tcb_SomeD | rule conjI)+
-  apply (rule arg_cong[where f = word_rcat])
-  apply clarsimp
-  apply (clarsimp simp:|rule conjI)
-   apply (rule underlying_memory_storeWord)
-      apply simp_all
-    apply (rule aligned_add_aligned)+
-        apply simp+
-       apply (rule is_aligned_after_mask)
-        apply simp+
-   apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
-         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
-  apply (rule conjI)
-   apply (subst add.assoc[symmetric])+
-   apply (rule underlying_memory_storeWord)
-      apply (simp_all)
-    apply (rule aligned_add_aligned)+
-        apply simp+
-       apply (subst is_aligned_after_mask)
-        apply simp+
-   apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
-  apply (rule conjI)
-   apply (subst add.assoc[symmetric])+
-   apply (rule underlying_memory_storeWord)
-      apply (simp_all)
-    apply (rule aligned_add_aligned)+
-        apply simp+
-       apply (subst is_aligned_after_mask)
-        apply simp+
-   apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
-  apply (subst add.assoc[symmetric])+
-  apply (rule underlying_memory_storeWord[where n = 0,simplified])
-    apply (simp_all)
-   apply (rule aligned_add_aligned)+
-       apply simp+
-      apply (subst is_aligned_after_mask)
-       apply simp+
-  apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-        by ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
-
 lemma get_ipc_buffer_words_separate_frame:
   "\<lbrakk>valid_objs s;
     get_tcb thread s = Some tcb_type;
@@ -1453,10 +1172,6 @@ lemma get_ipc_buffer_words_separate_frame:
   apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
         by ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
 
-lemma mask_inj_if:
-  "\<lbrakk>a && mask n = a; b && mask n = b; a && mask n = b && mask n\<rbrakk>\<Longrightarrow> a = b"
-  by (rule box_equals)
-
 (* FIXME: move to Word_Lib, generalise *)
 lemma bound_preserve_mask:
   "\<lbrakk> is_aligned (x::word32) n; x\<le> mask k; (z::word32)\<le> mask n; n < 32; k < 32; n \<le> k \<rbrakk> \<Longrightarrow>
@@ -1477,10 +1192,6 @@ lemma bound_preserve_mask:
    apply (clarsimp simp: word_size)
   apply (simp add: mask_out_sub_mask mask_and_mask min_def)
   done
-
-lemma nat_less_le:
-  "(a::nat) < b \<Longrightarrow> a \<le> b - 1"
-  by auto
 
 lemma within_page_ipc_buf:
   "\<lbrakk>valid_objs s; pspace_aligned s; pspace_distinct s; ipc_frame_ptr_at buf y s; ipc_frame_sz_at sz y s;
@@ -1508,9 +1219,6 @@ lemma within_page_ipc_buf:
       apply (simp add:word_size_def msg_align_bits)+
    apply (cases sz,auto)
   done
-
-lemma eq_sym_helper: "(A = B)  \<Longrightarrow> (B = A)"
-  by auto
 
 lemma store_word_corres_helper:
   "\<lbrakk>pspace_aligned s; pspace_distinct s; valid_objs s; ipc_frame_ptr_at buf s_id s;
@@ -1556,36 +1264,24 @@ lemma store_word_corres_helper:
      apply (simp add:msg_max_length_def msg_align_bits)
     apply simp
    apply (clarsimp simp:transform_cap_def split:cap.splits arch_cap.splits)
-   apply (rule conjI)
-    apply (frule_tac thread = thread and ptr = ptr and sz = sz and ms = "machine_state s" and
-            tcb_type = tcb and b = b and s_id = s_id
-            and xs = "[buffer_cptr_index..<buffer_cptr_index + unat (mi_extra_caps (get_tcb_message_info tcb))]"
-            in get_ipc_buffer_words_separate_frame)
-               apply (erule get_tcb_rev)
-              apply ((simp add:ipc_frame_wp_at_def obj_at_def)+)[8]
-      apply (clarsimp simp del:upt.simps)
-      apply (rule_tac sz = vmpage_size and y = thread in within_page_ipc_buf)
-            apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
-      apply (simp add:msg_max_length_def msg_align_bits buffer_cptr_index_def)
-      apply (case_tac "get_tcb_message_info tcb")
-      apply (clarsimp simp add: get_tcb_message_info_def data_to_message_info_def)
-      apply (erule order_less_le_trans)
-      apply (simp add: mask_def)
-      apply (rule iffD1[OF word_le_nat_alt[where b = "0x6::word32",simplified]])
-      apply (rule order_trans)
-       apply (rule  word_and_le1[where a = 3])
-      apply ((clarsimp simp:ipc_frame_wp_at_def obj_at_def)+)[4]
    apply (frule_tac thread = thread and ptr = ptr and sz = sz and ms = "machine_state s" and
            tcb_type = tcb and b = b and s_id = s_id
-           and xs = "[Suc (Suc (msg_max_length + msg_max_extra_caps))..<5 + (msg_max_length + msg_max_extra_caps)]"
+           and xs = "[buffer_cptr_index..<buffer_cptr_index + unat (mi_extra_caps (get_tcb_message_info tcb))]"
            in get_ipc_buffer_words_separate_frame)
               apply (erule get_tcb_rev)
              apply ((simp add:ipc_frame_wp_at_def obj_at_def)+)[8]
      apply (clarsimp simp del:upt.simps)
-     apply (rule_tac y = thread and sz = vmpage_size in within_page_ipc_buf)
+     apply (rule_tac sz = vmpage_size and y = thread in within_page_ipc_buf)
            apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
-     apply (clarsimp simp:msg_align_bits msg_max_length_def msg_max_extra_caps_def)
-    apply simp+
+     apply (simp add:msg_max_length_def msg_align_bits buffer_cptr_index_def)
+     apply (case_tac "get_tcb_message_info tcb")
+     apply (clarsimp simp add: get_tcb_message_info_def data_to_message_info_def)
+     apply (erule order_less_le_trans)
+     apply (simp add: mask_def)
+     apply (rule iffD1[OF word_le_nat_alt[where b = "0x6::word32",simplified]])
+     apply (rule order_trans)
+      apply (rule  word_and_le1[where a = 3])
+     apply ((clarsimp simp:ipc_frame_wp_at_def obj_at_def)+)[3]
   apply (clarsimp simp: tcb_ipcframe_id_def split: cdl_object.splits option.split_asm cdl_cap.split_asm)
   apply (clarsimp simp: transform_object_def split:Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm nat.splits)
   apply (rename_tac tcb)
@@ -1617,117 +1313,6 @@ lemma select_f_get_register:
    apply (clarsimp simp: fail_def return_def)+
   apply (clarsimp simp: get_tcb_def arch_tcb_get_registers_def arch_tcb_context_get_def
                   split: option.splits Structures_A.kernel_object.splits)
-  done
-
-lemma select_f_evalMonad:
-  "\<lbrakk>empty_fail g; empty_when_fail g; \<And>P. weak_det_spec P g; \<And>ms. \<lbrace>(=) ms\<rbrace>g\<lbrace>\<lambda>r. (=) ms\<rbrace>\<rbrakk>
-  \<Longrightarrow> (select_f (g ms)) = (case (evalMonad g ms) of Some a \<Rightarrow> return (a,ms) | None \<Rightarrow> fail)"
-  apply (rule ext)
-  apply (clarsimp simp: return_def select_f_def fail_def empty_fail_def split:option.splits)
-  apply (drule_tac x = ms in spec)
-    apply (rule conjI)
-    apply (clarsimp simp:evalMonad_def valid_def weak_det_spec_def)+
-  apply (drule_tac x = "(=) ms" in meta_spec)+
-  apply (clarsimp simp:no_fail_def empty_when_fail_def)
-  apply (drule_tac x = ms in meta_spec)
-  apply (clarsimp simp:det_spec_def)
-  apply (drule_tac x = ms in spec)
-  apply clarsimp
-  done
-
-
-lemma dcorres_store_word_safe:
-  "within_page obuf ptr sz \<Longrightarrow>
-   dcorres dc \<top>
-    (ko_at (ArchObj (DataPage dev sz)) obuf and (\<lambda>s. \<forall>buf thread. ipc_frame_ptr_at buf thread s \<longrightarrow> buf\<noteq> obuf) and
-    valid_objs and pspace_distinct and pspace_aligned)
-    (return a)
-    (do_machine_op (storeWord ptr b))"
-  supply option.case_cong[cong]
-  apply (rule dcorres_expand_pfx)
-  apply (clarsimp simp: do_machine_op_def valid_def get_def gets_def bind_def return_def
-                        simpler_modify_def corres_underlying_def)
-  apply (clarsimp simp: select_f_store_word assert_def bind_def fail_def return_def
-                  split: if_splits)
-  apply (clarsimp simp: transform_def transform_current_thread_def)
-  apply (rule ext)
-  apply (rename_tac thread)
-  apply (clarsimp simp:transform_objects_def restrict_map_def option_map_def map_add_def split:option.splits)
-  apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.splits)
-  apply (clarsimp simp:transform_tcb_def transform_full_intent_def Let_def)
-  apply (clarsimp simp del:upt.simps
-                  simp: Let_def get_tcb_mrs_def is_arch_page_cap_def
-                  split:cap.split_asm arch_cap.split_asm
-                  split del: if_split)
-  apply (frule valid_tcb_objs, erule get_tcb_rev)
-  apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def valid_ipc_buffer_cap_def
-              simp del: upt.simps)
-  apply (erule disjE)
-   apply (clarsimp simp: is_nondevice_page_cap_def split: cap.split_asm simp del: upt.simps)
-   apply (rename_tac tcb arch_cap)
-   apply (case_tac arch_cap)
-       apply ((simp add:get_ipc_buffer_words_def)+)[2]
-     apply (rename_tac word rights vmpage_size option)
-     apply (simp add:Suc_leI[OF msg_registers_lt_msg_max_length] del:upt.simps)
-     apply (frule_tac thread = thread and ptr = ptr and ms = "machine_state s'"
-                  and tcb_type = tcb and b = b
-                  and xs = "[Suc (length msg_registers)..<Suc msg_max_length]"
-                   in get_ipc_buffer_words_helper)
-               apply (erule get_tcb_rev)
-              apply ((simp add:ipc_frame_wp_at_def obj_at_def)+)[2]
-            apply (simp add:obj_at_def)
-           apply (clarsimp simp: is_aligned_mask split: bool.split_asm simp del: upt.simps)+
-       apply (rule_tac y = thread in within_page_ipc_buf)
-             apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
-       apply (simp add:msg_max_length_def msg_align_bits)
-      apply (subgoal_tac "ipc_frame_ptr_at word thread s'")
-       apply (drule_tac x = word in spec)
-       apply clarsimp
-      apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
-
-     apply clarsimp
-     apply (rule conjI)
-      apply (frule_tac thread = thread and ptr = ptr and ms = "machine_state s'"
-                   and tcb_type = tcb and b = b
-                   and xs = "[buffer_cptr_index..<buffer_cptr_index +
-                              unat (mi_extra_caps (get_tcb_message_info tcb))]"
-                    in get_ipc_buffer_words_helper)
-                apply (erule get_tcb_rev)
-               apply ((simp add:ipc_frame_wp_at_def obj_at_def is_aligned_mask)+)[7]
-        apply (clarsimp simp del:upt.simps)
-        apply (rule_tac sz = vmpage_size and y = thread in within_page_ipc_buf)
-              apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
-        apply (simp add:msg_max_length_def msg_align_bits buffer_cptr_index_def)
-        apply (case_tac "get_tcb_message_info tcb")
-        apply (clarsimp simp add: get_tcb_message_info_def data_to_message_info_def)
-        apply (erule order_less_le_trans)
-        apply (simp add: mask_def)
-        apply (rule iffD1[OF word_le_nat_alt[where b = "0x6::word32",simplified]])
-        apply (rule order_trans)
-         apply (rule word_and_le1[where a = 3])
-        apply simp
-       apply (subgoal_tac "ipc_frame_ptr_at word thread s'")
-        apply (drule_tac x = word in spec)
-        apply clarsimp
-       apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
-      apply simp
-     apply (frule_tac thread = thread and ptr = ptr and sz = sz and ms = "machine_state s'"
-                  and tcb_type = tcb and b = b
-                  and xs = "[Suc (Suc (msg_max_length + msg_max_extra_caps))..<
-                             5 + (msg_max_length + msg_max_extra_caps)]"
-                   in get_ipc_buffer_words_helper)
-               apply (erule get_tcb_rev)
-              apply ((simp add:ipc_frame_wp_at_def is_aligned_mask obj_at_def)+)[7]
-       apply (clarsimp simp del:upt.simps)
-       apply (rule_tac y = thread and sz = vmpage_size in within_page_ipc_buf)
-             apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
-       apply (clarsimp simp:msg_align_bits msg_max_length_def msg_max_extra_caps_def)
-      apply (subgoal_tac "ipc_frame_ptr_at word thread s'")
-       apply (drule_tac x = word in spec)
-       apply clarsimp
-      apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
-     apply simp
-    apply (clarsimp simp:get_ipc_buffer_words_def)+
   done
 
 lemma store_word_corres:
@@ -1763,55 +1348,6 @@ lemma store_word_corres:
 lemma store_word_offs_ipc_frame_wp:
   "\<lbrace>ipc_frame_wp_at P s_id\<rbrace> store_word_offs base a aa \<lbrace>\<lambda>rv. ipc_frame_wp_at P s_id\<rbrace>"
   by (wp | simp add: ipc_frame_wp_at_def store_word_offs_def)+
-
-lemma zip_cpy_word_corres:
-  "\<forall>x\<in> set xs. within_page buf (base + of_nat(x*word_size)) sz
-    \<Longrightarrow> dcorres dc \<top>
-   (pspace_aligned and pspace_distinct and valid_objs
-    and (ipc_frame_ptr_at buf s_id) and (ipc_frame_sz_at sz s_id))
-   (corrupt_frame buf)
-   (mapM (\<lambda>x. load_word_offs src_a x >>= store_word_offs base x)
-            xs)"
- proof (induct xs)
-   case Nil
-   show ?case
-     apply (rule corres_guard_imp)
-     apply (clarsimp simp:mapM_def sequence_def)
-     apply (rule dcorres_dummy_corrupt_frame[THEN corres_guard_imp,unfolded dc_def])
-   apply simp+
-   done
- next
-   case (Cons x xs)
-   show ?case
-     apply (subst corrupt_frame_duplicate[symmetric])
-     apply (rule corres_guard_imp)
-       apply (clarsimp simp:mapM_Cons)
-       apply (rule corres_split)
-          apply (rule corres_symb_exec_r)
-             apply (simp add: store_word_offs_def bind_assoc[symmetric]
-                              state_assert_def[symmetric])
-             apply (rule corres_state_assert)
-              apply (rule_tac s_id = s_id and sz = sz in store_word_corres)
-              using Cons.prems
-              apply simp
-             using Cons.prems
-             apply (clarsimp simp: within_page_def in_user_frame_def)
-             apply (thin_tac "Ball S P" for S P)
-             apply (rule_tac x=sz in exI)
-             apply (frule (2) ipc_frame_ptr_at_frame_at)
-             apply (simp add: obj_at_def a_type_simps)
-            apply wp+
-          apply clarsimp+
-         apply (rule corres_dummy_return_l)
-         apply (rule corres_split)
-            apply (rule Cons.hyps)
-            using Cons
-            apply clarsimp
-           apply (rule corres_free_return[where P = \<top> and P'=\<top> ])
-          apply wp+
-        apply (wp store_word_offs_ipc_frame_wp)+
-     by (fastforce simp:ipc_frame_wp_at_def)+
- qed
 
 lemma zip_store_word_corres:
   "\<forall>x\<in> set xs. within_page buf (base + of_nat (x * word_size)) sz \<Longrightarrow>
@@ -1982,51 +1518,6 @@ lemma set_registers_ipc_buffer_ptr_at[wp]:
   done
 
 
-lemma copy_mrs_corres:
-  "valid_message_info mi \<Longrightarrow>
-   dcorres dc \<top> (valid_idle and valid_objs and pspace_aligned and pspace_distinct and not_idle_thread y
-     and ipc_frame_ptr_at buf y and ipc_frame_sz_at sz y and ipc_buffer_wp_at bptr y)
-    (do corrupt_tcb_intent y;corrupt_frame buf od)
-    (copy_mrs thread rv y (Some (buf + (bptr && mask (pageBitsForSize sz))))
-               (mi_length mi))"
-  supply option.case_cong[cong]
-  apply (simp add:copy_mrs_def del:upt.simps)
-  apply (rule dcorres_expand_pfx)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="dc"])
-       apply (rule set_registers_corres)
-      apply (wpc)
-       apply (rule corres_dummy_return_l)
-       apply (rule corres_split[where r'="dc"])
-          apply (rule dcorres_dummy_corrupt_frame)
-         apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
-        apply wp
-       apply (clarify,simp del:upt.simps )
-      apply (rule corres_dummy_return_l)
-      apply (rule corres_split[where r'="dc"])
-         apply (rule_tac s_id = y and sz = sz in zip_cpy_word_corres)
-         apply (clarsimp simp del:upt.simps)
-         apply (rule within_page_ipc_buf)
-               apply simp+
-         apply (clarsimp simp:msg_align_bits valid_message_info_def msg_max_length_def)
-         apply (erule less_trans)
-         apply (rule le_less_trans[where y =  "Suc (unat (0x78))"])
-          apply (rule iffD2[OF Suc_le_mono])
-          apply (erule iffD1[OF word_le_nat_alt])
-         apply simp
-        apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
-       apply wp+
-     apply ((clarsimp|wp)+)[1]
-    apply (rule mapM_wp_inv)
-    apply (case_tac rv)
-     apply clarsimp
-     apply wp
-    apply (clarsimp|rule conjI)+
-    apply ((wp|clarsimp)+)[3]
-  apply (case_tac rv)
-   apply (fastforce simp: ipc_buffer_wp_at_def obj_at_def tcb_at_def valid_cur_fpu_def)+
-  done
-
 lemmas transform_cap_simps [simp] = transform_cap_def [split_simps cap.split arch_cap.split]
 
 lemma corrupt_frame_include_self:
@@ -2112,52 +1603,6 @@ lemma dcorres_set_mrs:
   apply (rule corrupt_frame_include_self)
    apply (rule corres_guard_imp[OF set_mrs_corres])
     apply clarsimp+
-  done
-
-lemma dcorres_copy_mrs:
-  "valid_message_info mi \<Longrightarrow>
-   dcorres dc \<top> (valid_idle and valid_objs and pspace_aligned and pspace_distinct and not_idle_thread y
-     and ipc_frame_ptr_at buf y and ipc_frame_sz_at sz y and ipc_buffer_wp_at bptr y)
-    (corrupt_frame buf)
-    (copy_mrs thread rv y (Some (buf + (bptr && mask (pageBitsForSize sz))))
-               (mi_length mi))"
-  apply (rule corrupt_frame_include_self)
-   apply (rule corres_guard_imp[OF copy_mrs_corres])
-     apply auto
-  done
-
-lemma ipc_frame_ptr_at_sz_at:
-  "\<lbrakk>ko_at (ArchObj (DataPage dev sz)) obuf s; valid_objs s;ipc_frame_ptr_at obuf thread s \<rbrakk> \<Longrightarrow> ipc_frame_sz_at sz thread s"
-  apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
-  apply (clarsimp split:cap.splits arch_cap.splits)
-  apply (frule valid_tcb_objs)
-   apply (erule get_tcb_rev)
-  apply (subgoal_tac "valid_cap (tcb_ipcframe tcb) s")
-   apply (clarsimp simp: valid_cap_def obj_at_def split: if_splits)
-  apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def split: if_splits)
-  done
-
-lemma dcorres_store_word_conservative:
-  " within_page obuf ptr sz \<Longrightarrow>
-    dcorres dc (\<lambda>_. True)
-     (ko_at (ArchObj (DataPage dev sz)) obuf and valid_objs and pspace_distinct and pspace_aligned)
-     (corrupt_frame obuf) (do_machine_op (storeWord ptr b))"
-  apply (rule dcorres_expand_pfx,clarsimp)
-  apply (case_tac "\<forall>buf. (\<exists>thread. ipc_frame_ptr_at buf thread s') \<longrightarrow> buf \<noteq> obuf")
-   apply (rule corres_dummy_return_pl[where b="()"])
-   apply (rule corres_dummy_return_r)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split[where r'=dc])
-        apply (erule dcorres_store_word_safe)
-       apply simp
-       apply (rule dcorres_dummy_corrupt_frame)
-      apply wp+
-    apply simp
-   apply simp
-  apply (clarsimp)
-  apply (frule ipc_frame_ptr_at_sz_at,simp+)
-  apply (rule corres_guard_imp[OF store_word_corres])
-    apply simp+
   done
 
 end

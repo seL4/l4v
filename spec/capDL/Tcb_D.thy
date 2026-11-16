@@ -44,21 +44,9 @@ definition decode_tcb_invocation ::
    cdl_tcb_invocation except_monad" where
   "decode_tcb_invocation target slot caps intent \<equiv>
      case intent of
-        \<comment> \<open>Read another thread's registers.\<close>
-        TcbReadRegistersIntent suspend flags count \<Rightarrow>
-          returnOk (ReadRegisters (cap_object target) suspend 0 0) \<sqinter> throw
-
         \<comment> \<open>Write another thread's registers.\<close>
-      | TcbWriteRegistersIntent resume flags count regs \<Rightarrow>
-          returnOk (WriteRegisters (cap_object target) resume [0] 0) \<sqinter> throw
-
-        \<comment> \<open>Copy registers from one thread to another.\<close>
-      | TcbCopyRegistersIntent suspend_source resume_target f1 f2 f3 \<Rightarrow> doE
-          (source_cap, _) \<leftarrow> throw_on_none $ get_index caps 0;
-          source_tcb \<leftarrow> case source_cap of TcbCap x \<Rightarrow> returnOk x | _ \<Rightarrow> throw;
-          target_tcb \<leftarrow> returnOk $ cap_object target;
-          returnOk (CopyRegisters target_tcb source_tcb suspend_source resume_target f1 f2 0)
-        odE \<sqinter> throw
+        TcbWriteRegistersIntent resume flags count regs \<Rightarrow>
+          returnOk (WriteRegisters (cap_object target) resume) \<sqinter> throw
 
         \<comment> \<open>Suspend the target thread.\<close>
       | TcbSuspendIntent \<Rightarrow>
@@ -86,18 +74,6 @@ definition decode_tcb_invocation ::
                                    (buffer_frame_opt)
          odE \<sqinter> throw
 
-        \<comment> \<open>Modify a thread's maximum control priority.\<close>
-      | TcbSetMCPriorityIntent mcp \<Rightarrow> doE
-          auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
-          returnOk $ ThreadControl (cap_object target) slot None None None None
-        odE \<sqinter> throw
-
-        \<comment> \<open>Modify a thread's priority.\<close>
-      | TcbSetPriorityIntent priority \<Rightarrow> doE
-          auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
-          returnOk $ ThreadControl (cap_object target) slot None None None None
-        odE \<sqinter> throw
-
         \<comment> \<open>Modify a thread's mcp and priority at the same time.\<close>
       | TcbSetSchedParamsIntent mcp priority \<Rightarrow> doE
           auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
@@ -114,23 +90,10 @@ definition decode_tcb_invocation ::
           returnOk (ThreadControl (cap_object target) slot None None None buffer_frame_opt)
         odE \<sqinter> throw
 
-        \<comment> \<open>Update the various spaces (CSpace/VSpace) of a thread.\<close>
-      | TcbSetSpaceIntent fault_ep cspace_root_data vspace_root_data \<Rightarrow> doE
-          cspace_root \<leftarrow> throw_on_none $ get_index caps 0;
-          vspace_root \<leftarrow> throw_on_none $ get_index caps 1;
-          cspace_root_cap_ref \<leftarrow> returnOk (cdl_update_cnode_cap_data (fst cspace_root)
-                                                                     cspace_root_data,
-                                           snd cspace_root);
-          vspace_root_cap_ref \<leftarrow> returnOk $ vspace_root;
-          returnOk $ ThreadControl (cap_object target) slot (Some fault_ep)
-                                   (Some cspace_root_cap_ref) (Some vspace_root_cap_ref) None
-         odE \<sqinter> throw
       | TcbBindNTFNIntent \<Rightarrow> doE
           (ntfn_cap, _) \<leftarrow> throw_on_none $ get_index caps 0;
-          returnOk (NotificationControl (cap_object target) (Some (cap_object ntfn_cap)))
+          returnOk (NotificationControl (cap_object target) (cap_object ntfn_cap))
         odE \<sqinter> throw
-      | TcbUnbindNTFNIntent \<Rightarrow> returnOk (NotificationControl (cap_object target) None) \<sqinter> throw
-      | TcbSetTLSBaseIntent \<Rightarrow> returnOk (SetTLSBase (cap_object target)) \<sqinter> throw
       | TcbSetFlagsIntent set_flags clear_flags \<Rightarrow>
           returnOk (SetFlags (cap_object target)
                              (set_flags && tcbFlagMask)
@@ -196,22 +159,29 @@ definition tcb_update_ipc_buffer ::
        tcb_update_thread_slot target_tcb tcb_cap_ref tcb_ipcbuffer_slot ipc_buffer
    odE"
 
-(* Resume a thread, aborting any pending operation, and revoking any incoming reply caps. *)
+text \<open>
+  Resume a thread. Aborting a pending operation is left unspecified: system initialisers only
+  resume threads that are not blocked.\<close>
 definition restart :: "cdl_object_id \<Rightarrow> unit k_monad" where
   "restart target_tcb \<equiv> do
      cap \<leftarrow> get_cap (target_tcb, tcb_pending_op_slot);
-     when (cap \<noteq> RestartCap \<and> cap \<noteq> RunningCap) $ do
-       cancel_ipc target_tcb;
+     if is_pending_cap cap
+     then chaos
+     else when (cap \<noteq> RestartCap \<and> cap \<noteq> RunningCap) $ do
        set_cap (target_tcb, tcb_replycap_slot) (MasterReplyCap target_tcb);
        set_cap (target_tcb, tcb_pending_op_slot) (RestartCap)
      od
    od"
 
-(* Suspend a thread, aborting any pending operation, and revoking any incoming reply caps. *)
+text \<open>
+  Suspend a thread. Aborting a pending operation is left unspecified: system initialisers only
+  suspend themselves.\<close>
 definition suspend :: "cdl_object_id \<Rightarrow> unit k_monad" where
   "suspend target_tcb \<equiv> do
-     cancel_ipc target_tcb;
-     set_cap (target_tcb, tcb_pending_op_slot) NullCap
+     cap \<leftarrow> get_cap (target_tcb, tcb_pending_op_slot);
+     if is_pending_cap cap
+     then chaos
+     else set_cap (target_tcb, tcb_pending_op_slot) NullCap
    od"
 
 definition bind_notification :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad" where
@@ -222,22 +192,10 @@ definition invoke_tcb :: "cdl_tcb_invocation \<Rightarrow> unit preempt_monad" w
   "invoke_tcb params \<equiv>
      case params of
        \<comment> \<open>Modify a thread's registers.\<close>
-       WriteRegisters target_tcb resume _ _ \<Rightarrow>
+       WriteRegisters target_tcb resume \<Rightarrow>
          liftE $ do
            corrupt_tcb_intent target_tcb;
            when resume $ restart target_tcb
-         od
-
-       \<comment> \<open>Read a thread's registers.\<close>
-     | ReadRegisters src_tcb _ _ _ \<Rightarrow>
-         liftE $ suspend src_tcb \<sqinter> return ()
-
-     \<comment> \<open>Copy registers from one thread to another\<close>
-     | CopyRegisters target_tcb source_tcb _ _ _ _ _ \<Rightarrow>
-         liftE $ do
-           suspend source_tcb \<sqinter> return ();
-           restart target_tcb \<sqinter> return ();
-           corrupt_tcb_intent target_tcb
          od
 
      \<comment> \<open>Suspend this thread.\<close>
@@ -274,10 +232,7 @@ definition invoke_tcb :: "cdl_tcb_invocation \<Rightarrow> unit preempt_monad" w
                    odE
        odE
      | NotificationControl tcb ntfn \<Rightarrow>
-         liftE (case ntfn of
-                  Some ntfn_id \<Rightarrow> bind_notification tcb ntfn_id
-                | None \<Rightarrow> unbind_notification tcb)
-     | SetTLSBase tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb
+         liftE $ bind_notification tcb ntfn
      | SetFlags tcb set_flags clear_flags \<Rightarrow> liftE $ corrupt_tcb_intent tcb"
 
 

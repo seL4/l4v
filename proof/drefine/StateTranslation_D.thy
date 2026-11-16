@@ -22,15 +22,6 @@ type_synonym kernel_object = Structures_A.kernel_object
 type_synonym tcb = Structures_A.tcb
 type_synonym pte = ARM_A.pte
 
-(* Transform an abstract-spec cap ptr to a capDL one. This is currently
- * a no-(;) however, it is conceivable that the capDL cptr representation could
- * be changed. Allowing for this potential change is the purpose of this
- * definition.
- *)
-definition
-  transform_cptr :: "word32 \<Rightarrow> cdl_cptr" where
-  "transform_cptr w \<equiv> w"
-
 definition transform_vm_attributes :: "vm_attributes \<Rightarrow> vmpage_size \<Rightarrow> word32" where
   "transform_vm_attributes attr sz \<equiv>
      case sz of
@@ -38,13 +29,6 @@ definition transform_vm_attributes :: "vm_attributes \<Rightarrow> vmpage_size \
      | ARMLargePage \<Rightarrow> attribs_to_word (attr - {Global, ParityEnabled})
      | ARMSection \<Rightarrow>attribs_to_word (attr - {Global})
      | ARMSuperSection \<Rightarrow> attribs_to_word (attr - {Global})"
-
-(* transform an abstract-spec recv_slot description to a capDL one *)
-definition
-  transform_recv_slot :: "(word32 \<times> word32 \<times> word8) \<Rightarrow>
-                          (cdl_cptr \<times> word32 \<times> word8)"
-where
-  "transform_recv_slot x \<equiv> let (cap,w32,w8) = x in (transform_cptr cap,w32,w8)"
 
 (*
  * Convert a user value to a CDL type.
@@ -84,29 +68,11 @@ where
 
 (* Arch flags always set to 0 here as they have no meaning on ARM. *)
 definition
-  transform_intent_tcb_read_registers :: "word32 list \<Rightarrow> cdl_tcb_intent option"
-where
-  "transform_intent_tcb_read_registers args =
-  (case args of flags#n#_ \<Rightarrow>
-    Some (TcbReadRegistersIntent (flags !! 0) 0 n)
-   | _ \<Rightarrow> None)"
-
-(* Arch flags always set to 0 here as they have no meaning on ARM. *)
-definition
   transform_intent_tcb_write_registers :: "word32 list \<Rightarrow> cdl_tcb_intent option"
 where
   "transform_intent_tcb_write_registers args =
   (case args of flags#n#values \<Rightarrow>
     Some (TcbWriteRegistersIntent (flags !! 0) 0 n values)
-   | _ \<Rightarrow> None)"
-
-(* Arch flags always set to 0 here as they have no meaning on ARM. *)
-definition
-  transform_intent_tcb_copy_registers :: "word32 list \<Rightarrow> cdl_tcb_intent option"
-where
-  "transform_intent_tcb_copy_registers args =
-  (case args of flags#_ \<Rightarrow>
-    Some (TcbCopyRegistersIntent (flags !! 0) (flags !! 1) (flags !! 2) (flags !! 3) 0)
    | _ \<Rightarrow> None)"
 
 (* Priority always set to 0 here. This should change if priorities
@@ -127,22 +93,6 @@ where
    | _ \<Rightarrow> None)"
 
 definition
-  transform_intent_tcb_set_priority :: "word32 list \<Rightarrow> cdl_tcb_intent option"
-where
-  "transform_intent_tcb_set_priority args =
-  (case args of prio#_ \<Rightarrow>
-    Some (TcbSetPriorityIntent (prio_from_arg prio))
-   | _ \<Rightarrow> None)"
-
-definition
-  transform_intent_tcb_set_mcpriority :: "word32 list \<Rightarrow> cdl_tcb_intent option"
-where
-  "transform_intent_tcb_set_mcpriority args =
-  (case args of mcp#_ \<Rightarrow>
-    Some (TcbSetMCPriorityIntent (prio_from_arg mcp))
-   | _ \<Rightarrow> None)"
-
-definition
   transform_intent_tcb_set_sched_params :: "word32 list \<Rightarrow> cdl_tcb_intent option"
 where
   "transform_intent_tcb_set_sched_params args =
@@ -158,14 +108,6 @@ where
     Some (TcbSetIPCBufferIntent buffer)
    | _ \<Rightarrow> None)"
 
-
-definition
-  transform_intent_tcb_set_space :: "word32 list \<Rightarrow> cdl_tcb_intent option"
-where
-  "transform_intent_tcb_set_space args =
-  (case args of fault_ep#croot_data#vroot_data#_ \<Rightarrow>
-    Some (TcbSetSpaceIntent fault_ep croot_data vroot_data)
-   | _ \<Rightarrow> None)"
 
 definition transform_intent_tcb_set_flags :: "machine_word list \<Rightarrow> cdl_tcb_intent option" where
   "transform_intent_tcb_set_flags args \<equiv>
@@ -216,17 +158,6 @@ where
   case args of destindex#destdepth#srcindex#srcdepth#capData#_ \<Rightarrow>
      Some (CNodeMutateIntent destindex destdepth
                              srcindex srcdepth capData)
-    | _ \<Rightarrow> Nothing"
-
-definition
-  transform_intent_cnode_rotate :: "word32 list \<Rightarrow> cdl_cnode_intent option"
-where
-  "transform_intent_cnode_rotate args \<equiv>
-  case args of destindex#destdepth#pivotbadge#pivotindex#
-               pivotdepth#srcbadge#srcindex#srcdepth#_ \<Rightarrow>
-     Some (CNodeRotateIntent destindex destdepth
-                             pivotindex pivotdepth pivotbadge
-                             srcindex srcdepth srcbadge)
     | _ \<Rightarrow> Nothing"
 
 
@@ -311,15 +242,11 @@ where
        }
      | _  \<Rightarrow> None"
 
-(* Added for IOAPIC patch *)
-definition
-  to_bool :: "word32 \<Rightarrow> bool"
-where
-  "to_bool w \<equiv> w \<noteq> 0"
-
 (* A dispatch function that converts the user's message label
  * and IPC buffer into an intent by dispatching on the message label.
  * For malformed messages etc., we return None.
+ * Invocations that are not needed for system initialisation become OtherIntent,
+ * whether their message is malformed or not.
 *)
 
 definition
@@ -329,50 +256,36 @@ definition
       GenInvocationLabel InvalidInvocation \<Rightarrow> None
     | GenInvocationLabel UntypedRetype \<Rightarrow>
         map_option UntypedIntent (transform_intent_untyped_retype args)
-    | GenInvocationLabel TCBReadRegisters \<Rightarrow>
-        map_option TcbIntent
-                   (transform_intent_tcb_read_registers args)
+    | GenInvocationLabel TCBReadRegisters \<Rightarrow> Some OtherIntent
     | GenInvocationLabel TCBWriteRegisters \<Rightarrow>
         map_option TcbIntent
                    (transform_intent_tcb_write_registers args)
-    | GenInvocationLabel TCBCopyRegisters \<Rightarrow>
-         map_option TcbIntent
-                   (transform_intent_tcb_copy_registers args)
+    | GenInvocationLabel TCBCopyRegisters \<Rightarrow> Some OtherIntent
     | GenInvocationLabel TCBConfigure \<Rightarrow>
          map_option TcbIntent
                    (transform_intent_tcb_configure args)
-    | GenInvocationLabel TCBSetPriority \<Rightarrow>
-         map_option TcbIntent
-                   (transform_intent_tcb_set_priority args)
-    | GenInvocationLabel TCBSetMCPriority \<Rightarrow>
-         map_option TcbIntent
-                   (transform_intent_tcb_set_mcpriority args)
+    | GenInvocationLabel TCBSetPriority \<Rightarrow> Some OtherIntent
+    | GenInvocationLabel TCBSetMCPriority \<Rightarrow> Some OtherIntent
     | GenInvocationLabel TCBSetSchedParams \<Rightarrow>
          map_option TcbIntent
                    (transform_intent_tcb_set_sched_params args)
     | GenInvocationLabel TCBSetIPCBuffer \<Rightarrow>
           map_option TcbIntent
                    (transform_intent_tcb_set_ipc_buffer args)
-    | GenInvocationLabel TCBSetSpace \<Rightarrow>
-          map_option TcbIntent
-                   (transform_intent_tcb_set_space args)
+    | GenInvocationLabel TCBSetSpace \<Rightarrow> Some OtherIntent
     | GenInvocationLabel TCBSuspend \<Rightarrow> Some (TcbIntent TcbSuspendIntent)
     | GenInvocationLabel TCBResume \<Rightarrow> Some (TcbIntent TcbResumeIntent)
     | GenInvocationLabel TCBBindNotification \<Rightarrow> Some (TcbIntent TcbBindNTFNIntent)
-    | GenInvocationLabel TCBUnbindNotification \<Rightarrow> Some (TcbIntent TcbUnbindNTFNIntent)
-    | GenInvocationLabel TCBSetTLSBase \<Rightarrow> Some (TcbIntent TcbSetTLSBaseIntent)
+    | GenInvocationLabel TCBUnbindNotification \<Rightarrow> Some OtherIntent
+    | GenInvocationLabel TCBSetTLSBase \<Rightarrow> Some OtherIntent
     | GenInvocationLabel TCBSetFlags \<Rightarrow>
           map_option TcbIntent
                    (transform_intent_tcb_set_flags args)
-    | GenInvocationLabel CNodeRevoke \<Rightarrow>
-          map_option CNodeIntent
-                   (transform_cnode_index_and_depth CNodeRevokeIntent args)
+    | GenInvocationLabel CNodeRevoke \<Rightarrow> Some OtherIntent
     | GenInvocationLabel CNodeDelete \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeDeleteIntent args)
-    | GenInvocationLabel CNodeCancelBadgedSends \<Rightarrow>
-          map_option CNodeIntent
-                   (transform_cnode_index_and_depth CNodeCancelBadgedSendsIntent args)
+    | GenInvocationLabel CNodeCancelBadgedSends \<Rightarrow> Some OtherIntent
     | GenInvocationLabel CNodeCopy \<Rightarrow>
           map_option CNodeIntent
                    (transform_intent_cnode_copy args)
@@ -385,22 +298,18 @@ definition
     | GenInvocationLabel CNodeMutate \<Rightarrow>
           map_option CNodeIntent
                    (transform_intent_cnode_mutate args)
-    | GenInvocationLabel CNodeRotate \<Rightarrow>
-          map_option CNodeIntent
-                   (transform_intent_cnode_rotate args)
-    | GenInvocationLabel CNodeSaveCaller \<Rightarrow>
-          map_option CNodeIntent
-                   (transform_cnode_index_and_depth CNodeSaveCallerIntent args)
+    | GenInvocationLabel CNodeRotate \<Rightarrow> Some OtherIntent
+    | GenInvocationLabel CNodeSaveCaller \<Rightarrow> Some OtherIntent
     | GenInvocationLabel IRQIssueIRQHandler \<Rightarrow>
           map_option IrqControlIntent
                    (transform_intent_issue_irq_handler args)
-    | GenInvocationLabel IRQAckIRQ \<Rightarrow> Some (IrqHandlerIntent IrqHandlerAckIntent)
+    | GenInvocationLabel IRQAckIRQ \<Rightarrow> Some OtherIntent
     | GenInvocationLabel IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
-    | GenInvocationLabel IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
+    | GenInvocationLabel IRQClearIRQHandler \<Rightarrow> Some OtherIntent
     | ArchInvocationLabel ARMPageTableMap \<Rightarrow>
                           map_option PageTableIntent
                                    (transform_intent_page_table_map args)
-    | ArchInvocationLabel ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent)
+    | ArchInvocationLabel ARMPageTableUnmap \<Rightarrow> Some OtherIntent
     | ArchInvocationLabel ARMPageMap \<Rightarrow>
                           map_option PageIntent
                                    (transform_intent_page_map args)
@@ -410,10 +319,10 @@ definition
     | ArchInvocationLabel ARMPageCleanInvalidate_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
     | ArchInvocationLabel ARMPageUnify_Instruction \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
     | ArchInvocationLabel ARMPageGetAddress \<Rightarrow> Some (PageIntent PageGetAddressIntent )
-    | ArchInvocationLabel ARMPDClean_Data \<Rightarrow> Some (PageDirectoryIntent PageDirectoryFlushIntent )
-    | ArchInvocationLabel ARMPDInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
-    | ArchInvocationLabel ARMPDCleanInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent)
-    | ArchInvocationLabel ARMPDUnify_Instruction \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
+    | ArchInvocationLabel ARMPDClean_Data \<Rightarrow> Some OtherIntent
+    | ArchInvocationLabel ARMPDInvalidate_Data \<Rightarrow> Some OtherIntent
+    | ArchInvocationLabel ARMPDCleanInvalidate_Data \<Rightarrow> Some OtherIntent
+    | ArchInvocationLabel ARMPDUnify_Instruction \<Rightarrow> Some OtherIntent
     | ArchInvocationLabel ARMASIDControlMakePool \<Rightarrow>
                           map_option AsidControlIntent
                                   (transform_cnode_index_and_depth AsidControlMakePoolIntent args)
@@ -436,39 +345,34 @@ lemmas transform_intent_simps =
                                    arch_invocation_label.split]
 
 lemmas transform_intent_tcb_defs =
-  transform_intent_tcb_read_registers_def
   transform_intent_tcb_write_registers_def
-  transform_intent_tcb_copy_registers_def
   transform_intent_tcb_configure_def
-  transform_intent_tcb_set_priority_def
-  transform_intent_tcb_set_mcpriority_def
   transform_intent_tcb_set_sched_params_def
   transform_intent_tcb_set_ipc_buffer_def
-  transform_intent_tcb_set_space_def
   transform_intent_tcb_set_flags_def
 
 lemma transform_tcb_intent_invocation:
   "transform_intent label args = Some (TcbIntent ti)
    \<Longrightarrow>
    (
-   ((label = GenInvocationLabel TCBReadRegisters) = (ti = (TcbReadRegistersIntent ((args ! 0)!!0) 0 (args ! 1)) \<and> length args \<ge> 2)) \<and>
    ((label = GenInvocationLabel TCBWriteRegisters) = (ti = (TcbWriteRegistersIntent ((args ! 0)!!0) 0 (args ! 1) (drop 2 args)) \<and> length args \<ge> 2)) \<and>
-   ((label = GenInvocationLabel TCBCopyRegisters) = (ti = (TcbCopyRegistersIntent ((args ! 0)!!0) ((args ! 0)!!1) ((args ! 0)!!2) ((args ! 0)!!3) 0) \<and> length args \<ge> 1)) \<and>
    ((label = GenInvocationLabel TCBConfigure) = (ti = (TcbConfigureIntent (args ! 0) (args ! 1) (args ! 2) (args ! 3)) \<and> length args \<ge> 4)) \<and>
-   ((label = GenInvocationLabel TCBSetPriority) = (ti = (TcbSetPriorityIntent (prio_from_arg (args ! 0))) \<and> length args \<ge> 1)) \<and>
-   ((label = GenInvocationLabel TCBSetMCPriority) = (ti = (TcbSetMCPriorityIntent (prio_from_arg (args ! 0))) \<and> length args \<ge> 1)) \<and>
    ((label = GenInvocationLabel TCBSetSchedParams) = (ti = (TcbSetSchedParamsIntent (prio_from_arg (args ! 0)) (prio_from_arg (args ! 1))) \<and> length args \<ge> 2)) \<and>
-   ((label = GenInvocationLabel TCBSetSpace) = (ti = (TcbSetSpaceIntent (args ! 0) (args ! 1) (args ! 2)) \<and> length args \<ge> 3)) \<and>
    ((label = GenInvocationLabel TCBSuspend) = (ti = TcbSuspendIntent)) \<and>
    ((label = GenInvocationLabel TCBResume) = (ti = TcbResumeIntent)) \<and>
    ((label = GenInvocationLabel TCBBindNotification) = (ti = TcbBindNTFNIntent)) \<and>
-   ((label = GenInvocationLabel TCBUnbindNotification) = (ti = TcbUnbindNTFNIntent)) \<and>
-   ((label = GenInvocationLabel TCBSetTLSBase) = (ti = TcbSetTLSBaseIntent) \<and>
-   ((label = GenInvocationLabel TCBSetFlags) = (ti = TcbSetFlagsIntent (args ! 0) (args ! 1) \<and> length args \<ge> 2)))
+   ((label = GenInvocationLabel TCBSetFlags) = (ti = TcbSetFlagsIntent (args ! 0) (args ! 1) \<and> length args \<ge> 2))
    ) \<and>
    (
     label \<noteq> GenInvocationLabel InvalidInvocation \<and>
     label \<noteq> GenInvocationLabel UntypedRetype \<and>
+    label \<noteq> GenInvocationLabel TCBReadRegisters \<and>
+    label \<noteq> GenInvocationLabel TCBCopyRegisters \<and>
+    label \<noteq> GenInvocationLabel TCBSetPriority \<and>
+    label \<noteq> GenInvocationLabel TCBSetMCPriority \<and>
+    label \<noteq> GenInvocationLabel TCBSetSpace \<and>
+    label \<noteq> GenInvocationLabel TCBUnbindNotification \<and>
+    label \<noteq> GenInvocationLabel TCBSetTLSBase \<and>
     label \<noteq> GenInvocationLabel CNodeRevoke \<and>
     label \<noteq> GenInvocationLabel CNodeDelete \<and>
     label \<noteq> GenInvocationLabel CNodeCancelBadgedSends \<and>
@@ -506,121 +410,17 @@ lemma transform_tcb_intent_invocation:
          simp add: transform_intent_def transform_intent_tcb_defs
               split: gen_invocation_labels.split_asm invocation_label.split_asm
                      arch_invocation_label.split_asm list.split_asm)+
-                               (* 33 subgoals *)
-                                  apply(simp add: transform_intent_def transform_intent_tcb_defs
-                                             split: gen_invocation_labels.split_asm
-                                                    invocation_label.split_asm
-                                                    arch_invocation_label.split_asm)+
+                                       (* 41 subgoals *)
+                                          apply(simp add: transform_intent_def transform_intent_tcb_defs
+                                                     split: gen_invocation_labels.split_asm
+                                                            invocation_label.split_asm
+                                                            arch_invocation_label.split_asm)+
   done
-
-lemma transform_intent_isnot_UntypedIntent:
-      "(\<not> (\<exists> ui. Some (UntypedIntent ui) = transform_intent label args))
-       = ((label \<noteq> GenInvocationLabel UntypedRetype) \<or>
-           (label = GenInvocationLabel UntypedRetype \<and> length args < 6) \<or>
-           (label = GenInvocationLabel UntypedRetype \<and> length args \<ge> 6 \<and> args ! 0 > 10))"
-  apply(rule iffI)
-   apply(erule contrapos_np)
-   apply(clarsimp)
-   apply(simp add: transform_intent_def)
-   apply(unfold transform_intent_untyped_retype_def)
-   apply (clarsimp split: list.split, safe, simp_all)[1]
-   apply (clarsimp simp: transform_type_def)
-   apply (simp add: unat_arith_simps)
-   apply (simp add: eval_nat_numeral linorder_not_less le_Suc_eq)
-  apply(erule disjE)
-   apply(auto simp: transform_intent_def option_map_def
-              split: gen_invocation_labels.split invocation_label.split arch_invocation_label.split
-                     option.split_asm)[1]
-  apply (erule disjE)
-   apply (auto simp: transform_intent_def transform_intent_untyped_retype_def
-         option_map_def split: invocation_label.split option.split_asm list.split)[1]
-  apply clarsimp
-  apply (clarsimp simp: transform_intent_def transform_type_def transform_intent_untyped_retype_def)
-  apply (clarsimp simp: option_map_def
-                  split: invocation_label.splits arch_invocation_label.splits option.splits list.splits)
-  apply (clarsimp simp: transform_type_def split: if_split_asm)
-  done
-
-lemma transform_cnode_index_and_depth_success:
-       "(\<exists>ci. Some (C ci) =
-            map_option C
-             (transform_cnode_index_and_depth C2 args)) =
-       (\<not> length args < 2)"
-apply(rule iffI)
- apply(unfold option_map_def transform_cnode_index_and_depth_def)
- apply(case_tac args)
- apply(auto split: list.split)
-done
-
-lemmas transform_intent_cnode_defs =
-  transform_cnode_index_and_depth_def
-  transform_intent_cnode_copy_def
-  transform_intent_cnode_mint_def
-  transform_intent_cnode_move_def
-  transform_intent_cnode_mutate_def
-  transform_intent_cnode_rotate_def
 
 method case_labels for label :: invocation_label =
   (cases label,
    find_goal \<open>match premises in "label = GenInvocationLabel x" for x \<Rightarrow> \<open>cases x\<close>\<close>,
    find_goal \<open>match premises in "label = ArchInvocationLabel x" for x \<Rightarrow> \<open>cases x\<close>\<close>)
-
-lemma transform_intent_isnot_CNodeIntent:
-      "(\<not> (\<exists> ui. Some (CNodeIntent ui) = transform_intent label args))
-       = ((label = GenInvocationLabel CNodeRevoke \<longrightarrow> length args < 2) \<and>
-          (label = GenInvocationLabel CNodeDelete \<longrightarrow> length args < 2) \<and>
-          (label = GenInvocationLabel CNodeCancelBadgedSends \<longrightarrow> length args < 2) \<and>
-          (label = GenInvocationLabel CNodeCopy \<longrightarrow> length args < 5) \<and>
-          (label = GenInvocationLabel CNodeMint \<longrightarrow> length args < 6) \<and>
-          (label = GenInvocationLabel CNodeMove \<longrightarrow> length args < 4) \<and>
-          (label = GenInvocationLabel CNodeMutate \<longrightarrow> length args < 5) \<and>
-          (label = GenInvocationLabel CNodeRotate \<longrightarrow> length args < 8) \<and>
-          (label = GenInvocationLabel CNodeSaveCaller \<longrightarrow> length args < 2))"
-  apply(rule iffI)
-   apply(erule contrapos_np)
-   apply(clarsimp simp: transform_intent_def)
-   apply(cases label; simp)
-   apply(rename_tac gen_label, case_tac gen_label;
-           simp add: transform_intent_cnode_defs option_map_def
-                split: list.split)
-           prefer 10
-           apply(clarify)
-           apply(case_labels label;
-                   clarsimp simp: transform_intent_def option_map_def transform_intent_cnode_defs
-                            split: list.split_asm option.split_asm)
-          apply(auto)
-  done
-
-lemma transform_intent_isnot_TcbIntent:
-      "(\<not> (\<exists> ti. Some (TcbIntent ti) = transform_intent label args))
-       = ((label = GenInvocationLabel TCBReadRegisters \<longrightarrow> length args < 2) \<and>
-          (label = GenInvocationLabel TCBWriteRegisters \<longrightarrow> length args < 2) \<and>
-          (label = GenInvocationLabel TCBCopyRegisters \<longrightarrow> length args < 1) \<and>
-          (label = GenInvocationLabel TCBConfigure \<longrightarrow> length args < 4) \<and>
-          (label = GenInvocationLabel TCBSetPriority \<longrightarrow> length args < 1) \<and>
-          (label = GenInvocationLabel TCBSetMCPriority \<longrightarrow> length args < 1) \<and>
-          (label = GenInvocationLabel TCBSetSchedParams \<longrightarrow> length args < 2) \<and>
-          (label = GenInvocationLabel TCBSetIPCBuffer \<longrightarrow> length args < 1) \<and>
-          (label = GenInvocationLabel TCBSetSpace \<longrightarrow> length args < 3) \<and>
-          (label = GenInvocationLabel TCBSetFlags \<longrightarrow> length args < 2) \<and>
-          (label \<noteq> GenInvocationLabel TCBSuspend) \<and>
-          (label \<noteq> GenInvocationLabel TCBResume) \<and>
-          (label \<noteq> GenInvocationLabel TCBBindNotification) \<and>
-          (label \<noteq> GenInvocationLabel TCBUnbindNotification) \<and>
-          (label \<noteq> GenInvocationLabel TCBSetTLSBase))"
-  apply(rule iffI)
-    subgoal
-      apply(erule contrapos_np)
-      apply(clarsimp simp: transform_intent_def)
-      apply(case_labels label; simp)
-              apply(fastforce simp: transform_intent_tcb_defs option_map_def
-                             split: list.split)+
-      done
-    apply(unfold transform_intent_def)
-    apply(case_labels label; simp add: option_map_def split: option.split)
-            apply(auto simp: transform_intent_tcb_defs
-                      split: list.splits arch_invocation_label.splits)
-  done
 
 (*
  * Convert a partial function of type "word \<Rightarrow> 'b" into
@@ -742,25 +542,12 @@ where
     else
       Some $ bin_to_bl bits (of_nat n)"
 
-lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = Some (to_bl x)"
-  by (clarsimp simp: nat_to_bl_def to_bl_def le_def word_size)
-
-(* FIXME: MOVE *)
-definition
-  option_join :: "'a option option \<Rightarrow> 'a option"
-where
-  "option_join x \<equiv> case x of
-                      Some (Some y) \<Rightarrow> Some y
-                    | _             \<Rightarrow> None"
-
 definition
   option_map_join :: "('a \<Rightarrow> 'b option) \<Rightarrow> 'a option \<Rightarrow> 'b option"
 where
   "option_map_join f x \<equiv> case x of
                       Some y        \<Rightarrow> f y
                     | _             \<Rightarrow> None"
-
-lemmas option_map_join_simps = option_map_join_def [split_simps option.split]
 
 (* Transform a CNode. *)
 
@@ -855,23 +642,16 @@ definition
   transform_full_intent :: "machine_state \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> cdl_full_intent"
 where
   "transform_full_intent ms r tcb \<equiv>
-  let mi = get_tcb_message_info tcb;
-      offset = msg_max_length + msg_max_extra_caps + 2
+  let mi = get_tcb_message_info tcb
   in
   \<lparr> cdl_intent_op = (transform_intent
                      (invocation_type (mi_label mi))
                      (get_tcb_mrs ms tcb)),
     cdl_intent_error = guess_error (mi_label mi),
     cdl_intent_cap = user_regs (arch_tcb_context_get (tcb_arch tcb)) cap_register,
-    cdl_intent_extras = get_ipc_buffer_words ms tcb [buffer_cptr_index ..< buffer_cptr_index + (unat (mi_extra_caps mi))],
-    cdl_intent_recv_slot = case (get_ipc_buffer_words ms tcb [offset ..< offset + 3]) of
-                                [croot, index, depth] \<Rightarrow> Some (croot, index, unat depth)
-                              | _                    \<Rightarrow> None
+    cdl_intent_extras = get_ipc_buffer_words ms tcb
+                          [buffer_cptr_index ..< buffer_cptr_index + (unat (mi_extra_caps mi))]
   \<rparr>"
-
-lemma invocation_type0:
-  "invocation_type 0 = GenInvocationLabel InvalidInvocation"
-  by (clarsimp simp: invocation_type_def toEnum_def enum_invocation_label enum_gen_invocation_labels)
 
 (* Transform a TCB object. *)
 abbreviation
@@ -1024,29 +804,6 @@ definition
 where
   "transform_cdt s =
      map_lift_over transform_cslot_ptr (cdt s)"
-
-definition
-  get_obj :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option"
-where
-  "get_obj s r \<equiv> (kheap s) r"
-
-definition
-  cap_installed_at_irq :: "irq \<Rightarrow> 'z::state_ext state \<Rightarrow> cap option"
-where
-  "cap_installed_at_irq irq s \<equiv> caps_of_state s (interrupt_irq_node s irq, [])"
-
-abbreviation
-  option_map2 :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a option \<Rightarrow> 'b option \<Rightarrow> 'c option"
-where
-  "option_map2 f opt_a opt_b \<equiv> case opt_a of
-                                   None \<Rightarrow> None
-                                 | Some a \<Rightarrow> (case opt_b of
-                                                 None \<Rightarrow> None
-                                               | Some b \<Rightarrow> Some (f a b))"
-
-
-
-
 
 (* Transform objects in the abstract spec to CapDL.
    Empty memory is transformed into Untyped objects. *)
