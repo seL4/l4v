@@ -4,5 +4,6 @@
 
 urls:
   - ".*haskellstack.org.*"
+  - "http://www.smlnj.org"
   - "https://isabelle.in.tum.de.*"
   - https://doi.org/10.1145/1190215.1190234
