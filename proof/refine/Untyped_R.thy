@@ -335,6 +335,8 @@ locale Untyped_R = mdb_insert_again_all_common +
     "word_size_bits \<le> resetChunkBits"
   assumes minUntypedSizeBits_le_resetChunkBits:
     "minUntypedSizeBits \<le> resetChunkBits"
+  assumes minUntypedSizeBits_le_minSchedContextBits:
+    "minUntypedSizeBits \<le> minSchedContextBits"
   assumes APIType_capBits_lower_bound:
     "\<And>tp us.
      \<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us;
@@ -4740,8 +4742,8 @@ lemma (in Untyped_R_2) inv_untyped_corres:
       apply (clarsimp simp: obj_bits_api_APIType_map2)
       apply (rule APIType_capBits_lower_bound)
        apply (clarsimp simp: minUntypedSizeBits_untyped_min_bits)
-      (* FIXME rt arch-split: add lemma saying minUntypedSizeBits \<le> minSchedContextBits *)
-      apply (clarsimp simp: min_sched_context_bits_def RISCV64_H.minUntypedSizeBits_def)
+      apply (force intro!: le_trans[OF minUntypedSizeBits_le_minSchedContextBits]
+                     simp: sc_size_bounds_def minSchedContextBits_min_sched_context_bits)
       done
 
     have cover: "range_cover ptr sz
@@ -5638,8 +5640,8 @@ lemma invokeUntyped_invs'':
           apply (erule is_aligned_weaken[OF range_cover.funky_aligned])
           apply (rule APIType_capBits_lower_bound)
            apply simp
-          (* FIXME rt arch-split: add lemma saying minUntypedSizeBits \<le> minSchedContextBits *)
-          apply (clarsimp simp: sc_size_bounds_def minSchedContextBits_def RISCV64_H.minUntypedSizeBits_def)
+          apply (force intro!: le_trans[OF minUntypedSizeBits_le_minSchedContextBits]
+                         simp: sc_size_bounds_def minSchedContextBits_min_sched_context_bits)
          apply (clarsimp simp: invs'_def valid_pspace'_def)
         apply (cases reset)
          apply clarsimp

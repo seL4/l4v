@@ -192,9 +192,6 @@ lemmas [Arch_assms] =
   arch_post_modify_registers_inv
   prepare_thread_delete_inv[Arch_assms]
 
-(* FIXME: rt arch-split, move interface to AInvs *)
-lemmas [Arch_assms] = is_cnode_or_valid_arch_is_cap_simps
-
 lemmas Tcb_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

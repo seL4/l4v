@@ -293,10 +293,12 @@ lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Arch_assms]:
   apply (wpsimp wp: checked_insert_no_cap_to hoare_vcg_const_imp_lift hoare_vcg_if_lift_ER)
   done
 
-lemma is_cnode_or_valid_arch_is_cap_simps:
+lemma is_cnode_or_valid_arch_is_cap_simps[Arch_assms]:
   "is_cnode_cap cap \<Longrightarrow> is_cnode_or_valid_arch cap"
   "is_valid_vtable_root cap \<Longrightarrow> is_cnode_or_valid_arch cap"
-  by (auto simp: is_cnode_or_valid_arch_def is_valid_vtable_root_def is_cap_simps
+  "is_cnode_or_valid_arch cap \<Longrightarrow> \<not> valid_fault_handler cap"
+  by (auto simp: is_cnode_or_valid_arch_def is_valid_vtable_root_def valid_fault_handler_def
+                 is_cap_simps
            split: cap.splits arch_cap.splits option.splits)
 
 lemma install_tcb_frame_cap_invs:

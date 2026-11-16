@@ -4216,8 +4216,6 @@ lemma sts'_valid_mdb'[wp]:
   "setThreadState st t \<lbrace>valid_mdb'\<rbrace>"
   by (wpsimp simp: valid_mdb'_def)
 
-context begin interpretation Arch . (* FIXME: arch-split RT *)
-
 lemma tcbSchedNext_update_valid_objs'[wp]:
   "\<lbrace>valid_objs' and valid_bound_tcb' ptrOpt\<rbrace>
    threadSet (tcbSchedNext_update (\<lambda>_. ptrOpt)) tcbPtr
@@ -4275,7 +4273,7 @@ lemma tcbSchedDequeue_valid_objs'[wp]:
 lemma setThreadState_valid_objs'[wp]:
   "setThreadState st t \<lbrace>valid_objs'\<rbrace>"
   apply (wpsimp simp: setThreadState_def wp: threadSet_valid_objs')
-  apply (simp add: valid_tcb'_def tcb_cte_cases_def objBits_simps')
+  apply (simp add: valid_tcb'_def tcb_cte_cases_def gen_objBits_simps tcb_cte_cases_neqs)
   done
 
 lemma sbn_valid_objs':
@@ -4391,10 +4389,8 @@ lemma sbn'_valid_pspace'_inv[wp]:
   "\<lbrace>valid_pspace' and valid_bound_ntfn' ntfn\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
   apply (clarsimp simp: setBoundNotification_def valid_pspace'_def)
   apply (wpsimp wp: threadSet_valid_replies' threadSet_valid_objs' threadSet_mdb')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def gen_objBits_simps tcb_cte_cases_neqs)
   done
-
-end
 
 crunch setQueue
   for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj P' t s)"

@@ -2267,7 +2267,7 @@ lemma updateNotification_ccorres_lemma4:
      apply clarsimp
      apply (rule rev_bexI, rule updateNotification_eq)
       apply assumption
-     apply (clarsimp simp: obj_at_simps)
+     apply (clarsimp simp: obj_at'_def)
      apply simp
     apply simp
    apply clarsimp
@@ -2502,7 +2502,7 @@ lemma updateReply_ccorres_lemma4:
      apply clarsimp
      apply (rule rev_bexI, rule updateReply_eq)
       apply assumption
-     apply (clarsimp simp: obj_at_simps)
+     apply (clarsimp simp: obj_at'_def)
      apply simp
     apply simp
    apply clarsimp
@@ -2616,12 +2616,12 @@ lemma updateSchedContext_ccorres_lemma:
    apply (frule obj_at_ko_at')
    apply clarsimp
   apply (prop_tac "objBits ko < word_bits")
-   apply (clarsimp simp: obj_at_simps)
+   apply (clarsimp simp: obj_at'_def objBits_simps)
   apply (rule bexI [rotated])
    apply (erule updateSchedContext_eq)
     apply (insert h)
     apply simp
-   apply (clarsimp simp: obj_at_simps)
+   apply (clarsimp simp: obj_at'_def)
   apply simp
   apply (rule_tac x1="t\<lparr>globals := globals x\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>"
                in iffD1 [OF rf_sr_upd], simp_all)[1]
@@ -2646,7 +2646,7 @@ lemma updateSchedContext_ccorres_lemma4:
      apply clarsimp
      apply (rule rev_bexI, rule updateSchedContext_eq)
         apply assumption
-       apply (clarsimp simp: obj_at_simps)
+       apply (clarsimp simp: obj_at'_def objBits_simps)
       apply simp
      apply simp
     apply simp
@@ -3314,7 +3314,7 @@ lemma updateEndpoint_ccorres_lemma4:
      apply clarsimp
      apply (rule rev_bexI, rule updateEndpoint_eq)
       apply assumption
-     apply (clarsimp simp: obj_at_simps)
+     apply (clarsimp simp: obj_at'_def)
      apply simp
     apply simp
    apply clarsimp

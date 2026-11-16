@@ -1523,14 +1523,14 @@ lemma asUser_tcbFault_obj_at:
   "asUser t' m \<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
-  apply (clarsimp simp: if_cong obj_at_simps)
+  apply (clarsimp simp: if_cong obj_at'_def)
   done
 
 lemma asUser_atcbContext_obj_at:
   "t \<noteq> t' \<Longrightarrow> asUser t' m \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
   apply (simp add: asUser_def split_def atcbContextGet_def atcbContextSet_def)
   apply (wp threadGet_wp)
-  apply (fastforce simp: obj_at_simps)
+  apply (fastforce simp: obj_at'_def)
   done
 
 lemma asUser_tcbFault_inv:
@@ -1589,7 +1589,7 @@ lemma asUser_obj_at_elsewhere:
   apply (rule hoare_gen_asm')
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
-  apply (fastforce simp: obj_at_simps)
+  apply (fastforce simp: obj_at'_def)
   done
 
 lemma exceptionMessage_length_aux :
@@ -2264,7 +2264,7 @@ lemma makeFaultMessage_tcb_at'_fault[wp]:
                      det_getRestartPC getRestartPC_inv threadGet_wp
                simp: getRegister_def makeArchFaultMessage_def schedContextUpdateConsumed_def
               split: arch_fault.split
-          | fastforce simp: obj_at_simps)+
+          | fastforce simp: obj_at'_def)+
 
 lemma doFaultTransfer_ccorres [corres]:
   "ccorres dc xfdc (valid_pspace' and tcb_at' sender and tcb_at' receiver
@@ -3703,10 +3703,10 @@ lemma lookupIPCBuffer_aligned:
                    Let_def getSlotCap_def cong: if_cong)
   apply (rule hoare_pre)
   apply (wp getCTE_wp' threadGet_wp | wpc)+
-  apply (clarsimp simp: obj_at_simps)
+  apply (clarsimp simp: obj_at'_def)
   apply (drule (1) ctes_of_valid)
   apply (prop_tac "valid_tcb' tcb s")
-   apply (fastforce intro: tcb_ko_at_valid_objs_valid_tcb' simp: obj_at_simps)
+   apply (fastforce intro: tcb_ko_at_valid_objs_valid_tcb' simp: obj_at'_def)
   apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def valid_obj'_def valid_tcb'_def)
   apply (auto elim: aligned_add_aligned intro: is_aligned_andI1)
   done
@@ -4604,7 +4604,7 @@ lemma doIPCTransfer_local_slots:
     \<lbrace> \<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot \<rbrace>"
   apply (simp add: doIPCTransfer_def)
   apply (wp doNormalTransfer_local_slots weak threadGet_wp | wpc)+
-  apply (fastforce simp: obj_at_simps)
+  apply (fastforce simp: obj_at'_def)
   done
 
 lemma doIPCTransfer_reply_or_replyslot:

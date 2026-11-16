@@ -10,6 +10,10 @@ theory Schedule_R
 imports SchedContext_R InterruptAcc_R
 begin
 
+arch_requalify_facts (* FIXME arch-split: Machine_AI *)
+  no_irq_setDeadline
+  setDeadline_underlying_memory_inv
+
 (* FIXME: review which of these are necessary/redundant and move *)
 declare hoare_weak_lift_imp[wp_split del]
 declare sts_rel_idle[simp]
@@ -502,6 +506,9 @@ locale Schedule_R =
        ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) !!
          word_log2 (ksReadyQueuesL2Bitmap s
                       (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d)))))"
+  assumes setDeadline_corres[corres]:
+    "\<And>P P' dl dl'.
+       dl = dl' \<Longrightarrow> corres_underlying Id False True dc P P' (setDeadline dl) (setDeadline dl')"
 begin
 
 crunch switchToThread, switchToIdleThread
@@ -1326,12 +1333,15 @@ lemma machine_op_lift_underlying_memory_invar:
   "(x, b) \<in> fst (machine_op_lift a m) \<Longrightarrow> underlying_memory b = underlying_memory m"
   by (clarsimp simp: in_monad machine_op_lift_def machine_rest_lift_def select_f_def)
 
-lemma setNextInterrupt_invs'[wp]:
-  "setNextInterrupt \<lbrace>invs'\<rbrace>"
-  unfolding setNextInterrupt_def
-  apply (wpsimp wp: dmo_invs' RISCV64.setDeadline_irq_masks threadGet_wp getReleaseQueue_wp)
-  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-  by (auto simp: in_monad RISCV64.setDeadline_def machine_op_lift_underlying_memory_invar) (*FIXME arch-split RT*)
+lemma resetTimer_invs'[wp]:
+  "doMachineOp (setDeadline d) \<lbrace>invs'\<rbrace>"
+  apply (wpsimp wp: dmo_invs' no_irq no_irq_setDeadline)
+  apply (force dest: use_valid[OF _ setDeadline_underlying_memory_inv])
+  done
+
+crunch setNextInterrupt
+  for invs'[wp]: invs'
+  (wp: crunch_wps ignore: doMachineOp)
 
 lemma setCurSc_invs'[wp]:
   "setCurSc v \<lbrace>invs'\<rbrace>"
@@ -2593,11 +2603,6 @@ lemma awaken_corres:
   apply (fastforce intro!: awaken_terminates)
   done
 
-(*FIXME arch-split RT*)
-lemma setDeadline_corres[corres]:
-  "dl = dl' \<Longrightarrow> corres_underlying Id False True dc \<top> \<top> (setDeadline dl) (setDeadline dl')"
-  by (simp, rule corres_underlying_trivial_gen; wpsimp simp: RISCV64.setDeadline_def RISCV64.no_fail_machine_op_lift)
-
 lemma threadGet_wp':
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
    threadGet f t
@@ -2626,7 +2631,7 @@ lemma active_sc_tcb_at_tcb_at:
   "active_sc_tcb_at tcb_ptr s \<Longrightarrow> tcb_at tcb_ptr s"
   by (clarsimp simp: vs_all_heap_simps obj_at_def is_tcb_def)
 
-lemma setNextInterrupt_corres:
+lemma (in Schedule_R) setNextInterrupt_corres:
   "corres dc
      ((\<lambda>s. active_sc_tcb_at (cur_thread s) s)
       and (\<lambda>s. \<forall>t \<in> set (release_queue s). active_sc_tcb_at t s)
@@ -4129,7 +4134,7 @@ crunch schedule_choose_new_thread
   for sc_at[wp]: "sc_at sc_ptr"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
-lemma scAndTimer_corres:
+lemma (in Schedule_R) scAndTimer_corres:
   "corres dc (\<lambda>s. valid_state s \<and> cur_tcb s \<and> sc_at (cur_sc s) s
                   \<and> active_scs_valid s \<and> valid_release_q s
                   \<and> cur_sc_more_than_ready s \<and> current_time_bounded s \<and> consumed_time_bounded s

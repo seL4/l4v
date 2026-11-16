@@ -1094,7 +1094,7 @@ lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
   apply (clarsimp simp: opt_map_def projectKO_opt_sc split: option.splits)
   apply (case_tac "scReplies_of s' scp", simp)
   apply (rename_tac p)
-  apply (drule RISCV64.pspace_relation_sc_at[where scp=scp]) (*FIXME arch-split RT*)
+  apply (drule pspace_relation_sc_at[where scp=scp])
    apply (clarsimp simp: opt_map_red)
   apply (clarsimp simp: gen_obj_at_simps is_sc_obj opt_map_red)
   apply (drule (1) sc_replies_relation_prevs_list', simp add: opt_map_red)

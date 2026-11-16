@@ -180,6 +180,12 @@ lemmas Arch_switchToIdleThread_not_queued'[Arch_assms] =
 lemmas Arch_switchToIdleThread_tcbState[Arch_assms] =
   ArchThreadDecls_H_RISCV64_H_switchToIdleThread_obj_at'[where P="P \<circ> tcbState" for P]
 
+lemma setDeadline_corres[Arch_assms]:
+  "dl = dl' \<Longrightarrow> corres_underlying Id False True dc P P' (setDeadline dl) (setDeadline dl')"
+  by (simp, rule corres_underlying_trivial_gen;
+      wpsimp simp: setDeadline_def
+               wp: no_fail_machine_op_lift)
+
 lemmas Schedule_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

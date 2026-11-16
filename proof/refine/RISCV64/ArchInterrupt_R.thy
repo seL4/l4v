@@ -239,6 +239,10 @@ lemma dmo_ackInterrupt_corres[Arch_assms, corres]:
   "corres dc \<top> \<top> (do_machine_op (ackInterrupt irq)) (doMachineOp (ackInterrupt irq))"
   by (corres corres: corres_machine_op)
 
+lemma dmo_ackDeadlineIRQ_corres[Arch_assms, corres]:
+  "corres dc \<top> \<top> (do_machine_op ackDeadlineIRQ) (doMachineOp ackDeadlineIRQ)"
+  by (corres corres: corres_machine_op)
+
 crunch maskIrqSignal
   for invs'[Arch_assms]: invs'
   (wp: dmo_maskInterrupt_True ignore: doMachineOp)

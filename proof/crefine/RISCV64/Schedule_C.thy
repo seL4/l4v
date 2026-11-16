@@ -92,7 +92,7 @@ lemma tcbSchedDequeue_ready_qs_runnable[wp]:
   unfolding tcbSchedDequeue_def tcbQueueRemove_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift2 threadGet_wp
                     tcbQueued_False_ready_qs_runnable getTCB_wp)
-  apply (fastforce simp: obj_at_simps split: if_splits)
+  apply (fastforce simp: obj_at'_def split: if_splits)
   done
 
 lemma isRunnable_exs_valid[wp]:
@@ -557,7 +557,7 @@ lemma refill_size_ccorres:
     apply wpsimp
    apply wpsimp
   apply (rule conjI)
-   apply (fastforce simp: obj_at_simps valid_refills'_def in_omonad)
+   apply (fastforce simp: obj_at'_def valid_refills'_def in_omonad)
   apply clarsimp
   apply (rename_tac sc abs_state)
   apply (drule_tac s=abs_state in obj_at_cslift_sc)
@@ -722,7 +722,7 @@ lemma refill_add_tail_ccorres:
          apply (rule_tac n="length (scRefills sc)" in array_assertion_shrink_right)
           apply (fastforce intro: sc_at_array_assertion'
                             simp: valid_sched_context'_def MIN_REFILLS_def)
-         apply (clarsimp simp: typ_heap_simps valid_sched_context'_def obj_at_simps
+         apply (clarsimp simp: typ_heap_simps valid_sched_context'_def obj_at'_def
                                active_sc_at'_def csched_context_relation_def)
         apply (frule rf_sr_refill_buffer_relation)
         apply (frule_tac n="scRefillTail sc" in h_t_valid_refill; fastforce?)
@@ -1999,7 +1999,7 @@ lemma no_ofail_releaseQNonEmptyAndReady:
   apply (clarsimp split: if_splits)
   apply (intro conjI)
    apply (fastforce intro!: aligned'_distinct'_obj_at'I
-                      simp: active_sc_tcb_at'_def opt_pred_def opt_map_def obj_at_simps
+                      simp: active_sc_tcb_at'_def opt_pred_def opt_map_def obj_at'_def
                      split: option.splits)
   apply normalise_obj_at'
   apply (fastforce intro!: aligned'_distinct'_obj_at'I

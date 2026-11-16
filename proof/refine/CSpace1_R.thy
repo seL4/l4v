@@ -576,16 +576,10 @@ lemma getThreadCSpaceRoot:
   by (simp add: getThreadCSpaceRoot_def locateSlot_conv
                 tcbCTableSlot_def)
 
-context Arch begin arch_global_naming
-
 lemma getThreadVSpaceRoot:
   "getThreadVSpaceRoot t = return (t+2^cteSizeBits)" (*2^cte_level_bits*)
   by (simp add: getThreadVSpaceRoot_def locateSlot_conv gen_objBits_simps
                 tcbVTableSlot_def cteSizeBits_cte_level_bits)
-
-end
-
-arch_requalify_facts getThreadVSpaceRoot (* FIXME: arch-split RT *)
 
 lemma getSlotCap_tcb_corres:
   "corres (\<lambda>t c. cap_relation (tcb_ctable t) c)

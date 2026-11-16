@@ -1520,7 +1520,7 @@ lemma ksPSpace_eq_imp_valid_pspace'_eq:
                      ps_clear_def no_0_obj'_def valid_mdb'_def
                      pspace_canonical'_def pspace_in_kernel_mappings'_def
                      ksPSpace_eq_imp_valid_objs'_eq[OF ksPSpace]
-                     valid_replies'_def pred_tcb_at'_def obj_at_simps)
+                     valid_replies'_def pred_tcb_at'_def obj_at'_def)
 
 text \<open>Collects all of the predicates used for showing uniqueness of the Haskell state\<close>
 definition cross_valid_objs' :: "kernel_state \<Rightarrow> bool" where
@@ -1532,7 +1532,7 @@ lemma ksPSpace_eq_imp_cross_valid_objs'_eq:
   by (clarsimp simp: cross_valid_objs'_def
                      cross_valid_tcbs'_def cross_valid_sched_contexts'_def
                      cross_valid_eps'_def cross_valid_ntfns'_def
-                     ps_clear_def obj_at_simps)
+                     ps_clear_def obj_at'_def)
 
 (* The awkwardness of this definition is only caused by the fact
    that valid_pspace' is defined over the complete state. *)

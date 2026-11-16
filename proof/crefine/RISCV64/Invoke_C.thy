@@ -1624,7 +1624,7 @@ lemma decodeCNodeInvocation_ccorres:
                               apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_updateCapData
                                                     capBadge_updateCapData_True)
                               apply (auto simp: updateCapData_Untyped ct_in_state'_def
-                                                pred_tcb_at'_def obj_at_simps
+                                                pred_tcb_at'_def obj_at'_def
                                          elim!: valid_updateCapDataI[OF ctes_of_valid']
                                          split: thread_state.splits)[1]
                              apply (simp add: Collect_const_mem all_ex_eq_helper)

@@ -18,8 +18,9 @@ arch_requalify_facts no_fail_ackInterrupt no_fail_resetTimer (* FIXME arch-split
 lemmas [wp,simp] = no_fail_resetTimer no_fail_ackInterrupt
 
 arch_requalify_facts (* FIXME arch-split: Machine_AI *)
-  no_irq_resetTimer no_irq_ackInterrupt
+  no_irq_resetTimer no_irq_ackInterrupt no_irq_ackDeadlineIRQ
   resetTimer_underlying_memory_inv ackInterrupt_underlying_memory_inv
+  ackDeadlineIRQ_underlying_memory_inv
 
 arch_requalify_facts dmo_maskInterrupt_True (* FIXME arch-split: ArchMachine_R *)
 
@@ -207,17 +208,11 @@ crunch doMachineOp
    and pred_tcb_at'_ct[wp]: "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
    and ex_nonz_cap_to'[wp]: "\<lambda>s. P (ex_nonz_cap_to' (ksCurThread s) s)"
 
-context begin interpretation Arch . (*FIXME: rt arch-split*)
-
 lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
   "doMachineOp ackDeadlineIRQ \<lbrace>invs'\<rbrace>"
-  apply (wpsimp simp: ackDeadlineIRQ_def wp: dmo_invs' ackInterrupt_irq_masks)
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply wpsimp+
+  apply (wpsimp wp: dmo_invs' no_irq no_irq_ackDeadlineIRQ)
+  apply (force dest: use_valid[OF _ ackDeadlineIRQ_underlying_memory_inv])
   done
-
-end (* Arch *)
 
 lemma dmo_wp_no_rest:
   "\<lbrace>K((\<forall>s f. P s = (P (machine_state_update (machine_state_rest_update f) s)))) and P\<rbrace>
@@ -334,6 +329,8 @@ locale Interrupt_R =
     "\<And>irq. corres dc \<top> \<top> (arch_mask_irq_signal irq) (Arch.maskIrqSignal irq)"
   assumes dmo_ackInterrupt_corres[corres]:
     "\<And>irq. corres dc \<top> \<top> (do_machine_op (ackInterrupt irq)) (doMachineOp (ackInterrupt irq))"
+  assumes dmo_ackDeadlineIRQ_corres[corres]:
+    "corres dc \<top> \<top> (do_machine_op ackDeadlineIRQ) (doMachineOp ackDeadlineIRQ)"
   assumes maskIrqSignal_invs'[wp]:
     "\<And>irq. Arch.maskIrqSignal irq \<lbrace>invs'\<rbrace>"
   assumes handleReservedIRQ_invs':
@@ -586,8 +583,7 @@ lemma handleInterrupt_corres:
             apply corres
              apply wpsimp+
     apply fastforce
-   apply (corresKsimp corres: corres_machine_op setReprogramTimer_corres
-                       simp: RISCV64.ackDeadlineIRQ_def RISCV64.ackInterrupt_def) (* FIXME: rt arch-split *)
+   apply (corres corres: setReprogramTimer_corres)
   apply (corres corres: corres_machine_op corres_eq_trivial)
   done
 

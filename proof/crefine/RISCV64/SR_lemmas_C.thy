@@ -1423,7 +1423,7 @@ lemma threadSet_eq:
   apply (frule setObject_eq_variable_size)
      apply simp
     apply (clarsimp simp: objBits_simps')
-   apply (clarsimp simp: obj_at_simps)
+   apply (clarsimp simp: obj_at'_def objBits_simps)
    apply (rule_tac x=tcb in exI)
    apply simp
   apply simp
@@ -2355,13 +2355,13 @@ lemma refill_buffer_relation_sc_no_refills_update:
        apply (clarsimp simp: map_comp_def)
       apply (drule_tac x=scPtr in spec)
       apply (clarsimp simp: map_comp_def split: option.splits)
-       apply (clarsimp simp: obj_at_simps)
-      apply (fastforce simp: obj_at_simps)
+       apply (clarsimp simp: obj_at'_def)
+      apply (fastforce simp: obj_at'_def)
      apply (drule refill_buffer_relation_refill_to_sc)
      apply (subst cheap_dom_eq)
       apply fastforce
      apply (subst dom_eq)
-      apply (clarsimp simp: obj_at_simps)
+      apply (clarsimp simp: obj_at'_def)
      apply (fastforce simp: obj_at'_def map_comp_def split: if_splits)
     apply (drule refill_buffer_relation_crefill_relation)
     apply (clarsimp simp: Let_def)
@@ -2417,7 +2417,7 @@ lemma c_guard_refill:
       apply (simp add: refillSizeBytes_def refill_C_size)
      apply (simp add: add_ac)
      apply (rule_tac n=sz in aligned_offset_non_zero)
-       apply (clarsimp simp: obj_at_simps)
+       apply (clarsimp simp: obj_at'_def)
       apply (subst Abs_fnat_hom_mult)
       apply (subst word_of_nat_plus[symmetric])
       apply (rule word_of_nat_less)

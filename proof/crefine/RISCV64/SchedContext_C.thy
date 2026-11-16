@@ -484,7 +484,7 @@ lemma refill_update_ccorres:
              apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
              apply (frule rf_sr_refill_buffer_relation)
              apply (frule_tac n="scRefillHead sc" in h_t_valid_refill; fastforce?)
-               apply (fastforce simp: valid_sched_context'_def obj_at_simps active_sc_at'_def)
+               apply (fastforce simp: valid_sched_context'_def obj_at'_def active_sc_at'_def)
               apply fastforce
              apply (intro conjI impI allI)
                 apply (clarsimp simp: typ_heap_simps)
@@ -492,7 +492,7 @@ lemma refill_update_ccorres:
                apply (rule_tac n="length (scRefills sc)" in array_assertion_shrink_right)
                 apply (fastforce intro: sc_at_array_assertion'
                                   simp: valid_sched_context'_def MIN_REFILLS_def)
-               apply (fastforce simp: typ_heap_simps valid_sched_context'_def obj_at_simps
+               apply (fastforce simp: typ_heap_simps valid_sched_context'_def obj_at'_def
                                       active_sc_at'_def csched_context_relation_def)
               apply (frule_tac n="scRefillHead sc" in crefill_relationD; fastforce?)
                apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_def)
