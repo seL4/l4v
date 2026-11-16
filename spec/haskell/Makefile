@@ -17,11 +17,14 @@ CUSTOM_BOOT_FILES = src/SEL4/Object/Structures.lhs-boot
 # However, cabal refuses to run when the GHC_PACKAGE_PATH
 # variable is set, so we use `stack-path` to clear
 # GHC_PACKAGE_PATH first.
-CABAL=stack exec -- ./stack-path cabal
+
+# We are not using any dependencies outside GHC, so we point cabal at a config
+# file without package repositories. This means cabal does not need network
+# access for the build.
+CABAL=CABAL_CONFIG=$(CURDIR)/cabal-norepo.config stack exec -- ./stack-path cabal
 
 CABAL_CONFIGURE=$(CABAL) v2-configure
 CABAL_BUILD=$(CABAL) v2-build
-CABAL_UPDATE=$(CABAL) v2-update
 CABAL_INSTALL=$(CABAL) v2-install
 
 RM_BACKUP=rm -f cabal.project.local~*
@@ -83,17 +86,13 @@ build-aarch64: sandbox $(BOOT_FILES)
 	$(CABAL_BUILD) --builddir="dist/aarch64"
 
 # We assume that if the .stack-work directory exists,
-# we don't need to install ghc, cabal, nor fetch the cabal
-# package database.
+# we don't need to install ghc and cabal.
 # We make this assumption to avoid hitting the network on
 # every build.
-# However, this means that if .stack-work exists, but the
-# cabal package database is missing, the build will fail.
 
 .stack-work:
 	mkdir -p ~/.stack
 	stack --install-ghc build cabal-install
-	$(CABAL_UPDATE)
 
 $(CUSTOM_BOOT_FILES):
 	echo "never run mkhsboot for hand-crafted lhs-boot files"
