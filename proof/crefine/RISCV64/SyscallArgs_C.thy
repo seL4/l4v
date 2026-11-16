@@ -243,8 +243,8 @@ lemma refill_index_ccorres:
    apply (normalise_obj_at', rename_tac sc)
    apply (frule (1) sc_ko_at_valid_objs_valid_sc')
    apply (rule_tac n="length (scRefills sc)" in array_assertion_shrink_right)
-    apply (fastforce intro: sc_at_array_assertion' simp: obj_at_simps in_omonad)
-   apply (clarsimp simp: obj_at_simps in_omonad)
+    apply (fastforce intro: sc_at_array_assertion' simp: obj_at'_def in_omonad)
+   apply (clarsimp simp: obj_at'_def in_omonad)
    apply (subst unat_of_nat64')
     apply (rule_tac y="length (scRefills sc)" in le_less_trans)
      apply fastforce
@@ -262,8 +262,9 @@ lemma refill_index_ccorres:
   apply (drule refill_buffer_relation_crefill_relation)
   apply (clarsimp simp: Let_def)
   apply (drule_tac x=scPtr in spec)
-  by (fastforce simp: dyn_array_list_rel_pointwise in_omonad obj_at_simps crefill_relation_def
-                      typ_heap_simps' sc_ptr_to_crefill_ptr_def)
+  apply  (fastforce simp: dyn_array_list_rel_pointwise in_omonad obj_at'_def crefill_relation_def
+                          typ_heap_simps' sc_ptr_to_crefill_ptr_def)
+  done
 
 lemma readRefillHead_rewrite:
   "readRefillHead scPtr = do {
@@ -307,7 +308,7 @@ lemma refill_head_ccorres:
   apply (rule conjI)
    apply normalise_obj_at'
    apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at_simps in_omonad)
+   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_def in_omonad)
   apply (clarsimp simp: typ_heap_simps csched_context_relation_def)
   done
 
@@ -353,7 +354,7 @@ lemma refill_tail_ccorres:
   apply (rule conjI)
    apply normalise_obj_at'
    apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at_simps in_omonad)
+   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_def in_omonad)
   apply (clarsimp simp: typ_heap_simps csched_context_relation_def)
   done
 

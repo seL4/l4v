@@ -618,8 +618,8 @@ lemma setObject_assert_modify:
   apply (intro conjI impI)
    apply (subst setObject_modify; assumption?)
     apply (fastforce dest: in_magnitude_check[where s'=s]
-                     simp: obj_at_simps project_inject)
-   apply (fastforce simp: obj_at_simps)
+                     simp: gen_obj_at_simps project_inject)
+   apply (fastforce simp: gen_obj_at_simps)
   apply (clarsimp simp: setObject_def split_def exec_gets updateObject_default_def assert_opt_def
                         assert_def alignCheck_assert
                  split: option.splits)
@@ -939,9 +939,10 @@ lemma setObject_modify_assert:
    apply fastforce
   apply (clarsimp simp: assert_opt_def assert_def magnitudeCheck_assert2
                  split: option.split)
-  by (fastforce simp: omonad_defs gets_the_def get_def bind_def return_def assert_opt_def fail_def
-                      obj_at_simps project_inject
-               split: option.splits)
+  apply (fastforce simp: omonad_defs gets_the_def get_def bind_def return_def assert_opt_def
+                         fail_def gen_obj_at_simps project_inject
+                  split: option.splits)
+  done
 
 lemma setEndpoint_isolatable:
   "thread_actions_isolatable idx (setEndpoint p e)"
@@ -1495,7 +1496,7 @@ lemma setThreadState_rewrite_simple:
    apply (rule monadic_rewrite_refl)
   apply clarsimp
   apply (intro conjI impI allI)
-    apply (fastforce simp: schedulable'_def obj_at_simps opt_map_def opt_pred_def
+    apply (fastforce simp: schedulable'_def obj_at'_def opt_map_def opt_pred_def
                            active_sc_tcb_at'_def
                     split: option.splits if_splits)
    apply (fastforce intro: valid_tcb'_tcbState_update

@@ -4606,7 +4606,7 @@ lemma pspace_no_overlap_induce_refill:
   apply (frule pspace_no_overlap_induce_sched_context)
         apply fastforce
        apply fastforce
-      apply (fastforce simp: obj_at_simps)
+      apply (fastforce simp: obj_at'_def)
      apply assumption
     apply assumption
    apply assumption
@@ -5113,14 +5113,14 @@ proof (intro impI allI)
          apply (prop_tac "scPtr \<noteq> regionBase")
           apply (insert rf, drule cmap_relation_sched_context)
           apply (frule pspace_no_overlap_induce_sched_context[OF _ pal pbound _ al szb pno])
-           apply (fastforce simp: obj_at_simps)
+           apply (fastforce simp: obj_at'_def)
           apply (rule ccontr)
           apply (cut_tac p=regionBase and m="2 ^ objBits sc" and n="2 ^ userSize" in intvl_start_inter)
-            apply (clarsimp simp: obj_at_simps)
+            apply (clarsimp simp: obj_at'_def)
            apply (insert scsb)
            apply (clarsimp simp: sc_size_bounds_def minSchedContextBits_def)
           apply fastforce
-         apply (clarsimp simp: obj_at_simps)
+         apply (clarsimp simp: obj_at'_def)
         apply clarsimp
        apply (drule ko_at_projectKO_opt)
        apply (fastforce simp: map_comp_def ko_def split: if_splits)
@@ -5146,7 +5146,7 @@ proof (intro impI allI)
       apply (insert rf, drule cmap_relation_sched_context)
       apply (frule_tac x=scPtr and sc=sc
                     in pspace_no_overlap_induce_sched_context[OF _ pal pbound _ al szb pno])
-       apply (fastforce simp: obj_at_simps map_comp_def split: if_splits option.splits)
+       apply (fastforce simp: obj_at'_def map_comp_def split: if_splits option.splits)
       apply (cut_tac p=scPtr and sc=sc and n=n in refill_within_sc_size[OF _ _ pbound])
          apply (fastforce simp: map_comp_def split: if_splits option.splits)
         apply (clarsimp simp: valid_objs'_def)
@@ -7084,7 +7084,7 @@ lemma refill_buffer_typ_region_bytes:
   apply (rule conjI)
    apply (frule invs_pspace_bounded')
    apply (frule refill_buffer_within_sc_size[rotated 2])
-     apply (fastforce simp: obj_at_simps)
+     apply (fastforce simp: obj_at'_def)
     apply (fastforce dest: invs'_ko_at_valid_sched_context')
    apply (fastforce dest: pspace_no_overlap_induce_sched_context
                     simp: obj_at'_def mult.commute)

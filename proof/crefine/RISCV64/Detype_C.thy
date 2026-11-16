@@ -901,7 +901,7 @@ proof -
   have oran' [simp]: "?oran' = ?oran"
   proof (rule upto_intvl_eq)
     show "is_aligned (ptr_val x) (objBitsKO (KOSchedContext sc))"
-      using sc invs by (fastforce simp: obj_at_simps intro: pspace_alignedD')
+      using sc invs by (fastforce simp: obj_at'_def intro: pspace_alignedD')
   qed
 
   from xv have px: "ptr_val x \<in> (- ?ran)"
@@ -911,7 +911,7 @@ proof -
     apply simp
     done
 
-  hence "ksPSpace ?s (ptr_val x) = Some (KOSchedContext sc)" using sc by (simp add: obj_at_simps)
+  hence "ksPSpace ?s (ptr_val x) = Some (KOSchedContext sc)" using sc by (simp add: obj_at'_def)
   hence "?oran \<inter> ?ran = {}"
   proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
     from invs have "valid_pspace' s" ..
@@ -1827,18 +1827,18 @@ proof -
        apply (rule context_conjI)
         apply (simp add: map_comp_restrict_map)
         apply (rule conjI)
-         apply (force simp: obj_at_simps)
+         apply (force simp: obj_at'_def)
         apply clarsimp
         apply (frule valid_untyped_cap_ko_at_disjoint'[OF D.valid_untyped])
          apply (frule invs_pspace_bounded')
          apply (frule pspace_boundedD'[rotated])
-          apply (fastforce simp: obj_at_simps)
+          apply (fastforce simp: obj_at'_def)
          apply (rule_tac x=p in not_emptyI)
           apply (rule intvl_self)
           apply (fastforce simp: objBits_simps)
          apply fastforce
         apply (force simp: image_def)
-       apply (force simp: obj_at_simps map_comp_def restrict_map_def split: if_splits)
+       apply (force simp: obj_at'_def map_comp_def restrict_map_def split: if_splits)
       apply (frule refill_buffer_relation_crefill_relation)
       apply (clarsimp simp: dyn_array_list_rel_pointwise cvariable_array_map_relation_def)
       apply (drule_tac x=p in spec)+

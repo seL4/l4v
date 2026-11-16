@@ -1280,7 +1280,7 @@ lemma schedContext_cancelYieldTo_ccorres:
          apply (rename_tac tcb')
          apply (frule (1) obj_at_cslift_sc)
          apply (prop_tac "tcbYieldTo_C tcb' = Ptr yield_sc")
-          apply (clarsimp simp: obj_at_simps ctcb_relation_def)
+          apply (clarsimp simp: obj_at'_def ctcb_relation_def)
          apply clarsimp
          apply (rule rf_sr_sc_update_no_refill_buffer_update2; fastforce?)
            apply (simp add: typ_heap_simps')
