@@ -33,7 +33,8 @@ lemma post_test_False: "False \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\
 
 method sp_post_schematic = succeeds \<open>rule post_test_True\<close>, succeeds \<open>rule post_test_False\<close>
 
-method sp_fwd uses rules = fwd_all_new \<open>sp_once rules: rules\<close> \<open>sp_fwd | fails sp_post_schematic\<close>
+method sp_fwd uses rules =
+  fwd_all_new \<open>sp_once rules: rules\<close> \<open>sp_fwd rules: rules | fails sp_post_schematic\<close>
 
 method sp_finish uses rules = rule hoare_strengthen_post, sp_fwd rules: rules
 
@@ -41,8 +42,13 @@ text \<open>
   Perform strongest postcondition reasoning, ensuring that unsolved subgoals with schematic
   postconditions are not created.
 
-  In addition to the rules in the set @{thm sp}, the user may specify additional rules to the rules:
-  argument, which will be used in preference to those in the @{thm sp} set.\<close>
+  In addition to the rules in the set @{text sp}, the user may specify additional rules to the rules:
+  argument, which will be used in preference to those in the @{text sp} set.
+
+  FIXME: there are a couple of improvements that we may wish to implement. One would be to fail when
+         the precondition is schematic, so that the user does not first apply wp or wpsimp, and then
+         apply this method. Another would be to print an error message when the method fails because
+         the postcondition is schematic.\<close>
 method sp uses rules \<open>apply strongest postcondition rules\<close> =
   (sp_fwd rules: rules; (sp_finish rules: rules)?) | (sp_finish rules: rules)
 
@@ -50,7 +56,7 @@ method sp_step uses rules \<open>do one step of strongest postcondition reasonin
   (sp_once rules: rules, (sp_once rules: rules)?), fails sp_post_schematic
 
 lemmas [sp] =
-  bind_wp_fwd return_sp get_sp put_sp gets_sp modify_sp assert_sp assert_opt_sp
+  bind_wp_fwd return_sp get_sp put_sp' gets_sp modify_sp assert_sp assert_opt_sp
   select_sp select_f_sp state_select_sp fail_sp chaos_sp hoare_returnOk_sp hoare_K_bind
 
 end
