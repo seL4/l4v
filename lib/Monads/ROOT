@@ -66,6 +66,7 @@ session Monads (lib) = HOL +
     WPC
     WP_Pre
     WP
+    SP
     Datatype_Schematic
 
   document_files

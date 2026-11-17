@@ -1402,6 +1402,11 @@ lemma put_sp:
   "\<lbrace>\<top>\<rbrace> put a \<lbrace>\<lambda>_ s. s = a\<rbrace>"
   by(simp add:put_def valid_def)
 
+text \<open>A strongest postcondition rule for @{const put} that has a schematic precondition.\<close>
+lemma put_sp':
+  "\<lbrace>P\<rbrace> put a \<lbrace>\<lambda>_ s'. \<exists>s. P s \<and> s' = a\<rbrace>"
+  by (fastforce intro: hoare_weaken_pre[OF put_wp])
+
 lemma return_sp:
   "\<lbrace>P\<rbrace> return a \<lbrace>\<lambda>rv s. rv = a \<and> P s\<rbrace>"
   by(simp add:return_def valid_def)
@@ -1421,6 +1426,43 @@ lemma assert_opt_sp:
 lemma hoare_gets_sp:
   "\<lbrace>P\<rbrace> gets f \<lbrace>\<lambda>rv s. rv = f s \<and> P s\<rbrace>"
   by (simp add: valid_def simpler_gets_def)
+
+lemma select_sp:
+  "\<lbrace>P\<rbrace> select S \<lbrace>\<lambda>rv s. rv \<in> S \<and> P s\<rbrace>"
+  by (simp add: hoare_weaken_pre[OF select_wp])
+
+lemma select_f_sp:
+  "\<lbrace>P\<rbrace> select_f S \<lbrace>\<lambda>rv s. rv \<in> fst S \<and> P s\<rbrace>"
+  by (simp add: hoare_weaken_pre[OF select_f_wp])
+
+lemma state_select_sp:
+  "\<lbrace>P\<rbrace> state_select r \<lbrace>\<lambda>rv s'. \<exists>s. (s, s') \<in> r \<and> P s\<rbrace>"
+  by (fastforce intro: hoare_weaken_pre[OF state_select_wp])
+
+lemma fail_sp:
+  "\<lbrace>P\<rbrace> fail \<lbrace>\<lambda>_ _. False\<rbrace>"
+  by (rule hoare_fail_any)
+
+lemma chaos_sp:
+  "\<lbrace>P\<rbrace> chaos \<lbrace>\<lambda>_ _. \<exists>s. P s\<rbrace>"
+  by (fastforce intro: hoare_weaken_pre[OF chaos_wp])
+
+lemma modify_sp:
+  "\<lbrace>P\<rbrace> modify f \<lbrace>\<lambda>_ s'. \<exists>s. P s \<and> s' = f s\<rbrace>"
+  by (fastforce intro: hoare_weaken_pre[OF modify_wp])
+
+lemma if_sp:
+  "\<lbrakk> \<lbrace>\<lambda>s. P s \<and> b\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>\<lambda>s. P s \<and> \<not> b\<rbrace> g \<lbrace>Q'\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace> if b then f else g \<lbrace>\<lambda>rv s. (b \<and> Q rv s) \<or> (\<not> b \<and> Q' rv s)\<rbrace>"
+  apply (clarsimp split: if_splits)
+  apply (intro conjI impI)
+   apply (fastforce intro: hoare_weaken_pre[OF hoare_disjI1])
+  apply (fastforce intro: hoare_weaken_pre[OF hoare_disjI2])
+  done
+
+lemma when_sp:
+  "\<lbrace>\<lambda>s. P s \<and> b\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> when b f \<lbrace>\<lambda>rv s. (b \<and> Q rv s) \<or> (\<not> b \<and> P s)\<rbrace>"
+  by (clarsimp simp: when_def)
 
 lemma hoare_returnOk_sp:
   "\<lbrace>P\<rbrace> returnOk x \<lbrace>\<lambda>rv s. rv = x \<and> P s\<rbrace>, \<lbrace>Q\<rbrace>"
