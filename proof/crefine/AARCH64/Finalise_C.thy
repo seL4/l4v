@@ -2620,16 +2620,6 @@ lemma switchLocalFpuOwner_ccorres:
              split: option.splits)
   done
 
-lemma switchFpuOwner_ccorres:
-  "ccorres dc xfdc
-     (no_0_obj' and opt_tcb_at' newOwner)
-     (\<lbrace>\<acute>new_owner = option_to_ctcb_ptr newOwner\<rbrace>) hs
-     (switchLocalFpuOwner newOwner) (Call switchFpuOwner_'proc)"
-  apply (cinit')
-   apply (ctac add: switchLocalFpuOwner_ccorres)
-  apply clarsimp
-  done
-
 lemma nativeThreadUsingFPU_ccorres:
   "ccorres (\<lambda>rv rv'. to_bool rv' = (rv = Some thread)) ret__unsigned_long_'
      (no_0_obj' and tcb_at' thread)
@@ -2651,7 +2641,7 @@ lemma fpuRelease_ccorres:
      apply (clarsimp simp: to_bool_neq_0)
      apply (rule ccorres_when[where R=\<top>])
       apply (clarsimp split: if_split)
-     apply (ctac add: switchFpuOwner_ccorres)
+     apply (ctac add: switchLocalFpuOwner_ccorres)
     apply wpsimp
    apply (vcg exspec=nativeThreadUsingFPU_modifies)
   apply (clarsimp simp: invs_no_0_obj' option_to_ctcb_ptr_def)
