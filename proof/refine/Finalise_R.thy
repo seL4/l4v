@@ -2435,7 +2435,7 @@ lemma replyRemoveTCB_makes_unlive:
   apply (wpsimp wp: replyUnlink_makes_unlive)
   done
 
-crunch setThreadState
+crunch threadSet, setThreadState
   for is_reply_linked[wp]: "\<lambda>s. P (is_reply_linked replyPtr s)"
   (wp: is_reply_linked_lift)
 
