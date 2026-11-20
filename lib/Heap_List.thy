@@ -590,7 +590,7 @@ lemma heap_ls_remove_middle:
 
 lemma heap_ls_takeWhile_not_hd:
   "\<lbrakk>heap_ls hp st (xs @ t # ys); xs \<noteq> []\<rbrakk>
-   \<Longrightarrow> heap_ls (hp(last xs := None)) (Some (hd xs)) (takeWhile ((\<noteq>) t) (xs @ t # ys))"
+   \<Longrightarrow> heap_ls (hp(last xs := None)) st (takeWhile ((\<noteq>) t) (xs @ t # ys))"
   apply (frule heap_ls_distinct)
   apply (prop_tac "takeWhile ((\<noteq>) t) (xs @ t # ys) = xs")
    apply (force simp: takeWhile_tail)
