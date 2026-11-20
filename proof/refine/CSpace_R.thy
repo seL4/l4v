@@ -3188,8 +3188,6 @@ crunch cteInsert
   and valid_sched_pointers[wp]: valid_sched_pointers
   (wp: crunch_wps setObject_cte_replies_of' simp: crunch_simps setCTE_def inQ_def)
 
-lemmas fold_list_refs_of_replies' = comp_def[symmetric, where f=Some and g=list_refs_of_reply']
-
 lemma valid_NullCap:
   "valid_cap' NullCap = \<top>"
   by (rule ext, simp add: valid_cap_simps' capAligned_def word_bits_def)
@@ -3604,7 +3602,7 @@ lemma corres_caps_decomposition:
               \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')
                   \<and> cdt_list_relation (new_list s) (new_mdb s) (new_ctes s')
                   \<and> sc_replies_relation_2 (new_sc_replies_of s) (new_scs_of' s' |> scReply)
-                      (new_replies_of' s' |> replyPrev)
+                      (new_replies_of' s' |> replyPrev) (new_replies_of' s' |> replyNext)
                   \<and> ep_queues_relation_2 (new_ep_queues_of s) (new_epQueues_of s')
                                           (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
                   \<and> ntfn_queues_relation_2 (new_ntfn_queues_of s) (new_ntfnQueues_of s')
@@ -5110,19 +5108,18 @@ lemma cteInsert_valid_globals_simple:
 
 lemma cteInsert_simple_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
-  (\<lambda>s. src \<noteq> dest) and (\<lambda>s. safe_parent_for' (ctes_of s) src cap)
-  and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)
-  and cte_at' src
-  and ex_cte_cap_to' dest and K (is_simple_cap' cap)\<rbrace>
+   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. safe_parent_for' (ctes_of s) src cap)
+   and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)
+   and cte_at' src
+   and ex_cte_cap_to' dest and K (is_simple_cap' cap)\<rbrace>
   cteInsert cap src dest
-  \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: invs'_def valid_pspace'_def)
    apply (wp valid_bitmaps_lift valid_irq_node_lift irqs_masked_lift
              cteInsert_simple_mdb' cteInsert_valid_globals_simple cteInsert_norq
              sym_heap_sched_pointers_lift valid_dom_schedule'_lift
           | simp add: pred_tcb_at'_def)+
-   apply (subst fold_list_refs_of_replies')
   apply (auto simp: invs'_def valid_pspace'_def
                     untyped_derived_eq_def o_def
               dest!: is_simple_cap'_genD

@@ -5290,15 +5290,13 @@ proof (intro impI allI)
   have relrl:
     "creply_relation makeObject (from_bytes (replicate (size_of TYPE(reply_C)) 0))"
     unfolding creply_relation_def
-    apply (simp add: Let_def makeObject_reply size_of_def call_stack_lift_def)
+    apply (simp add: Let_def makeObject_reply size_of_def)
     apply (simp add: from_bytes_def)
-    apply (simp add: typ_info_simps reply_C_tag_def isHead_def)
+    apply (simp add: typ_info_simps reply_C_tag_def)
     apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                      final_pad_def)
     apply (simp add: update_ti_adjust_ti  typ_info_simps)
     apply (simp add: eval_nat_numeral update_ti_t_ptr_0s)
-    apply (simp add: call_stack_C_tag_def)
-    apply (simp add: ti_typ_pad_combine_empty_ti final_pad_def)
     apply (simp add: align_td_array' size_td_array typ_info_array array_tag_def array_tag_n.simps
                      update_ti_adjust_ti ti_typ_combine_def empty_typ_info_def
                      update_ti_t_machine_word_0s option_to_ctcb_ptr_def)

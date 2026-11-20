@@ -3088,10 +3088,6 @@ crunch schedContextCompleteYieldTo, schedContextUnbindTCB, unbindNotification,
   (wp: crunch_wps threadSet_ct_in_state'
    simp: crunch_simps sch_act_simple_def setBoundNotification_def)
 
-crunch schedContextUnbindReply
-  for sc_at'[wp]: "sc_at' scPtr"
-  (wp: crunch_wps simp: crunch_simps sch_act_simple_def)
-
 lemma schedContext_unbindReply_ccorres:
   "ccorres dc xfdc
      (invs' and sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> hs
@@ -3101,7 +3097,6 @@ lemma schedContext_unbindReply_ccorres:
   apply (cinit' lift: sc_')
    apply (rule ccorres_stateAssert)
    apply (rule ccorres_pre_getObject_sc, rename_tac sc' sc)
-   apply (rule ccorres_stateAssert)
    apply (rule_tac val="from_bool True"
                and R="sc_at' scPtr and no_0_obj'"
                and xf'=ret__int_'
@@ -3109,6 +3104,7 @@ lemma schedContext_unbindReply_ccorres:
       apply (rule conseqPre, vcg)
       apply (fastforce split: if_splits)
      apply ceqv
+    apply (rule ccorres_stateAssert)
     apply ccorres_rewrite
     apply (rule ccorres_move_c_guard_sc)
     apply (rule_tac val="from_bool (scReply sc \<noteq> None)"
@@ -3124,7 +3120,7 @@ lemma schedContext_unbindReply_ccorres:
       apply ceqv
      apply (clarsimp simp: when_def)
      apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
-      apply fastforce
+       apply fastforce
       apply (rule ccorres_split_nothrow)
           apply (rule_tac P'="ko_at' sc scPtr and valid_sched_context' sc and no_0_obj'"
                        in updateReply_ccorres_lemma3[where P=\<top>])
@@ -3132,15 +3128,12 @@ lemma schedContext_unbindReply_ccorres:
           apply normalise_obj_at'
           apply (frule (1) obj_at_cslift_sc)
           apply (fastforce intro!: rf_sr_reply_update2
-                             simp: typ_heap_simps' creply_relation_def csched_context_relation_def
-                                   isHead_def)
+                             simp: typ_heap_simps' creply_relation_def csched_context_relation_def)
          apply ceqv
         apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
           apply vcg
          apply fastforce
-        apply clarsimp
-        apply (rule conjI)
-         apply (clarsimp simp: typ_heap_simps')
+        apply (clarsimp simp: typ_heap_simps')
         apply (rule_tac sc'="scReply_C_update (\<lambda>_. NULL) sc'"
                      in rf_sr_sc_update_no_refill_buffer_update2;
                fastforce?)
@@ -3152,9 +3145,9 @@ lemma schedContext_unbindReply_ccorres:
      apply (rule ccorres_return_Skip)
     apply vcg
    apply vcg
-  apply clarsimp
+  apply normalise_obj_at'
   apply (frule (1) invs'_ko_at_valid_sched_context')
-  apply (fastforce simp: valid_sched_context'_def)
+  apply (fastforce simp: valid_sched_context'_def valid_bound_reply'_def)
   done
 
 lemma finaliseCap_ccorres:

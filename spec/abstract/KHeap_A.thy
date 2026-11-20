@@ -312,6 +312,11 @@ abbreviation
   set_reply :: "obj_ref \<Rightarrow> reply \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_reply \<equiv> set_simple_ko Reply"
 
+definition update_reply :: "(reply \<Rightarrow> reply) \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "update_reply f reply_ptr \<equiv> do
+     reply \<leftarrow> get_reply reply_ptr;
+     set_reply reply_ptr $ f reply
+   od"
 
 abbreviation
   "get_reply_tcb r \<equiv> liftM reply_tcb (get_reply r)"

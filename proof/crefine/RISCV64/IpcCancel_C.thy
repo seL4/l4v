@@ -2664,21 +2664,136 @@ lemmas updateSchedContext_ccorres_lemma3 =
 lemmas updateSchedContext_ccorres_lemma2 =
   updateSchedContext_ccorres_lemma3[where P'=\<top>, simplified pred_conj_def, simplified]
 
+lemma break_reply_chain_at_ccorres:
+  "ccorres dc xfdc (valid_objs' and no_0_obj') \<lbrace>\<acute>reply = reply_Ptr replyPtr\<rbrace> hs
+     (breakReplyChainAt replyPtr) (Call break_reply_chain_at_'proc)"
+  unfolding breakReplyChainAt_def breakReplyChainAt'_def bind_assoc
+  supply if_split[split del]
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_reply_sp')+
+  apply (cinit' lift: reply_')
+  apply (rename_tac areply' areply reply)
+   apply (rule ccorres_move_c_guard_reply)
+   apply (rule_tac xf'=prev___ptr_to_struct_reply_C_'
+               and val="option_to_ptr (replyPrev areply)"
+               and R="ko_at' areply replyPtr"
+                in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+      apply (rule conseqPre, vcg)
+      apply (fastforce dest: obj_at_cslift_reply simp: typ_heap_simps creply_relation_def)
+     apply ceqv
+    apply (rule ccorres_move_c_guard_reply)
+    apply (rule_tac xf'=next___ptr_to_struct_reply_C_'
+                and val="option_to_ptr (replyNext areply)"
+                and R="ko_at' areply replyPtr"
+                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+       apply (rule conseqPre, vcg)
+       apply (fastforce dest: obj_at_cslift_reply simp: typ_heap_simps creply_relation_def)
+      apply ceqv
+     apply (rule ccorres_rhs_assoc2)
+     apply (rule ccorres_rhs_assoc)
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+         apply (clarsimp simp: when_def)
+         apply (rule_tac Q="ko_at' areply replyPtr and valid_objs' and no_0_obj'"
+                      in ccorres_cond_both'[where Q'=\<top>])
+           apply normalise_obj_at'
+           apply (frule (1) reply_ko_at_valid_objs_valid_reply')
+           apply (clarsimp simp: option_to_ptr_def option_to_0_def valid_reply'_def
+                          split: if_splits option.splits)
+          apply (rule_tac P'="valid_bound_reply' (replyPrev areply)"
+                       in updateReply_ccorres_lemma3[where P=\<top>])
+           apply vcg
+          apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
+         apply (rule ccorres_return_Skip)
+        apply ceqv
+       apply (simp add: bind_assoc)
+       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+           apply (clarsimp simp: when_def)
+           apply (rule_tac Q="valid_bound_reply' (replyNext areply) and no_0_obj'"
+                        in ccorres_cond_both'[where Q'=\<top>])
+             apply (case_tac "replyNext areply"; clarsimp)
+             apply normalise_obj_at'
+             apply (fastforce dest: reply_ko_at_valid_objs_valid_reply' split: if_splits)
+            apply (rule_tac P'="valid_bound_reply' (replyPrev areply)"
+                         in updateReply_ccorres_lemma3[where P=\<top>])
+             apply vcg
+            apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
+           apply (rule ccorres_return_Skip)
+          apply ceqv
+         apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+             apply (rule updateReply_ccorres_lemma2[where P=\<top>])
+              apply vcg
+             apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
+            apply ceqv
+           apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+               apply (rule updateReply_ccorres_lemma2[where P=\<top>])
+                apply vcg
+               apply (fastforce intro!: rf_sr_reply_update2
+                                  simp: typ_heap_simps' creply_relation_def)
+              apply ceqv
+             apply (rule ccorres_move_c_guard_reply)
+             apply (rule_tac xf'=replySC_'
+                         and val="option_to_ptr (replySC areply)"
+                         and R="\<lambda>s. replySCs_of s replyPtr = replySC areply \<and> reply_at' replyPtr s"
+                          in ccorres_symb_exec_r_known_rv[where R'=UNIV])
+                apply (rule conseqPre, vcg)
+                apply (fastforce dest: obj_at_cslift_reply
+                                 simp: opt_map_red obj_at'_def typ_heap_simps creply_relation_def)
+               apply ceqv
+              apply (rule_tac P="areply' = areply" in ccorres_gen_asm)
+              apply (rule_tac P="\<exists>ptr. replySC areply = Some ptr" in ccorres_cases;
+                     simp add: when_def)
+               \<comment> \<open>the reply is linked to an sc; update scReply and replySC fields\<close>
+               apply (rule ccorres_cond_true)
+               apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+                   apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+                     apply vcg
+                    apply simp
+                   apply (fastforce intro: rf_sr_sc_update_no_refill_buffer_update2
+                                           refill_buffer_relation_sc_no_refills_update
+                                     simp: typ_heap_simps' csched_context_relation_def)
+                  apply ceqv
+                 apply (rule updateReply_ccorres_lemma2[where P=\<top>])
+                  apply vcg
+                 apply (fastforce intro!: rf_sr_reply_update2
+                                    simp: typ_heap_simps' creply_relation_def)
+                apply wpsimp
+               apply vcg
+              \<comment> \<open>the reply is not linked to an sc; return/SKIP\<close>
+              apply ccorres_rewrite
+              apply (rule ccorres_return_Skip)
+             apply vcg
+            apply (wpsimp wp: updateReply_field_inv)
+           apply vcg
+          apply (wpsimp wp: updateReply_field_inv)
+         apply vcg
+        apply (wpsimp wp: updateReply_field_inv)
+       apply vcg
+      apply clarsimp
+      apply (wpsimp wp: updateReply_field_inv)
+     apply vcg
+    apply vcg
+   apply vcg
+  apply clarsimp
+  apply normalise_obj_at'
+  apply (rename_tac reply s s')
+  apply (frule (1) reply_ko_at_valid_objs_valid_reply')
+  apply (rule conjI)
+   apply (fastforce simp: valid_reply'_def)
+  apply (rule conjI)
+   apply (fastforce simp: valid_reply'_def opt_map_red obj_at'_def split: if_splits)
+  by (case_tac "replySC reply";
+      clarsimp simp: typ_heap_simps' creply_relation_def valid_reply'_def split: if_splits)
+
 lemma reply_remove_tcb_ccorres:
   "ccorres dc xfdc
-     (no_0_obj' and pspace_aligned' and pspace_distinct'
+     (valid_objs' and no_0_obj' and pspace_aligned' and pspace_distinct'
       and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tptr\<rbrace> hs
-    (replyRemoveTCB tptr) (Call reply_remove_tcb_'proc)"
-  supply Collect_const[simp del]
-  supply if_split[split del]
+     (replyRemoveTCB tptr) (Call reply_remove_tcb_'proc)"
   apply (cinit lift: tcb_' simp: assert_opt_def2)
    apply (rule ccorres_stateAssert)
    apply (rule getThreadState_ccorres_foo, rename_tac threadState)
    apply (rule ccorres_assert2_abs)+
-   apply (rule ccorres_pre_getObject_reply, rename_tac reply)
-   apply clarsimp
-   apply (rename_tac replyObj)
+   apply (rename_tac threadState)
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule_tac xf'=ret__unsigned_longlong_'
                and val="the (replyObject threadState)"
@@ -2693,106 +2808,12 @@ lemma reply_remove_tcb_ccorres:
       apply (case_tac "tcbState tcb"; clarsimp)
      apply ceqv
     apply csymbr
-    apply (rule ccorres_move_c_guard_reply)
-    apply (rule_tac xf'=ret__unsigned_longlong_'
-                and val="if \<exists>y. replyNext reply = Some y
-                         then if isHead (replyNext reply)
-                              then theHeadScPtr (replyNext reply)
-                              else theReplyNextPtr (replyNext reply)
-                         else 0"
-                and R="ko_at' reply (the (replyObject threadState))"
-                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
-       apply (rule conseqPre, vcg)
-       apply normalise_obj_at'
-       apply (frule (1) obj_at_cslift_reply)
-       apply (clarsimp simp: typ_heap_simps creply_relation_def)
-      apply ceqv
-     apply csymbr
-     apply (rule ccorres_move_c_guard_reply)
-     apply (rule_tac xf'=ret__unsigned_longlong_'
-                 and val="option_to_0 (replyPrev reply)"
-                 and R="ko_at' reply (the (replyObject threadState))"
-                  in ccorres_symb_exec_r_known_rv[where R'=UNIV])
-        apply (rule conseqPre, vcg)
-        apply (clarsimp simp: st_tcb_at'_def)
-        apply normalise_obj_at'
-        apply (frule (1) obj_at_cslift_reply)
-        apply (clarsimp simp: typ_heap_simps creply_relation_def option_to_ptr_def)
-       apply ceqv
-      apply csymbr
-      apply (rule ccorres_split_nothrow)
-          apply (simp only: when_def)
-          apply (rule_tac Q="valid_reply' reply and no_0_obj'" in ccorres_cond_both'[where Q'=\<top>])
-            apply (fastforce simp: isHead_def valid_reply'_def split: if_splits reply_next.splits)
-           apply (rule_tac xf'=ret__unsigned_longlong_'
-                       and val="from_bool (isHead (replyNext reply))"
-                       and R="ko_at' reply (the (replyObject threadState))"
-                        in ccorres_symb_exec_r_known_rv[where R'=UNIV])
-              apply (rule conseqPre, vcg)
-              apply normalise_obj_at'
-              apply (frule (1) obj_at_cslift_reply)
-              apply (clarsimp simp: creply_relation_def typ_heap_simps)
-             apply ceqv
-            apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
-              apply clarsimp
-             apply simp
-             apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
-               apply vcg
-              apply simp
-             apply (fastforce intro: rf_sr_sc_update_no_refill_buffer_update2
-                                     refill_buffer_relation_sc_no_refills_update
-                               simp: typ_heap_simps' csched_context_relation_def)
-            apply simp
-            apply (rule_tac P'=no_0_obj' in updateReply_ccorres_lemma3[where P=\<top>])
-             apply vcg
-            apply (fastforce intro!: rf_sr_reply_update2
-                               simp: typ_heap_simps' creply_relation_def split: if_splits)
-           apply (vcg exspec=call_stack_get_isHead_modifies)
-          apply (rule ccorres_return_Skip)
-         apply ceqv
-        apply (rule ccorres_split_nothrow)
-            apply (simp add: when_def)
-            apply (rule_tac Q="valid_reply' reply and no_0_obj'" in ccorres_cond_both'[where Q'=\<top>])
-              apply (fastforce simp: option_to_0_def valid_reply'_def split: option.splits)
-             apply (rule updateReply_ccorres_lemma3[where P=\<top> and P'=\<top>])
-              apply vcg
-             apply (frule (1) obj_at_cslift_reply)
-             apply (fastforce intro!: rf_sr_reply_update2
-                                simp: typ_heap_simps' creply_relation_def isHead_def)
-            apply (rule ccorres_return_Skip)
-           apply ceqv
-          apply (clarsimp simp: cleanReply_def bind_assoc)
-          apply (rule ccorres_rhs_assoc2)
-          apply (rule ccorres_split_nothrow)
-              apply (rule updateReply_ccorres_lemma2[where P=\<top>])
-               apply vcg
-              apply (fastforce dest: obj_at_cslift_reply intro!: rf_sr_reply_update2
-                               simp: typ_heap_simps' creply_relation_def split: if_splits)
-             apply ceqv
-            apply (rule ccorres_rhs_assoc2)
-            apply (rule ccorres_split_nothrow)
-                apply (rule updateReply_ccorres_lemma2[where P=\<top>])
-                 apply vcg
-                apply (frule (1) obj_at_cslift_reply)
-                apply (fastforce intro!: rf_sr_reply_update2
-                                   simp: typ_heap_simps' creply_relation_def isHead_def)
-               apply ceqv
-              apply (ctac add: reply_unlink_ccorres)
-             apply (wpsimp wp: updateReply_valid_objs')
-            apply (vcg exspec=call_stack_new_modifies)
-           apply wpsimp
-          apply (vcg exspec=call_stack_new_modifies)
-         apply wpsimp
-        apply (vcg exspec=call_stack_new_modifies)
-       apply (drule Some_to_the)
-       apply simp
-       apply (wpsimp simp: when_def)
-      apply vcg
-     apply vcg
-    apply vcg
-   apply (vcg exspec=thread_state_get_replyObject_modifies)
-  apply (fastforce dest: reply_ko_at_valid_objs_valid_reply'
-                   simp: valid_reply'_def isHead_def split: reply_next.splits if_splits)
+    apply (ctac add: break_reply_chain_at_ccorres)
+      apply (ctac add: reply_unlink_ccorres)
+     apply (wpsimp wp: updateReply_valid_objs')
+    apply (vcg exspec=break_reply_chain_at_modifies)
+   apply vcg
+  apply clarsimp
   done
 
 lemma threadSet_tcbInReleaseQueue_ccorres[corres]:
@@ -2974,136 +2995,95 @@ lemma schedContext_donate_ccorres:
                    simp: valid_sched_context'_def option_to_ctcb_ptr_def split: option.splits)
   done
 
-crunch schedContextDonate
+crunch schedContextDonate, replyPop, replyPush
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma reply_pop_ccorres:
   "ccorres dc xfdc
-    (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
-     and tcb_at' tcbPtr and reply_at' replyPtr)
-    (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
-    (replyPop replyPtr tcbPtr) (Call reply_pop_'proc)"
+     (valid_objs' and no_0_obj' and obj_at' (\<lambda>reply. replySC reply \<noteq> None) replyPtr)
+     \<lbrace>\<acute>reply = reply_Ptr replyPtr\<rbrace> hs
+     (replyPop replyPtr) (Call reply_pop_'proc)"
+  unfolding replyPop_def replyPop'_def bind_assoc
   supply if_split[split del]
-  supply Collect_const[simp del]
-  apply (cinit lift: reply_' tcb_' simp: assert_opt_def2)
-   apply (rename_tac creply)
-   apply (rule ccorres_stateAssert)
-   apply (rule ccorres_pre_getObject_reply, rename_tac reply)
-   apply (rule ccorres_assert2_abs)+
-   apply clarsimp
-   apply (rule getThreadState_ccorres_foo, rename_tac threadState)
-   apply (rule ccorres_assert2_abs)+
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_reply_sp')
+  apply (rename_tac areply)
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: return_sp)
+  apply ccorres_exec_l_pre
+  apply (rule ccorres_gen_asm[simplified pred_conj_def])
+  apply (cinit' lift: reply_')
+   apply (clarsimp simp: bind_assoc)
+   apply (rename_tac scPtr)
    apply (rule ccorres_move_c_guard_reply)
-   apply (rule_tac xf'=ret__unsigned_longlong_'
-               and val="if \<exists>y. replyNext reply = Some y
-                        then if isHead (replyNext reply)
-                             then theHeadScPtr (replyNext reply)
-                             else theReplyNextPtr (replyNext reply)
-                        else 0"
-               and R="ko_at' reply (the (replyObject threadState))"
+   apply (rule_tac xf'=replySC_'
+               and val="sched_context_Ptr scPtr"
+               and R="ko_at' areply replyPtr and K (replySC areply = Some scPtr)"
                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
       apply (rule conseqPre, vcg)
-      apply normalise_obj_at'
-      apply (frule (1) obj_at_cslift_reply)
-      apply (clarsimp simp: typ_heap_simps creply_relation_def)
+      apply (fastforce dest: obj_at_cslift_reply simp: typ_heap_simps creply_relation_def)
      apply ceqv
-    apply csymbr
     apply (rule ccorres_move_c_guard_reply)
-    apply (rule_tac xf'=ret__unsigned_longlong_'
-                and val="option_to_0 (replyPrev reply)"
-                and R="ko_at' reply (the (replyObject threadState))"
+    apply (rule_tac xf'=prev___ptr_to_struct_reply_C_'
+                and val="option_to_ptr (replyPrev areply)"
+                and R="ko_at' areply replyPtr"
                  in ccorres_symb_exec_r_known_rv[where R'=UNIV])
        apply (rule conseqPre, vcg)
-       apply (clarsimp simp: st_tcb_at'_def)
-       apply normalise_obj_at'
-       apply (frule (1) obj_at_cslift_reply)
-       apply (clarsimp simp: typ_heap_simps creply_relation_def option_to_ptr_def)
+       apply (fastforce dest: obj_at_cslift_reply simp: typ_heap_simps creply_relation_def)
       apply ceqv
-     apply csymbr
-     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-         apply (rule ccorres_move_c_guard_sc)
-         apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
-           apply vcg
-          apply simp
-         apply (fastforce intro: rf_sr_sc_update_no_refill_buffer_update2
-                                 refill_buffer_relation_sc_no_refills_update
-                           simp: typ_heap_simps' csched_context_relation_def option_to_ptr_def
-                                 isHead_def
-                          split: option.splits)
+     apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+         apply (rule updateReply_ccorres_lemma3[where P=\<top> and P'=\<top>])
+          apply vcg
+         apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
         apply ceqv
-       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-           apply (clarsimp simp: when_def)
-           apply (rule_tac Q="ko_at' reply replyPtr and valid_objs' and no_0_obj'"
-                        in ccorres_cond_both'[where Q'=\<top>])
-             apply clarsimp
-             apply (frule (1) obj_at_cslift_reply)
-             apply (frule (1) reply_ko_at_valid_objs_valid_reply')
-             apply (clarsimp simp: valid_reply'_def option_to_0_def split: option.splits)
-            apply (rule ccorres_move_c_guard_reply)
-            apply (rule_tac P'="ko_at' reply replyPtr" in updateReply_ccorres_lemma3[where P=\<top>])
-             apply vcg
-            apply (frule (1) obj_at_cslift_reply)
-            apply normalise_obj_at'
-            apply (fastforce dest: obj_at_cslift_reply intro!: rf_sr_reply_update2
-                             simp: typ_heap_simps' creply_relation_def isHead_def
-                            split: option.splits)
-           apply (rule ccorres_return_Skip)
+       apply (rule ccorres_stateAssert)
+       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+           apply (rule updateReply_ccorres_lemma3[where P=\<top> and P'=\<top>])
+            apply vcg
+           apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
           apply ceqv
-         apply (rule ccorres_rhs_assoc2)
-         apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-             apply (rule updateReply_ccorres_lemma2[where P=\<top>])
-              apply vcg
-             apply (frule (1) obj_at_cslift_reply)
-             apply (fastforce intro!: rf_sr_reply_update2
-                                simp: typ_heap_simps' creply_relation_def isHead_def)
+         apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+             apply (clarsimp simp: when_def)
+             apply (rule_tac Q="valid_bound_reply' (replyPrev areply) and no_0_obj'"
+                          in ccorres_cond_both'[where Q'=\<top>])
+               apply (case_tac "replyPrev areply"; clarsimp split: if_splits)
+              apply (rule updateReply_ccorres_lemma3[where P=\<top> and P'=\<top>])
+               apply vcg
+              apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
+             apply (rule ccorres_return_Skip)
             apply ceqv
-           apply (rule ccorres_pre_threadGet, rename_tac tcbScPtrOpt)
-           apply (rule ccorres_move_c_guard_tcb)
-           apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-               apply (clarsimp simp: when_def)
-               apply (rule_tac Q="obj_at' (\<lambda>tcb. tcbSchedContext tcb = tcbScPtrOpt) tcbPtr
-                                  and valid_tcbs' and no_0_obj'"
-                            in ccorres_cond_both'[where Q'=\<top>])
-                 apply normalise_obj_at'
-                 apply (frule (1) obj_at_cslift_tcb)
-                 apply (frule (1) ko_at'_valid_tcbs'_valid_tcb')
-                 apply (clarsimp simp: ctcb_relation_def typ_heap_simps option_to_ptr_def
-                                       option_to_0_def valid_tcb'_def valid_bound_obj'_def)
-                 apply (rename_tac tcb tcb')
-                 apply (case_tac "tcbSchedContext tcb"; clarsimp)
-                apply (ctac (no_vcg) add: schedContext_donate_ccorres)
-               apply (rule ccorres_return_Skip)
+           apply (simp add: bind_assoc)
+           apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+               apply (rule updateSchedContext_ccorres_lemma2[where P=\<top>])
+                 apply vcg
+                apply simp
+               apply normalise_obj_at'
+               apply (fastforce intro: rf_sr_sc_update_no_refill_buffer_update2
+                                       refill_buffer_relation_sc_no_refills_update
+                                 simp: typ_heap_simps' csched_context_relation_def)
               apply ceqv
-             apply (rule ccorres_rhs_assoc2)
-             apply (rule ccorres_split_nothrow_novcg)
-                 apply (rule updateReply_ccorres_lemma2[where P=\<top>])
-                  apply vcg
-                 apply (frule (1) obj_at_cslift_reply)
-                 apply (fastforce intro!: rf_sr_reply_update2
-                                    simp: typ_heap_simps' creply_relation_def isHead_def
-                                   split: if_splits)
-                apply ceqv
-               apply (ctac (no_vcg) add: reply_unlink_ccorres)
-              apply (wpsimp wp: updateReply_valid_objs')
-             apply (clarsimp simp: guard_is_UNIV_def)
+             apply (clarsimp simp: when_def)
+             apply (rule_tac Q="valid_bound_reply' (replyPrev areply) and no_0_obj'"
+                          in ccorres_cond_both'[where Q'=\<top>])
+               apply (case_tac "replyPrev areply"; clarsimp split: if_splits)
+              apply (rule ccorres_assert)
+              apply (rule updateReply_ccorres_lemma2[where P=\<top>])
+               apply vcg
+              apply (fastforce intro!: rf_sr_reply_update2 simp: typ_heap_simps' creply_relation_def)
+             apply (rule ccorres_return_Skip)
             apply wpsimp
-           apply (clarsimp simp: guard_is_UNIV_def)
-          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_if_lift2)
-         apply (clarsimp simp: guard_is_UNIV_def isHead_def split: if_splits)
-        apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-       apply (clarsimp simp: guard_is_UNIV_def)
-      apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_if_lift2)
-     apply (clarsimp simp: guard_is_UNIV_def)
+           apply vcg
+          apply ((wpsimp wp: | wp (once) hoare_drop_imps)+)[1]
+         apply vcg
+        apply wpsimp
+       apply vcg
+      apply ((wpsimp wp: | wp (once) hoare_drop_imps)+)[1]
+     apply vcg
     apply vcg
+   apply clarsimp
    apply vcg
-  apply clarsimp
-  apply (frule invs_valid_objs')
   apply normalise_obj_at'
-  apply (frule (1) reply_ko_at_valid_objs_valid_reply')
-  by (fastforce simp: valid_reply'_def isHead_def valid_obj'_def valid_sched_context'_def
-                      opt_pred_def opt_map_def obj_at'_def refillSize_def getReplyNextPtr_def
-               split: reply_next.splits if_splits option.splits)
+  apply (fastforce dest: reply_ko_at_valid_objs_valid_reply' simp: valid_reply'_def)
+  done
 
 lemma reply_remove_ccorres:
   "ccorres dc xfdc
@@ -3111,124 +3091,70 @@ lemma reply_remove_ccorres:
      and tcb_at' tcbPtr and reply_at' replyPtr)
     (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
     (replyRemove replyPtr tcbPtr) (Call reply_remove_'proc)"
+  unfolding replyRemove_def maybeToMonad_def
   supply if_split[split del]
-  supply Collect_const[simp del]
-  apply (cinit lift: reply_' tcb_' simp: assert_opt_def2)
-   apply (rename_tac creply)
-   apply (rule ccorres_stateAssert)
-   apply (rule ccorres_pre_getObject_reply, rename_tac reply)
-   apply (rule ccorres_assert2_abs)+
-   apply (rule getThreadState_ccorres_foo, rename_tac threadState)
-   apply (rule ccorres_assert2_abs)+
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_reply_sp' assert_opt_sp gts_sp' return_sp)+
+  apply (cinit' lift: reply_' tcb_')
+  apply (rename_tac areply tptr state replySCOpt tcb reply)
+  apply (subst case_option_If2)
    apply (rule ccorres_move_c_guard_reply)
-   apply (rule_tac xf'=ret__unsigned_longlong_'
-               and val="if \<exists>y. replyNext reply = Some y
-                        then if isHead (replyNext reply)
-                             then theHeadScPtr (replyNext reply)
-                             else theReplyNextPtr (replyNext reply)
-                        else 0"
-               and R="ko_at' reply replyPtr"
+   apply (rule_tac xf'=replySC_'
+               and val="option_to_ptr (replySC areply)"
+               and R="ko_at' areply replyPtr"
                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
       apply (rule conseqPre, vcg)
-      apply normalise_obj_at'
-      apply (frule (1) obj_at_cslift_reply)
-      apply (clarsimp simp: typ_heap_simps creply_relation_def)
+      apply (fastforce dest: obj_at_cslift_reply simp: typ_heap_simps creply_relation_def)
      apply ceqv
-    apply csymbr
-    apply clarsimp
-    apply (rule ccorres_move_c_guard_reply)
-    apply (rule_tac xf'=ret__unsigned_longlong_'
-                and val="option_to_0 (replyPrev reply)"
-                and R="ko_at' reply replyPtr"
-                 in ccorres_symb_exec_r_known_rv[where R'=UNIV])
-       apply (rule conseqPre, vcg)
-       apply (clarsimp simp: st_tcb_at'_def)
-       apply normalise_obj_at'
-       apply (frule (1) obj_at_cslift_reply)
-       apply (clarsimp simp: typ_heap_simps creply_relation_def option_to_ptr_def)
-      apply ceqv
-     apply csymbr
-     apply csymbr
-     apply (rule_tac xf'=ret__int_'
-                 and val="from_bool ((\<exists>y. replyNext reply = Some y) \<and> isHead (replyNext reply))"
-                 and R="ko_at' reply replyPtr and valid_objs' and no_0_obj'"
-                 and R'="{s'. \<forall>s. ((s, s') \<in> rf_sr \<and> ko_at' reply replyPtr s
-                                   \<and> valid_objs' s \<and> no_0_obj' s)
-                                  \<longrightarrow> (ret__int_' s'
-                                       = (if \<exists>y. replyNext reply = Some y then 1 else 0))}"
-                  in ccorres_symb_exec_r_known_rv)
-        apply (rule conseqPre, vcg)
-        apply (clarsimp split: if_splits)
-        subgoal
-          by (intro conjI impI allI;
-              normalise_obj_at'?,
-              (frule (1) obj_at_cslift_reply)?,
-              fastforce dest: reply_ko_at_valid_objs_valid_reply'
-                        simp: creply_relation_def typ_heap_simps isHead_def false_def true_def
-                              valid_reply'_def
-                       split: reply_next.splits )
-       apply ceqv
-      apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
-        apply clarsimp
-       apply (ctac (no_vcg) add: reply_pop_ccorres)
-      apply (rule ccorres_rhs_assoc)+
-      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-          apply (clarsimp simp: when_def)
-          apply (rule_tac Q="valid_reply' reply and no_0_obj'" in ccorres_cond_both'[where Q'=\<top>])
-            apply (clarsimp simp: option_to_0_def valid_reply'_def isHead_def
-                           split: option.splits reply_next.splits)
-           apply (rule_tac P'="valid_objs' and no_0_obj'" in updateReply_ccorres_lemma3[where P=\<top>])
-            apply vcg
-           apply (fastforce intro!: rf_sr_reply_update2
-                              simp: typ_heap_simps' creply_relation_def split: if_splits)
-          apply (rule ccorres_return_Skip)
-         apply ceqv
-        apply clarsimp
-        apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-            apply (clarsimp simp: when_def)
-            apply (rule_tac Q="valid_reply' reply and no_0_obj'" in ccorres_cond_both'[where Q'=\<top>])
-              apply (fastforce simp: option_to_0_def valid_reply'_def split: option.splits)
-             apply (rule updateReply_ccorres_lemma3[where P=\<top> and P'=\<top>])
-              apply vcg
-             apply (fastforce intro!: rf_sr_reply_update2
-                                simp: typ_heap_simps' creply_relation_def isHead_def)
-            apply (rule ccorres_return_Skip)
-           apply ceqv
-          apply (clarsimp simp: cleanReply_def bind_assoc)
-          apply (rule ccorres_rhs_assoc2)
-          apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-              apply (rule updateReply_ccorres_lemma2[where P=\<top>])
-               apply vcg
-              apply (fastforce intro!: rf_sr_reply_update2
-                                 simp: typ_heap_simps' creply_relation_def split: if_splits)
-             apply ceqv
-            apply (rule ccorres_rhs_assoc2)
-            apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-                apply (rule updateReply_ccorres_lemma2[where P=\<top>])
-                 apply vcg
-                apply (fastforce intro!: rf_sr_reply_update2
-                                   simp: typ_heap_simps' creply_relation_def isHead_def)
-               apply ceqv
-              apply (ctac (no_vcg) add: reply_unlink_ccorres)
-             apply (wpsimp wp: updateReply_valid_objs')
-            apply (clarsimp simp: guard_is_UNIV_def)
+    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
+        apply (rule_tac Q="ko_at' areply replyPtr and K (replySCOpt = replySC areply)
+                           and valid_objs' and no_0_obj'"
+                     in ccorres_cond_both'[where Q'=\<top>])
+          apply clarsimp
+          apply (frule (1) reply_ko_at_valid_objs_valid_reply')
+          apply (clarsimp simp: option_to_ptr_def option_to_0_def valid_reply'_def
+                         split: if_splits option.splits)
+         apply clarsimp
+         apply (rename_tac scPtr)
+         apply (ctac add: reply_pop_ccorres)
+           apply (rule ccorres_symb_exec_l)
+              apply (clarsimp simp: when_def)
+              apply (rule ccorres_move_c_guard_tcb)
+              apply (rule_tac Q="obj_at' (\<lambda>tcb. tcbSchedContext tcb = tcbScPtrOpt) tcbPtr
+                                 and valid_objs' and no_0_obj'"
+                           in ccorres_cond_both'[where Q'=\<top>])
+                apply normalise_obj_at'
+                apply (rename_tac tcb)
+                apply (frule (1) obj_at_cslift_tcb)
+                apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+                apply (case_tac "tcbSchedContext tcb";
+                       fastforce simp: valid_tcb'_def typ_heap_simps ctcb_relation_def)
+               apply (ctac add: schedContext_donate_ccorres)
+              apply (rule ccorres_return_Skip)
+             apply wpsimp
+            apply (wpsimp wp: threadGet_wp)
            apply wpsimp
-          apply (clarsimp simp: guard_is_UNIV_def)
-         apply wpsimp
-        apply (clarsimp simp: guard_is_UNIV_def)
-       apply (wpsimp simp: when_def)
-      apply (clarsimp simp: guard_is_UNIV_def)
-     apply vcg
-    apply vcg
-   apply clarsimp
+          apply (rule_tac Q'="\<lambda>_ s. sc_at' scPtr s \<and> tcb_at' tcbPtr s \<and> valid_objs' s \<and> no_0_obj' s
+                                    \<and> weak_sch_act_wf (ksSchedulerAction s) s
+                                    \<and> pspace_aligned' s \<and> pspace_distinct' s"
+                       in hoare_post_imp)
+           apply (clarsimp simp: obj_at'_def)
+          apply wpsimp
+         apply wpfix
+         apply (vcg exspec=reply_pop_modifies)
+        apply (ctac add: break_reply_chain_at_ccorres)
+       apply ceqv
+      apply (ctac add: reply_unlink_ccorres)
+     apply wpsimp
+    apply (vcg exspec=reply_pop_modifies
+               exspec=break_reply_chain_at_modifies
+               exspec=schedContext_donate_modifies)
    apply vcg
-  apply normalise_obj_at'
-  apply (frule invs_valid_objs')
-  apply (frule (1) reply_ko_at_valid_objs_valid_reply')
-  apply (frule invs_no_0_obj')
-  by (fastforce simp: getHeadScPtr_def theHeadScPtr_def valid_reply'_def isHead_def
-                      valid_obj'_def obj_at'_def no_0_obj'_def
-               split: reply_next.splits if_splits)
+  apply (rule conjI)
+   apply normalise_obj_at'
+   apply (frule (1) reply_ko_at_valid_objs_valid_reply'[OF _ invs_valid_objs'])
+   apply (fastforce simp: valid_reply'_def)
+  apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
+  done
 
 lemma getBlockingObject_BlockedOnReceive_return:
   "(getBlockingObject (Structures_H.thread_state.BlockedOnReceive oref cg ro)) = return oref"

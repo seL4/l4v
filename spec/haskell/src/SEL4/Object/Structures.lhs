@@ -234,35 +234,11 @@ the full queue is obtained by starting at the head and following the tcbSchedNex
 
 \subsubsection{Reply Objects}
 
-> data ReplyNext = Head (PPtr SchedContext) | Next (PPtr Reply)
->   deriving Eq
-
 > data Reply = Reply {
 >     replyTCB :: Maybe (PPtr TCB),
+>     replySC :: Maybe (PPtr SchedContext),
 >     replyPrev :: Maybe (PPtr Reply),
->     replyNext :: Maybe ReplyNext }
-
-> isHead :: Maybe ReplyNext -> Bool
-> isHead (Just (Head _)) = True
-> isHead _ = False
-
-> isNext :: Maybe ReplyNext -> Bool
-> isNext (Just (Next _)) = True
-> isNext _ = False
-
-> getHeadScPtr :: Maybe ReplyNext -> Maybe (PPtr SchedContext)
-> getHeadScPtr (Just (Head ptr)) = Just ptr
-> getHeadScPtr _ = Nothing
-
-> theHeadScPtr :: Maybe ReplyNext -> PPtr SchedContext
-> theHeadScPtr ptr = fromJust (getHeadScPtr ptr)
-
-> getReplyNextPtr :: Maybe ReplyNext -> Maybe (PPtr Reply)
-> getReplyNextPtr (Just (Next ptr)) = Just ptr
-> getReplyNextPtr _ = Nothing
-
-> theReplyNextPtr :: Maybe ReplyNext -> PPtr Reply
-> theReplyNextPtr ptr = fromJust (getReplyNextPtr ptr)
+>     replyNext :: Maybe (PPtr Reply) }
 
 \subsubsection{Notification Objects}
 

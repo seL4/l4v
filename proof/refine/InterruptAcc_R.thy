@@ -405,7 +405,7 @@ lemma sch_act_simple_irq_state_independent[intro!, simp]:
 
 method invs'_independent_method
   = clarsimp simp: irq_state_independent_H_def invs'_def
-                   valid_pspace'_def valid_replies'_def
+                   valid_pspace'_def valid_replies'_def is_reply_linked_def
                    if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
                    valid_global_refs'_def valid_irq_node'_def
                    valid_irq_handlers'_def valid_irq_states'_def

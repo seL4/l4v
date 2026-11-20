@@ -457,7 +457,11 @@ lemma rcorres_from_corres_underlying:
   by (fastforce simp: corres_underlying_def rcorres_def no_fail_def)
 
 
-section \<open>Interactions with @{const no_fail}\<close>
+section \<open>Failure, and interactions with @{const no_fail}\<close>
+
+lemma rcorres_fail:
+  "rcorres \<bottom>\<bottom> fail f' R'"
+  by (clarsimp simp: rcorres_def)
 
 lemma no_fail_rcorres_bind:
   "\<lbrakk>\<And>rv rv'. no_fail (\<lambda>s'. \<exists>s. R rv rv' s s') (g' rv'); rcorres Q f f' R;

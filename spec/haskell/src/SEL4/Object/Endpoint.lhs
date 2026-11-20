@@ -21,7 +21,7 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 > import SEL4.API.Failures
 > import SEL4.Machine
 > import SEL4.Model
-> import SEL4.Object.Reply(updateReply, getReply, replyPush, replyRemove, replyUnlink, replyRemoveTCB)
+> import SEL4.Object.Reply(updateReply, getReply, replyLinkCaller, replyRemove, replyUnlink, replyRemoveTCB)
 > import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import SEL4.Object.Instances()
@@ -109,7 +109,7 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                 fault <- threadGet tcbFault thread
 >                 if (call || isJust fault)
 >                   then if ((canGrant || canGrantReply) && isJust replyOpt)
->                     then replyPush thread dest (fromJust replyOpt) canDonate
+>                     then replyLinkCaller thread dest (fromJust replyOpt) canDonate
 >                     else setThreadState Inactive thread
 >                   else when (canDonate && scOptDest == Nothing) $ do
 >                     scOptSrc <- threadGet tcbSchedContext thread
@@ -197,7 +197,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         then do
 >                             senderSc <- threadGet tcbSchedContext sender
 >                             donate <- return ((senderSc /= Nothing) && not (isJust fault && isTimeoutFault (fromJust fault)))
->                             replyPush sender thread (fromJust replyOpt) donate
+>                             replyLinkCaller sender thread (fromJust replyOpt) donate
 >                         else setThreadState Inactive sender
 >                     else do
 >                         setThreadState Running sender
