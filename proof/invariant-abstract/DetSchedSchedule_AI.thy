@@ -13737,7 +13737,7 @@ lemma reply_remove_sc_tcbs_of_retract[wp]:
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule bind_wp[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
-  apply  (wpsimp wp: sched_context_donate_sc_tcbs_of_retract)
+  apply (wpsimp wp: sched_context_donate_sc_tcbs_of_retract)
   done
 
 lemma reply_link_caller_sc_tcbs_of_retract[wp]:
