@@ -39,7 +39,7 @@ abbreviation valid_replies'_alt :: "kernel_state \<Rightarrow> bool" where
 lemma valid_replies'_def2:
   "pspace_distinct' s \<Longrightarrow> pspace_aligned' s \<Longrightarrow>
    valid_replies' s = valid_replies'_alt s"
-  unfolding valid_replies'_def
+  unfolding valid_replies'_def is_reply_linked_def
   apply (rule iffI; clarsimp simp: obj_at'_def valid_sz_simps)
    apply (drule_tac x=rptr in spec, clarsimp simp: opt_map_def)
   apply (clarsimp simp: pspace_alignedD' pspace_distinctD' opt_map_def
@@ -4169,7 +4169,7 @@ lemma live'_reply_cross:
     pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> live (Structures_A.Reply reply)"
   apply (clarsimp simp: reply_relation_def live_def live_reply_def live_reply'_def
-                        valid_replies'_def)
+                        valid_replies'_def is_reply_linked_def)
   apply (drule_tac x=ptr in spec)
   apply (fastforce simp: opt_map_red)
   done

@@ -982,8 +982,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
    apply (fastforce simp: obj_at'_def)
   apply (frule (1) obj_at_replyTCBs_of[OF ko_at_obj_at', simplified])
   apply (frule valid_replies'_no_tcb, clarsimp)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def live_reply'_def opt_map_def
-                        valid_replies'_sc_asrt_def)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def live_reply'_def is_reply_linked_def
+                        opt_map_def valid_replies'_sc_asrt_def)
   done
 
 context Arch begin arch_global_naming

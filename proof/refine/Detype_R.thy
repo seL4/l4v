@@ -1085,7 +1085,7 @@ proof (simp add: invs'_def valid_pspace'_def
     done
 
   show "valid_replies' ?s" using vreplies assms
-    apply (clarsimp simp: valid_replies'_def simp del: imp_disjL)
+    apply (clarsimp simp: valid_replies'_def is_reply_linked_def simp del: imp_disjL)
     apply (prop_tac "rptr \<notin> base_bits")
      apply (clarsimp simp: opt_map_def)
     apply (drule_tac x=rptr in spec, drule mp)

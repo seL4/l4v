@@ -13673,7 +13673,7 @@ lemma reply_link_caller_not_queued[wp]:
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   unfolding reply_link_caller_def reply_push_def
   by (wpsimp wp: hoare_drop_imp get_sched_context_wp hoare_vcg_if_lift2 hoare_vcg_all_lift
-     split_del: if_split)
+      split_del: if_split)
 
 lemma sched_context_donate_tcb_scps_of_retract[wp]:
   "\<lbrace>\<lambda>s. heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s) \<and> pred_map_eq None (tcb_scps_of s) t\<rbrace>
@@ -13737,7 +13737,8 @@ lemma reply_remove_sc_tcbs_of_retract[wp]:
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule bind_wp_fwd_skip, wpsimp)
   apply (rule bind_wp[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
-  by (wpsimp wp: sched_context_donate_sc_tcbs_of_retract)
+  apply  (wpsimp wp: sched_context_donate_sc_tcbs_of_retract)
+  done
 
 lemma reply_link_caller_sc_tcbs_of_retract[wp]:
   "reply_link_caller caller callee reply_ptr can_donate
@@ -13818,7 +13819,7 @@ lemmas set_thread_state_ipc_queued_valid_blocked_except_set
 lemma set_sc_replies_active_reply_scs:
   "\<lbrace>\<lambda>s. active_reply_scs s \<and> (replies \<noteq> [] \<longrightarrow> pred_map active_scrc (sc_refill_cfgs_of s) scp)\<rbrace>
    set_sc_obj_ref sc_replies_update scp replies
-   \<lbrace>\<lambda>rv. active_reply_scs\<rbrace>"
+   \<lbrace>\<lambda>_. active_reply_scs\<rbrace>"
   apply (wpsimp wp: update_sched_context_valid_sched_pred)
      apply (auto elim!: active_reply_scsE
                   simp: heap_upd_def active_reply_scs_def active_if_reply_sc_at_def
@@ -21678,20 +21679,20 @@ lemma send_ipc_ct_ready_if_schedulable_not_blocked_on_receive:
     apply (case_tac queue; simp)
     apply (rename_tac dest list)
     apply (wpsimp wp: maybeM_inv)
-               apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv reply_link_caller_ct_ready_if_schedulable)
-              apply (rule_tac Q'="\<lambda>_. ct_ready_if_schedulable and (\<lambda>s. dest \<noteq> cur_thread s)"
-                     in hoare_post_imp, simp)
-              apply (wpsimp wp: assert_inv)+
-             apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv reply_link_caller_ct_ready_if_schedulable)
-            apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv reply_link_caller_ct_ready_if_schedulable)
-           apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv reply_link_caller_ct_ready_if_schedulable)
-            apply (wpsimp wp: sched_context_donate_ct_ready_if_schedulable')
+            apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong )
+           apply (rule_tac Q'="\<lambda>_. ct_ready_if_schedulable and (\<lambda>s. dest \<noteq> cur_thread s)"
+                        in hoare_post_imp, simp)
+           apply (wpsimp wp: assert_inv)+
+             apply (wpsimp wp: assert_inv reply_link_caller_ct_ready_if_schedulable)
+            apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong)
+           apply (wpsimp wp: sched_context_donate_ct_ready_if_schedulable')
            apply (wpsimp wp: get_tcb_obj_ref_wp thread_get_wp')
           apply (wpsimp wp: get_tcb_obj_ref_wp thread_get_wp')
          apply (wpsimp wp: get_tcb_obj_ref_wp thread_get_wp')
-        apply (rule_tac Q'="\<lambda>_ s. dest \<noteq> cur_thread s \<and> thread = cur_thread s \<and> fault_tcb_at bound thread s
-                                 \<and> heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)"
-               in hoare_post_imp)
+        apply (rule_tac Q'="\<lambda>_ s. dest \<noteq> cur_thread s \<and> thread = cur_thread s
+                                  \<and> fault_tcb_at bound thread s
+                                  \<and> heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)"
+                     in hoare_post_imp)
          apply clarsimp
          apply (intro conjI; intro allI impI)
           apply (clarsimp simp: sc_at_kh_simps tcb_at_kh_simps vs_all_heap_simps obj_at_def)

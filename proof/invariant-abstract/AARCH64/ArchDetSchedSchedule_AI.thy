@@ -151,7 +151,7 @@ lemma arch_thread_set_scs_of[wp]:
   unfolding arch_thread_set_def
   apply (wpsimp wp: set_object_wp_strong)
   apply (fastforce elim!: rsubst[where P=P]
-                    simp: vs_all_heap_simps obj_at_kh_kheap_simps opt_map_def scs_of_kh_def )
+                    simp: vs_all_heap_simps obj_at_kh_kheap_simps opt_map_def scs_of_kh_def)
   done
 
 lemma arch_thread_set_tcb_sts_of[wp]:

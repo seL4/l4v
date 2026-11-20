@@ -1810,6 +1810,8 @@ lemma replyRemove_valid_objs'[wp]:
 
 crunch schedContextDonate, updateSchedContext
   for ko_at'_reply[wp]: "\<lambda>s. Q (ko_at' (reply :: reply) scPtr s)"
+  and is_reply_linked[wp]: "\<lambda>s. P (is_reply_linked replyPtr s)"
+  (wp: is_reply_linked_lift)
 
 lemma replyPop_valid_replies'[wp]:
   "\<lbrace>valid_replies' and pspace_aligned' and pspace_distinct'\<rbrace>
@@ -1823,7 +1825,7 @@ lemma replyRemove_valid_replies'[wp]:
    replyRemove replyPtr tcbPtr
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   unfolding replyRemove_def
-  by (wpsimp wp: hoare_vcg_imp_lift' replyPop_not_reply_linked[simplified])
+  by (wpsimp wp: hoare_vcg_imp_lift')
 
 lemma replyRemove_valid_mdb'[wp]:
   "replyRemove replyPtr tcbPtr \<lbrace>valid_mdb'\<rbrace>"
@@ -2393,8 +2395,9 @@ lemma replyUnlink_makes_unlive:
   apply (wpsimp wp: setThreadState_Inactive_unlive)
          apply (wpsimp wp: set_reply'.set_wp)
         apply (wpsimp wp: gts_wp')+
-  by (auto simp: fun_upd_apply ko_wp_at'_def obj_at'_def opt_map_def objBitsKO_def
-                 live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def)
+  apply (fastforce simp: fun_upd_apply ko_wp_at'_def obj_at'_def opt_map_def objBitsKO_def
+                         is_reply_linked_def live'_def live_reply'_def)
+  done
 
 crunch replyPop'
   for replySCs_of[wp]: "\<lambda>s. P (replySCs_of s)"
@@ -2415,9 +2418,8 @@ lemma replyRemove_makes_unlive:
   "\<lbrace>valid_tcbs' and sym_heap_sched_pointers and valid_sched_pointers\<rbrace>
    replyRemove rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
-  supply de_Morgan_disj[simp del]
   unfolding replyRemove_def
-  by (wpsimp wp: replyUnlink_makes_unlive replyPop_not_reply_linked[simplified])
+  by (wpsimp wp: replyUnlink_makes_unlive)
 
 lemma replyRemoveTCB_makes_unlive:
   "\<lbrace>st_tcb_at' (\<lambda>st. replyObject st = Some rptr) tptr\<rbrace>
@@ -2432,6 +2434,10 @@ lemma replyRemoveTCB_makes_unlive:
   apply clarsimp
   apply (wpsimp wp: replyUnlink_makes_unlive)
   done
+
+crunch setThreadState
+  for is_reply_linked[wp]: "\<lambda>s. P (is_reply_linked replyPtr s)"
+  (wp: is_reply_linked_lift)
 
 method cancelIPC_makes_unlive_hammer =
   normalise_obj_at',

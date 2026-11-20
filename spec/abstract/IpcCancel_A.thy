@@ -200,7 +200,7 @@ definition reply_remove_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (uni
 
 definition reply_push :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "reply_push sc_ptr reply_ptr \<equiv> do
-     sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (sc_ptr);
+     sc_replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
      \<comment> \<open>unlink head reply and sc before pushing\<close>
      case sc_replies of
          [] \<Rightarrow> return ()

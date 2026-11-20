@@ -40,6 +40,9 @@ This module specifies the behavior of reply objects.
 >     reply <- getReply replyPtr
 >     setReply replyPtr (upd reply)
 
+A helper function used only in replyPush that bundles all updates to all
+fields visible to sc_replies_relation.
+
 > replyPush' :: PPtr SchedContext -> PPtr Reply -> Maybe (PPtr Reply) -> Kernel ()
 > replyPush' scPtr replyPtr scReplyOpt = do
 >     stateAssert (replyPush'_asrt scReplyOpt) ""
@@ -80,6 +83,9 @@ This module specifies the behavior of reply objects.
 >         replyPush (fromJust scPtrOptDonated) replyPtr
 >         schedContextDonate (fromJust scPtrOptDonated) calleePtr
 
+A helper function used only in breakReplyChainAt that bundles all updates to all
+fields visible to sc_replies_relation.
+
 > breakReplyChainAt' :: PPtr Reply -> Kernel ()
 > breakReplyChainAt' replyPtr = do
 >     reply <- getReply replyPtr
@@ -92,7 +98,7 @@ This module specifies the behavior of reply objects.
 >     updateReply replyPtr (\reply -> reply { replyPrev = Nothing })
 >     updateReply replyPtr (\reply -> reply { replyNext = Nothing })
 >     replySCOpt <- return $ replySC reply
->     when (replySCOpt /= Nothing) $ 
+>     when (replySCOpt /= Nothing) $
 >         updateSchedContext (fromJust replySCOpt) (\sc -> sc { scReply = Nothing })
 
 > breakReplyChainAt :: PPtr Reply -> Kernel ()
@@ -100,8 +106,11 @@ This module specifies the behavior of reply objects.
 >     reply <- getReply replyPtr
 >     breakReplyChainAt' replyPtr
 >     replySCOpt <- return $ replySC reply
->     when (replySCOpt /= Nothing) $ 
+>     when (replySCOpt /= Nothing) $
 >         updateReply replyPtr (\reply -> reply { replySC = Nothing })
+
+A helper function used only in replyPop that bundles all updates to all
+fields visible to sc_replies_relation.
 
 > replyPop' :: PPtr Reply -> PPtr SchedContext -> Maybe (PPtr Reply) -> Kernel ()
 > replyPop' replyPtr scPtr prevReplyOpt = do

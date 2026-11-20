@@ -333,9 +333,9 @@ definition sc_replies_relation_2 ::
    \<Rightarrow> bool"
   where
   "sc_replies_relation_2 sc_repls scRepl replPrevs replyNexts \<equiv>
-     \<forall>p replies st.
-       sc_repls p = Some replies \<longrightarrow> scRepl p = st
-       \<longrightarrow> list_linked_list_relation replies st replPrevs replyNexts"
+     \<forall>p replies reply_ptr_opt.
+       sc_repls p = Some replies \<longrightarrow> scRepl p = reply_ptr_opt
+       \<longrightarrow> list_linked_list_relation replies reply_ptr_opt replPrevs replyNexts"
 
 abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "sc_replies_relation s s' \<equiv>

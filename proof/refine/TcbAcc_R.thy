@@ -624,7 +624,7 @@ lemma setObject_tcb_valid_replies':
                       \<or> \<not> is_reply_linked rptr s)\<rbrace>
    setObject t (v :: tcb)
    \<lbrace>\<lambda>rv. valid_replies'\<rbrace>"
-  unfolding valid_replies'_def pred_tcb_at'_def
+  unfolding valid_replies'_def is_reply_linked_def pred_tcb_at'_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_ex_lift
                     set_tcb'.setObject_obj_at'_strongest)
   apply (rename_tac rptr)
@@ -4356,7 +4356,7 @@ lemma setObject_tcb_valid_replies'_except_Blocked:
    setObject t (v :: tcb)
    \<lbrace>\<lambda>rv. valid_replies'\<rbrace>"
   supply opt_mapE[elim!]
-  unfolding valid_replies'_def valid_replies'_except_def
+  unfolding valid_replies'_def valid_replies'_except_def is_reply_linked_def
   apply (subst pred_tcb_at'_eq_commute)+
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ex_lift
                     set_tcb'.setObject_obj_at'_strongest
@@ -6229,13 +6229,11 @@ lemma (in TcbAcc_R_2) sts_invs':
     and tcb_at' t
     and invs'\<rbrace>
    setThreadState st t
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def)
   apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift
                     setThreadState_valid_sched_pointers setThreadState_sym_heap_sched_pointers
               simp: cteCaps_of_def o_def)
-  apply (clarsimp simp: valid_pspace'_def)
-  apply fast
   done
 
 end (* TcbAcc_R_3 *)

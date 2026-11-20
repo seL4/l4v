@@ -317,6 +317,9 @@ lemma tcbs_relation_lift_rcorres[rcorres_lift]:
   apply fastforce
   done
 
+\<comment> \<open>
+  Note that this does not need preservation of the sc_replies field of the abstract sc, or the
+  scReply field of the concrete sc.\<close>
 lemma scs_relation_lift_rcorres[rcorres_lift]:
   assumes det: "\<And>s'. det_wp (\<lambda>s. Q s s') f"
   assumes abs:

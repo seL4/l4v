@@ -396,7 +396,8 @@ crunch tcbEPAppend, tcbEPDequeue, tcbNTFNAppend, tcbNTFNDequeue
   and valid_irq_states'[wp]: valid_irq_states'
   and valid_machine_state'[wp]: valid_machine_state'
   and pspace_domain_valid[wp]: pspace_domain_valid
-  (wp: crunch_wps)
+  and is_reply_linked[wp]: "\<lambda>s. P (is_reply_linked replyPtr s)"
+  (wp: crunch_wps is_reply_linked_lift)
 
 lemma tcbEPDequeue_corres:
   "\<lbrakk>tcb_ptr = tcbPtr; ep_ptr = epPtr\<rbrakk> \<Longrightarrow>
@@ -1744,6 +1745,10 @@ crunch cancelIPC
   and pspace_domain_valid[wp]: pspace_domain_valid
   and ntfn_at'[wp]: "ntfn_at' t"
   (wp: hoare_vcg_all_lift crunch_wps simp: crunch_simps)
+
+crunch replyUnlink
+  for is_reply_linked[wp]: "\<lambda>s. P (is_reply_linked replyPtr s)"
+  (wp: is_reply_linked_lift)
 
 lemma blockedCancelIPC_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and st_tcb_at' ((=) st) tptr\<rbrace>

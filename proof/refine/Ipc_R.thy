@@ -2514,7 +2514,7 @@ lemma replyLinkCaller_valid_objs'[wp]:
 
 lemma updateReply_valid_replies'_except:
   "\<lbrace>valid_replies'\<rbrace> updateReply rptr f \<lbrace>\<lambda>_. valid_replies'_except {rptr}\<rbrace>"
-  unfolding valid_replies'_def valid_replies'_except_def imp_conjL
+  unfolding valid_replies'_def valid_replies'_except_def is_reply_linked_def imp_conjL
   apply (rule hoare_allI)
   apply (rule hoare_vcg_imp_lift_pre_add[rotated])
    apply wpsimp
@@ -4375,7 +4375,6 @@ lemma sendSignal_corres:
    apply (frule (3) st_tcb_at_coerce_concrete)
    apply (clarsimp cong: conj_cong)
    apply (intro conjI impI allI; clarsimp?)
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   apply (clarsimp simp: ntfn_relation_def updateNotification_def)
   apply (rule corres_symb_exec_r[OF _ get_ntfn_sp']; (solves wpsimp)?)
@@ -6038,6 +6037,10 @@ crunch replyUnlink
   for scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
   (simp: crunch_simps wp: crunch_wps)
 
+lemma replyTCB_update_is_reply_linked[wp]:
+  "updateReply replyPtr' (replyTCB_update f) \<lbrace>\<lambda>s. P (is_reply_linked replyPtr s)\<rbrace>"
+  by (wpsimp wp: is_reply_linked_lift updateReply_field_inv)
+
 lemma replyLinkCaller_sym_heap_reply_pointers:
   "\<lbrace>sym_heap_reply_pointers and valid_replies'\<rbrace>
    replyLinkCaller callerPtr calleePtr replyPtr canDonate
@@ -6049,7 +6052,7 @@ lemma replyLinkCaller_sym_heap_reply_pointers:
                         in hoare_post_imp)
             apply fastforce
            apply (wpsimp wp: sym_heap_reply_pointers_lift updateReply_field_inv)+
-  apply (fastforce dest!: spec[where x=replyPtr] simp: valid_replies'_def opt_map_red obj_at'_def)
+  apply (fastforce simp: valid_replies'_def opt_map_red obj_at'_def)
   done
 
 lemma replyLinkCaller_untyped_ranges_zero'[wp]:
@@ -6081,7 +6084,8 @@ crunch maybeReturnSc, cancelIPC
 crunch maybeReturnSc, doIPCTransfer
   for replyTCB_obj_at'[wp]: "\<lambda>s. P (obj_at' (\<lambda>reply. P' (replyTCB reply)) t s)"
   and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
-  (wp: crunch_wps constOnFailure_wp simp: crunch_simps)
+  and is_reply_linked[wp]: "\<lambda>s. P (is_reply_linked replyPtr s)"
+  (wp: crunch_wps constOnFailure_wp is_reply_linked_lift simp: crunch_simps)
 
 lemma replyUnlink_replyTCBs_of_None[wp]:
   "\<lbrace>\<lambda>s. r \<noteq> rptr \<longrightarrow> replyTCBs_of s rptr = None\<rbrace>
@@ -6232,10 +6236,7 @@ lemma ri_invs' [wp]:
                         cancelIPC_replyTCBs_of_None hoare_vcg_all_lift getEndpoint_wp
                         hoare_drop_imp[where Q'="\<lambda>_ s. \<exists>ko. ko_at' ko _ s"] hoare_vcg_imp_lift')+
   apply (rename_tac s)
-  apply (clarsimp simp: comp_def invs'_def valid_pspace'_def if_distribR
-                  cong: conj_cong imp_cong)
-  apply (frule (3) sym_refs_tcbSCs)
-  apply (frule (3) sym_refs_scReplies)
+  apply (clarsimp simp: comp_def invs'_def valid_pspace'_def)
   apply (prop_tac "\<forall>r g. replyCap = ReplyCap r g \<longrightarrow> \<not>obj_at' (\<lambda>a. replyTCB a = Some t) r s")
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
    apply (drule_tac ko="ko :: reply" for ko in sym_refs_ko_atD'[rotated])

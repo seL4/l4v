@@ -1338,15 +1338,15 @@ qed
 
 lemma retype_replyPrevs_of:
   assumes  pr: "pspace_relation (kheap s) (ksPSpace s')"
-      and  vs: "valid_pspace s" "valid_mdb s"
-      and vs': "pspace_aligned' s'" "pspace_distinct' s'"
-      and  pn: "pspace_no_overlap_range_cover ptr sz s"
-      and pn': "pspace_no_overlap' ptr sz s'"
-      and  ko: "makeObjectKO dev us d ty = Some ko"
-      and tysc: "ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us"
-      and cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
-      and orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us d) ko"
-      and num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
+  assumes  vs: "valid_pspace s" "valid_mdb s"
+  assumes vs': "pspace_aligned' s'" "pspace_distinct' s'"
+  assumes  pn: "pspace_no_overlap_range_cover ptr sz s"
+  assumes pn': "pspace_no_overlap' ptr sz s'"
+  assumes  ko: "makeObjectKO dev us d ty = Some ko"
+  assumes tysc: "ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us"
+  assumes cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
+  assumes orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us d) ko"
+  assumes num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
   shows
   "replyPrevs_of
      (s'\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs m ptr ko) (ksPSpace s')\<rparr>)
@@ -1368,15 +1368,15 @@ qed
 
 lemma retype_replyNexts_of:
   assumes  pr: "pspace_relation (kheap s) (ksPSpace s')"
-      and  vs: "valid_pspace s" "valid_mdb s"
-      and vs': "pspace_aligned' s'" "pspace_distinct' s'"
-      and  pn: "pspace_no_overlap_range_cover ptr sz s"
-      and pn': "pspace_no_overlap' ptr sz s'"
-      and  ko: "makeObjectKO dev us d ty = Some ko"
-      and tysc: "ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us"
-      and cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
-      and orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us d) ko"
-      and num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
+  assumes  vs: "valid_pspace s" "valid_mdb s"
+  assumes vs': "pspace_aligned' s'" "pspace_distinct' s'"
+  assumes  pn: "pspace_no_overlap_range_cover ptr sz s"
+  assumes pn': "pspace_no_overlap' ptr sz s'"
+  assumes  ko: "makeObjectKO dev us d ty = Some ko"
+  assumes tysc: "ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us"
+  assumes cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
+  assumes orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us d) ko"
+  assumes num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
   shows
   "replyNexts_of
      (s'\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs m ptr ko) (ksPSpace s')\<rparr>)
@@ -2972,7 +2972,7 @@ proof (intro conjI impI)
 
   show valid_replies': "valid_replies' ?s'" using vr
     apply (subst mult.commute)
-    apply (clarsimp simp: valid_replies'_def pred_tcb_at'_def obj_at_disj'
+    apply (clarsimp simp: valid_replies'_def is_reply_linked_def pred_tcb_at'_def obj_at_disj'
                           foldr_upd_app_if[folded data_map_insert_def]
                    elim!: ranE
                    split: if_split_asm)
@@ -3691,44 +3691,39 @@ lemma (in Retype_R) createObjects_sched_queues:
    createObjects' ptr n val gbits
    \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
   (is "\<lbrace> \<lambda>s. _ \<and> _ \<and> ?Pre s \<rbrace> _ \<lbrace>\<lambda>_. _\<rbrace>")
-proof -
-  show ?thesis
-    apply (rule hoare_grab_asm)
-    apply (rule hoare_grab_asm)
+proof (rule hoare_grab_asm, rule hoare_grab_asm)
+  assume not_0: "\<not> n = 0"
+     and cover: "range_cover ptr sz ((objBitsKO val) + gbits) n"
+  then show
+    "\<lbrace>\<lambda>s. ?Pre s\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
   proof -
-    assume not_0: "\<not> n = 0"
-       and cover: "range_cover ptr sz ((objBitsKO val) + gbits) n"
-    then show
-      "\<lbrace>\<lambda>s. ?Pre s\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
-    proof -
-      have shiftr_not_zero:" 1 \<le> ((of_nat n)::machine_word) << gbits"
-        using range_cover_not_zero_shift[OF not_0 cover,where gbits = gbits]
-        by (simp add:word_le_sub1)
-      show ?thesis
-        apply (clarsimp simp: createObjects'_def unless_def alignError_def split_def)
-        apply (wp | clarsimp simp del: fun_upd_apply)+
-        apply (clarsimp simp: shiftL_nat data_map_insert_def[symmetric]
-                              new_cap_addrs_fold'[OF shiftr_not_zero]
-                    simp del: data_map_insert_def)
-        using range_cover.unat_of_nat_n_shift[OF cover, where gbits=gbits, simplified]
-        apply (clarsimp simp: foldr_upd_app_if)
-        apply (rule_tac a="tcbSchedNexts_of s" and b="tcbSchedPrevs_of s"
-                     in rsubst2[rotated, OF sym sym, where P=P])
-          apply (rule ext)
-          apply (clarsimp simp: opt_map_def)
-          apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
-            apply (fastforce intro: cover)
-           apply assumption
-          apply (clarsimp split: kernel_object.splits option.splits)
-         apply (rule ext)
-         apply (clarsimp simp: opt_map_def)
-         apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
-           apply (fastforce intro: cover)
-          apply fastforce
-         apply (clarsimp split: kernel_object.splits option.splits)
-        apply simp
-        done
-    qed
+    have shiftr_not_zero:" 1 \<le> ((of_nat n)::machine_word) << gbits"
+      using range_cover_not_zero_shift[OF not_0 cover,where gbits = gbits]
+      by (simp add:word_le_sub1)
+    show ?thesis
+      apply (clarsimp simp: createObjects'_def unless_def alignError_def split_def)
+      apply (wp | clarsimp simp del: fun_upd_apply)+
+      apply (clarsimp simp: shiftL_nat data_map_insert_def[symmetric]
+                            new_cap_addrs_fold'[OF shiftr_not_zero]
+                  simp del: data_map_insert_def)
+      using range_cover.unat_of_nat_n_shift[OF cover, where gbits=gbits, simplified]
+      apply (clarsimp simp: foldr_upd_app_if)
+      apply (rule_tac a="tcbSchedNexts_of s" and b="tcbSchedPrevs_of s"
+                   in rsubst2[rotated, OF sym sym, where P=P])
+        apply (rule ext)
+        apply (clarsimp simp: opt_map_def)
+        apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
+          apply (fastforce intro: cover)
+         apply assumption
+        apply (clarsimp split: kernel_object.splits option.splits)
+       apply (rule ext)
+       apply (clarsimp simp: opt_map_def)
+       apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
+         apply (fastforce intro: cover)
+        apply fastforce
+       apply (clarsimp split: kernel_object.splits option.splits)
+      apply simp
+      done
   qed
 qed
 
@@ -3743,44 +3738,39 @@ lemma (in Retype_R) createObjects_reply_pointers:
    createObjects' ptr n val gbits
    \<lbrace>\<lambda>_ s. P (replyPrevs_of s) (replyNexts_of s)\<rbrace>"
   (is "\<lbrace> \<lambda>s. _ \<and> _ \<and> ?Pre s \<rbrace> _ \<lbrace>\<lambda>_. _\<rbrace>")
-proof -
-  show ?thesis
-    apply (rule hoare_grab_asm)
-    apply (rule hoare_grab_asm)
+proof (rule hoare_grab_asm, rule hoare_grab_asm)
+  assume not_0: "\<not> n = 0"
+     and cover: "range_cover ptr sz ((objBitsKO val) + gbits) n"
+  then show
+    "\<lbrace>\<lambda>s. ?Pre s\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>_ s. P (replyPrevs_of s) (replyNexts_of s)\<rbrace>"
   proof -
-    assume not_0: "\<not> n = 0"
-       and cover: "range_cover ptr sz ((objBitsKO val) + gbits) n"
-    then show
-      "\<lbrace>\<lambda>s. ?Pre s\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>_ s. P (replyPrevs_of s) (replyNexts_of s)\<rbrace>"
-    proof -
-      have shiftr_not_zero:" 1 \<le> ((of_nat n)::machine_word) << gbits"
-        using range_cover_not_zero_shift[OF not_0 cover,where gbits = gbits]
-        by (simp add:word_le_sub1)
-      show ?thesis
-        apply (clarsimp simp: createObjects'_def unless_def alignError_def split_def)
-        apply (wp | clarsimp simp del: fun_upd_apply)+
-        apply (clarsimp simp: shiftL_nat data_map_insert_def[symmetric]
-                              new_cap_addrs_fold'[OF shiftr_not_zero]
-                    simp del: data_map_insert_def)
-        using range_cover.unat_of_nat_n_shift[OF cover, where gbits=gbits, simplified]
-        apply (clarsimp simp: foldr_upd_app_if)
-        apply (rule_tac a="replyPrevs_of s" and b="replyNexts_of s"
-                     in rsubst2[rotated, OF sym sym, where P=P])
-          apply (rule ext)
-          apply (clarsimp simp: opt_map_def)
-          apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
-            apply (fastforce intro: cover)
-           apply assumption
-          apply (clarsimp split: kernel_object.splits option.splits)
-         apply (rule ext)
-         apply (clarsimp simp: opt_map_def)
-         apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
-           apply (fastforce intro: cover)
-          apply fastforce
-         apply (clarsimp split: kernel_object.splits option.splits)
-        apply simp
-        done
-    qed
+    have shiftr_not_zero:" 1 \<le> ((of_nat n)::machine_word) << gbits"
+      using range_cover_not_zero_shift[OF not_0 cover,where gbits = gbits]
+      by (simp add:word_le_sub1)
+    show ?thesis
+      apply (clarsimp simp: createObjects'_def unless_def alignError_def split_def)
+      apply (wp | clarsimp simp del: fun_upd_apply)+
+      apply (clarsimp simp: shiftL_nat data_map_insert_def[symmetric]
+                            new_cap_addrs_fold'[OF shiftr_not_zero]
+                  simp del: data_map_insert_def)
+      using range_cover.unat_of_nat_n_shift[OF cover, where gbits=gbits, simplified]
+      apply (clarsimp simp: foldr_upd_app_if)
+      apply (rule_tac a="replyPrevs_of s" and b="replyNexts_of s"
+                   in rsubst2[rotated, OF sym sym, where P=P])
+        apply (rule ext)
+        apply (clarsimp simp: opt_map_def)
+        apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
+          apply (fastforce intro: cover)
+         apply assumption
+        apply (clarsimp split: kernel_object.splits option.splits)
+       apply (rule ext)
+       apply (clarsimp simp: opt_map_def)
+       apply (frule (2) retype_ksPSpace_None[simplified mult.commute])
+         apply (fastforce intro: cover)
+        apply fastforce
+       apply (clarsimp split: kernel_object.splits option.splits)
+      apply simp
+      done
   qed
 qed
 

@@ -918,7 +918,7 @@ where
 definition
   "no_0_obj' \<equiv> \<lambda>s. ksPSpace s 0 = None"
 
-abbreviation is_reply_linked :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
+definition is_reply_linked :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "is_reply_linked rptr s \<equiv> replyNexts_of s rptr \<noteq> None \<or> replyPrevs_of s rptr \<noteq> None"
 
 definition valid_replies'_except :: "obj_ref set \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -1968,7 +1968,7 @@ lemma valid_mdb'_pspaceI:
 
 lemma valid_replies'_pspaceI:
   "valid_replies' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_replies' s'"
-  unfolding valid_replies'_def
+  unfolding valid_replies'_def is_reply_linked_def
   apply clarsimp
   apply (drule_tac x=rptr in spec)
   apply (auto simp: opt_map_def intro: pred_tcb_at'_pspaceI)
@@ -2931,7 +2931,7 @@ lemma valid_objs_size_update [iff]:
 lemma valid_replies'_update [iff]:
   "valid_replies' (f s) = valid_replies' s"
   apply (simp add: valid_replies'_def pspace)
-  apply (auto simp: pspace pred_tcb_at'_def)
+  apply (auto simp: is_reply_linked_def pspace pred_tcb_at'_def)
   done
 
 lemma pspace_aligned_update [iff]:
@@ -3699,7 +3699,7 @@ lemma valid_replies'D:
   "valid_replies' s \<Longrightarrow> is_reply_linked rptr s
    \<Longrightarrow> \<exists>tptr. replyTCBs_of s rptr = Some tptr
               \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s"
-  apply (clarsimp simp: valid_replies'_def)
+  apply (clarsimp simp: valid_replies'_def is_reply_linked_def)
   apply (drule_tac x=rptr in spec)
   apply fastforce
   done
@@ -3733,14 +3733,22 @@ lemma valid_replies'_sc_asrt_lift:
   unfolding valid_replies'_sc_asrt_def
   by (wpsimp wp: hoare_vcg_imp_lift' x y z hoare_vcg_ex_lift)
 
+lemma is_reply_linked_lift:
+  "\<lbrakk>\<And>P. f \<lbrace>\<lambda>s. P (replyPrevs_of s)\<rbrace>; \<And>P. f \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>\<rbrakk>
+   \<Longrightarrow> f \<lbrace>\<lambda>s. P (is_reply_linked replyPtr s)\<rbrace>"
+  unfolding is_reply_linked_def
+  apply (rule_tac f=replyNexts_of in hoare_lift_Pf2; wpsimp)
+  apply (rule_tac f=replyPrevs_of in hoare_lift_Pf2; wpsimp)
+  done
+
 lemma valid_replies'_lift:
-  assumes rNext: "\<And>P. f \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>"
-  and rPrev: "\<And>P. f \<lbrace>\<lambda>s. P (replyPrevs_of s)\<rbrace>"
-  and rTCB: "\<And>P. f \<lbrace>\<lambda>s. P (replyTCBs_of s)\<rbrace>"
-  and st: "\<And>rptr p. f \<lbrace>st_tcb_at' ((=) (BlockedOnReply rptr)) p\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (replyPrevs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (replyTCBs_of s)\<rbrace>"
+  assumes "\<And>rptr p. f \<lbrace>st_tcb_at' ((=) (BlockedOnReply rptr)) p\<rbrace>"
   shows "\<lbrace>valid_replies'\<rbrace> f \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   unfolding valid_replies'_def
-  by (wpsimp wp: hoare_vcg_imp_lift' rNext rPrev rTCB st hoare_vcg_all_lift hoare_vcg_ex_lift)
+  by (wpsimp wp: assms is_reply_linked_lift hoare_vcg_imp_lift' hoare_vcg_all_lift hoare_vcg_ex_lift)
 
 lemma cteCaps_of_ctes_of_lift:
   "(\<And>P. f \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>"

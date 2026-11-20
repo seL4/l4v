@@ -133,7 +133,7 @@ lemma setReply_valid_replies':
                        tptr s))\<rbrace>
    setReply rptr reply
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
-  unfolding valid_replies'_def
+  unfolding valid_replies'_def is_reply_linked_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_ex_lift)
   apply auto
   done
@@ -157,7 +157,8 @@ lemma replyUnlink_valid_replies'[wp]:
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   unfolding replyUnlink_def
   apply (wpsimp wp: updateReply_valid_replies' sts'_valid_replies'
-                    updateReply_field_inv hoare_vcg_all_lift hoare_vcg_imp_lift' gts_wp')
+                    updateReply_field_inv hoare_vcg_all_lift hoare_vcg_imp_lift' gts_wp'
+              simp: is_reply_linked_def)
   apply normalise_obj_at'
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def replyUnlink_assertion_def)
   apply (auto simp: opt_map_def split: option.splits)
@@ -296,7 +297,8 @@ lemma replyPrev_update_valid_replies'[wp]:
    updateReply replyPtr (replyPrev_update (\<lambda>_. replyPtrOpt))
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   apply (wpsimp wp: updateReply_valid_replies')
-  apply (fastforce dest: spec[where x=replyPtr] simp: obj_at'_def opt_map_red valid_replies'_def)
+  apply (fastforce dest: spec[where x=replyPtr]
+                   simp: obj_at'_def opt_map_red valid_replies'_def is_reply_linked_def)
   done
 
 lemma replyNext_update_valid_replies'[wp]:
@@ -304,10 +306,15 @@ lemma replyNext_update_valid_replies'[wp]:
    updateReply replyPtr (replyNext_update (\<lambda>_. replyPtrOpt))
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   apply (wpsimp wp: updateReply_valid_replies')
-  apply (fastforce dest: spec[where x=replyPtr] simp: obj_at'_def opt_map_red valid_replies'_def)
+  apply (fastforce dest: spec[where x=replyPtr]
+                   simp: obj_at'_def opt_map_red valid_replies'_def is_reply_linked_def)
   done
 
-lemma updateReply_replySC_None_valid_replies[wp]:
+lemma replySC_update_is_reply_linked[wp]:
+  "updateReply rptr (replySC_update f) \<lbrace>\<lambda>s. P (is_reply_linked replyPtr s)\<rbrace>"
+  by (wpsimp wp: is_reply_linked_lift updateReply_field_inv)
+
+lemma updateReply_replySC_valid_replies[wp]:
   "updateReply rptr (replySC_update f) \<lbrace>valid_replies'\<rbrace>"
   unfolding valid_replies'_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' updateReply_field_inv hoare_vcg_ex_lift)
@@ -333,15 +340,14 @@ lemma breakReplyChainAt_valid_replies'[wp]:
 lemma breakReplyChainAt'_not_reply_linked[wp]:
   "\<lbrace>\<top>\<rbrace> breakReplyChainAt' rptr \<lbrace>\<lambda>_ s. \<not> is_reply_linked rptr s\<rbrace>"
   unfolding breakReplyChainAt'_def
-  apply (wpsimp wp: updateReply_wp)
+  apply (wpsimp wp: updateReply_wp simp: is_reply_linked_def)
   apply (clarsimp simp: obj_at'_def)
   done
 
 lemma breakReplyChainAt_not_reply_linked[wp]:
   "\<lbrace>\<top>\<rbrace> breakReplyChainAt rptr \<lbrace>\<lambda>_ s. \<not> is_reply_linked rptr s\<rbrace>"
   unfolding breakReplyChainAt_def
-  by (wpsimp wp: breakReplyChainAt'_not_reply_linked[simplified] updateReply_field_inv
-                 hoare_vcg_if_lift2 hoare_drop_imps)
+  by (wpsimp wp: hoare_drop_imps)
 
 crunch breakReplyChainAt'
   for replySCs_of[wp]: "\<lambda>s. P (replySCs_of s)"
@@ -360,9 +366,9 @@ defs replyPop'_asrt_def:
            \<and> replyNexts_of s replyPtr = None)
      \<and> is_replyObject replyPtr s"
 
-lemma replyPop'_not_reply_linked[simplified, wp]:
+lemma replyPop'_not_reply_linked[wp]:
   "\<lbrace>\<top>\<rbrace> replyPop' replyPtr scPtr prevReplyOpt \<lbrace>\<lambda>_ s. \<not> is_reply_linked replyPtr s\<rbrace>"
-  unfolding replyPop'_def
+  unfolding replyPop'_def is_reply_linked_def
   apply (wpsimp wp: updateReply_wp)
   apply (fastforce simp: obj_at'_def opt_map_def replyPop'_asrt_def split: option.splits)
   done
@@ -903,7 +909,7 @@ lemma updateReply_replyTCB_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wpsimp wp: updateReply_valid_objs' sym_heap_reply_pointers_lift
                     updateReply_valid_replies' updateReply_field_inv
-              simp: invs'_def valid_pspace'_def valid_reply'_def
+              simp: invs'_def valid_pspace'_def valid_reply'_def is_reply_linked_def
              split: option.split_asm)
    apply (auto simp: obj_at'_def opt_map_def)
   done
@@ -944,7 +950,7 @@ lemma replyPush'_sym_heap_reply_pointers:
   "\<lbrace>sym_heap_reply_pointers and not is_reply_linked replyPtr\<rbrace>
    replyPush' scPtr replyPtr scReplyOpt
    \<lbrace>\<lambda>_. sym_heap_reply_pointers\<rbrace>"
-  unfolding replyPush'_def replyPush'_asrt_def
+  unfolding replyPush'_def replyPush'_asrt_def is_reply_linked_def
   by (cases scReplyOpt;
       wpsimp wp: updateReply_wp,
       fastforce simp: sym_heap_connect obj_at'_def fun_upd_swap opt_map_red opt_map_upd_triv

@@ -108,7 +108,7 @@ lemma setObject_update_TCB_corres'[Arch_assms]:
    apply (prop_tac "typ_at' (koTypeOf (injectKO new_tcb')) ptr s'")
     subgoal by (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def)
    apply (frule replyPrevs_of_non_reply_update[simplified])
-      apply fastforce
+    apply fastforce
    apply (drule replyNexts_of_non_reply_update[simplified])
     apply fastforce
    apply (clarsimp simp: opt_map_def split: option.splits)
