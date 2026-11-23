@@ -8,7 +8,6 @@ chapter "ARM Machine Types"
 
 theory MachineTypes
   imports
-    Word_Lib.WordSetup
     Monads.Nondet_Empty_Fail
     Monads.Nondet_Reader_Option
     Setup_Locale
