@@ -513,12 +513,6 @@ locale Retype_R =
   assumes createNewCaps_irq_states'[wp]:
     "\<And>t regionBase numObjects userSize dev.
      createNewCaps t regionBase numObjects userSize dev \<lbrace>valid_irq_states'\<rbrace>"
-   assumes createNewCaps_pspace_domain_valid[wp]:
-    "\<And>ptr sz ty us n dev.
-     \<lbrace>pspace_domain_valid and K ({ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> kernel_data_refs = {}
-                                 \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
-     createNewCaps ty ptr n us dev
-     \<lbrace>\<lambda>rv. pspace_domain_valid\<rbrace>"
   assumes createNewCaps_state_refs_of':
     "\<And>ty ptr n us dev sz.
      \<lbrakk>range_cover ptr sz (APIType_capBits ty us) n; n \<noteq> 0\<rbrakk> \<Longrightarrow>
@@ -3378,44 +3372,6 @@ lemma doMachineOp_return_foo:
   apply (rule set_eqI)
   apply clarsimp
   done
-
-lemma createObjects_pspace_domain_valid':
-  "\<lbrace>\<lambda>s. range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0
-      \<and> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> kernel_data_refs = {}
-      \<and> pspace_domain_valid s\<rbrace>
-       createObjects' ptr n val gbits
-   \<lbrace>\<lambda>_. pspace_domain_valid\<rbrace>"
-  apply (simp add: createObjects'_def split_def unless_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc | simp only: alignError_def haskell_assert_def)+
-  apply (clarsimp simp: new_cap_addrs_fold' unat_1_0 unat_gt_0
-                        range_cover_not_zero_shift
-                        caps_overlap_reserved'_def)
-  apply (simp add: pspace_domain_valid_def foldr_upd_app_if
-                   fun_upd_def[symmetric])
-  apply (subgoal_tac " \<forall>x \<in> set (new_cap_addrs (unat (of_nat n << gbits)) ptr val).
-                         mask_range x (objBitsKO val) \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}")
-   apply blast
-
-  apply (rule ballI)
-  apply (rule new_range_subset)
-   apply (erule range_cover_rel, simp+)
-  apply (simp add: range_cover.unat_of_nat_n_shift field_simps)
-  done
-
-lemma createObjects_pspace_domain_valid:
-  "\<lbrace>\<lambda>s. range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0
-      \<and> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> kernel_data_refs = {}
-      \<and> pspace_domain_valid s\<rbrace>
-       createObjects ptr n val gbits
-   \<lbrace>\<lambda>_. pspace_domain_valid\<rbrace>"
-  apply (simp add: createObjects_def)
-  apply (wp createObjects_pspace_domain_valid'[where sz=sz])
-  apply (simp add: objBits_def)
-  done
-
-crunch doMachineOp
-  for pspace_domain_valid[wp]: pspace_domain_valid
 
 (* FIXME: move *)
 lemma ct_idle_or_in_cur_domain'_lift_futz:

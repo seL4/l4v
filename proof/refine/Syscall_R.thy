@@ -1099,7 +1099,6 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
     valid_machine_state' s \<and>
     cur_tcb' s \<and>
     untyped_ranges_zero' s \<and>
-    pspace_domain_valid s \<and>
     ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and>
     (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s)"
 

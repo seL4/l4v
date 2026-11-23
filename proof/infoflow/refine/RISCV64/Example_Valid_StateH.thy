@@ -3099,11 +3099,10 @@ end
 
 
 (* kernel_data_refs is an undefined constant at the moment, and therefore
-   cannot be referred to in valid_global_refs' and pspace_domain_valid.
+   cannot be referred to in valid_global_refs'.
    We use an axiomatization for the moment. *)
 axiomatization  where
-  kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
-  kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
+  kdr_valid_global_refs': "valid_global_refs' s0H_internal"
 
 
 context begin interpretation Arch .
@@ -3341,8 +3340,6 @@ lemma s0H_invs:
                          s0H_internal_def Low_tcbH_def Low_domain_def objBitsKO_def s0_ptrs_aligned)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
    apply (simp add: objBitsKO_def)
-  apply (rule conjI)
-   apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
   apply (clarsimp simp: s0H_internal_def cteCaps_of_def untyped_ranges_zero_inv_def
                         dschDomain_def dschLength_def valid_dom_schedule'_def
                         maxDomainDuration_def mask_def)

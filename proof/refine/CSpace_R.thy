@@ -3085,10 +3085,6 @@ lemma cteInsert_vms'[wp]:
           intro hoare_drop_imp|assumption)+
   done
 
-crunch cteInsert
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-  (wp: crunch_wps)
-
 lemma setCTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> setCTE ptr cte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (rule ct_not_inQ_lift [OF setCTE_nosch])
@@ -4107,7 +4103,6 @@ crunch setupReplyMaster
   and irqs_masked' [wp]: irqs_masked'
   and pred_tcb_at' [wp]: "pred_tcb_at' proj P t"
   and ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
-  and pspace_domain_valid[wp]: "pspace_domain_valid"
   and ct_not_inQ[wp]: "ct_not_inQ"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
