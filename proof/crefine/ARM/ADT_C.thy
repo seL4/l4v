@@ -189,13 +189,7 @@ definition
 
 end
 
-(*Restrict our undefined initial state to only use the nondeterministic state*)
-consts
-  Init_C' :: "unit observable \<Rightarrow> cstate global_state set"
-
 context begin interpretation Arch . (*FIXME: arch-split*)
-
-definition "Init_C \<equiv> \<lambda>((tc,s),m,e). Init_C' ((tc, truncate_state s),m,e)"
 
 definition
   user_mem_C :: "globals \<Rightarrow> word32 \<Rightarrow> word8 option"
