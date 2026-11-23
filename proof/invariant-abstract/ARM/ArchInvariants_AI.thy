@@ -16,7 +16,7 @@ qualify ARM (in Arch)
 
 (* FIXME: move to spec level *)
 (* global data and code of the kernel, not covered by any cap *)
-axiomatization
+consts'
   kernel_data_refs :: "word32 set"
 
 end_qualify
