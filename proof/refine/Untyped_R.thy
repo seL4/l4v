@@ -5080,7 +5080,6 @@ crunch insertNewCap
   and irq_states' [wp]: valid_irq_states'
   and irqs_masked' [wp]: irqs_masked'
   and valid_machine_state'[wp]: valid_machine_state'
-  and pspace_domain_valid[wp]: pspace_domain_valid
   and ct_not_inQ[wp]: "ct_not_inQ"
   and tcbState_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbState tcb)) t"
   and tcbDomain_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"

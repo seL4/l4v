@@ -1300,7 +1300,6 @@ lemma deletedIRQHandler_ct_not_inQ[wp]:
 
 crunch emptySlot
   for umm[wp]: "\<lambda>s. P (underlying_memory (ksMachineState s))"
-  and pspace_domain_valid[wp]: "pspace_domain_valid"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and ct_not_inQ[wp]: "ct_not_inQ"

@@ -5080,7 +5080,6 @@ crunch cteSwap
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and ct_not_inQ[wp]: "ct_not_inQ"
-  and pspace_domain_valid[wp]: "pspace_domain_valid"
   and vms'[wp]: "valid_machine_state'"
   and st_tcb_at'[wp]: "st_tcb_at' P t"
   and ksqsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"

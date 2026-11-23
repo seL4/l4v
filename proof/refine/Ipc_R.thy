@@ -1087,9 +1087,6 @@ lemma transferCapsToSlots_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. irqs_masked'\<rbrace>"
   by (wp transferCapsToSlots_pres1 irqs_masked_lift)
 
-crunch setExtraBadge, transferCapsToSlots
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-
 crunch setExtraBadge
   for ct_not_inQ[wp]: "ct_not_inQ"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
@@ -2867,10 +2864,6 @@ lemma cancelIPC_nonz_cap_to'[wp]:
 crunch activateIdleThread, getThreadReplySlot, isFinalCapability
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: Let_def)
-
-crunch setupCallerCap, asUser, setMRs, doIPCTransfer, possibleSwitchTo
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-  (wp: crunch_wps simp: zipWithM_x_mapM_x)
 
 crunch setupCallerCap, doIPCTransfer, possibleSwitchTo
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"

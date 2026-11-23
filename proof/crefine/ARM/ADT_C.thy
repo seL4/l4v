@@ -75,7 +75,7 @@ lemma Basic_sem_eq:
 
 lemma setTCBContext_C_corres:
   "\<lbrakk> ccontext_relation tc tc'; t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
-   corres_underlying rf_sr nf nf' dc (pspace_domain_valid and tcb_at' t) \<top>
+   corres_underlying rf_sr nf nf' dc (tcb_at' t) \<top>
      (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setTCBContext_C tc' t')"
   apply (simp add: setTCBContext_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp

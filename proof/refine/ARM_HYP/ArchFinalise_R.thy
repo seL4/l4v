@@ -857,9 +857,6 @@ lemma archThreadSet_obj_at'_pte[wp]:
   by (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad)
 
 crunch archThreadSet
-  for pspace_domain_valid[wp]: pspace_domain_valid
-
-crunch archThreadSet
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
 
 lemma archThreadSet_untyped_ranges_zero'[wp]:

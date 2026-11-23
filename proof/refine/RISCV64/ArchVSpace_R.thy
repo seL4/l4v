@@ -636,7 +636,7 @@ lemma dmo_setVSpaceRoot_invs_no_cicd'[wp]:
   "doMachineOp (setVSpaceRoot r a) \<lbrace>invs_no_cicd'\<rbrace>"
   unfolding all_invs_but_ct_idle_or_in_cur_domain'_def valid_global_refs'_def valid_irq_node'_def
             valid_irq_handlers'_def irq_issued'_def irqs_masked'_def valid_machine_state'_def
-            pointerInUserData_def pointerInDeviceData_def ct_not_inQ_def pspace_domain_valid_def
+            pointerInUserData_def pointerInDeviceData_def ct_not_inQ_def
   by (wpsimp wp: hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_disj_lift
              simp: o_def
       | wps)+
@@ -763,9 +763,6 @@ lemma storePTE_vms'[wp]:
   apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
-
-crunch storePTE
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma storePTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePTE p pte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
