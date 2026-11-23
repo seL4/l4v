@@ -14,8 +14,22 @@ theory Machine_C
 imports Ctac_lemmas_C
 begin
 
+(* Restrict our undefined initial state to only use the nondeterministic state *)
+consts
+  Init_C' :: "unit observable \<Rightarrow> cstate global_state set"
+
+(* In the event of kernel init verification: remove init_refinement_C_axiom,
+   then move Init_C and Init_C' to ADT_C *)
+definition
+  "Init_C \<equiv> \<lambda>((tc,(s::det_ext state)),m,e). Init_C' ((tc, truncate_state s),m,e)"
+
 (* FIXME x64: add all machine operations as required *)
 locale kernel_m = kernel +
+
+\<comment> \<open>Currently, we assume correctness of the init code.\<close>
+assumes init_refinement_C_axiom:
+  "\<And>s. Init_C s \<subseteq> lift_state_relation rf_sr `` Init_H"
+
 assumes getFaultAddr_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getFaultAddress)
