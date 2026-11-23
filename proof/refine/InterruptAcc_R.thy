@@ -153,7 +153,7 @@ lemma invs'_irq_state_independent [simp, intro!]:
           valid_irq_node'_def
           valid_irq_handlers'_def valid_irq_states'_def
           irqs_masked'_def bitmapQ_defs valid_bitmaps_def
-          pspace_domain_valid_def cur_tcb'_def
+          cur_tcb'_def
           valid_machine_state'_def tcb_in_cur_domain'_def
           ct_not_inQ_def ct_idle_or_in_cur_domain'_def
           cong: if_cong option.case_cong)

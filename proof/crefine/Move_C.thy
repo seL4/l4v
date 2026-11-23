@@ -871,10 +871,6 @@ lemma st_tcb_at'_opeq_simp:
     = st_tcb_at' (\<lambda>st. st = Structures_H.thread_state.Running) (ksCurThread s) s"
   by (fastforce simp add: st_tcb_at'_def obj_at'_def)
 
-lemma invs'_pspace_domain_valid:
-  "invs' s \<Longrightarrow> pspace_domain_valid s"
-  by (simp add: invs'_def valid_state'_def)
-
 lemma and_eq_0_is_nth:
   fixes x :: "('a :: len) word"
   shows "y = 1 << n \<Longrightarrow> ((x && y) = 0) = (\<not> (x !! n))"

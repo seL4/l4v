@@ -2016,20 +2016,6 @@ lemma set_ntfn_vms'[wp]:
   by (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
       simp)+
 
-lemma setObject_pspace_domain_valid[wp]:
-  "\<lbrace>pspace_domain_valid\<rbrace>
-    setObject ptr val
-   \<lbrace>\<lambda>rv. pspace_domain_valid\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def pspace_domain_valid_def
-                        valid_def in_monad
-                 split: if_split_asm)
-  apply (drule updateObject_objBitsKO)
-  apply (clarsimp simp: lookupAround2_char1)
-  done
-
-crunch setNotification, setEndpoint
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-
 lemma valid_refs'_def2:
   "valid_refs' R (ctes_of s) = (\<forall>cref. \<not>cte_wp_at' (\<lambda>c. R \<inter> capRange (cteCap c) \<noteq> {}) cref s)"
   by (auto simp: valid_refs'_def cte_wp_at_ctes_of ran_def)

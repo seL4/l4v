@@ -1170,11 +1170,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from invs
-  have "pspace_domain_valid s'" by (simp add: invs'_def valid_state'_def)
-  thus "pspace_domain_valid state'"
-    by (simp add: pspace_domain_valid_def)
-
-  from invs
   have "valid_machine_state' s'" by (simp add: invs'_def valid_state'_def)
   thus "valid_machine_state' ?state''"
     apply (clarsimp simp: valid_machine_state'_def)

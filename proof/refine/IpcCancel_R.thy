@@ -1739,7 +1739,6 @@ crunch rescheduleRequired
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and valid_irq_states'[wp]: valid_irq_states'
-  and pspace_domain_valid[wp]: pspace_domain_valid
 
 lemma sch_act_wf_weak[elim!]:
   "sch_act_wf sa s \<Longrightarrow> weak_sch_act_wf sa s"
