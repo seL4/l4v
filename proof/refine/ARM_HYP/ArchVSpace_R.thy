@@ -4174,10 +4174,6 @@ lemma storePDE_vms'[wp]:
   by (wpsimp simp: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
              wp: setObject_typ_at_inv setObject_ksMachine updateObject_default_inv hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-crunch storePDE
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-  (wp: hoare_drop_imp)
-
 lemma storePDE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePDE p pde \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (rule ct_not_inQ_lift [OF storePDE_nosch])
@@ -4382,10 +4378,6 @@ lemma storePTE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
   by (wpsimp simp: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
              wp: setObject_typ_at_inv setObject_ksMachine updateObject_default_inv hoare_vcg_all_lift hoare_vcg_disj_lift)
-
-crunch storePTE
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-  (wp: hoare_drop_imp)
 
 lemma storePTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePTE p pte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"

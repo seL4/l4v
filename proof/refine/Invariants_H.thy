@@ -842,10 +842,6 @@ definition valid_global_refs' :: "kernel_state \<Rightarrow> bool" where
     \<and> global_refs' s \<subseteq> kernel_data_refs
     \<and> valid_cap_sizes' (gsMaxObjectSize s) (ctes_of s)"
 
-definition pspace_domain_valid :: "kernel_state \<Rightarrow> bool" where
-  "pspace_domain_valid \<equiv> \<lambda>s.
-     \<forall>x ko. ksPSpace s x = Some ko \<longrightarrow> mask_range x (objBitsKO ko) \<inter> kernel_data_refs = {}"
-
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
 
@@ -916,7 +912,6 @@ definition valid_state' :: "kernel_state \<Rightarrow> bool" where
                       \<and> valid_bitmaps s
                       \<and> ct_not_inQ s
                       \<and> ct_idle_or_in_cur_domain' s
-                      \<and> pspace_domain_valid s
                       \<and> ksCurDomain s \<le> maxDomain
                       \<and> valid_dom_schedule' s
                       \<and> untyped_ranges_zero' s"
@@ -989,7 +984,6 @@ abbreviation(input)
            \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
            \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> ct_idle_or_in_cur_domain' s
-           \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -1004,7 +998,6 @@ abbreviation(input)
            \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
            \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> ct_idle_or_in_cur_domain' s
-           \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -1027,7 +1020,6 @@ definition
            \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_bitmaps s
            \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> ct_not_inQ s
-           \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -2474,10 +2466,6 @@ lemma pointerInUserData_update[iff]:
 lemma pointerInDeviceData_update[iff]:
   "pointerInDeviceData p (f s) = pointerInDeviceData p s"
   by (simp add: pointerInDeviceData_def)
-
-lemma pspace_domain_valid_update [iff]:
-  "pspace_domain_valid (f s) = pspace_domain_valid s"
-  by (simp add: pspace_domain_valid_def pspace)
 
 lemma valid_tcb_state'_eq[iff]:
   "valid_tcb_state' st (f s) = valid_tcb_state' st s"

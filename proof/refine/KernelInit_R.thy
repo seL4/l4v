@@ -34,8 +34,8 @@ axiomatization where
   "((tc,s),x) \<in> Init_H \<Longrightarrow> ksSchedulerAction s = ResumeCurrentThread"
 
 axiomatization where
-  ckernel_init_ctr:
-  "((tc,s),x) \<in> Init_H \<Longrightarrow> ct_running' s"
+  ckernel_init_ct_idle:
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> ct_idle' s"
 
 axiomatization where
   ckernel_init_domain_time:

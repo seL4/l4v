@@ -812,23 +812,6 @@ lemma createNewCaps_vms[Arch_assms]:
                      field_simps mult_2_right bit_simps)
   done
 
-lemma createNewCaps_pspace_domain_valid[Arch_assms, wp]:
-  "\<lbrace>pspace_domain_valid and K ({ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
-            \<inter> kernel_data_refs = {}
-        \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
-    createNewCaps ty ptr n us dev
-   \<lbrace>\<lambda>rv. pspace_domain_valid\<rbrace>"
-  apply (simp add: createNewCaps_def)
-  apply (rule hoare_pre)
-   apply (wp createObjects_pspace_domain_valid[where sz=sz]
-            mapM_x_wp'
-        | wpc | simp add: Arch_createNewCaps_def curDomain_def Let_def
-                     split del: if_split)+
-  apply (simp add: RISCV64_H.toAPIType_def
-            split: object_type.splits)
-  apply (auto simp: objBits_simps APIType_capBits_def field_simps mult_2_right bit_simps)
-  done
-
 (* safe for generic context, and we can't requalify object_type.inject as that would
    result in it being named "inject" *)
 lemma object_type_inject[Arch_assms]:
@@ -1443,7 +1426,7 @@ proof -
                 createObjects_idle' createObjects_no_cte_valid_global
                 createObjects_valid_arch createObjects_irq_state
                 createObjects_no_cte_irq_handlers createObjects_cur'
-                createObjects_pspace_domain_valid co_ct_not_inQ
+                co_ct_not_inQ
                 createObjects_ct_idle_or_in_cur_domain'
                 createObjects_untyped_ranges_zero'[OF moKO]
                 assms

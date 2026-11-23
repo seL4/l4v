@@ -1809,9 +1809,6 @@ lemma storePML4E_vms'[wp]:
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
 
-crunch storePDE, storePDPTE, storePML4E
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-
 lemma storePDE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePDE p pde \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (rule ct_not_inQ_lift [OF storePDE_nosch])
@@ -2143,9 +2140,6 @@ lemma storePTE_vms'[wp]:
   apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
-
-crunch storePTE
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma storePTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePTE p pte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"

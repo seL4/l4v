@@ -75,7 +75,7 @@ lemma Basic_sem_eq:
 
 lemma setTCBContext_C_corres:
   "\<lbrakk> ccontext_relation tc tc'; t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
-   corres_underlying rf_sr nf nf' dc (pspace_domain_valid and tcb_at' t) \<top>
+   corres_underlying rf_sr nf nf' dc (tcb_at' t) \<top>
      (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setTCBContext_C tc' t')"
   apply (simp add: setTCBContext_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp
@@ -199,13 +199,7 @@ definition
 
 end
 
-(*Restrict our undefined initial state to only use the nondeterministic state*)
-consts
-  Init_C' :: "unit observable \<Rightarrow> cstate global_state set"
-
 context begin interpretation Arch . (*FIXME: arch-split*)
-
-definition "Init_C \<equiv> \<lambda>((tc,s),m,e). Init_C' ((tc, truncate_state s),m,e)"
 
 definition
   user_mem_C :: "globals \<Rightarrow> machine_word \<Rightarrow> word8 option"

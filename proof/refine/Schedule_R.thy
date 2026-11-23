@@ -930,10 +930,6 @@ lemma asUser_ct_not_inQ[wp]:
   done
 
 crunch asUser
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-(wp: crunch_wps simp: crunch_simps)
-
-crunch asUser
   for valid_dom_schedule'[wp]: "valid_dom_schedule'"
 (wp: crunch_wps simp: crunch_simps)
 

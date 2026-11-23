@@ -3133,6 +3133,13 @@ lemma s0H_valid_pspace':
 
 end
 
+(* Instantiate kernel_data_refs for the example with everything that is in global_refs. *)
+defs kernel_data_refs_def:
+  "kernel_data_refs \<equiv>
+     {idle_tcb_ptr} \<union>
+     mask_range AARCH64_A.arm_global_pt_ptr (AARCH64_H.ptBits AARCH64.VSRootPT_T) \<union>
+     mask_range AARCH64_A.init_irq_node_ptr (LENGTH(AARCH64.irq_len) + cteSizeBits)"
+
 
 (* Instantiate the current, abstract domain scheduler into the
    concrete scheduler required for this example *)
@@ -3142,19 +3149,69 @@ axiomatization  where
 axiomatization where
   newKSDomainTime: "newKSDomainTime = 5"
 
-(* kernel_data_refs is an undefined constant at the moment, and therefore
-   cannot be referred to in valid_global_refs' and pspace_domain_valid.
-   We use an axiomatization for the moment. *)
-axiomatization  where
-  kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
-  kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
-
-
 context begin interpretation Arch .
 
 lemma ksArchState0H[simp]:
   "ksArchState s0H_internal = arch_state0H"
   by (simp add: s0H_internal_def)
+
+lemma s0H_global_pt_refs_subset:
+  "table_refs' arm_global_pt_ptr \<subseteq> mask_range arm_global_pt_ptr (ptBits VSRootPT_T)"
+  unfolding table_refs'_def
+  apply (clarsimp simp only: shiftl_t2n' image_subset_iff) (* "only:" to avoid arithmetic *)
+  apply (rule add_mult_in_mask_range; simp add: bit_simps s0_ptr_defs is_aligned_def mask_def)
+  done
+
+lemma s0H_irq_node_refs_subset:
+  "range (\<lambda>irq::irq. init_irq_node_ptr + (ucast irq << cteSizeBits)) \<subseteq>
+   mask_range init_irq_node_ptr (LENGTH(irq_len) + cteSizeBits)"
+  apply (clarsimp simp only: shiftl_t2n' image_subset_iff) (* "only:" to avoid arithmetic *)
+  apply (rule add_mult_in_mask_range;
+         simp add: cteSizeBits_def s0_ptr_defs is_aligned_def ucast_less[THEN less_le_trans])
+  done
+
+lemma s0H_global_refs'_subset:
+  "global_refs' s0H_internal \<subseteq> kernel_data_refs"
+  using s0H_global_pt_refs_subset s0H_irq_node_refs_subset
+  by (auto simp: global_refs'_def kernel_data_refs_def s0H_internal_def arch_state0H_def)
+
+lemma s0H_capRange_kernel_data_refs:
+  "kernel_data_refs \<inter> capRange NullCap = {}"
+  "kernel_data_refs \<inter> capRange (ThreadCap Low_tcb_ptr) = {}"
+  "kernel_data_refs \<inter> capRange (ThreadCap High_tcb_ptr) = {}"
+  "kernel_data_refs \<inter> capRange (ReplyCap Low_tcb_ptr m r) = {}"
+  "kernel_data_refs \<inter> capRange (ReplyCap High_tcb_ptr m r) = {}"
+  "kernel_data_refs \<inter> capRange (CNodeCap Low_cnode_ptr 10 g gs) = {}"
+  "kernel_data_refs \<inter> capRange (CNodeCap High_cnode_ptr 10 g gs) = {}"
+  "kernel_data_refs \<inter> capRange (CNodeCap Silc_cnode_ptr 10 g gs) = {}"
+  "kernel_data_refs \<inter> capRange (NotificationCap ntfn_ptr badge canSend canRecv) = {}"
+  "kernel_data_refs \<inter> capRange (ArchObjectCap (PageTableCap Low_pd_ptr VSRootPT_T m_pd)) = {}"
+  "kernel_data_refs \<inter> capRange (ArchObjectCap (PageTableCap High_pd_ptr VSRootPT_T m_pd')) = {}"
+  "kernel_data_refs \<inter> capRange (ArchObjectCap (PageTableCap Low_pt_ptr NormalPT_T m_pt)) = {}"
+  "kernel_data_refs \<inter> capRange (ArchObjectCap (PageTableCap High_pt_ptr NormalPT_T m_pt')) = {}"
+  "kernel_data_refs \<inter> capRange (ArchObjectCap (ASIDPoolCap Low_pool_ptr asid)) = {}"
+  "kernel_data_refs \<inter> capRange (ArchObjectCap (ASIDPoolCap High_pool_ptr asid')) = {}"
+  "kernel_data_refs \<inter>
+   capRange (ArchObjectCap (FrameCap shared_page_ptr_virt R shared_page_size d m_f)) = {}"
+  by (simp_all add: kernel_data_refs_def capRange_def Int_Un_distrib2 objBits_simps' bit_simps)
+     eval+
+
+lemma s0H_valid_global_refs':
+  "valid_global_refs' s0H_internal"
+  unfolding valid_global_refs'_def valid_refs'_def valid_cap_sizes'_def
+  apply (intro conjI ballI)
+    apply (clarsimp simp: ran_def)
+    apply (drule map_to_ctes_kh0H_SomeD)
+    apply (elim disjE;
+           clarsimp simp: kh0H_all_obj_def' s0H_capRange_kernel_data_refs split: if_split_asm)
+   apply (rule s0H_global_refs'_subset)
+  apply (clarsimp simp: ran_def s0H_internal_def card_word)
+  apply (drule map_to_ctes_kh0H_SomeD)
+  apply (elim disjE;
+         clarsimp simp: kh0H_all_obj_def' objBits_simps' bit_simps asid_low_bits_def
+                        shared_page_size_def
+                 split: if_split_asm)
+  done
 
 (* FIXME AARCH64: canonical_address no longer applicable to arm_global_pt_ptr instantiation
    due to kernel ELF window changes *)
@@ -3339,7 +3396,7 @@ lemma s0H_invs:
     apply (simp add: objBitsKO_def)
    apply (clarsimp simp: idle_tcb_ptr_def idle_thread_ptr_def)
   apply (rule conjI)
-   apply (clarsimp simp: kdr_valid_global_refs') (* use axiomatization for now *)
+   apply (rule s0H_valid_global_refs')
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_state_s0H)
   apply (rule conjI)
@@ -3386,8 +3443,6 @@ lemma s0H_invs:
                          s0H_internal_def Low_tcbH_def Low_domain_def objBitsKO_def s0_ptrs_aligned)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
    apply (simp add: objBitsKO_def)
-  apply (rule conjI)
-   apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
     apply (clarsimp simp: s0H_internal_def cteCaps_of_def untyped_ranges_zero_inv_def
                           dschDomain_def dschLength_def valid_dom_schedule'_def maxDomainDuration_def mask_def)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def  s0H_internal_def objBitsKO_def s0_ptrs_aligned)

@@ -695,7 +695,6 @@ crunch copyGlobalMappings
   and ksReadyQueuesL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and valid_idle'[wp]: "valid_idle'"
   and iflive'[wp]: "if_live_then_nonz_cap'"
-  and pspace_domain_valid[wp]: "pspace_domain_valid"
   and valid_bitmaps[wp]: valid_bitmaps
   and sched_pointers[wp]: "\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
   and valid_sched_pointers[wp]: valid_sched_pointers
@@ -1000,23 +999,6 @@ lemma createNewCaps_vms[Arch_assms]:
   apply (case_tac ty)
    apply (auto simp: APIType_capBits_def objBits_simps toAPIType_def object_type.splits
                      field_simps mult_2_right bit_simps)
-  done
-
-lemma createNewCaps_pspace_domain_valid[Arch_assms, wp]:
-  "\<lbrace>pspace_domain_valid and K ({ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
-            \<inter> kernel_data_refs = {}
-        \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
-    createNewCaps ty ptr n us dev
-   \<lbrace>\<lambda>rv. pspace_domain_valid\<rbrace>"
-  apply (simp add: createNewCaps_def)
-  apply (rule hoare_pre)
-   apply (wp createObjects_pspace_domain_valid[where sz=sz] copyGlobalMappings_ko_wp_at
-            mapM_x_wp'
-        | wpc | simp add: Arch_createNewCaps_def curDomain_def Let_def
-                     split del: if_split)+
-  apply (simp add: X64_H.toAPIType_def
-            split: object_type.splits)
-  apply (auto simp: objBits_simps APIType_capBits_def field_simps mult_2_right bit_simps)
   done
 
 (* safe for generic context, and we can't requalify object_type.inject as that would
@@ -1660,7 +1642,7 @@ proof -
                 createObjects_idle' createObjects_no_cte_valid_global
                 createObjects_valid_arch createObjects_irq_state
                 createObjects_no_cte_irq_handlers createObjects_cur'
-                createObjects_pspace_domain_valid co_ct_not_inQ
+                co_ct_not_inQ
                 createObjects_ct_idle_or_in_cur_domain'
                 createObjects_untyped_ranges_zero'[OF moKO]
                 assms
