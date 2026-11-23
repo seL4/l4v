@@ -157,7 +157,7 @@ lemma create_object_first:
      object_type child_obj \<noteq> UntypedType;
      object_size_bits child_obj < 2 ^ word_bits;
      obj_size = (obj_bits_cdl (object_type child_obj) (object_size_bits child_obj));
-     obj_size < word_size;
+     obj_size < word_bits;
      t child = Some (alignUp base_ptr obj_size);
      cover_ids \<noteq> {};
      base_ptr = Min cover_ids;
@@ -181,7 +181,7 @@ lemma create_object_first:
                                                       all_available_ids="{(the (t child))}" and
                                                       cover_ids=cover_ids]])
              apply (fastforce)+
-    apply (clarsimp simp: word_size_def alignUp_idem)
+    apply (clarsimp simp: word_bits_def alignUp_idem)
     apply (clarsimp simp: si_cap_at_def)
     apply (clarsimp simp: update_range_def si_objects_def)
     apply (sep_flatten)
@@ -194,14 +194,14 @@ lemma create_object_first:
                                                       all_available_ids="{(the (t child))}" and
                                                       cover_ids=cover_ids]])
           apply (fastforce)+
-    apply (clarsimp simp: word_size_def alignUp_idem)
+    apply (clarsimp simp: word_bits_def alignUp_idem)
    apply (clarsimp simp: si_cap_at_def)
    apply (clarsimp simp:  si_objects_def)
    apply (sep_flatten)
    apply (sep_cancel)+
   apply (clarsimp simp: si_objects_def si_null_cap_at_def)
   apply (sep_cancel)+
-  apply (clarsimp simp: alignUp_idem word_size_def)
+  apply (clarsimp simp: alignUp_idem word_bits_def)
   apply (clarsimp simp: update_range_def)
   done
 
@@ -215,7 +215,7 @@ lemma create_object_has_children:
      object_type child_obj \<noteq> UntypedType;
      object_size_bits child_obj < 2 ^ word_bits;
      obj_size = (obj_bits_cdl (object_type child_obj) (object_size_bits child_obj));
-     obj_size < word_size;
+     obj_size < word_bits;
      t child = Some (alignUp base_ptr obj_size);
      cover_ids \<noteq> {};
      available_ids \<noteq> {};
@@ -237,7 +237,7 @@ lemma create_object_has_children:
                                                         all_available_ids="{(the (t child))}" and
                                                         cover_ids=cover_ids]])
              apply (fastforce)+
-   apply (clarsimp simp: word_size_def alignUp_idem)
+   apply (clarsimp simp: word_bits_def alignUp_idem)
    apply (clarsimp simp: update_range_def si_objects_def)
    apply (sep_flatten)
    apply (clarsimp simp: si_objects_def si_null_cap_at_def)
@@ -248,7 +248,7 @@ lemma create_object_has_children:
                                                        all_available_ids="{(the (t child))}" and
                                                        cover_ids=cover_ids]])
           apply (fastforce)+
-    apply (clarsimp simp: word_size_def alignUp_idem)
+    apply (clarsimp simp: word_bits_def alignUp_idem)
    apply (clarsimp simp: si_cap_at_def)
   apply (clarsimp simp:  si_objects_def)
   apply (sep_flatten)
@@ -266,7 +266,7 @@ lemma create_object_rest:
      object_type child_obj \<noteq> UntypedType;
      object_size_bits child_obj < 2 ^ word_bits;
      obj_size = (obj_bits_cdl (object_type child_obj) (object_size_bits child_obj));
-     obj_size < word_size;
+     obj_size < word_bits;
      t child = Some (alignUp next_ptr obj_size);
      cover_ids \<noteq> {};
      available_ids \<noteq> {};
@@ -293,7 +293,7 @@ lemma create_object_rest:
                                                        all_available_ids="{(the (t child))}" and
                                                        cover_ids=cover_ids]])
             apply (fastforce)+
-   apply (clarsimp simp: word_size_def alignUp_idem)
+   apply (clarsimp simp: word_bits_def alignUp_idem)
    apply (clarsimp simp: si_cap_at_def)
    apply (clarsimp simp: si_objects_def)
    apply (sep_flatten)
@@ -468,7 +468,7 @@ lemma create_children_wp:
                          object_type (the_obj child) \<noteq> UntypedType \<and>
                          the_obits child < 2 ^ word_bits \<and>
                          Min cover_ids \<le> Min cover_ids + 2 ^ the_tbits child \<and>
-                         the_tbits child < word_size) children \<rbrakk> \<Longrightarrow>
+                         the_tbits child < word_bits) children \<rbrakk> \<Longrightarrow>
      \<lbrace>\<guillemotleft>(si_null_caps_at t si_caps spec  (set children) \<and>*
        (si_cnode_id, unat parent_cptr) \<mapsto>c UntypedCap dev cover_ids cover_ids \<and>*
        sep_map_set_conj (\<lambda>child. (the (t child)) \<mapsto>o Untyped) (set children) \<and>*
@@ -596,35 +596,35 @@ lemma create_children_wp:
        apply (rename_tac cdl_obj')
        apply (clarsimp simp: aligned_allocate_previous allocate_previous next_allocation_def
                             spec_object_size_def)
-       apply (subst alignUp_idem, assumption, simp add: word_size_def)
+       apply (subst alignUp_idem, assumption, simp add: word_bits_def)
        apply sep_cancel
        apply (clarsimp simp: sep_fold_def)
        apply sep_flatten
        apply (sep_erule si_null_cap_at_cong[THEN fun_congD1, rotated])
         apply (erule trans)
-        apply (clarsimp simp: alignUp_idem word_size_def)
+        apply (clarsimp simp: alignUp_idem word_bits_def)
         apply (simp add: aligned_allocate_previous next_allocation_def spec_object_size_def
-                         alignUp_idem word_size_def)
-       apply (clarsimp simp: alignUp_idem word_size_def)
+                         alignUp_idem word_bits_def)
+       apply (clarsimp simp: alignUp_idem word_bits_def)
        apply (simp add: aligned_allocate_previous next_allocation_def spec_object_size_def
-                        alignUp_idem word_size_def)
+                        alignUp_idem word_bits_def)
        apply sep_cancel+
        apply (clarsimp simp: si_caps_at_def)
        apply (sep_flatten, sep_erule si_cap_at_cong[THEN fun_congD1, rotated])
         apply (erule trans[symmetric])
         apply (simp add: aligned_allocations_def)
-        apply (subst alignUp_idem, assumption, simp add: word_size_def, rule refl)
+        apply (subst alignUp_idem, assumption, simp add: word_bits_def, rule refl)
        apply (sep_erule si_cap_at_cong[THEN fun_congD1, rotated])
         apply (erule trans[symmetric])
         apply (simp add: aligned_allocations_def)
         apply (subst mapp_app; clarsimp)
          apply (clarsimp simp: allocate.simps)
         apply (simp add: allocate.simps aligned_allocate_previous next_allocation_def
-                         spec_object_size_def alignUp_idem word_size_def Let_unfold)
+                         spec_object_size_def alignUp_idem word_bits_def Let_unfold)
        apply (rule exI, sep_cancel)
        apply (clarsimp simp: objects_empty_def object_empty_def object_initialised_general_def)
        apply (simp add: aligned_allocate_previous next_allocation_def spec_object_size_def
-                        alignUp_idem word_size_def Let_unfold default_object_in_def
+                        alignUp_idem word_bits_def Let_unfold default_object_in_def
                         object_default_state_def)
        apply (frule_tac x=cdl_obj in bspec)
         apply (fastforce simp: ran_def, clarsimp)
@@ -632,10 +632,10 @@ lemma create_children_wp:
         apply (fastforce simp: ran_def, clarsimp)
        apply sep_solve
       apply (simp add: allocate_previous spec_object_size_def Let_unfold)
-      apply (simp add: next_allocation_def alignUp_idem word_size_def spec_object_size_def Let_unfold)
+      apply (simp add: next_allocation_def alignUp_idem word_bits_def spec_object_size_def Let_unfold)
       apply sep_cancel
       apply (rule sep_map_sep_foldI, clarsimp, sep_flatten)
-      apply (simp add: aligned_allocate_previous allocate_previous alignUp_idem word_size_def
+      apply (simp add: aligned_allocate_previous allocate_previous alignUp_idem word_bits_def
                        next_allocation_def spec_object_size_def  Let_unfold)
       apply sep_cancel
       apply (clarsimp simp: sep_list_conj_sep_map_set_conj)
@@ -655,26 +655,26 @@ lemma create_children_wp:
       apply (clarsimp simp: si_caps_at_def)
       apply (sep_erule si_null_cap_at_cong[THEN fun_congD1, rotated])
        apply (erule trans)
-       apply (simp add: aligned_allocations_def aligned_allocate_previous alignUp_idem word_size_def
+       apply (simp add: aligned_allocations_def aligned_allocate_previous alignUp_idem word_bits_def
                         next_allocation_def spec_object_size_def Let_unfold)
        apply (subst mapp_app; clarsimp)
         apply (clarsimp simp: allocate.simps)
        apply (simp add: allocate.simps aligned_allocate_previous next_allocation_def
-                        spec_object_size_def alignUp_idem word_size_def Let_unfold)
+                        spec_object_size_def alignUp_idem word_bits_def Let_unfold)
       apply (sep_erule sep_map_set_conj_subst[THEN fun_congD1, OF si_null_cap_at_cong, rotated])
        apply (drule (1) bspec, erule trans)
        apply (rule allocate_alignUp[symmetric]; clarsimp?)
       apply sep_cancel+
       apply (sep_erule si_cap_at_cong[THEN fun_congD1, rotated])
-       apply (simp add: aligned_allocate_previous alignUp_idem word_size_def next_allocation_def
+       apply (simp add: aligned_allocate_previous alignUp_idem word_bits_def next_allocation_def
                         spec_object_size_def Let_unfold)
       apply (sep_erule si_cap_at_cong[THEN fun_congD1, rotated])
        apply (erule trans[symmetric])
-       apply (simp add: aligned_allocate_previous alignUp_idem word_size_def next_allocation_def
+       apply (simp add: aligned_allocate_previous alignUp_idem word_bits_def next_allocation_def
                         spec_object_size_def Let_unfold)
       apply (sep_erule sep_map_set_conj_subst[THEN fun_congD1, OF si_cap_at_cong, rotated ])
        apply (drule (1) bspec, erule trans[symmetric])
-       apply (simp add: aligned_allocate_previous alignUp_idem word_size_def next_allocation_def
+       apply (simp add: aligned_allocate_previous alignUp_idem word_bits_def next_allocation_def
                         spec_object_size_def Let_unfold)
        apply (rule allocate_alignUp[symmetric]; clarsimp?)
       apply (rule exI, sep_cancel+)
@@ -682,7 +682,7 @@ lemma create_children_wp:
       apply (sep_erule default_object_is_object_empty)
          apply fastforce
         apply (fastforce simp: ran_def)
-       apply (simp add: aligned_allocations_def aligned_allocate_previous alignUp_idem word_size_def
+       apply (simp add: aligned_allocations_def aligned_allocate_previous alignUp_idem word_bits_def
                         next_allocation_def spec_object_size_def Let_unfold)
       apply (sep_erule default_object_is_object_empty)
          apply fastforce
@@ -1116,7 +1116,7 @@ lemma retype_untypeds_wp_helper:
                    2 ^ obj_bits_cdl (object_type (the (cdl_objects spec child)))
                                     (object_size_bits (the (cdl_objects spec child))) \<and>
                 obj_bits_cdl (object_type (the (cdl_objects spec child)))
-                             (object_size_bits (the (cdl_objects spec child))) < word_size)
+                             (object_size_bits (the (cdl_objects spec child))) < word_bits)
         untyped_derivations;
       list_all (\<lambda>n. n < 2 ^ si_cnode_size) untyped_slots;
       list_all (\<lambda>n. n < 2 ^ si_cnode_size) (list_region free_cptrs);
