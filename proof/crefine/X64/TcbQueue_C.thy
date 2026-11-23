@@ -1142,20 +1142,6 @@ lemma ptr_span_ctcb_subset:
   apply (rule unat_lt2p)
   done
 
-(* FIXME: move *)
-lemma tcb_at'_non_kernel_data_ref:
-  "pspace_domain_valid s \<Longrightarrow> tcb_at' p s \<Longrightarrow> ptr_span (tcb_ptr_to_ctcb_ptr p) \<inter> kernel_data_refs = {}"
-  apply (rule disjoint_subset[OF ptr_span_ctcb_subset])
-   apply (erule tcb_aligned')
-  apply (drule map_to_tcbs_from_tcb_at)
-  apply (clarsimp simp: pspace_domain_valid_def map_comp_def split: option.splits)
-  apply (drule spec, drule spec, drule (1) mp)
-  apply (simp add: projectKOs objBits_simps add_mask_fold)
-  done
-
-lemmas tcb_at'_non_kernel_data_ref'
-  = tcb_at'_non_kernel_data_ref[OF invs'_pspace_domain_valid]
-
 (* FIXME: move near tag_disj_via_td_name *)
 lemma tag_not_less_via_td_name:
   assumes ta: "typ_name (typ_info_t TYPE('a)) \<noteq> pad_typ_name"

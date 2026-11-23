@@ -13,6 +13,6 @@ imports
 begin
 
 axiomatization where
-  akernel_init_invs: "\<forall>((tc,s),m,e) \<in> Init_A. invs s \<and> ct_running s"
+  akernel_init_invs: "\<forall>((tc,s),m,e) \<in> Init_A. invs s \<and> ct_idle s"
 
 end

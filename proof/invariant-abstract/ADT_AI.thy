@@ -147,12 +147,13 @@ definition
          (s', KernelMode, Some Interrupt) ) |s s'.  (s, True, s') \<in> get_active_irq}"
 
 text \<open>
-  After kernel initialisation, the machine is in UserMode, running the initial thread.
-\<close>
+  For the initial state we are currently taking an example state that starts in Idle mode. This is
+  not a real state after kernel initialisation, just a placeholder to show invariants and
+  relations are not empty.\<close>
 definition
   Init_A :: "'a::state_ext state global_state set"
 where
-  "Init_A \<equiv> {((empty_context, init_A_st), UserMode, None)}"
+  "Init_A \<equiv> {((empty_context, init_A_st), IdleMode, None)}"
 
 definition
   "user_memory_update um \<equiv> modify (\<lambda>ms.

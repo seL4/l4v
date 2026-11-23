@@ -986,7 +986,6 @@ global_interpretation threadSet: gen_typ_at_props' "threadSet tptr f"
 
 crunch threadSet
   for irq_states'[wp]: valid_irq_states'
-  and pspace_domain_valid[wp]: "pspace_domain_valid"
   and irqs_masked'[wp]: "irqs_masked'"
   (rule: irqs_masked_lift)
 
@@ -1841,7 +1840,6 @@ crunch setQueue, removeFromBitmap
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and valid_irq_states'[wp]: valid_irq_states'
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  and pspace_domain_valid[wp]: pspace_domain_valid
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
@@ -1869,7 +1867,6 @@ crunch tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue, setQueue
   and typ_at[wp]: "\<lambda>s. P (typ_at' T p s)"
   and interrupt_state[wp]: "\<lambda>s. P (ksInterruptState s)"
   and valid_irq_state'[wp]: valid_irq_states'
-  and pspace_domain_valid[wp]: pspace_domain_valid
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
@@ -4105,7 +4102,6 @@ crunch setThreadState, setBoundNotification
 
 crunch setThreadState, setBoundNotification
   for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
-  and pspace_domain_valid[wp]: "pspace_domain_valid"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma (in TcbAcc_R_2) setThreadState_vms'[wp]:
