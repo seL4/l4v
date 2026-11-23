@@ -38,7 +38,7 @@ definition Init_H :: "kernel_state global_state set" where
        fst (initKernel (VPtr initEntry) (PPtr initOffset) (map PPtr initFrames)
                        (map PPtr initKernelFrames) initBootFrames
                        (newKernelState initDataStart))) \<times>
-     {UserMode} \<times> {None}"
+     {IdleMode} \<times> {None}"
 
 definition
   "user_mem' s \<equiv> \<lambda>p.

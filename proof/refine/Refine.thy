@@ -668,7 +668,7 @@ lemma ckernel_invariant:
    apply (insert ckernel_init_invs)[1]
    apply clarsimp
    apply (frule ckernel_init_sch_norm)
-   apply (frule ckernel_init_ctr)
+   apply (frule ckernel_init_ct_idle)
    apply (frule ckernel_init_domain_time)
    apply (frule ckernel_init_domain_list)
    apply (fastforce simp: Init_H_def)
