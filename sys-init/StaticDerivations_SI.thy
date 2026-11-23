@@ -218,7 +218,7 @@ definition valid_derivations ::
              object_type spec_child \<noteq> UntypedType \<and>
              object_size_bits spec_child < 2 ^ word_bits \<and>
              start \<le> start + 2 ^ child_size \<and>
-             child_size < word_size \<and>
+             child_size < word_bits \<and>
              is_aligned start child_size \<and>
              start \<le> the (aligned_allocations spec start children child) + 2 ^ child_size \<and>
              (previous child children \<noteq> None \<longrightarrow> start < the (allocate start spec children child)) \<and>
