@@ -27,7 +27,7 @@ lemma retype_untyped_wp_no_children:
      base_ptr \<in> all_available_ids;
      free_cptr < 2 ^ si_cnode_size;
      untyped_cptr < 2 ^ si_cnode_size;
-     sz < 2 ^ word_bits;
+     sz < word_bits;
      type \<noteq> UntypedType;
      base_ptr = Min cover_ids \<rbrakk> \<Longrightarrow>
     \<lbrace>\<lambda>s. \<guillemotleft> (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids cover_ids \<and>*
@@ -69,7 +69,7 @@ lemma retype_untyped_wp_no_children:
                             folded word_bits_num]])
                apply (fastforce)+
          apply (assumption
-                | simp add: unat_of_nat32
+                | simp add: unat_of_nat32 lt_word_bits_lt_pow
                 | rule offset_slot' [symmetric] guard_equal_si_cnode_cap)+
     apply (clarsimp)
     apply (clarsimp simp: offset_slot')
@@ -85,7 +85,7 @@ lemma retype_untyped_wp_has_children:
     alignUp next_ptr (obj_bits_cdl type sz) \<in> all_available_ids;
     free_cptr < 2 ^ si_cnode_size;
     untyped_cptr < 2 ^ si_cnode_size;
-    sz < 2 ^ word_bits;
+    sz < word_bits;
     type \<noteq> UntypedType;
     available_ids \<noteq> {};
     base_ptr = Min cover_ids;
@@ -131,13 +131,15 @@ lemma retype_untyped_wp_has_children:
                                                tcb = "obj_tcb root_tcb"],
                             folded word_bits_num])
              apply (fastforce)+
-         apply (simp add: unat_of_nat32 | rule offset_slot'[symmetric] guard_equal_si_cnode_cap)+
+         apply (simp add: unat_of_nat32 lt_word_bits_lt_pow
+                | rule offset_slot'[symmetric] guard_equal_si_cnode_cap)+
     apply (clarsimp)
     apply (clarsimp simp: offset_slot')
     apply (sep_erule_concl refl_imp)+
     apply (clarsimp)
     apply (assumption)
-   apply (simp add: unat_of_nat32 | rule offset_slot'[symmetric] guard_equal_si_cnode_cap)+
+   apply (simp add: unat_of_nat32 lt_word_bits_lt_pow
+          | rule offset_slot'[symmetric] guard_equal_si_cnode_cap)+
    apply (clarsimp simp: keep_if_cond offset_slot')
    apply sep_solve
   apply (clarsimp simp: si_cspace_cap_def si_cnode_cap_def)
@@ -155,7 +157,7 @@ lemma create_object_first:
      the (si_caps child) < 2 ^ si_cnode_size;
      parent < 2 ^ si_cnode_size;
      object_type child_obj \<noteq> UntypedType;
-     object_size_bits child_obj < 2 ^ word_bits;
+     object_size_bits child_obj < word_bits;
      obj_size = (obj_bits_cdl (object_type child_obj) (object_size_bits child_obj));
      obj_size < word_bits;
      t child = Some (alignUp base_ptr obj_size);
@@ -213,7 +215,7 @@ lemma create_object_has_children:
      the (si_caps child) < 2 ^ si_cnode_size;
      parent < 2 ^ si_cnode_size;
      object_type child_obj \<noteq> UntypedType;
-     object_size_bits child_obj < 2 ^ word_bits;
+     object_size_bits child_obj < word_bits;
      obj_size = (obj_bits_cdl (object_type child_obj) (object_size_bits child_obj));
      obj_size < word_bits;
      t child = Some (alignUp base_ptr obj_size);
@@ -264,7 +266,7 @@ lemma create_object_rest:
      the (si_caps child) < 2 ^ si_cnode_size;
      parent < 2 ^ si_cnode_size;
      object_type child_obj \<noteq> UntypedType;
-     object_size_bits child_obj < 2 ^ word_bits;
+     object_size_bits child_obj < word_bits;
      obj_size = (obj_bits_cdl (object_type child_obj) (object_size_bits child_obj));
      obj_size < word_bits;
      t child = Some (alignUp next_ptr obj_size);
@@ -466,7 +468,7 @@ lemma create_children_wp:
        list_all (\<lambda>child. is_aligned (Min cover_ids) (the_tbits child)) children;
        list_all (\<lambda>child. cdl_objects spec child \<noteq> None \<and>
                          object_type (the_obj child) \<noteq> UntypedType \<and>
-                         the_obits child < 2 ^ word_bits \<and>
+                         the_obits child < word_bits \<and>
                          Min cover_ids \<le> Min cover_ids + 2 ^ the_tbits child \<and>
                          the_tbits child < word_bits) children \<rbrakk> \<Longrightarrow>
      \<lbrace>\<guillemotleft>(si_null_caps_at t si_caps spec  (set children) \<and>*
@@ -1110,7 +1112,7 @@ lemma retype_untypeds_wp_helper:
         (\<lambda>x. \<forall>child\<in>set (snd x).
                 (\<exists>y. cdl_objects spec child = Some y) \<and>
                 object_type (the (cdl_objects spec child)) \<noteq> UntypedType \<and>
-                object_size_bits (the (cdl_objects spec child)) < 2 ^ word_bits \<and>
+                object_size_bits (the (cdl_objects spec child)) < word_bits \<and>
                 Min (available_range (cap_of (untyped_map (fst x))))
                 \<le> Min (available_range (cap_of (untyped_map (fst x)))) +
                    2 ^ obj_bits_cdl (object_type (the (cdl_objects spec child)))
