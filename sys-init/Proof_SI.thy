@@ -265,6 +265,23 @@ method extract_static_monad_results = (extract_static_monad_result+)[1]
 
 end (* private method context *)
 
+abbreviation
+  "cdl_irq_map spec \<equiv> \<lambda>cdl_irq_id.
+     if (\<exists>irq\<in>used_irqs spec. cdl_irq_node spec irq = cdl_irq_id) then Some cdl_irq_id else None"
+
+lemma cdl_irq_map_triv_alloc':
+  "\<lbrakk>((=) (cdl_irq_map spec) \<and>* R) t; irq \<in> used_irqs spec\<rbrakk> \<Longrightarrow>
+   t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq)"
+  apply (drule is_in_rangeD[where v = "cdl_irq_node spec irq"])
+   apply fastforce
+  apply fastforce
+  done
+
+lemma cdl_irq_map_triv_alloc:
+  "((=) (cdl_irq_map spec) \<and>* R) t \<Longrightarrow>
+   \<forall>irq\<in>used_irqs spec. t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq)"
+  by (clarsimp simp: cdl_irq_map_triv_alloc')
+
 lemma sys_init_explicit:
   "\<lbrakk>well_formed spec;
     valid_untypeds (map fst untyped_derivations) untyped_cptrs ut_info untyped_caps;
@@ -272,8 +289,8 @@ lemma sys_init_explicit:
     obj_ids = sorted_list_of_set (dom (cdl_objects spec)); distinct obj_ids;
     real_ids = collect_children untyped_derivations;
 
-    \<forall>irq\<in>used_irqs spec. t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq);
-    (\<And>* map (\<lambda>(parent, children).
+    ((=) (cdl_irq_map spec) \<and>*
+     \<And>* map (\<lambda>(parent, children).
                  (=) (aligned_allocations spec (Min (available_range (cap_of (untyped_map parent)))) children))
               untyped_derivations) t;
     set (collect_children untyped_derivations) = {obj_id . real_object_at obj_id spec};
@@ -339,6 +356,7 @@ lemma sys_init_explicit:
   apply (insert distinct_card [symmetric, where xs ="[obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec]"], simp)
   apply (clarsimp simp: init_system_def prod_bind_simp)
   apply (frule (3) valid_concat_regions_appends, (erule conjE)+)
+  apply (frule cdl_irq_map_triv_alloc)
   apply extract_static_monad_results
   apply (clarsimp simp: well_formed_spec_used_irqs_compute parse_bootinfo_def)
   apply (wp sep_wp:
@@ -347,7 +365,8 @@ lemma sys_init_explicit:
                  init_irqs_sep[where t=t and dev=False] duplicate_caps_sep'[where t=t and dev=False]
                  create_irq_caps_sep'[where t=t and spec = spec])
    apply (wp add: sep_lift_generic[OF
-                  create_objects_sep'[where t=t and untyped_slots=untyped_cptrs and
+                  create_objects_sep'[where t=t and s'="cdl_irq_map spec" and
+                                            untyped_slots=untyped_cptrs and
                                             untyped_caps=untyped_caps and dev=False and
                                             untyped_map=untyped_map,
                                             simplified sep_wp_simp], simplified])+
@@ -357,7 +376,8 @@ lemma sys_init_explicit:
                         valid_untypeds_def distinct_collection valid_concat_regions_empty_first
                         drop_region_all)
   apply (intro conjI allI impI pred_conjI | sep_cancel+)+
-    apply (fastforce simp: ran_def elim: well_formed_object_domain)
+     apply (fastforce simp: ran_def elim: well_formed_object_domain)
+    apply (fastforce dest: well_formed_objects_only_real_or_irq split: if_splits)
    apply (clarsimp simp: valid_slot_region_append)
   apply (intro conjI allI impI pred_conjI | sep_cancel+ | clarsimp)+
        apply (rule bij_betw_map_of'[simplified comp_def]; clarsimp simp: distinct_collection)
@@ -404,10 +424,10 @@ definition valid_boot_info where
      valid_derivations spec untyped_derivations untyped_map \<and>
      untyped_map = make_untyped_map (map fst untyped_derivations) [ustart .e. uend - 1]
                                     ut_info untyped_caps \<and>
-     (\<forall>irq\<in>used_irqs spec. t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq)) \<and>
-     ((\<And>* map (\<lambda>(parent, children).
-                 (=) (aligned_allocations spec (Min (available_range (cap_of (untyped_map parent)))) children))
-              untyped_derivations) t) \<and>
+     (((=) (cdl_irq_map spec) \<and>*
+       \<And>* map (\<lambda>(parent, children).
+                   (=) (aligned_allocations spec (Min (available_range (cap_of (untyped_map parent)))) children))
+                untyped_derivations) t) \<and>
      set (collect_children untyped_derivations) = {obj_id . real_object_at obj_id spec} \<and>
      card (used_irqs spec) + length (collect_children untyped_derivations) = length obj_ids \<and>
      length_region real_free_cptrs = length real_obj_ids \<and>
