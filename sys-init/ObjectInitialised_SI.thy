@@ -475,18 +475,18 @@ lemma cap_has_object_cap_transform [simp]:
   by (clarsimp simp: cap_transform_def)
 
 lemma well_formed_cap_cap_transform [simp]:
-  "well_formed_cap (cap_transform t cap) = well_formed_cap cap"
+  "well_formed_cap (cap_transform t cap) in_tcb = well_formed_cap cap in_tcb"
   by (clarsimp simp: cap_transform_def)
 
 lemma is_default_cap_cap_transform [simp]:
-  "well_formed_cap cap \<Longrightarrow> is_default_cap (cap_transform t cap) = is_default_cap cap"
+  "well_formed_cap cap in_tcb \<Longrightarrow> is_default_cap (cap_transform t cap) = is_default_cap cap"
   apply (clarsimp simp: is_default_cap_def well_formed_cap_def cap_type_def default_cap_def
                         cap_transform_def cap_has_object_def)
   apply (cases cap, simp_all add: update_cap_object_def cnode_cap_size_def)
   done
 
 lemma default_cap_cap_transform:
-  "\<lbrakk>is_default_cap cap; well_formed_cap cap; t (cap_object cap) = Some obj_id;
+  "\<lbrakk>is_default_cap cap; well_formed_cap cap in_tcb; t (cap_object cap) = Some obj_id;
     cap_type cap = Some type; type \<noteq> IRQNodeType\<rbrakk>
   \<Longrightarrow> default_cap type {obj_id} (cnode_cap_size cap) (is_device_cap cap) = cap_transform t cap"
   by (clarsimp simp: is_default_cap_def default_cap_def cap_transform_def cap_type_def
