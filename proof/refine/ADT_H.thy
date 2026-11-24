@@ -20,25 +20,18 @@ text \<open>
   It is based on the abstract specification because we chose
   to base the refinement's observable state on the abstract state.\<close>
 
+text \<open>
+  Kernel initialisation is not modelled at this level. We use an uninterpreted
+  function and axiomatise its properties in KernelInit_R.\<close>
 consts
-  initEntry :: machine_word
-  initFrames :: "machine_word list"
-  initOffset :: machine_word
-  initKernelFrames :: "machine_word list"
-  initBootFrames :: "machine_word list"
-  initDataStart :: machine_word
+  initStates_H :: "kernel_state set"
 
 text \<open>
   The construction of the abstract data type
   for the executable specification largely follows
   the one for the abstract specification.\<close>
 definition Init_H :: "kernel_state global_state set" where
-  "Init_H \<equiv>
-    ({empty_context} \<times> snd `
-       fst (initKernel (VPtr initEntry) (PPtr initOffset) (map PPtr initFrames)
-                       (map PPtr initKernelFrames) initBootFrames
-                       (newKernelState initDataStart))) \<times>
-     {IdleMode} \<times> {None}"
+  "Init_H \<equiv> ({empty_context} \<times> initStates_H) \<times> {IdleMode} \<times> {None}"
 
 definition
   "user_mem' s \<equiv> \<lambda>p.
