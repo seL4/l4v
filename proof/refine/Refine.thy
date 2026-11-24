@@ -667,9 +667,9 @@ lemma ckernel_invariant:
     apply (clarsimp simp: Init_A_def)
    apply (insert ckernel_init_invs)[1]
    apply clarsimp
-   apply (frule ckernel_init_sch_norm)
+   apply (frule ckernel_init_sch_norm[OF _ sched_act_init])
    apply (frule ckernel_init_ct_idle)
-   apply (frule ckernel_init_domain_time)
+   apply (frule ckernel_init_domain_time[OF _ valid_domain_time_init])
    apply (fastforce simp: Init_H_def)
   apply (clarsimp simp: ADT_A_def ADT_H_def global_automaton_def)
   apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
