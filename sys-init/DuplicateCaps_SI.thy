@@ -28,7 +28,7 @@ lemma sep_map_zip_snd_take:
   done
 
 lemma wfdc_obj_not_untyped:
-  "well_formed_cap (default_cap t oid sz dev) \<Longrightarrow> t \<noteq> UntypedType"
+  "well_formed_cap (default_cap t oid sz dev) in_tcb \<Longrightarrow> t \<noteq> UntypedType"
   by (clarsimp simp:default_cap_def well_formed_cap_def)
 
 lemma derived_cap_default:
@@ -39,7 +39,7 @@ lemma derived_cap_default:
 
 lemma cnode_or_tcb_at_wfc:
   "\<lbrakk>cnode_or_tcb_at obj_id spec; cdl_objects spec obj_id = Some obj; sz \<le> 32\<rbrakk>
-   \<Longrightarrow> well_formed_cap (default_cap (object_type obj) oid sz dev)"
+   \<Longrightarrow> well_formed_cap (default_cap (object_type obj) oid sz dev) in_tcb"
   apply (elim disjE)
    apply (simp add: object_at_def is_tcb_def default_cap_def well_formed_cap_def
                     is_cnode_def object_type_def guard_bits_def
@@ -48,7 +48,7 @@ lemma cnode_or_tcb_at_wfc:
 
 lemma frame_at_wfc:
   "\<lbrakk>frame_at obj_id spec; cdl_objects spec obj_id = Some obj; sz \<le> 32\<rbrakk>
-   \<Longrightarrow> well_formed_cap (default_cap (object_type obj) oid sz dev)"
+   \<Longrightarrow> well_formed_cap (default_cap (object_type obj) oid sz dev) in_tcb"
    apply (simp add: object_at_def is_frame_def default_cap_def well_formed_cap_def
                     is_cnode_def object_type_def guard_bits_def vm_read_write_def
              split: cdl_object.splits)
@@ -57,7 +57,7 @@ lemma frame_at_wfc:
 lemma seL4_CNode_Copy_sep_helper:
   "\<lbrakk>(free_cptr::32 word) < 2 ^ si_cnode_size;
     (cap_ptr::32 word) < 2 ^ si_cnode_size;
-    well_formed_cap (default_cap (object_type obj) {kobj_id} (object_size_bits obj) dev)\<rbrakk>
+    well_formed_cap (default_cap (object_type obj) {kobj_id} (object_size_bits obj) dev) in_tcb\<rbrakk>
   \<Longrightarrow>
   \<lbrace>\<lambda>s. \<guillemotleft>si_tcb_id \<mapsto>f root_tcb \<and>*
        (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -97,14 +97,16 @@ lemma seL4_CNode_Copy_sep_helper:
 
 (* This definition is a bit of a hack for the duplicate_cap_sep_helper_general lemma below.
    Originally it only supported CNodes and TCBs, but it has been extended with support for'
-   duplicating frames *)
+   duplicating frames.
+   Caps that are only well_formed when in TCBs (like RestartCaps and MasterReplyCaps) are not
+   duplicated. This means that we can fix in_tcb to False in well_formed_cap. *)
 definition well_formed_obj_filter ::
   "(cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> bool) \<Rightarrow> bool"
   where
   "well_formed_obj_filter obj_filter \<equiv>
      \<forall>spec obj_id obj.
         obj_filter obj_id spec \<and> cdl_objects spec obj_id = Some obj
-        \<longrightarrow> (\<forall>oid sz dev. sz \<le> 32 \<longrightarrow> well_formed_cap (default_cap (object_type obj) oid sz dev))
+        \<longrightarrow> (\<forall>oid sz dev. sz \<le> 32 \<longrightarrow> well_formed_cap (default_cap (object_type obj) oid sz dev) False)
             \<and> (well_formed spec \<longrightarrow> real_object_at obj_id spec)"
 
 lemma wf_obj_filter_wfc:
@@ -112,7 +114,7 @@ lemma wf_obj_filter_wfc:
     obj_filter obj_id spec;
     cdl_objects spec obj_id = Some obj;
     sz \<le> 32\<rbrakk> \<Longrightarrow>
-   well_formed_cap (default_cap (object_type obj) oid sz dev)"
+   well_formed_cap (default_cap (object_type obj) oid sz dev) False"
   by (clarsimp simp: well_formed_obj_filter_def)
 
 lemma wf_obj_filter_real_object_at:
