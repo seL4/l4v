@@ -763,11 +763,9 @@ lemma is_in_rangeD:
   by (clarsimp simp: sep_conj_def plus_fun_def plus_option_def)
 
 lemma is_in_sep_list_conjD:
-  "\<lbrakk> sep_list_conj (map (\<lambda>x. (=) (s' x)) xs) s; x \<in> set xs; v \<in> dom (s' x) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> (sep_list_conj (map (\<lambda>x. (=) (s' x)) xs) \<and>* R) s; x \<in> set xs; v \<in> dom (s' x) \<rbrakk> \<Longrightarrow>
    s v = (s' x v :: 'b option)"
-  apply (subst (asm) sep_list_conj_map_remove1, assumption)
-  apply (erule (1) is_in_rangeD)
-  done
+  by (fastforce dest: is_in_rangeD simp: sep_list_conj_map_remove1 sep_conj_assoc)
 
 definition disjoint_sets :: "'a set set \<Rightarrow> bool" where
   "disjoint_sets S \<equiv> \<forall>x\<in>S. \<forall>y\<in>S. x \<noteq> y \<longrightarrow> x \<inter> y = {}"
@@ -826,8 +824,8 @@ lemma distinct_map_comp':
   by (clarsimp simp: comp_def distinct_map_comp)
 
 lemma map_allocates:
-  "\<lbrakk> (parent, children) \<in> set utds; child \<in> set children;
-     (\<And>* (map (\<lambda>(p, c). (=) (aligned_allocations spec (f p) c)) utds)) s \<rbrakk>
+  "\<lbrakk> (\<And>* (map (\<lambda>(p, c). (=) (aligned_allocations spec (f p) c)) utds) \<and>* R) s;
+     (parent, children) \<in> set utds; child \<in> set children \<rbrakk>
    \<Longrightarrow> s child = aligned_allocations spec (f parent) children child"
   apply (subst (asm) split_beta')
   apply (drule_tac is_in_sep_list_conjD[where x = "(parent, children)"
@@ -1101,7 +1099,7 @@ lemma retype_untypeds_wp_helper:
            untyped_derivations"
   shows
     "\<lbrakk>well_formed spec;
-      sep_list_conj (allocation_map spec untyped_map untyped_derivations) t;
+      (sep_list_conj (allocation_map spec untyped_map untyped_derivations) \<and>* R') t;
       map_of (zip_region (collect_children untyped_derivations) free_cptrs) = si_caps;
       map (fst) untyped_list = untyped_slots;
       untyped_map = make_untyped_map (map fst untyped_derivations) (map fst untyped_list)
@@ -1263,9 +1261,11 @@ lemma create_objects_sep:
         map (unat \<circ> fst) untyped_list = untyped_slots \<and>
         (\<forall>obj\<in>ran (cdl_objects spec). object_domain obj = minBound) \<and>
         (\<And>* map (\<lambda>(parent, children).
-                   (=) (aligned_allocations spec ((Min \<circ> available_range \<circ> cap_of \<circ> untyped_map) parent)
+                   (=) (aligned_allocations spec
+                                            ((Min \<circ> available_range \<circ> cap_of \<circ> untyped_map) parent)
                                             children))
-                untyped_derivations) t \<and>
+                untyped_derivations
+         \<and>* R') t \<and>
         length (collect_children untyped_derivations) \<le> length_region free_cptrs \<and>
         valid_slot_region free_cptrs) \<rbrace>
    create_objects spec untyped_list free_cptrs (untyped_derivations :: (machine_word \<times> (machine_word list)) list)
@@ -1359,8 +1359,8 @@ lemma distinct_collection:
   done
 
 lemma is_in_sep_list_conjD':
-  "\<lbrakk> sep_list_conj (map (\<lambda>x. (=) (g x)) xs) s; \<exists>x. x \<in> set xs \<and> v \<in> dom (g x) \<rbrakk> \<Longrightarrow> s v \<noteq> None "
-  by (fastforce dest: is_in_rangeD simp: sep_list_conj_map_remove1)
+  "\<lbrakk> (sep_list_conj (map (\<lambda>x. (=) (g x)) xs) \<and>* R) s; \<exists>x. x \<in> set xs \<and> v \<in> dom (g x) \<rbrakk> \<Longrightarrow> s v \<noteq> None"
+  by (fastforce dest: is_in_rangeD simp: sep_list_conj_map_remove1 sep_conj_assoc)
 
 lemma in_collection_in_derivations:
   "x \<in> set (collect_children untyped_derivations) \<Longrightarrow>
@@ -1391,7 +1391,8 @@ lemma create_objects_sep':
                    (=) (aligned_allocations spec
                                             ((Min \<circ> available_range \<circ> cap_of \<circ> untyped_map) parent)
                                             children))
-                untyped_derivations) t \<and>
+                untyped_derivations
+         \<and>* R') t \<and>
         length (collect_children untyped_derivations) \<le> length_region free_cptrs \<and>
         valid_slot_region free_cptrs)\<rbrace>
    create_objects spec untyped_list free_cptrs
@@ -1404,7 +1405,7 @@ lemma create_objects_sep':
                    (set (collect_children untyped_derivations)) \<and>*
       (\<And>* cptr\<in>set_region (drop_region (length (collect_children untyped_derivations)) free_cptrs).
             (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-      si_objects  \<and>* R\<guillemotright> s\<rbrace>"
+      si_objects \<and>* R\<guillemotright> s\<rbrace>"
    apply (rule create_objects_sep[where untyped_caps=untyped_caps and
                                         untyped_slots="(map (unat \<circ> fst) untyped_list)" and
                                         untyped_map=untyped_map,
@@ -1439,20 +1440,19 @@ lemma create_objects_sep':
      apply (rule the_map_of_zip_inR; clarsimp)
     apply (simp add: set_take_subset)
    defer
-   apply (rule_tac is_in_sep_list_conjD'[where
+   apply (rule is_in_sep_list_conjD'[where
                      xs = untyped_derivations and
                      g = "\<lambda>(p, cs). aligned_allocations
                                       spec
                                       ((Min o available_range \<circ> cap_of \<circ> untyped_map) p)
                                       cs" and
-                     s = t])
+                     s = t and R = R'])
     apply (clarsimp simp: split_def)
    apply (fastforce intro: mapp_app
                     dest: in_collection_in_derivations
                     simp: in_list_allocate aligned_allocations_def)
-  apply (clarsimp)
   apply (drule (1) set_rev_mp)
-  apply (clarsimp)
+  apply clarsimp
   done
 
 end
