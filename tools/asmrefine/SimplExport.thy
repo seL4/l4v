@@ -874,6 +874,7 @@ fun reduce_set_mem ctxt x S = let
 
 fun is_spec_body_const @{const_name Spec} = true
   | is_spec_body_const @{const_name guarded_spec_body} = true
+  | is_spec_body_const @{const_name extern_spec_body} = true
   | is_spec_body_const _ = false
 
 fun has_reads body = exists_Const (fn (s, T) =>

@@ -51,6 +51,50 @@ lemma guarded_spec_body_wp [vcg_hoare]:
   apply (auto simp: image_def Bex_def)
   done
 
+(* Full wp rule for extern_spec_body. For modifies proofs we use the weaker form below that
+   only shows M so that modifies proofs are automatic. For manual proofs, use extern_spec_body_wp
+   instead. *)
+lemma extern_spec_body_wp:
+  "P \<subseteq> {s. (\<forall>t. M s t \<longrightarrow> ((s,t) \<in> X \<or> (\<forall>t'. M s t' \<longrightarrow> (s,t') \<notin> X)) \<longrightarrow> t \<in> Q) \<and> (\<exists>t. M s t)}
+   \<Longrightarrow> \<Gamma>,\<Theta> \<turnstile>\<^bsub>/F\<^esub> P (extern_spec_body M X) Q, A"
+  unfolding extern_spec_body_def
+  by (rule HoarePartial.Spec) blast
+
+lemma extern_spec_body_wp_total:
+  "P \<subseteq> {s. (\<forall>t. M s t \<longrightarrow> ((s,t) \<in> X \<or> (\<forall>t'. M s t' \<longrightarrow> (s,t') \<notin> X)) \<longrightarrow> t \<in> Q) \<and> (\<exists>t. M s t)}
+   \<Longrightarrow> \<Gamma>,\<Theta> \<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (extern_spec_body M X) Q, A"
+  unfolding extern_spec_body_def
+  by (rule HoareTotal.Spec) blast
+
+(* Default automation rule for extern_spec_body. Uses the modifies part only. *)
+lemma extern_spec_body_modifies_wp[vcg_hoare]:
+  "P \<subseteq> {s. (\<forall>t. M s t \<longrightarrow> t \<in> Q) \<and> (\<exists>t. M s t)}
+   \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (extern_spec_body M X) Q, A"
+  by (rule extern_spec_body_wp) blast
+
+lemma extern_spec_body_modifies_wp_total[vcg_hoare]:
+  "P \<subseteq> {s. (\<forall>t. M s t \<longrightarrow> t \<in> Q) \<and> (\<exists>t. M s t)}
+   \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (extern_spec_body M X) Q, A"
+  by (rule extern_spec_body_wp_total) blast
+
+(* Nicer form of extern_spec_body_wp for when it is known that M and X intersect. *)
+lemma extern_spec_body_enabled_wp:
+  "P \<subseteq> {s. (\<forall>t. M s t \<and> (s,t) \<in> X \<longrightarrow> t \<in> Q) \<and> (\<exists>t. M s t \<and> (s,t) \<in> X)}
+   \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (extern_spec_body M X) Q, A"
+  by (rule extern_spec_body_wp) blast
+
+lemma extern_spec_body_enabled_wp_total:
+  "P \<subseteq> {s. (\<forall>t. M s t \<and> (s,t) \<in> X \<longrightarrow> t \<in> Q) \<and> (\<exists>t. M s t \<and> (s,t) \<in> X)}
+   \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (extern_spec_body M X) Q, A"
+  by (rule extern_spec_body_wp_total) blast
+
+(* Same as above, on the semantics level *)
+lemma extern_spec_body_exec:
+  "\<lbrakk> \<Gamma> \<turnstile> \<langle>extern_spec_body M X, Normal s\<rangle> \<Rightarrow> t'; M s t\<^sub>0; (s,t\<^sub>0) \<in> X \<rbrakk>
+   \<Longrightarrow> \<exists>t. t' = Normal t \<and> M s t \<and> (s,t) \<in> X"
+  unfolding extern_spec_body_def
+  by (erule exec_Normal_elim_cases; blast)
+
 ML_file "tools/mlyacc/mlyacclib/MLY_base-sig.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_join.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_lrtable.ML"
