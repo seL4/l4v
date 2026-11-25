@@ -311,6 +311,13 @@ lemma pspace_in_kernel_window_init_A_st:
   apply unat_arith
   done
 
+(* interface lemma *)
+lemma ct_idle_init_A_st:
+  "ct_idle init_A_st"
+  unfolding init_A_st_def ct_in_state_def
+  by (clarsimp simp: pred_tcb_at_def obj_at_def state_defs)
+
+(* interface lemma *)
 lemma invs_A:
   "invs init_A_st" (is "invs ?st")
   supply is_aligned_def[THEN iffD2, simp]
