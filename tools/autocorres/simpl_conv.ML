@@ -159,6 +159,17 @@ fun simpl_conv'
           prove_term [] @{thm L1corres_guarded_spec}
             (fn _ => mk_l1 @{term "L1_spec"} [s])
 
+      (* For external functions, use only the modifies spec. *)
+      | (Const (@{const_name extern_spec_body}, _) $ m $ _) =>
+          let
+            val state_T = #state_type prog_info
+            val rel = HOLogic.Collect_const (HOLogic.mk_prodT (state_T, state_T))
+                      $ HOLogic.mk_case_prod m
+          in
+            prove_term [] @{thm L1corres_extern_spec}
+              (fn _ => mk_l1 @{term "L1_spec"} [rel])
+          end
+
       (*
        * "call": This is primarily what is output by the C parser. We
        * accept input terms of the form:

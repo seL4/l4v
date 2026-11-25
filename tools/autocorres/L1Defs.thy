@@ -211,6 +211,17 @@ lemma L1corres_guarded_spec:
                elim: exec_Normal_elim_cases intro: terminates.Guard terminates.Spec)
   done
 
+lemma L1corres_extern_spec:
+  "L1corres ct \<Gamma> (L1_spec {(s,t). M s t}) (extern_spec_body M X)"
+  apply (clarsimp simp: L1corres_alt_def ccorresE_def L1_spec_def extern_spec_body_def
+                        liftE_def spec_def bind_def return_def)
+  apply (rule conjI)
+   apply clarsimp
+   apply (erule exec_Normal_elim_cases; clarsimp)
+   apply blast
+  apply (clarsimp intro!: terminates.Spec)
+  done
+
 lemma liftE_get_bindE:
   "(liftE get >>=E B) = (\<lambda>s. B s s)"
   apply (monad_eq simp: Ball_def Bex_def)
