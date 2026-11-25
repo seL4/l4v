@@ -560,7 +560,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                             apply (ctac add: ccorres_return_CE)
                            apply (ctac add: ccorres_inst[where P=\<top> and P'=UNIV])
                           apply wp
-                         apply (vcg exspec=invokeIRQControl_modifies)
+                         apply (vcg exspec=invokeIRQControl_modifies exspec=setIRQTrigger_modifies)
                         apply (wp sts_invs_minor')
                        apply (rule injection_wp, rule refl, wp)
                       apply simp

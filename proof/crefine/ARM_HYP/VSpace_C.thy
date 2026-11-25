@@ -2174,7 +2174,7 @@ lemma vcpu_restore_ccorres:
                 apply (frule (1) vcpu_at_rf_sr)
                 apply (clarsimp simp: typ_heap_simps cvcpu_relation_regs_def cvgic_relation_def virq_to_H_def unat_of_nat)
                apply (simp add: word_less_nat_alt upt_Suc)
-              apply vcg
+              apply (vcg exspec=set_gic_vcpu_ctrl_lr_modifies)
               apply clarsimp
              apply wpsimp
             apply (simp add: upt_Suc)
