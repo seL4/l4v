@@ -212,15 +212,14 @@ definition valid_derivations ::
          distinct children \<and>
          (\<forall>child\<in>(set children).
            let spec_child = the (cdl_objects spec child);
-               child_size = spec_object_size spec child
+               child_size_bits = spec_object_size spec child
            in
              cdl_objects spec child \<noteq> None \<and>
              object_type spec_child \<noteq> UntypedType \<and>
-             object_size_bits spec_child < 2 ^ word_bits \<and>
-             start \<le> start + 2 ^ child_size \<and>
-             child_size < word_size \<and>
-             is_aligned start child_size \<and>
-             start \<le> the (aligned_allocations spec start children child) + 2 ^ child_size \<and>
+             start \<le> start + 2 ^ child_size_bits \<and>
+             child_size_bits < word_bits \<and>
+             is_aligned start child_size_bits \<and>
+             start \<le> the (aligned_allocations spec start children child) + 2 ^ child_size_bits \<and>
              (previous child children \<noteq> None \<longrightarrow> start < the (allocate start spec children child)) \<and>
              the (allocate start spec children child) \<in> available_range (parent_cap)))"
 
