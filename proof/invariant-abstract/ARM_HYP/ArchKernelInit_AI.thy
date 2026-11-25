@@ -250,6 +250,13 @@ lemma cap_refs_respects_device_region_init[simp]:
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
    done
 
+(* interface lemma *)
+lemma ct_idle_init_A_st:
+  "ct_idle init_A_st"
+  unfolding init_A_st_def ct_in_state_def
+  by (clarsimp simp: pred_tcb_at_def obj_at_def state_defs)
+
+(* interface lemma *)
 lemma invs_A:
   "invs init_A_st"
   apply (simp add: invs_def)
