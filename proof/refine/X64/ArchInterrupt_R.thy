@@ -251,6 +251,10 @@ lemma arch_performIRQControl_corres[Arch_assms]:
           (arch_invoke_irq_control ivk)
           (Arch.performIRQControl ivk')"
   apply (cases ivk; simp add: X64_H.performIRQControl_def arch_invoke_irq_control_def)
+   apply (rename_tac ioapic pin level polarity vector)
+   apply (rule_tac F="pin && mask 8 = pin" in corres_req)
+    apply (clarsimp simp: arch_irq_control_inv_valid_def and_mask_eq_iff_le_mask)
+    apply (erule order_trans, rule ucast_leq_mask, simp)
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
         apply do_machine_op_corres
