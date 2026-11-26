@@ -323,7 +323,10 @@ lemma sys_init_explicit:
       remaining_cptrs
    \<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>(\<And>* (cptr, cap) \<in> set (zip untyped_cptrs untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c cap) \<and>*
-     (\<And>* cptr \<in> set_region free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap)  \<and>*
+     (\<And>* cptr \<in> set_region real_free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+     (\<And>* cptr \<in> set_region irq_free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+     (\<And>* cptr \<in> set_region dup_cap_free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+     (\<And>* cptr \<in> set_region remaining_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
      (SETSEPCONJ obj_id:set (collect_children untyped_derivations). the (t obj_id) \<mapsto>o Untyped) \<and>*
      si_objects \<and>*
      si_irq_nodes spec \<and>*
@@ -339,8 +342,7 @@ lemma sys_init_explicit:
          (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
        si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
        si_objects \<and>*
-       (SETSEPCONJ cptr:set_region (shared_frame_cap_cptrs @2 remaining_cptrs).
-         (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+       (SETSEPCONJ cptr:set_region remaining_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
        (\<And>* map2 (\<lambda>slot. on_depleted_untyped_cap (sep_map_c (si_cnode_id, unat slot))) untyped_cptrs untyped_caps) \<and>*
        (SETSEPCONJ pd_id | pd_at pd_id spec.
          frame_duplicates_copied (make_frame_cap_map real_ids (shared_frame_cap_cptrs @2 remaining_cptrs) spec)
@@ -403,12 +405,15 @@ definition valid_boot_info where
    (shared_frame_cap_cptrs :: bi_slot_region)
    (remaining_cptrs :: bi_slot_region).
     ((\<And>* (cptr, cap) \<in> set (zip [ustart .e. uend - 1] untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c cap) \<and>*
-     (\<And>* cptr \<in> set_region (fstart, fend). (si_cnode_id, unat cptr) \<mapsto>c NullCap)  \<and>*
+     (\<And>* cptr \<in> set_region real_free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+     (\<And>* cptr \<in> set_region irq_free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+     (\<And>* cptr \<in> set_region dup_cap_free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+     (\<And>* cptr \<in> set_region remaining_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
      (SETSEPCONJ obj_id:set (collect_children untyped_derivations). the (t obj_id) \<mapsto>o Untyped) \<and>*
      si_objects \<and>*
      si_irq_nodes spec \<and>*
      (SETSEPCONJ pd_id | pd_at pd_id spec.
-       frame_duplicates_empty (make_frame_cap_map real_obj_ids ( shared_frame_cap_cptrs @2 remaining_cptrs)
+       frame_duplicates_empty (make_frame_cap_map real_obj_ids (shared_frame_cap_cptrs @2 remaining_cptrs)
                                                   spec)
                               pd_id spec)) s \<and>
      obj_ids = sorted_list_of_set (dom (cdl_objects spec)) \<and>
@@ -452,7 +457,9 @@ definition si_final_objects ::
     ((\<And>*  cptr \<in> set (take (card (dom (cdl_objects spec))) free_cptrs).
           (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
      (\<And>*  cptr \<in> set (drop (card (dom (cdl_objects spec)) +
-                             card ({obj_id. cnode_or_tcb_at obj_id spec})) free_cptrs).
+                             card ({obj_id. cnode_or_tcb_at obj_id spec}) +
+                             card (\<Union>(set ` get_frame_caps spec ` {obj_id. pd_at obj_id spec})))
+                            free_cptrs).
           (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
      (\<And>* map2 (\<lambda>x. on_depleted_untyped_cap (sep_map_c (si_cnode_id, unat x))) untyped_cptrs untyped_caps) \<and>*
      (\<And>*  obj_id \<in> {obj_id. cnode_or_tcb_at obj_id spec}. (si_cap_at t dup_caps spec False obj_id)) \<and>*
@@ -487,7 +494,7 @@ lemma sys_init:
               apply (solves \<open>simp\<close>)+
     apply (subst fst_conv)
     apply clarsimp
-  apply (frule (3) valid_concat_regions_appends, (erule conjE)+)
+   apply (frule (3) valid_concat_regions_appends, (erule conjE)+)
    apply (simp add: length_filter_card)
   apply (simp add: si_objects_extra_caps_def si_caps_at_def distinct_collection
                    sep_conj_exists sep_conj_assoc)

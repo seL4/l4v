@@ -522,7 +522,7 @@ definition conjure_real_frame_cap ::
     case cap of FrameCap _ ptr _ n _ _ \<Rightarrow> real_frame_cap_of False ptr vm_read_write n t | _ \<Rightarrow> cap"
 
 definition frame_duplicates_empty ::
-  "(cdl_object_id \<times> nat \<Rightarrow> word32) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> (sep_state \<Rightarrow> bool)"
+  "(cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> (sep_state \<Rightarrow> bool)"
   where
   "frame_duplicates_empty cptr_map pd_id spec \<equiv>
    sep_map_set_conj
