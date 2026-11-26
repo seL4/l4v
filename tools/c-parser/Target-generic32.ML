@@ -37,7 +37,7 @@ val UINT_MAX = umax intWidth
 val ULONG_MAX = umax longWidth
 val ULLONG_MAX = umax llongWidth
 
-val SCHAR_MAX = max intWidth
+val SCHAR_MAX = max charWidth
 val SHORT_MAX = max shortWidth
 val INT_MAX = max intWidth
 val LONG_MAX = max longWidth

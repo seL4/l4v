@@ -199,3 +199,4 @@
   translation replaces them as before with an `asm_semantics_ok_to_ignore`
   guard. Use `--unhandled_asm` in the standalone parser to list these
   statements.
+- Fix the value of SCHAR_MAX to 8 bit. This affects signed char only.
