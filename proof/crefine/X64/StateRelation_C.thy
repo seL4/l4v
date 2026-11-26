@@ -139,8 +139,7 @@ where
        (ucast (id_CL irq_ioapic))
        (ucast (pin_CL irq_ioapic))
        (ucast (level_CL irq_ioapic))
-       (ucast (polarity_low_CL irq_ioapic))
-       (to_bool (masked_CL irq_ioapic))"
+       (ucast (polarity_low_CL irq_ioapic))"
 | "x86_irq_state_to_H (X86_irq_state_irq_msi irq_msi) =
      X64IRQMSI
        (ucast (bus_CL irq_msi))
