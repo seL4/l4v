@@ -200,3 +200,4 @@
   guard. Use `--unhandled_asm` in the standalone parser to list these
   statements.
 - Fix the value of SCHAR_MAX to 8 bit. This affects signed char only.
+- On X64, plain `char` is now signed, matching the x86-64 System V ABI.

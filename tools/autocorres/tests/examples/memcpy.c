@@ -7,7 +7,8 @@
 void *memcpy(void *dest, void *src, unsigned long size)
 {
     unsigned long i;
-    char *d = (char *)dest, *s = (char *)src;
+    /* unsigned char, so it is the same type in the proofs for all architectures */
+    unsigned char *d = (unsigned char *)dest, *s = (unsigned char *)src;
     for (i = 0; i < size; i++) {
         d[i] = s[i];
     }
