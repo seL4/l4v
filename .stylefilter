@@ -8,7 +8,6 @@
 # absolute as well as relative from the repo top.
 
 # ignore generated and parse test files
-*camkes/glue-proofs/*.c
 *tools/autocorres/tests/parse-tests/*
 *tools/c-parser/testfiles/*
 *spec/cspec/c/build/*
