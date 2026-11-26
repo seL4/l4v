@@ -300,7 +300,7 @@ definition maxPCIFunc :: "machine_word" where
   "maxPCIFunc \<equiv> 7"
 
 definition ioapicIRQLines :: "machine_word" where
-  "ioapicIRQLines \<equiv> 24"
+  "ioapicIRQLines \<equiv> 240"
 
 consts' ioapicMapPinToVector_impl ::
   "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow>

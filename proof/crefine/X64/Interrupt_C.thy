@@ -376,6 +376,11 @@ lemma Platform_maxIRQ:
   "maxIRQ = scast Kernel_C.maxIRQ"
    by (simp add: maxIRQ_def Kernel_C.maxIRQ_def)
 
+(* sync check for ioapicIRQLines constant with C *)
+lemma Platform_ioapicIRQLines:
+  "ioapicIRQLines = scast Kernel_C.ioapicIRQLines"
+  by (simp add: ioapicIRQLines_def Kernel_C.ioapicIRQLines_def)
+
 lemma le_maxirq_ucast_explicit:
   "irq \<le> 0x7D \<Longrightarrow> UCAST(8 \<rightarrow> 64) irq < 0x7E"
   apply (subgoal_tac "UCAST(8 \<rightarrow> 64) irq \<le> UCAST(8 \<rightarrow> 64) 0x7D \<and> LENGTH(8) \<le> LENGTH(64)")
@@ -497,8 +502,10 @@ lemma invokeIssueIRQHandlerIOAPIC_ccorres:
    apply (ctac (no_vcg) add: ioapicMapPinToVector_ccorres)
     apply clarsimp
     apply (rule ccorres_add_returnOk)
-    apply (subgoal_tac "x64_irq_state_relation (X64IRQIOAPIC (ioapic && mask 5) (pin && mask 5) (level && 1) (polarity && 1) True)
-                                               irqState___struct_x86_irq_state_C")
+    apply (subgoal_tac "x64_irq_state_relation
+                          (X64IRQIOAPIC (ioapic && mask 5) (pin && mask 8) (level && 1)
+                                        (polarity && 1) True)
+                          irqState___struct_x86_irq_state_C")
      prefer 2
      apply (fastforce simp: x64_irq_state_relation_def x86_irq_state_irq_ioapic_lift x64_irq_state_relation_helpers)
     apply (ctac add: Arch_invokeIRQControl_ccorres)

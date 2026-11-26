@@ -356,6 +356,11 @@ lemma invs_valid_ioapic[elim!]:
   "invs' s \<Longrightarrow> valid_ioapic s"
   by (simp add: invs'_def valid_state'_def valid_arch_state'_def)
 
+(* sanity check that ioapicIRQLines fits into x64KSIOAPICnIRQs without truncating *)
+lemma ioapicIRQLines_fits_x64KSIOAPICnIRQs:
+  "ioapicIRQLines \<le> mask (size (x64KSIOAPICnIRQs (ksArchState s) ioapic))"
+  by (simp add: ioapicIRQLines_def word_size mask_def)
+
 lemma page_directory_pde_atI':
   "\<lbrakk> page_directory_at' p s; x < 2 ^ ptTranslationBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << word_size_bits)) s"
   by (simp add: page_directory_at'_def pageBits_def)
