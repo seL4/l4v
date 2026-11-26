@@ -252,7 +252,6 @@ datatype X64IRQState =
       (IRQPin : machine_word)
       (IRQLevel : machine_word)
       (IRQPolarity : machine_word)
-      (IRQMasked : bool)
 
 definition
   arch_is_frame_type :: "aobject_type \<Rightarrow> bool"

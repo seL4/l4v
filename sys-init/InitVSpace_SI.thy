@@ -1236,7 +1236,7 @@ lemma init_vspace_sep:
   apply (rule sep_map_set_sep_foldI)
    apply (clarsimp simp: sep.prod.distrib)+
   apply sep_cancel+
-    (* Split PTs into those which have a parent and those which do not *)
+  (* Split PTs into those which have a parent and those which do not *)
   apply (clarsimp simp: sep_map_set_conj_restrict
                           [where t="\<lambda>pt_id. (\<exists>obj. pd_at obj spec \<and> parent_obj_of obj pt_id spec)"
                              and xs="{obj_id. pt_at obj_id spec}"])

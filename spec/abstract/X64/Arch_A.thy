@@ -30,7 +30,7 @@ definition
   "arch_invoke_irq_control aic \<equiv> (case aic of
     IssueIRQHandlerIOAPIC irq dest src ioapic pin level polarity vector \<Rightarrow> without_preemption (do
       do_machine_op $ ioapicMapPinToVector ioapic pin level polarity vector;
-      irq_state \<leftarrow> return $ IRQIOAPIC (ioapic && mask 5) pin (level && 1) (polarity && 1) True;
+      irq_state \<leftarrow> return $ IRQIOAPIC (ioapic && mask 5) pin (level && 1) (polarity && 1);
       update_irq_state irq irq_state;
       set_irq_state IRQSignal (IRQ irq);
       cap_insert (IRQHandlerCap (IRQ irq)) src dest
