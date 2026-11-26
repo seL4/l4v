@@ -159,9 +159,6 @@ maxPCIDev = 31 -- PCI_DEV_MAX
 maxPCIFunc :: Word
 maxPCIFunc = 7 -- PCI_FUNC_MAX
 
-ioapicIRQLines :: Word
-ioapicIRQLines = 240
-
 -- error checks this performs moved out to x64 decodeIRQControl
 ioapicMapPinToVector :: Ptr CallbackData -> Word -> Word -> Word -> Word -> Word -> IO ()
 ioapicMapPinToVector = isabelleOp
