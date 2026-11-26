@@ -417,7 +417,7 @@ lemma updateIRQState_ccorres:
   done
 
 lemma Arch_invokeIRQControl_ccorres:
-  "x64_irq_state_relation (X64IRQIOAPIC ioapic pin level polarity True) irq_state_c \<Longrightarrow>
+  "x64_irq_state_relation (X64IRQIOAPIC ioapic pin level polarity) irq_state_c \<Longrightarrow>
    ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and cte_at' parent and (\<lambda>_. ucast irq \<le> (scast Kernel_C.maxIRQ :: machine_word)))
       (UNIV \<inter> {s. irq_' s = ucast irq}
@@ -425,7 +425,7 @@ lemma Arch_invokeIRQControl_ccorres:
             \<inter> {s. controlSlot_' s = cte_Ptr parent}
             \<inter> {s. irqState___struct_x86_irq_state_C_' s = irq_state_c})
       hs
-      (do y <- updateIRQState irq (X64IRQIOAPIC ioapic pin level polarity True);
+      (do y <- updateIRQState irq (X64IRQIOAPIC ioapic pin level polarity);
           y <- setIRQState irqstate.IRQSignal irq;
           liftE (cteInsert (capability.IRQHandlerCap irq) parent slot)
        od)
@@ -504,7 +504,7 @@ lemma invokeIssueIRQHandlerIOAPIC_ccorres:
     apply (rule ccorres_add_returnOk)
     apply (subgoal_tac "x64_irq_state_relation
                           (X64IRQIOAPIC (ioapic && mask 5) (pin && mask 8) (level && 1)
-                                        (polarity && 1) True)
+                                        (polarity && 1))
                           irqState___struct_x86_irq_state_C")
      prefer 2
      apply (fastforce simp: x64_irq_state_relation_def x86_irq_state_irq_ioapic_lift x64_irq_state_relation_helpers)
