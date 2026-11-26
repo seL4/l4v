@@ -50,13 +50,14 @@ val INT_MIN = min intWidth
 val LONG_MIN = min longWidth
 val LLONG_MIN = min llongWidth
 
-val char_signedp = false
+val char_signedp = true
 
-val CHAR_MAX = UCHAR_MAX
-val CHAR_MIN = IntInf.fromInt 0
+val CHAR_MAX = SCHAR_MAX
+val CHAR_MIN = SCHAR_MIN
 
 open CharLitUtil
 
-val charliteral_conversion = uchar_conv {umax=UCHAR_MAX}
+val charliteral_conversion = schar_conv {umax=UCHAR_MAX,smin=SCHAR_MIN,
+                                         smax=SCHAR_MAX}
 
 end

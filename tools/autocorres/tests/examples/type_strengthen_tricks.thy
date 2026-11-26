@@ -65,7 +65,8 @@ term "st_f' :: ure_C ptr \<Rightarrow> ure_C ptr \<Rightarrow> (lifted_globals, 
 term "st_g' :: word32 ptr \<Rightarrow> (lifted_globals, word32) nondet_monad"
 term "st_h' :: word32 \<Rightarrow> (lifted_globals, word32) nondet_monad"
 term "st_i' :: nat \<Rightarrow> ure_C ptr \<Rightarrow> ure_C ptr \<Rightarrow> (lifted_globals, ure_C ptr) nondet_monad"
-term "exc_f' :: word8 ptr \<Rightarrow> 32 signed word ptr \<Rightarrow> (lifted_globals, int) nondet_monad"
+(* The signedness of plain char depends on the architecture, hence "_ word" *)
+term "exc_f' :: _ word ptr \<Rightarrow> 32 signed word ptr \<Rightarrow> (lifted_globals, int) nondet_monad"
 end
 
 end
