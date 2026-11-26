@@ -7,10 +7,15 @@
 CapDL Refinement Proof
 ======================
 
-This proof establishes that seL4's [abstract specification][aspec] is
-a formal *refinement* (i.e. a correct implementation) of its [capDL
-specification][capDL]. It is described as part of an ICFEM '13
-[paper][paper].
+This proof establishes that seL4's [abstract specification][aspec] is a formal
+refinement, i.e. a correct implementation, of its [capDL specification][capDL].
+It is described as part of an ICFEM '13 [paper][paper].
+
+The capDL kernel specification and refinement proofs are used specifically for
+proving properties about capability distributions after system intialisation.
+They liberally use nondeterminism for everything that is not important to system
+intialisation. For a general user-level verification interface, use the abstract
+specification instead.
 
   [aspec]: ../../spec/abstract/
   [capdl]: ../../spec/capDL/
