@@ -7,6 +7,5 @@
 CAmkES is a component platform for seL4. This directory contains files related
 to a formal Isabelle model of CAmkES.
 
- adl-spec/ - Architectural model.
- glue-proofs/ - AutoCorres-based work (bottom-up approach to glue code).
- glue-spec/ - Behavioural model (top-down approach to glue code).
+ `adl-spec/` - Architectural model.
+ `cdl-refine/` - capDL spec refines component spec.
