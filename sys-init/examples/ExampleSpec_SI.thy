@@ -68,8 +68,7 @@ definition
    cdl_tcb_intent = \<lparr>cdl_intent_op = None,
                      cdl_intent_error = False,
                      cdl_intent_cap = 0,
-                     cdl_intent_extras = [],
-                     cdl_intent_recv_slot = None\<rparr>,
+                     cdl_intent_extras = []\<rparr>,
    cdl_tcb_has_fault = False,
    cdl_tcb_domain = minBound,
    cdl_tcb_extra = default_tcb_extra_data\<rparr>"
@@ -170,8 +169,8 @@ lemma well_formed_orig_cap_tcb [simp]:
                      cap_rights_def ep_related_cap_def)
 
 lemma well_formed_cap_ex [simp]:
-  "well_formed_cap (CNodeCap a 0 0 2)"
-  "well_formed_cap (TcbCap 0)"
+  "well_formed_cap (CNodeCap a 0 0 2) in_tcb"
+  "well_formed_cap (TcbCap 0) in_tcb"
   by (clarsimp simp: well_formed_cap_def guard_bits_def)+
 
 lemma cap_at_has_no_parents_in_cdt_example_spec [simp]:
@@ -192,7 +191,7 @@ lemma original_cap_at_example_spec [simp]:
 lemma well_formed_cap_example [simp]:
   "\<lbrakk>cdl_objects example_spec obj_id = Some obj;
     object_slots obj slot = Some cap; cap \<noteq> NullCap\<rbrakk>
-  \<Longrightarrow> well_formed_cap cap"
+  \<Longrightarrow> well_formed_cap cap (is_tcb obj)"
   by (clarsimp simp: well_formed_cap_def example_spec_def example_tcb_def
                      object_slots_def empty_cap_map_def guard_bits_def
                      tcb_slot_defs vm_read_write_def

@@ -102,7 +102,7 @@ lemma guard_size_well_formed:
   done
 
 lemma well_formed_cap_valid_src_cap:
-  "well_formed_cap cap \<Longrightarrow> valid_src_cap cap (cap_data cap)"
+  "well_formed_cap cap in_tcb \<Longrightarrow> valid_src_cap cap (cap_data cap)"
   apply (clarsimp simp: valid_src_cap_def)
   apply (clarsimp simp: cap_data_def cnode_cap_size_def)
   apply (clarsimp simp: well_formed_cap_def cap_type_def guard_as_rawdata_def split: cdl_cap.splits)
@@ -127,7 +127,7 @@ lemma well_formed_cap_valid_src_cap:
   done
 
 lemma well_formed_cap_has_object_has_type [simp]:
-  "\<lbrakk>well_formed_cap cap; cap_has_object cap\<rbrakk> \<Longrightarrow> cap_has_type cap"
+  "\<lbrakk>well_formed_cap cap in_tcb; cap_has_object cap; \<not> is_MasterReplyCap cap\<rbrakk> \<Longrightarrow> cap_has_type cap"
   by (clarsimp simp: cap_has_object_def well_formed_cap_def cap_type_def
               split: cdl_cap.splits)
 
@@ -146,7 +146,7 @@ lemma si_obj_cap_at_empty_cap_has_object:
 (* MOVEME *)
 lemma well_formed_cap_no_object_irqhandler_cap:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap; cap \<noteq> NullCap;
-    \<not> cap_at cap_has_object (obj_id, slot) spec\<rbrakk>
+    \<not> cap_at cap_has_object (obj_id, slot) spec; cap \<noteq> RestartCap\<rbrakk>
    \<Longrightarrow> cap_at is_irqhandler_cap (obj_id, slot) spec"
   apply (clarsimp simp: cap_at_def)
   apply (frule opt_cap_cdl_objects, clarsimp)
@@ -175,7 +175,7 @@ lemma default_cap_data_if_cnode:
   \<Longrightarrow> (default_cap type m sz dev)
    =  (default_cap type m (cnode_cap_size spec_cap) dev)"
   by (case_tac spec_cap,
-      (clarsimp simp: default_cap_def cap_type_def is_cnode_cap_simps)+)
+      (clarsimp simp: default_cap_def cap_type_def)+)
 
 
 (************************************************************
@@ -610,6 +610,7 @@ lemma mint_post:
    apply (rule object_slots_object_initialised_state, (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
   apply (frule (2) well_formed_vm_cap_has_asid)
+  apply (simp add: is_tcb_obj_type, frule well_formed_cap_not_tcb_not_MasterReplyCap)
   apply (frule (1) well_formed_is_fake_vm_cap,
          (assumption|simp add: object_type_is_object)+)
   apply (clarsimp simp: cap_rights_inter_default_cap_rights)
@@ -1153,23 +1154,25 @@ lemma init_cnode_slot_move_original_sep:
    apply (wp seL4_CNode_Mutate_object_slot_initialised_sep
              seL4_CNode_Move_object_slot_initialised_cap_has_object_sep |
           clarsimp)+
+   apply (clarsimp simp: object_at_def)
    apply (intro impI conjI,simp_all add:)
           apply (drule(1) well_formed_well_formed_cap[where obj_id = obj_id])
             apply (simp add:opt_cap_def slots_of_def)
            apply (simp add:cap_type_null)
+          apply (simp, frule well_formed_cap_not_tcb_not_MasterReplyCap)
           apply simp
          apply (metis cap_has_object_not_NullCap well_formed_cap_valid_src_cap
                       well_formed_well_formed_cap')
         apply (metis cap_has_object_not_NullCap well_formed_orig_ep_cap_is_default)
        apply (simp add: ep_related_cap_def cap_type_def split:cdl_cap.splits)
       apply (erule (3) well_formed_cnode_object_size_bits_eq)
-     apply (metis cap_has_object_NullCap well_formed_cap_has_object_has_type
-                  well_formed_well_formed_cap')
+     apply (metis well_formed_types_match)
     apply (metis cap_has_object_NullCap well_formed_cap_valid_src_cap well_formed_well_formed_cap')
    apply (erule (3) well_formed_cnode_object_size_bits_eq)
 
   (* Case: cap_at is_irqhandler_cap (obj_id, slot) spec *)
   apply (frule (3) well_formed_cap_no_object_irqhandler_cap)
+   apply (fastforce dest: well_formed_well_formed_cap')
   apply (clarsimp simp: cap_at_def)
   apply (rename_tac cap)
   apply (clarsimp simp: init_cnode_slot_def)
@@ -1576,6 +1579,7 @@ lemma init_cnode_slot_copy_not_original_sep:
   (* Case: cap_at is_irqhandler_cap (obj_id, slot) spec *)
   apply clarsimp
   apply (frule (3) well_formed_cap_no_object_irqhandler_cap)
+   apply (fastforce simp: cnode_at_not_tcb_at dest: well_formed_well_formed_cap')
   apply (clarsimp simp: original_cap_at_def)
   done
 

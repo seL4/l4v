@@ -82,17 +82,6 @@ done
 
 (* the state of proving before new stuff *)
 
-lemma swap_cap_wp_old:
-  "\<lbrace><dest \<mapsto>c cap \<and>*  src \<mapsto>c cap' \<and>* R>\<rbrace>
-    swap_cap cap' src cap dest
-   \<lbrace>\<lambda>_.<dest \<mapsto>c cap' \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>"
-  apply (clarsimp simp add: swap_cap_def)
-  apply (wp swap_parents_wp set_cap_wp)
-  apply (rule hoare_chain)
-    apply (rule set_cap_wp)
-    apply (sep_solve)+
-done
-
 
 lemma move_cap_wp_old:
  "\<lbrace><dest \<mapsto>c - \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>
@@ -107,26 +96,6 @@ lemma move_cap_wp_old:
    apply (sep_solve)
   apply (rule hoare_chain)
     apply (rule insert_cap_orphan_wp)
-   apply (sep_solve)
-  apply (sep_solve)
-done
-
-lemma invoke_cnode_rotate2_wp_old:
-  "(dest) \<noteq> (rnd) \<Longrightarrow>
-  \<lbrace><dest \<mapsto>c cap1 \<and>* src \<mapsto>c cap2 \<and>*
-    rnd \<mapsto>c - \<and>* R>\<rbrace>
-     invoke_cnode (RotateCall cap1 cap2 dest src rnd)
-  \<lbrace>\<lambda>_. <dest \<mapsto>c NullCap \<and>* src \<mapsto>c cap1 \<and>*
-    rnd \<mapsto>c cap2 \<and>* R>\<rbrace>"
-  including no_pre
-  apply (clarsimp simp: invoke_cnode_def)
-  apply (wp)
-   apply (rule hoare_strengthen_post)
-    apply (rule move_cap_wp)
-   apply (sep_solve )
-  apply (rule hoare_chain)
-    apply (rule move_cap_wp)
-   apply (sep_select_asm 2, sep_select_asm 3)
    apply (sep_solve)
   apply (sep_solve)
 done
@@ -194,27 +163,6 @@ lemma move_cap_wp2:
   \<lbrace>\<lambda>_. <dest \<mapsto>c cap'  \<and>* src \<mapsto>c NullCap \<and>* R>\<rbrace>"
   apply (simp add: move_cap_def)
   apply (sep_wp set_cap_wp swap_parents_wp insert_cap_orphan_wp)+
-  apply (sep_solve)
-  done
-
-lemma swap_cap_wp2:
-  "\<lbrace><dest \<mapsto>c cap \<and>*  src \<mapsto>c cap' \<and>* R>\<rbrace>
-    swap_cap cap' src cap dest
-   \<lbrace>\<lambda>_.<dest \<mapsto>c cap' \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>"
-  apply (clarsimp simp: swap_cap_def)
-  apply (sep_wp swap_parents_wp set_cap_wp)+
-  apply (sep_solve)
-  done
-
-lemma invoke_cnode_rotate2_wp:
-  "(dest) \<noteq> (rnd) \<Longrightarrow>
-  \<lbrace><dest \<mapsto>c cap1 \<and>* src \<mapsto>c cap2 \<and>*
-    rnd \<mapsto>c - \<and>* R>\<rbrace>
-     invoke_cnode (RotateCall cap1 cap2 dest src rnd)
-  \<lbrace>\<lambda>_. <dest \<mapsto>c NullCap \<and>* src \<mapsto>c cap1 \<and>*
-    rnd \<mapsto>c cap2 \<and>* R>\<rbrace>"
-  apply (clarsimp simp: invoke_cnode_def)
-  apply (sep_wp move_cap_wp)+
   apply (sep_solve)
   done
 

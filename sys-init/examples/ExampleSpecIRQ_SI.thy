@@ -63,7 +63,7 @@ definition
                    tcb_boundvcpu_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None, cdl_intent_error = False, cdl_intent_cap = 0,
-                     cdl_intent_extras = [], cdl_intent_recv_slot = None\<rparr>,
+                     cdl_intent_extras = []\<rparr>,
    cdl_tcb_has_fault = False,
    cdl_tcb_domain = minBound,
    cdl_tcb_extra = default_tcb_extra_data \<rparr>"
@@ -80,7 +80,7 @@ definition
                    tcb_boundvcpu_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None, cdl_intent_error = False, cdl_intent_cap = 0,
-                     cdl_intent_extras = [], cdl_intent_recv_slot = None\<rparr>,
+                     cdl_intent_extras = []\<rparr>,
    cdl_tcb_has_fault = False,
    cdl_tcb_domain = minBound,
    cdl_tcb_extra = default_tcb_extra_data \<rparr>"
@@ -541,8 +541,8 @@ lemma well_formed_orig_cap_tcb [simp]:
                      cap_rights_def ep_related_cap_def)
 
 lemma well_formed_cap_ex [simp]:
-  "well_formed_cap (CNodeCap a 0 0 2)"
-  "well_formed_cap (TcbCap 0)"
+  "well_formed_cap (CNodeCap a 0 0 2) in_tcb"
+  "well_formed_cap (TcbCap 0) in_tcb"
   by (clarsimp simp: well_formed_cap_def guard_bits_def)+
 
 lemma validate_vm_attributes_0[simp]:
@@ -558,7 +558,7 @@ lemma validate_pt_vm_attributes_0[simp]:
 lemma well_formed_cap_example [simp]:
   "\<lbrakk>cdl_objects example_spec obj_id = Some obj;
     object_slots obj slot = Some cap; cap \<noteq> NullCap\<rbrakk>
-  \<Longrightarrow> well_formed_cap cap"
+  \<Longrightarrow> well_formed_cap cap (is_tcb obj)"
   apply (clarsimp simp: well_formed_cap_def)
   by (clarsimp simp: well_formed_cap_def example_spec_def
                      obj_defs new_cap_map_def new_irq_node_def new_cnode_def

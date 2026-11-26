@@ -50,12 +50,6 @@ definition syscall ::
 fun perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> cdl_invocation \<Rightarrow> unit preempt_monad" where
     "perform_invocation is_call can_block (InvokeUntyped untyped_params) =
        invoke_untyped untyped_params"
-  | "perform_invocation is_call can_block (InvokeEndpoint endpoint_params) =
-       liftE (invoke_endpoint is_call can_block endpoint_params)"
-  | "perform_invocation is_call can_block (InvokeNotification ntfn_params) =
-       liftE (invoke_notification ntfn_params)"
-  | "perform_invocation is_call can_block (InvokeReply reply_params) =
-       liftE (invoke_reply reply_params)"
   | "perform_invocation is_call can_block (InvokeTcb tcb_params) =
        invoke_tcb tcb_params"
   | "perform_invocation is_call can_block (InvokeDomain domain_params) =
@@ -75,22 +69,9 @@ fun perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> cdl_invocation 
        liftE (invoke_asid_control asid_control_params)"
   | "perform_invocation is_call can_block (InvokeAsidPool asid_pool_params) =
        liftE (invoke_asid_pool asid_pool_params)"
-  | "perform_invocation is_call can_block (InvokePageDirectory page_dir_params) =
-       liftE (invoke_page_directory page_dir_params)"
-  | "perform_invocation is_call can_block (InvokeSGISignal sgi_params) =
-       liftE (invoke_sgi_signal_generate sgi_params)"
   | "perform_invocation is_call can_block (InvokeVCPU vcpu_params) =
        liftE (invoke_vcpu vcpu_params)"
-
-definition ep_related_cap :: "cdl_cap \<Rightarrow> bool" where
-  "ep_related_cap cap \<equiv>
-     case cap of
-       EndpointCap o_id badge rights \<Rightarrow> True
-     | NotificationCap o_id badge rights \<Rightarrow> True
-     | ReplyCap o_id rights \<Rightarrow> True
-     \<comment> \<open>these are like EP caps in the sense that their syscall has no intent argument or label:\<close>
-     | SGISignalCap irq target \<Rightarrow> True
-     | _ \<Rightarrow> False"
+  | "perform_invocation is_call can_block OtherInvocation = chaos"
 
 definition has_restart_cap :: "cdl_object_id \<Rightarrow> bool k_monad" where
   "has_restart_cap \<equiv> \<lambda>tcb_id. do
@@ -115,8 +96,9 @@ definition handle_invocation :: "bool \<Rightarrow> bool \<Rightarrow> unit pree
          extra_caps \<leftarrow> lookup_extra_caps thread_ptr extra_cap_cptrs;
          returnOk (cap, cap_ref, extra_caps)
        odE)
-       \<comment> \<open>If that failed, send off a fault IPC (if we did a blocking operation).\<close>
-       (when can_block $ handle_fault)
+       \<comment> \<open>If that failed, the kernel would send off a fault IPC (if we did a blocking operation).
+           Fault handling is not needed for system initialisation.\<close>
+       (when can_block chaos)
 
        \<comment> \<open>Decode the user's intent.\<close>
        (\<lambda>(cap, cap_ref, extra_caps).
@@ -144,69 +126,29 @@ definition handle_invocation :: "bool \<Rightarrow> bool \<Rightarrow> unit pree
         odE)
   odE"
 
-definition handle_recv :: "unit k_monad" where
-  "handle_recv \<equiv> do
-     \<comment> \<open>Get the current thread.\<close>
-     tcb_id \<leftarrow> gets_the cdl_current_thread;
-     tcb \<leftarrow> get_thread tcb_id;
-     \<comment> \<open>Get the endpoint it is trying to receive from.\<close>
-     doE
-       ep_cptr \<leftarrow> returnOk $ cdl_intent_cap (cdl_tcb_intent tcb);
-       ep_cap \<leftarrow> lookup_cap tcb_id ep_cptr;
-       case ep_cap of
-         EndpointCap o_id badge rights \<Rightarrow>
-           if Read \<in> rights
-           then (liftE $ do
-                   delete_cap_simple (tcb_id, tcb_caller_slot);
-                   receive_ipc tcb_id (cap_object ep_cap) (Grant \<in> rights)
-                 od)
-                \<sqinter> throw
-           else throw
-       | NotificationCap o_id badge rights \<Rightarrow>
-           if Read \<in> rights then liftE (recv_signal tcb_id ep_cap) \<sqinter> throw else throw
-       | _ \<Rightarrow> throw
-     odE
-     <catch> (\<lambda> _. handle_fault)
-   od"
-
-definition handle_reply :: "unit k_monad" where
-  "handle_reply \<equiv> do
-     tcb_id \<leftarrow> gets_the cdl_current_thread;
-     caller_cap \<leftarrow> get_cap (tcb_id, tcb_caller_slot);
-     case caller_cap of
-       ReplyCap target rights \<Rightarrow>
-         do_reply_transfer tcb_id target (tcb_id, tcb_caller_slot) (Grant \<in> rights)
-     | NullCap \<Rightarrow> return ()
-     | _ \<Rightarrow> fail
-   od"
-
-definition handle_hypervisor_fault :: "unit k_monad" where
-  "handle_hypervisor_fault \<equiv> return ()"
-
 definition handle_syscall :: "syscall \<Rightarrow> unit preempt_monad" where
   "handle_syscall sys \<equiv>
      case sys of
        SysSend  \<Rightarrow> handle_invocation False True
      | SysNBSend \<Rightarrow> handle_invocation False False
      | SysCall \<Rightarrow> handle_invocation True True
-     | SysRecv \<Rightarrow> liftE $ handle_recv
      | SysYield \<Rightarrow> returnOk ()
-     | SysReply \<Rightarrow> liftE $ handle_reply
-     | SysReplyRecv \<Rightarrow> liftE $ do
-         handle_reply;
-         handle_recv
-       od
-     | SysNBRecv \<Rightarrow> liftE $ handle_recv"
+     \<comment> \<open>Receiving and replying are not needed for system initialisation.\<close>
+     | SysRecv \<Rightarrow> chaos
+     | SysNBRecv \<Rightarrow> chaos
+     | SysReply \<Rightarrow> chaos
+     | SysReplyRecv \<Rightarrow> chaos"
 
 definition handle_event :: "event \<Rightarrow> unit preempt_monad" where
   "handle_event ev \<equiv>
      case ev of
        SyscallEvent sys \<Rightarrow> handle_syscall sys
-     | UnknownSyscall n \<Rightarrow> liftE $ handle_fault
-     | UserLevelFault a b \<Rightarrow> liftE $ handle_fault
-     | VMFaultEvent c \<Rightarrow> liftE $ handle_fault
      | Interrupt \<Rightarrow> liftE $ handle_pending_interrupts
-     | HypervisorEvent w \<Rightarrow> liftE $ handle_hypervisor_fault"
+     \<comment> \<open>Faults are not needed for system initialisation.\<close>
+     | UnknownSyscall n \<Rightarrow> chaos
+     | UserLevelFault a b \<Rightarrow> chaos
+     | VMFaultEvent c \<Rightarrow> chaos
+     | HypervisorEvent w \<Rightarrow> chaos"
 
 definition call_kernel :: "event \<Rightarrow> unit k_monad" where
   "call_kernel ev \<equiv> do

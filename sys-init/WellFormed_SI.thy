@@ -133,9 +133,9 @@ lemma guard_size_shiftl_non_zero:
 (* End of MOVE ME
  *)
 
-definition well_formed_cap :: "cdl_cap \<Rightarrow> bool"
+definition well_formed_cap :: "cdl_cap \<Rightarrow> bool \<Rightarrow> bool"
 where
-  "well_formed_cap cap \<equiv> case cap of
+  "well_formed_cap cap in_tcb \<equiv> case cap of
       EndpointCap _ b _       \<Rightarrow> b < 2 ^ badge_bits
     | NotificationCap _ b r   \<Rightarrow> b < 2 ^ badge_bits \<and> r \<subseteq> {AllowRead, AllowWrite}
     | CNodeCap _ g gs sz      \<Rightarrow> gs < guard_bits \<and> g < 2 ^ gs \<and> sz + gs \<le> 32
@@ -150,6 +150,8 @@ where
     | PageTableCap PD _ _ ad  \<Rightarrow> ad = None
     | IrqHandlerCap _         \<Rightarrow> True
     | VCPUCap _               \<Rightarrow> True
+    | RestartCap              \<Rightarrow> in_tcb
+    | MasterReplyCap _        \<Rightarrow> in_tcb
 \<comment> \<open>LIMITATION: The following should probably eventually be true.\<close>
     | IrqControlCap           \<Rightarrow> False
     | UntypedCap _ _ _        \<Rightarrow> False
@@ -225,7 +227,7 @@ where
   "well_formed_caps spec obj_id obj \<equiv> \<forall>slot cap.
      object_slots obj slot = Some cap \<longrightarrow>
      cap \<noteq> NullCap \<longrightarrow>
-        (well_formed_cap cap \<and>
+        (well_formed_cap cap (is_tcb obj) \<and>
         (original_cap_at (obj_id, slot) spec \<longrightarrow> well_formed_orig_cap cap) \<and>
         (\<not>original_cap_at (obj_id, slot) spec \<longrightarrow> is_copyable_cap cap) \<and>
          well_formed_cdt spec (obj_id, slot) cap \<and>
@@ -408,25 +410,26 @@ lemma dom_cap_map' [simp]:
  *******************************)
 
 lemma well_formed_cap_cap_has_object_eq:
-  "\<lbrakk>well_formed_cap cap; cap_has_object cap; cap_type cap = cap_type cap'\<rbrakk> \<Longrightarrow> cap_has_object cap'"
+  "\<lbrakk>well_formed_cap cap in_tcb; cap_has_object cap; cap_type cap = cap_type cap'; cap_type cap \<noteq> None\<rbrakk>
+   \<Longrightarrow> cap_has_object cap'"
   by (clarsimp simp: well_formed_cap_def cap_type_def cap_has_object_def split: cdl_cap.splits)+
 
 lemma well_formed_cap_update_cap_objects [simp]:
   "is_untyped_cap cap
-   \<Longrightarrow> well_formed_cap (update_cap_objects x cap) = well_formed_cap cap"
+   \<Longrightarrow> well_formed_cap (update_cap_objects x cap) in_tcb = well_formed_cap cap in_tcb"
   apply (clarsimp simp: update_cap_object_def
                         update_cap_objects_def well_formed_cap_def)
   apply (cases cap, simp_all)
   done
 
 lemma well_formed_cap_update_cap_object [simp]:
-  "well_formed_cap (update_cap_object x cap) = well_formed_cap cap"
+  "well_formed_cap (update_cap_object x cap) in_tcb = well_formed_cap cap in_tcb"
   apply (clarsimp simp: update_cap_object_def well_formed_cap_def)
   apply (cases cap, simp_all add:is_default_cap_def cap_type_def cap_badge_def default_cap_def)
   done
 
 lemma cap_rights_inter_default_cap_rights:
-  "\<lbrakk>well_formed_cap cap; cap_type cap = Some type\<rbrakk>
+  "\<lbrakk>well_formed_cap cap in_tcb; cap_type cap = Some type\<rbrakk>
    \<Longrightarrow> cap_rights (default_cap type ids sz dev) \<inter> cap_rights cap = cap_rights cap"
   by (fastforce simp: well_formed_cap_def default_cap_def cap_type_def cap_rights_def
                       validate_vm_rights_def vm_read_write_def
@@ -434,7 +437,8 @@ lemma cap_rights_inter_default_cap_rights:
                split: cdl_cap.splits cdl_object_type.splits)
 
 lemma well_formed_cap_derived_cap [simp]:
-  "\<lbrakk>well_formed_cap cap; \<not> vm_cap_has_asid cap\<rbrakk> \<Longrightarrow> derived_cap cap = cap"
+  "\<lbrakk>well_formed_cap cap in_tcb; \<not> vm_cap_has_asid cap; \<not> is_MasterReplyCap cap\<rbrakk>
+   \<Longrightarrow> derived_cap cap = cap"
   by (clarsimp simp: well_formed_cap_def vm_cap_has_asid_def derived_cap_def not_Some_eq_tuple
               split: cdl_cap.splits)
 
@@ -485,7 +489,7 @@ lemma well_formed_well_formed_caps:
 lemma well_formed_well_formed_cap:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj;
     object_slots obj slot = Some cap; cap \<noteq> NullCap\<rbrakk>
-   \<Longrightarrow> well_formed_cap cap"
+   \<Longrightarrow> well_formed_cap cap (is_tcb obj)"
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
   apply (clarsimp simp: well_formed_caps_def)
@@ -493,9 +497,9 @@ lemma well_formed_well_formed_cap:
 
 lemma well_formed_well_formed_cap':
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap; cap \<noteq> NullCap\<rbrakk> \<Longrightarrow>
-  well_formed_cap cap"
+  well_formed_cap cap (tcb_at obj_id spec)"
   apply (frule opt_cap_dom_cdl_objects)
-  apply clarsimp
+  apply (clarsimp simp: object_at_def)
   apply (frule (1) object_slots_opt_cap, simp)
   apply (erule (3) well_formed_well_formed_cap)
   done
@@ -694,6 +698,18 @@ lemma well_formed_inj_cdl_irq_node:
   "well_formed spec \<Longrightarrow> inj (cdl_irq_node spec)"
   by (clarsimp simp: well_formed_def well_formed_irq_table_def)
 
+lemma well_formed_cap_not_tcb_not_Restart:
+  "well_formed_cap cap False \<Longrightarrow> cap \<noteq> RestartCap"
+  by (clarsimp simp: well_formed_cap_def)
+
+lemma well_formed_cap_not_tcb_not_MasterReplyCap:
+  "well_formed_cap cap False \<Longrightarrow> \<not> is_MasterReplyCap cap"
+  by (clarsimp simp: well_formed_cap_def split: cdl_cap.splits)
+
+lemma is_MasterReplyCap_update_cap_object[simp]:
+  "is_MasterReplyCap (update_cap_object obj_id cap) = is_MasterReplyCap cap"
+  by (clarsimp simp: update_cap_object_def split: cdl_cap.splits)
+
 lemma well_formed_vm_cap_has_asid:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj;
     object_slots obj slot = Some cap\<rbrakk>
@@ -759,31 +775,11 @@ lemma well_formed_is_untyped_cap:
                  split: cdl_cap.splits)
   done
 
-lemma well_formed_cap_has_object:
-  "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some spec_cap;
-   spec_cap \<noteq> NullCap; \<not> is_untyped_cap spec_cap; \<not> is_irqhandler_cap spec_cap\<rbrakk>
-   \<Longrightarrow> cap_has_object spec_cap"
-  apply (clarsimp simp: opt_cap_def slots_of_def)
-  apply (clarsimp simp: well_formed_def)
-  apply (clarsimp split: option.splits)
-  apply (rename_tac obj)
-  apply (erule_tac x=obj_id in allE)
-  apply (erule_tac x=obj in allE)
-  apply (clarsimp simp: well_formed_caps_def)
-  apply (erule_tac x=slot in allE)
-  apply (clarsimp simp: domI)
-  by (clarsimp simp: cap_has_object_def well_formed_cap_def
-               split: cdl_cap.splits)
-
 lemma well_formed_cap_object:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some spec_cap;
     cap_has_object spec_cap\<rbrakk>
    \<Longrightarrow> \<exists>obj. cdl_objects spec (cap_object spec_cap) = Some obj"
   apply (frule (1) well_formed_well_formed_cap', clarsimp)
-  apply (frule (1) well_formed_cap_has_object)
-    apply clarsimp
-   apply (clarsimp simp: well_formed_cap_def cap_type_def split: cdl_cap.splits)
-  apply simp
   apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   apply (frule (1) well_formed_well_formed_caps)
   apply (clarsimp simp: well_formed_caps_def well_formed_cap_types_match_def)
@@ -814,7 +810,7 @@ lemma well_formed_all_caps_cap_irq:
   done
 
 lemma well_formed_update_cap_rights_idem:
-  "\<lbrakk>well_formed_cap cap; rights = cap_rights cap\<rbrakk>
+  "\<lbrakk>well_formed_cap cap in_tcb; rights = cap_rights cap\<rbrakk>
    \<Longrightarrow> update_cap_rights rights cap = cap"
   by (auto simp: update_cap_rights_def cap_rights_def well_formed_cap_def
                validate_vm_rights_def vm_kernel_only_def vm_read_write_def
@@ -830,8 +826,8 @@ lemma default_ntfn_cap[simp]:
   by (simp add:is_default_cap_def default_cap_def cap_type_def)
 
 lemma default_cap_well_formed_cap:
-  "\<lbrakk>well_formed_cap cap; cap_type cap = Some type; cnode_cap_size cap = sz\<rbrakk>
-   \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz dev)"
+  "\<lbrakk>well_formed_cap cap in_tcb; cap_type cap = Some type; cnode_cap_size cap = sz\<rbrakk>
+   \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz dev) in_tcb"
   by (clarsimp simp: well_formed_cap_def default_cap_def cap_type_def
                      vm_read_write_def cnode_cap_size_def badge_bits_def
                split: cdl_cap.splits cdl_pt_type.splits)
@@ -840,7 +836,7 @@ lemma default_cap_well_formed_cap2:
   "\<lbrakk>is_default_cap cap; cap_type cap = Some type; sz \<le> 32;
     \<not> is_untyped_cap cap; \<not> is_asidpool_cap cap;
     \<forall>pt_t. is_pt_type_cap pt_t cap \<longrightarrow> pt_t = PT \<or> pt_t = PD\<rbrakk>
-   \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz dev)"
+   \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz dev) in_tcb"
   unfolding is_default_cap_def
   by (auto simp: default_cap_def well_formed_cap_def
                  word_gt_a_gt_0 badge_bits_def guard_bits_def
@@ -1017,7 +1013,7 @@ lemma well_formed_tcb_cspace_cap:
   done
 
 lemma cap_data_cap_guard_size_0:
-  "\<lbrakk>well_formed_cap cap; is_cnode_cap cap; cap_data cap = 0\<rbrakk>
+  "\<lbrakk>well_formed_cap cap in_tcb; is_cnode_cap cap; cap_data cap = 0\<rbrakk>
    \<Longrightarrow> cap_guard_size cap = 0"
   apply (clarsimp simp: cap_type_def cap_data_def guard_as_rawdata_def
                         well_formed_cap_def
@@ -1237,7 +1233,7 @@ lemma well_formed_pt_cap_is_fake_pt_cap:
   by (frule (2) well_formed_pd, clarsimp+)
 
 lemma wf_cap_pt_cap[simp]:
-  "well_formed_cap (PageTableCap PT pt_id ty addr) \<longleftrightarrow>
+  "well_formed_cap (PageTableCap PT pt_id ty addr) in_tcb \<longleftrightarrow>
    addr = None \<and> ((\<exists>attr. ty = Fake attr  \<and> attr = validate_pt_vm_attributes attr) \<or> ty = Real)"
   by (clarsimp simp: well_formed_cap_def)
 
@@ -1701,7 +1697,7 @@ lemmas well_formed_cap_simps[simp] = well_formed_cap_def[split_simps cdl_cap.spl
 
 lemma update_cap_rights_and_data:
   "\<lbrakk>t (cap_object spec_cap) = Some client_object_id; \<not> is_untyped_cap spec_cap;
-    well_formed_cap spec_cap; \<not> vm_cap_has_asid spec_cap; \<not> is_fake_vm_cap spec_cap;
+    well_formed_cap spec_cap in_tcb; \<not> vm_cap_has_asid spec_cap; \<not> is_fake_vm_cap spec_cap;
     \<not> is_irqhandler_cap spec_cap; cap_type spec_cap = Some type\<rbrakk>
  \<Longrightarrow> update_cap_data_det
      (cap_data spec_cap)
@@ -1764,7 +1760,7 @@ lemma update_cap_rights_and_data:
 lemma update_cap_data:
   "\<lbrakk>t (cap_object spec_cap) = Some client_object_id;
     cap_type spec_cap = Some type; cap_data spec_cap = data;
-    well_formed_cap spec_cap; \<not> is_untyped_cap spec_cap;
+    well_formed_cap spec_cap in_tcb; \<not> is_untyped_cap spec_cap;
     \<not> vm_cap_has_asid spec_cap; \<not> is_fake_vm_cap spec_cap; \<not> is_irqhandler_cap spec_cap;
     cap_rights (default_cap type {obj_id} sz (is_device_cap spec_cap)) = cap_rights spec_cap;
     dev = is_device_cap spec_cap\<rbrakk>
@@ -1824,7 +1820,7 @@ lemma well_formed_no_dev: "well_formed spec \<Longrightarrow> \<forall>slot. \<n
   by (clarsimp simp: well_formed_def)
 
 lemma well_formed_frame_cap[simp]:
-  "well_formed_cap (FrameCap x y rights a b R) \<longleftrightarrow>
+  "well_formed_cap (FrameCap x y rights a b R) in_tcb \<longleftrightarrow>
      R = None \<and> (rights = vm_read_write \<or> rights = vm_read_only) \<and>
      ((\<exists>attr. (b = Fake attr) \<and> attr = validate_vm_attributes attr (pageForPageBits a)) \<or> b = Real)"
   apply (clarsimp simp: well_formed_cap_def split: cdl_frame_cap_type.splits)
