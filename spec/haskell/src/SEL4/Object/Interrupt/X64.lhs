@@ -104,7 +104,7 @@ updateIRQState sets the arch-specific IRQ state for an IRQ
 > performIRQControl (ArchInv.IssueIRQHandlerIOAPIC (IRQ irq) destSlot srcSlot ioapic
 >         pin level polarity vector) = withoutPreemption $ do
 >     doMachineOp $ Arch.ioapicMapPinToVector ioapic pin level polarity vector
->     irqState <- return $ X64IRQIOAPIC (ioapic .&. mask 5) (pin .&. mask 8) (level .&. 1) (polarity .&. 1) True
+>     irqState <- return $ X64IRQIOAPIC (ioapic .&. mask 5) (pin .&. mask 8) (level .&. 1) (polarity .&. 1)
 >     updateIRQState (IRQ irq) irqState
 >     -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >     setIRQState IRQSignal (IRQ irq)
