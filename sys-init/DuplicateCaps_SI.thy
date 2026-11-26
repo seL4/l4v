@@ -295,7 +295,8 @@ lemma duplicate_caps_sep'[OF refl]:
   "\<lbrakk>obj_ids' = filter (\<lambda>obj_id. cnode_or_tcb_at obj_id spec) real_obj_ids\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>(si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>*
-      (\<And>* cptr \<in> set_region free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+      (\<And>* cptr \<in> set_region (take_region (card {obj_id. cnode_or_tcb_at obj_id spec}) free_cptrs).
+         (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
        R) and
       K (well_formed spec \<and>
          distinct real_obj_ids \<and>
@@ -308,9 +309,7 @@ lemma duplicate_caps_sep'[OF refl]:
     \<guillemotleft>(si_caps_at t (fst rv) spec dev {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
       si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>*
-      (\<And>* cptr \<in> set_region (drop_region (card {obj_id. cnode_or_tcb_at obj_id spec}) free_cptrs).
-            (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-       R) and
+      R) and
       K (rv = (map_of (zip_region obj_ids' free_cptrs),
                drop_region (length obj_ids') free_cptrs))\<guillemotright> \<rbrace>"
   apply (rule hoare_weaken_pre)
@@ -322,9 +321,6 @@ lemma duplicate_caps_sep'[OF refl]:
   apply (clarsimp, intro conjI; (clarsimp simp: )?)
    apply (sep_cancel)+
    apply (clarsimp)
-   apply (drule sep_map_set_conj_set_take_drop[where n="(card {obj_id. cnode_or_tcb_at obj_id spec})"])
-    apply (clarsimp)
-   apply (sep_cancel)
    apply (subst (asm) sep_map_zip_snd_take''[where xs= "obj_ids'", symmetric])
      apply (clarsimp)
     apply (clarsimp)
