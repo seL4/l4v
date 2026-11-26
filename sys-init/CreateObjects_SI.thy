@@ -1372,7 +1372,8 @@ lemma in_collection_in_derivations:
 lemma create_objects_sep':
   "\<lbrace> \<guillemotleft>\<And>* map (\<lambda>(slot, cap). (sep_map_c (si_cnode_id, unat slot)) cap)
              (zip untyped_slots untyped_caps) \<and>*
-      (\<And>* cptr\<in>set_region free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
+      (\<And>* cptr\<in>set_region (take_region (length (collect_children untyped_derivations)) free_cptrs).
+         (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
       (\<And>* obj_id\<in>(set (collect_children untyped_derivations)). the (t obj_id) \<mapsto>o Untyped) \<and>*
       si_objects \<and>* R\<guillemotright> and
      K (well_formed spec \<and>
@@ -1403,22 +1404,20 @@ lemma create_objects_sep':
       objects_empty spec t (set (collect_children untyped_derivations)) \<and>*
       si_caps_at t (map_of (zip_region (collect_children untyped_derivations) free_cptrs)) spec dev
                    (set (collect_children untyped_derivations)) \<and>*
-      (\<And>* cptr\<in>set_region (drop_region (length (collect_children untyped_derivations)) free_cptrs).
-            (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
       si_objects \<and>* R\<guillemotright> s\<rbrace>"
    apply (rule create_objects_sep[where untyped_caps=untyped_caps and
                                         untyped_slots="(map (unat \<circ> fst) untyped_list)" and
                                         untyped_map=untyped_map,
                                   THEN hoare_chain];
           clarsimp simp: pred_conj_def)
-  apply (intro conjI)
-       defer (* schematic *)
-       apply (fastforce)
-      apply (clarsimp simp: list_all_iff)
-      apply (auto simp: unat_less_2_si_cnode_size')[1]
-     apply (fastforce)
-    apply (fastforce simp: valid_untypeds_def)
-   apply (clarsimp simp: valid_untypeds_def, sep_cancel+)
+   apply (intro conjI)
+        defer (* schematic *)
+        apply (fastforce)
+       apply (clarsimp simp: list_all_iff)
+       apply (auto simp: unat_less_2_si_cnode_size')[1]
+      apply (fastforce)
+     apply (fastforce simp: valid_untypeds_def)
+    apply (clarsimp simp: valid_untypeds_def, sep_cancel+)
   apply (erule sep_conj_impl)
    apply (subst (asm) map2_map_left[where g=unat])
    apply (clarsimp)
