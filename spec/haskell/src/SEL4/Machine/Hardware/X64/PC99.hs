@@ -160,7 +160,7 @@ maxPCIFunc :: Word
 maxPCIFunc = 7 -- PCI_FUNC_MAX
 
 ioapicIRQLines :: Word
-ioapicIRQLines = 24 -- IOAPIC_IRQ_LINES
+ioapicIRQLines = 240
 
 -- error checks this performs moved out to x64 decodeIRQControl
 ioapicMapPinToVector :: Ptr CallbackData -> Word -> Word -> Word -> Word -> Word -> IO ()

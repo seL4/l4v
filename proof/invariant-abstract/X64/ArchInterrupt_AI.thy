@@ -19,6 +19,7 @@ where
                     ex_cte_cap_wp_to is_cnode_cap dest_slot and
                     real_cte_at dest_slot and
                     (\<lambda>s. ioapic < x64_num_ioapics (arch_state s)) and
+                    (\<lambda>s. pin \<le> ucast (x64_ioapic_nirqs (arch_state s) ioapic - 1)) and
                     K (minUserIRQ \<le> irq \<and> irq \<le> maxUserIRQ \<and>
                        level < 2 \<and> polarity < 2))"
 | "arch_irq_control_inv_valid_real (IssueIRQHandlerMSI irq dest_slot src_slot bus dev func handle)
@@ -120,6 +121,8 @@ lemma arch_decode_irq_control_valid[wp]:
           | wpc
           | wp hoare_vcg_imp_liftE_R[where P="\<lambda>rv s. \<not> x64_num_ioapics (arch_state s) - 1 < args ! 2"]
           | wp hoare_vcg_imp_liftE_R[where P="\<lambda>rv s. x64_num_ioapics (arch_state s) \<noteq> 0"]
+          | wp hoare_vcg_imp_liftE_R[where P="\<lambda>rv s. \<not> ucast (x64_ioapic_nirqs (arch_state s)
+                                                                (args ! 2) - 1) < args ! 3"]
           | wp (once) hoare_drop_imps)+
   apply ( safe; auto simp: word_le_not_less[symmetric] word_leq_minus_one_le
                            irq_plus_min_ge_min irq_plus_min_le_max ioapicIRQLines_def
