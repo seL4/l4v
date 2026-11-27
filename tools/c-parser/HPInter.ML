@@ -255,9 +255,43 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
   val mod_spec = collect_t $ list_mk_pabs([s,t], relbody)
   val _ = Feedback.informStr(0, "modstr : " ^ typedterm mod_spec)
   val otherspecs = List.concat (map (parse_spec thy) (#spec f))
+  (* For DONT_TRANSLATE functions with MODIFIES annotation generate roughly the
+     body `extern_spec_body modifies_spec (extern_semantics fname args)` (but
+     written as a set of pairs). See CLanguage.thy for definition. *)
+  fun extern_body () = let
+    val glob_ty =
+        case state_ty of
+          Type(@{type_name "StateSpace.state.state_ext"}, [g, _]) => g
+        | _ => raise TYPE ("mkSpecFunction: state_ty has unexpected form",
+                           [state_ty], [])
+    val globals_t = Const(@{const_name "globals"}, state_ty --> glob_ty)
+    fun local_acc st (nm, ty, _) =
+        Const(Sign.intern_const thy
+                (NameGeneration.local_rcd_name ^ "." ^ HoarePackage.varname nm),
+              state_ty --> ty) $ st
+    val args_t = HOLogic.mk_tuple (map (local_acc s) (#inparams f))
+    val ret_t =
+        case #outparams f of
+          [] => HOLogic.unit
+        | [p] => local_acc t p
+        | _ => raise Fail ("mkSpecFunction: more than one return variable for "
+                           ^ fname)
+    val res_t = HOLogic.mk_prod (ret_t, globals_t $ t)
+    val sem_t =
+        Const(@{const_name "extern_semantics"},
+              HOLogic.stringT --> type_of args_t --> glob_ty -->
+              mk_set_type (type_of res_t))
+        $ HOLogic.mk_string fname $ args_t $ (globals_t $ s)
+    val ext_rel = collect_t $ list_mk_pabs([s,t], mk_IN(res_t, sem_t))
+    val mod_pred = list_mk_abs([s,t], relbody)
+  in
+    Const(@{const_name "extern_spec_body"},
+          type_of mod_pred --> type_of ext_rel --> mk_com_ty styargs)
+    $ mod_pred $ ext_rel
+  end
   val fbody =
     if null otherspecs then
-      mk_Spec(styargs, mod_spec)
+      extern_body ()
     else
       let
         val _ = appi (fn n => fn t => Feedback.informStr(0,
