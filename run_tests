@@ -44,7 +44,6 @@ EXCLUDE["ARM"]=[]
 EXCLUDE["X64"]=[
     "Access",
     "AutoCorresSEL4",
-    "CamkesGlueProofs",
     "DBaseRefine",
     "DSpec",
     "SimplExportAndRefine",
@@ -55,7 +54,6 @@ EXCLUDE["RISCV64"]=[
     "AutoCorresSEL4",
     "DSpec",
     "DBaseRefine",
-    "CamkesGlueProofs",
     "AsmRefine"
 ]
 
@@ -65,7 +63,6 @@ EXCLUDE["AARCH64"]=[
 
     # Tools and unrelated content, removed for development
     "AutoCorres",
-    "CamkesGlueSpec",
     "Concurrency",
     "EVTutorial",
     "TakeGrant",
@@ -76,7 +73,6 @@ EXCLUDE["AARCH64"]=[
     "DBaseRefine",
     "DSpecProofs",
     "SysInit",
-    "CamkesGlueProofs",
     "AsmRefine",
     "SimplExportAndRefine"
 ]

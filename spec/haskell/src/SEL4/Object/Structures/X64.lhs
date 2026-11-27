@@ -188,5 +188,4 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >     irqIOAPIC :: Word,
 >     irqPin :: Word,
 >     irqLevel :: Word,
->     irqPolarity :: Word,
->     irqMasked :: Bool }
+>     irqPolarity :: Word }

@@ -168,8 +168,8 @@ fun x64irqstate_to_abstract :: "x64irqstate \<Rightarrow> X64IRQState" where
   "x64irqstate_to_abstract X64IRQFree = IRQFree"
 | "x64irqstate_to_abstract X64IRQReserved = IRQReserved"
 | "x64irqstate_to_abstract (X64IRQMSI bus dev func handle) = (IRQMSI bus dev func handle)"
-| "x64irqstate_to_abstract (X64IRQIOAPIC ioapic pin level polarity masked) =
-     (IRQIOAPIC ioapic pin level polarity masked)"
+| "x64irqstate_to_abstract (X64IRQIOAPIC ioapic pin level polarity) =
+     (IRQIOAPIC ioapic pin level polarity)"
 
 definition x64_irq_relation :: "(8 word \<Rightarrow> X64IRQState) \<Rightarrow> (8 word \<Rightarrow> x64irqstate) \<Rightarrow> bool" where
   "x64_irq_relation irq_states irq_states' \<equiv> irq_states = x64irqstate_to_abstract o irq_states'"

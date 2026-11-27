@@ -15,13 +15,11 @@ all: images test
 #
 
 # CAmkES
-HEAPS += CamkesAdlSpec CamkesCdlRefine CamkesGlueSpec CamkesGlueProofs
+HEAPS += CamkesAdlSpec CamkesCdlRefine
 GROUPS += Camkes
 
 # Clean
 clean:
-	rm -f ${ISABELLE_BROWSER_INFO}/CAmkES/CamkesGlueSpec/document.pdf
 	rm -f ${ISABELLE_BROWSER_INFO}/CAmkES/CamkesAdlSpec/document.pdf
-	rm -f ${ISABELLE_BROWSER_INFO}/CAmkES/CamkesGlueProofs/document.pdf
 
 include ../misc/isa-common.mk

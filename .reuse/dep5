@@ -94,8 +94,6 @@ License: CC-BY-SA-4.0
 # ulem.sty
 Files:
   camkes/adl-spec/document/ulem.sty
-  camkes/glue-proofs/document/ulem.sty
-  camkes/glue-spec/document/ulem.sty
   spec/abstract/document/ulem.sty
   tools/autocorres/doc/quickstart/document/ulem.sty
 Copyright: 1989-2011 by Donald Arseneau (Vancouver, Canada; asnd@triumf.ca)
@@ -105,8 +103,6 @@ License: LicenseRef-ulem
 Files:
   camkes/adl-spec/document/imgs/*.pdf
   camkes/adl-spec/document/imgs/*.svg
-  camkes/glue-spec/document/imgs/*.pdf
-  camkes/glue-spec/document/imgs/*.svg
   proof/infoflow/figs/example-auth-graph2.svg
 Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
 License: CC-BY-SA-4.0

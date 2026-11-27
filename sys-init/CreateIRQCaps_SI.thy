@@ -273,7 +273,7 @@ lemma create_irq_caps_sep:
 
 lemma create_irq_caps_sep':
   "\<forall>irq\<in>used_irqs spec. t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq) \<Longrightarrow>
-  \<lbrace>\<guillemotleft>((\<And>* cptr \<in> set_region (free_cptrs).
+  \<lbrace>\<guillemotleft>((\<And>* cptr \<in> set_region (take_region (card (used_irqs spec)) free_cptrs).
            ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
       si_objects \<and>* si_irq_nodes spec \<and>* R)  and
    K (well_formed spec \<and> valid_slot_region free_cptrs \<and>
@@ -282,8 +282,6 @@ lemma create_irq_caps_sep':
    \<lbrace>\<lambda>_.
     \<guillemotleft>(irqs_empty spec t (used_irqs spec) \<and>*
       si_irq_caps_at (map_of (zip_region (used_irq_list spec) free_cptrs)) spec (used_irqs spec) \<and>*
-     (\<And>* cptr \<in> set_region (drop_region (card (used_irqs spec)) free_cptrs).
-           ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
       si_objects \<and>* R)
     \<guillemotright> \<rbrace>"
   apply (erule hoare_chain[OF create_irq_caps_sep])
@@ -291,9 +289,6 @@ lemma create_irq_caps_sep':
    prefer 2 (* instantiate schematic *)
    apply (clarsimp simp: pred_conj_def cong del: prod.cong_simp)
    apply sep_solve
-  apply sep_cancel+
-  apply (sep_drule sep_map_set_conj_set_take_drop[where n="card (used_irqs spec)"])
-   apply clarsimp
   apply sep_cancel+
   done
 
