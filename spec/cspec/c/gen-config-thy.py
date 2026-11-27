@@ -282,6 +282,26 @@ def parse_irqBits(l4v_arch: str, platform_gen_h_file: str) -> str:
     raise Exception(f'Could not find IRQ_CNODE_SLOT_BITS in {platform_gen_h_file}')
 
 
+def parse_ioapicIRQLines(l4v_arch: str, machine_h_file: str) -> str:
+    """
+    Parse pc99/plat/machine.h for the value of ioapicIRQLines on X64. None for
+    other architectures.
+    """
+
+    if l4v_arch != 'X64':
+        return None
+
+    ioapicIRQLines_re = re.compile(r'ioapicIRQLines[\t ]+= ([0-9]+)')
+
+    with open(machine_h_file, 'r') as f:
+        for line in f:
+            m = ioapicIRQLines_re.match(line.strip())
+            if m:
+                return m.group(1)
+
+    raise Exception(f'Could not find ioapicIRQLines in {machine_h_file}')
+
+
 def add_defaults(config: Dict[str, str]):
     """
     Defaults are boolean config keys that are mentioned in known_config_keys
@@ -310,8 +330,6 @@ begin
 
   This file was generated from the following files:
   {}
-  {}
-  {}
   by the script {}.
 *)
 
@@ -319,7 +337,7 @@ begin
 
 
 def write_config_thy(header, config_thy_path, config: Dict[str, str],
-                     physBase=None, maxIRQ=None, irqBits=None):
+                     physBase=None, maxIRQ=None, irqBits=None, ioapicIRQLines=None):
     """
     Write a Kernel_Config.thy file for a given configuration dict.
     """
@@ -346,6 +364,12 @@ def write_config_thy(header, config_thy_path, config: Dict[str, str],
             f.write('definition irqBits :: nat where\n')
             f.write(f'  "irqBits \\<equiv> {irqBits}"\n\n')
             names.append('irqBits')
+
+        if ioapicIRQLines:
+            f.write('(* ioapicIRQLines from pc99/plat/machine.h. *)\n')
+            f.write('definition ioapicIRQLines :: machine_word where\n')
+            f.write(f'  "ioapicIRQLines \\<equiv> {ioapicIRQLines}"\n\n')
+            # no names.append, because we do not want hide this constant (not user-configurable)
 
         for key, value in config.items():
             type = type_of(key)
@@ -394,17 +418,23 @@ if __name__ == '__main__':
 
     thy_path = path.join(this_dir, f'../../machine/{l4v_arch}')
 
+    source_root = path.realpath(path.join(this_dir, "../../../../seL4"))
+    machine_h_path = path.join(source_root, "include/plat/pc99/plat/machine.h")
+
     config = parse_gen_config(config_path)
     physBase = parse_physBase(l4v_arch, devices_gen_path)
     maxIRQ = parse_maxIRQ(l4v_arch, platform_gen_path)
     irqBits = parse_irqBits(l4v_arch, platform_gen_path)
+    ioapicIRQLines = parse_ioapicIRQLines(l4v_arch, machine_h_path)
     add_defaults(config)
+
+    source_files = [config_path, devices_gen_path, platform_gen_path]
+    if ioapicIRQLines:
+        source_files.append(machine_h_path)
 
     header = theory_header.format(
         date.today().year,
-        config_path,
-        devices_gen_path,
-        platform_gen_path,
+        '\n  '.join(source_files),
         path.realpath(__file__)
     )
-    write_config_thy(header, thy_path, config, physBase, maxIRQ, irqBits)
+    write_config_thy(header, thy_path, config, physBase, maxIRQ, irqBits, ioapicIRQLines)

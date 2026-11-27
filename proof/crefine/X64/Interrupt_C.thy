@@ -378,7 +378,7 @@ lemma Platform_maxIRQ:
 
 (* sync check for ioapicIRQLines constant with C *)
 lemma Platform_ioapicIRQLines:
-  "ioapicIRQLines = scast Kernel_C.ioapicIRQLines"
+  "Kernel_Config.ioapicIRQLines = scast Kernel_C.ioapicIRQLines"
   by (simp add: ioapicIRQLines_def Kernel_C.ioapicIRQLines_def)
 
 lemma le_maxirq_ucast_explicit:
@@ -631,7 +631,8 @@ lemma ioapic_decode_map_pin_to_vector_ccorres:
       apply (rule_tac P="\<lambda>s. ioapic_nirqs = x64KSIOAPICnIRQs (ksArchState s) \<and>
                              numIOAPICs \<le> of_nat maxNumIOAPIC \<and>
                              0 < x64KSIOAPICnIRQs (ksArchState s) ioapic \<and>
-                             x64KSIOAPICnIRQs (ksArchState s) ioapic \<le> ucast ioapicIRQLines"
+                             x64KSIOAPICnIRQs (ksArchState s) ioapic \<le>
+                               ucast Kernel_Config.ioapicIRQLines"
                   and P'="UNIV" in ccorres_from_vcg_throws)
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: fst_throwError_returnOk syscall_error_to_H_cases

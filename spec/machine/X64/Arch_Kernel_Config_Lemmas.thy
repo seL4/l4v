@@ -14,6 +14,9 @@ begin
 
 context Arch begin global_naming X64
 
+(* Make sure that ioapicIRQLines_def inside Arch later takes precedence over Kernel_C.ioapicIRQLines_def *)
+lemmas ioapicIRQLines_def = ioapicIRQLines_def
+
 end
 
 end

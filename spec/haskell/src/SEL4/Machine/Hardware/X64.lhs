@@ -614,9 +614,6 @@ IRQ parameters
 > maxPCIFunc :: Word
 > maxPCIFunc = Platform.maxPCIFunc
 
-> ioapicIRQLines :: Word
-> ioapicIRQLines = Platform.ioapicIRQLines
-
 > ioapicMapPinToVector :: Word -> Word -> Word -> Word -> Word -> MachineMonad ()
 > ioapicMapPinToVector ioapic pin level polarity vector = do
 >     cbptr <- ask
