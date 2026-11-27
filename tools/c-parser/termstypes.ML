@@ -154,7 +154,7 @@ end
 
 (* UMM types *)
 val addr_ty = IntInfo.addr_ty
-val heap_ty = addr_ty --> IntInfo.char
+val heap_ty = addr_ty --> word8
 
 fun mk_ptr_ty ty = Type("CTypesBase.ptr", [ty])
 fun dest_ptr_ty ty =
