@@ -6,9 +6,9 @@
 
 theory Kernel_C
 imports
-  "ExecSpec.MachineTypes"
-  "CLib.CTranslationNICTA"
-  "AsmRefine.CommonOps"
+  ExecSpec.MachineOps
+  CLib.CTranslationNICTA
+  AsmRefine.CommonOps
 begin
 
 external_file
